@@ -1,0 +1,322 @@
+/* Responsive Design Improvements for SST Platform */
+/* Optimized for screens 15 inches and larger */
+
+/* Base responsive breakpoints */
+:root {
+  --sidebar-width: 280px;
+  --header-height: 64px;
+  --content-padding: 24px;
+  --card-max-width: 1200px;
+  --table-min-width: 800px;
+}
+
+/* Container improvements for larger screens */
+@media (min-width: 1366px) {
+  /* 15 inch screens and up */
+  .main-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+  
+  .dashboard-grid {
+    gap: 24px !important;
+  }
+  
+  .card-container {
+    max-width: var(--card-max-width);
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1600px) {
+  /* 17 inch screens and up */
+  .main-content {
+    max-width: 1600px;
+    padding: 0 48px;
+  }
+  
+  .dashboard-grid {
+    gap: 32px !important;
+  }
+}
+
+@media (min-width: 1920px) {
+  /* 19 inch screens and up */
+  .main-content {
+    max-width: 1800px;
+    padding: 0 64px;
+  }
+}
+
+/* Table responsive improvements */
+.responsive-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.responsive-table {
+  min-width: var(--table-min-width);
+  width: 100%;
+}
+
+@media (min-width: 1366px) {
+  .responsive-table {
+    min-width: 1000px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .responsive-table {
+    min-width: 1200px;
+  }
+}
+
+/* Form improvements for larger screens */
+.responsive-form {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1366px) {
+  .responsive-form {
+    max-width: 1000px;
+  }
+  
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  
+  .form-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+  }
+}
+
+/* Card layout improvements */
+.card-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+@media (min-width: 1366px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 32px;
+  }
+}
+
+/* Dashboard specific improvements */
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 1366px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .dashboard-stats {
+    gap: 32px;
+  }
+}
+
+/* Sidebar improvements for larger screens */
+@media (min-width: 1366px) {
+  .sidebar-content {
+    padding: 24px 16px;
+  }
+  
+  .sidebar-menu-item {
+    margin-bottom: 8px;
+  }
+}
+
+/* Sidebar transition improvements */
+.MuiDrawer-root {
+  transition: width 0.3s ease-in-out;
+}
+
+.MuiDrawer-paper {
+  transition: transform 0.3s ease-in-out;
+  overflow-x: hidden;
+}
+
+/* Prevent content shift during sidebar transitions */
+.sidebar-transition {
+  transition: margin-left 0.3s ease-in-out;
+}
+
+/* Ensure menu items maintain their state */
+.MuiCollapse-root {
+  transition: height 0.2s ease-in-out;
+}
+
+.MuiListItemButton-root {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Content area improvements */
+.content-wrapper {
+  padding: var(--content-padding);
+  min-height: calc(100vh - var(--header-height));
+}
+
+@media (min-width: 1366px) {
+  .content-wrapper {
+    padding: 32px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .content-wrapper {
+    padding: 48px;
+  }
+}
+
+/* Typography improvements for larger screens */
+@media (min-width: 1366px) {
+  .page-title {
+    font-size: 2.5rem;
+    margin-bottom: 32px;
+  }
+  
+  .section-title {
+    font-size: 1.75rem;
+    margin-bottom: 24px;
+  }
+}
+
+/* Button and action improvements */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 1366px) {
+  .action-buttons {
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+}
+
+/* Modal and dialog improvements */
+@media (min-width: 1366px) {
+  .responsive-dialog {
+    min-width: 600px;
+  }
+  
+  .responsive-dialog.large {
+    min-width: 800px;
+  }
+  
+  .responsive-dialog.extra-large {
+    min-width: 1000px;
+  }
+}
+
+/* Chart and visualization improvements */
+.chart-container {
+  width: 100%;
+  height: 400px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 1366px) {
+  .chart-container {
+    height: 500px;
+    margin-bottom: 32px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .chart-container {
+    height: 600px;
+  }
+}
+
+/* Utility classes for responsive spacing */
+.spacing-sm { margin: 8px; }
+.spacing-md { margin: 16px; }
+.spacing-lg { margin: 24px; }
+.spacing-xl { margin: 32px; }
+
+@media (min-width: 1366px) {
+  .spacing-responsive {
+    margin: 24px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .spacing-responsive {
+    margin: 32px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-full-width {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+/* High DPI screen improvements */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .high-dpi-text {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Focus and accessibility improvements */
+.focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling for larger screens */
+@media (min-width: 1366px) {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+}
