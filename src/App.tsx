@@ -39,7 +39,7 @@ import Seguimiento from "./pages/Seguimiento";
 import Reinduction from "./pages/Reinduction";
 
 // Absenteeism components
-import { AbsenteeismList, AbsenteeismForm, AbsenteeismDetail } from "./components/absenteeism";
+import Absenteeism from "./pages/Absenteeism";
 import AdminConfig from "./pages/AdminConfig";
 import Audit from "./pages/Audit";
 import Files from "./pages/Files";
@@ -253,6 +253,16 @@ const AppContent: React.FC = () => {
                     }
                   />
 
+                  {/* Rutas de ausentismo */}
+                  <Route
+                    path="/admin/absenteeism"
+                    element={
+                      <ProtectedRoute route="/admin/absenteeism">
+                        <Absenteeism />
+                      </ProtectedRoute>
+                    }
+                  />
+
                   {/* Rutas de cursos */}
                   {/* Redirección de /courses a /admin/courses */}
                   <Route
@@ -366,34 +376,11 @@ const AppContent: React.FC = () => {
                     path="/admin/absenteeism"
                     element={
                       <ProtectedRoute route="/admin/absenteeism">
-                        <AbsenteeismList />
+                        <Absenteeism />
                       </ProtectedRoute>
                     }
                   />
-                  <Route
-                    path="/admin/absenteeism/new"
-                    element={
-                      <ProtectedRoute route="/admin/absenteeism">
-                        <AbsenteeismForm mode="create" />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/absenteeism/:id"
-                    element={
-                      <ProtectedRoute route="/admin/absenteeism">
-                        <AbsenteeismDetail />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/absenteeism/:id/edit"
-                    element={
-                      <ProtectedRoute route="/admin/absenteeism">
-                        <AbsenteeismForm mode="edit" />
-                      </ProtectedRoute>
-                    }
-                  />
+
 
                   {/* Rutas de certificados y notificaciones */}
                   <Route

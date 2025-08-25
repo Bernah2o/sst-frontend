@@ -330,7 +330,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         },
         {
           id: 'absenteeism',
-          label: 'Absenteeism',
+          label: 'Ausentismo',
           icon: <MedicalServices />,
           path: '/admin/absenteeism',
           roles: ['admin', 'supervisor']

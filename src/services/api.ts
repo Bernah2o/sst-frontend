@@ -157,6 +157,43 @@ class ApiService {
   async patch(url: string, data?: any, config?: any): Promise<AxiosResponse<any>> {
     return this.api.patch(url, data, config);
   }
+
+  // Métodos específicos para ausentismo
+  async getAbsenteeismRecords(params?: any): Promise<any> {
+    const response = await this.api.get('/absenteeism', { params });
+    return response.data;
+  }
+
+  async getAbsenteeismRecord(id: number): Promise<any> {
+    const response = await this.api.get(`/absenteeism/${id}`);
+    return response.data;
+  }
+
+  async createAbsenteeismRecord(data: any): Promise<any> {
+    const response = await this.api.post('/absenteeism', data);
+    return response.data;
+  }
+
+  async updateAbsenteeismRecord(id: number, data: any): Promise<any> {
+    const response = await this.api.put(`/absenteeism/${id}`, data);
+    return response.data;
+  }
+
+  async deleteAbsenteeismRecord(id: number): Promise<void> {
+    await this.api.delete(`/absenteeism/${id}`);
+  }
+
+  async getAbsenteeismStats(params?: any): Promise<any> {
+    const response = await this.api.get('/absenteeism/stats/summary', { params });
+    return response.data;
+  }
+
+  async searchWorkersForAbsenteeism(query: string, limit: number = 10): Promise<any> {
+    const response = await this.api.get('/absenteeism/workers/search', {
+      params: { q: query, limit }
+    });
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();
