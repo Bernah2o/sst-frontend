@@ -14,6 +14,9 @@ import { UserRole } from "./types";
 import Layout from "./components/Layout";
 import Login from "./components/Login";
 import Register from "./components/Register";
+import ForgotPassword from "./components/ForgotPassword";
+import ResetPassword from "./components/ResetPassword";
+import ChangePassword from "./components/ChangePassword";
 
 // General pages
 import User from "./pages/User";
@@ -177,6 +180,14 @@ const AppContent: React.FC = () => {
         <Route
           path="/register"
           element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
+        />
+        <Route
+          path="/forgot-password"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />}
+        />
+        <Route
+          path="/reset-password"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <ResetPassword />}
         />
 
         {/* Rutas protegidas con Layout */}
@@ -462,6 +473,7 @@ const AppContent: React.FC = () => {
 
                   {/* Ruta de perfil - accesible para todos los usuarios autenticados */}
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/change-password" element={<ChangePassword />} />
 
                   {/* Rutas específicas para empleados */}
                   <Route

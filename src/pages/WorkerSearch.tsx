@@ -18,6 +18,7 @@ import {
   Email as EmailIcon,
   Phone as PhoneIcon
 } from '@mui/icons-material';
+import UppercaseTextField from '../components/UppercaseTextField';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Worker } from '../types';
@@ -99,7 +100,7 @@ const WorkerSearch: React.FC = () => {
         </Alert>
       )}
 
-      <TextField
+      <UppercaseTextField
         fullWidth
         variant="outlined"
         placeholder="Buscar por nombre, apellido, cédula, email o cargo..."

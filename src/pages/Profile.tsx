@@ -16,10 +16,12 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { PhotoCamera, Edit, Save, Cancel } from '@mui/icons-material';
+import { PhotoCamera, Edit, Save, Cancel, VpnKey } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { UserProfile } from '../types';
+import { useNavigate } from 'react-router-dom';
+import UppercaseTextField from '../components/UppercaseTextField';
 
 interface ProfileFormData {
   first_name: string;
@@ -31,6 +33,7 @@ interface ProfileFormData {
 
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState<ProfileFormData>({
     first_name: '',
@@ -288,13 +291,24 @@ const Profile: React.FC = () => {
                   Información Personal
                 </Typography>
                 {!isEditing ? (
-                  <Button
-                    startIcon={<Edit />}
-                    onClick={() => setIsEditing(true)}
-                    variant="outlined"
-                  >
-                    Editar
-                  </Button>
+                  <Box>
+                    <Button
+                      startIcon={<Edit />}
+                      onClick={() => setIsEditing(true)}
+                      variant="outlined"
+                      sx={{ mr: 1 }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      startIcon={<VpnKey />}
+                      onClick={() => navigate('/change-password')}
+                      variant="outlined"
+                      color="secondary"
+                    >
+                      Cambiar Contraseña
+                    </Button>
+                  </Box>
                 ) : (
                   <Box>
                     <Button
@@ -319,7 +333,7 @@ const Profile: React.FC = () => {
               
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
+                  <UppercaseTextField
                     fullWidth
                     label="Nombre"
                     name="first_name"
@@ -330,7 +344,7 @@ const Profile: React.FC = () => {
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
+                  <UppercaseTextField
                     fullWidth
                     label="Apellido"
                     name="last_name"

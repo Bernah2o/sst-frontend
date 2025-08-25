@@ -124,6 +124,11 @@ const Login: React.FC = () => {
               </Button>
               
               <Box sx={{ textAlign: 'center', mt: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <Link to="/forgot-password" style={{ textDecoration: 'none', color: '#1976d2' }}>
+                    ¿Olvidó su contraseña?
+                  </Link>
+                </Typography>
                 <Typography variant="body2">
                   ¿No tienes una cuenta?{' '}
                   <Link to="/register" style={{ textDecoration: 'none', color: '#1976d2' }}>

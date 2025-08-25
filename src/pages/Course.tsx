@@ -33,6 +33,7 @@ import {
   Grid,
   LinearProgress,
 } from "@mui/material";
+import UppercaseTextField from '../components/UppercaseTextField';
 import {
   Add,
   Edit,
@@ -1105,7 +1106,7 @@ const CoursesManagement: React.FC = () => {
 
       {/* Barra de búsqueda para empleados */}
       <Box sx={{ mb: 3 }}>
-        <TextField
+        <UppercaseTextField
           placeholder="Buscar mis cursos..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

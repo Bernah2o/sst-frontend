@@ -31,6 +31,9 @@ import { Add, Edit, Delete, Search, Refresh } from "@mui/icons-material";
 import { User, UserRole, DocumentType } from "./../types";
 import { formatDate } from "./../utils/dateUtils";
 import api from "./../services/api";
+import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
+import UppercaseTextField from '../components/UppercaseTextField';
+import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
 
 // Interfaces para el sistema de permisos
 interface CustomRole {
@@ -101,6 +104,8 @@ const UsersManagement: React.FC = () => {
     message: "",
     severity: "success" as "success" | "error",
   });
+  const [loadingWorkerData, setLoadingWorkerData] = useState(false);
+  const [workerDataFound, setWorkerDataFound] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -123,6 +128,47 @@ const UsersManagement: React.FC = () => {
       setCargos(response.data || []);
     } catch (error) {
       console.error('Error fetching cargos:', error);
+    }
+  };
+
+  const searchWorkerByDocument = async (documentNumber: string) => {
+    if (!documentNumber || documentNumber.length < 3) {
+      setWorkerDataFound(false);
+      return;
+    }
+
+    try {
+      setLoadingWorkerData(true);
+      const response = await api.get(`/workers/check-document/${documentNumber}`);
+      
+      if (response.data.exists && response.data.worker) {
+        const worker = response.data.worker;
+        
+        // Autocompletar los campos con los datos del trabajador encontrado
+        setFormData(prev => ({
+          ...prev,
+          first_name: worker.first_name || prev.first_name,
+          last_name: worker.last_name || prev.last_name,
+          email: worker.email || prev.email,
+          phone: worker.phone || prev.phone,
+          department: worker.department || prev.department,
+          position: worker.position || prev.position,
+          hire_date: worker.fecha_de_ingreso ? new Date(worker.fecha_de_ingreso).toISOString().split('T')[0] : prev.hire_date,
+        }));
+        
+        setWorkerDataFound(true);
+        showSnackbar(`Datos del trabajador ${worker.first_name} ${worker.last_name} cargados automáticamente`, "success");
+      } else {
+        setWorkerDataFound(false);
+      }
+    } catch (error: any) {
+      setWorkerDataFound(false);
+      // No mostrar error si el trabajador no existe, es normal
+      if (error.response?.status !== 404) {
+        console.error('Error searching worker by document:', error);
+      }
+    } finally {
+      setLoadingWorkerData(false);
     }
   };
 
@@ -150,6 +196,10 @@ const UsersManagement: React.FC = () => {
 
   const handleCreateUser = () => {
     setEditingUser(null);
+    // Resetear estados de búsqueda de trabajador
+    setLoadingWorkerData(false);
+    setWorkerDataFound(false);
+    
     setFormData({
       email: "",
       first_name: "",
@@ -490,21 +540,27 @@ const UsersManagement: React.FC = () => {
                   <MenuItem value={DocumentType.SPECIAL_PERMIT}>Permiso Especial de Permanencia</MenuItem>
                 </Select>
               </FormControl>
-              <TextField
+              <UppercaseTextField
                 label="Número de Documento"
                 value={formData.document_number}
-                onChange={(e) =>
-                  setFormData({ ...formData, document_number: e.target.value })
-                }
+                onChange={(e) => {
+                  const documentNumber = e.target.value;
+                  setFormData({ ...formData, document_number: documentNumber });
+                  // Solo buscar si no estamos editando un usuario existente
+                  if (!editingUser) {
+                    searchWorkerByDocument(documentNumber);
+                  }
+                }}
                 fullWidth
                 required
+                helperText={loadingWorkerData ? "Buscando datos del trabajador..." : workerDataFound ? "Datos del trabajador cargados automáticamente" : ""}
               />
             </Box>
             
             {/* Información básica */}
             <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Información Básica</Typography>
             <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
+              <UppercaseTextField
                 label="Nombre"
                 value={formData.first_name}
                 onChange={(e) => {
@@ -516,7 +572,7 @@ const UsersManagement: React.FC = () => {
                 fullWidth
                 required
               />
-              <TextField
+              <UppercaseTextField
                 label="Apellido"
                 value={formData.last_name}
                 onChange={(e) => {
@@ -554,14 +610,25 @@ const UsersManagement: React.FC = () => {
             {/* Información laboral */}
             <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Información Laboral</Typography>
             <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                label="Departamento"
-                value={formData.department || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, department: e.target.value })
-                }
-                fullWidth
-              />
+              <FormControl fullWidth>
+                <InputLabel>Departamento</InputLabel>
+                <Select
+                  value={formData.department || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, department: e.target.value })
+                  }
+                  label="Departamento"
+                >
+                  <MenuItem value="">
+                    <em>Seleccionar departamento</em>
+                  </MenuItem>
+                  {COLOMBIAN_DEPARTMENTS.map((department) => (
+                    <MenuItem key={department} value={department}>
+                      {department}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <FormControl fullWidth required>
                 <InputLabel>Cargo</InputLabel>
                 <Select
@@ -613,31 +680,16 @@ const UsersManagement: React.FC = () => {
                 </Select>
               </FormControl>
               
-              <FormControl fullWidth>
-                <InputLabel>Rol Personalizado</InputLabel>
-                <Select
-                  value={formData.custom_role_id || ""}
-                  onChange={(e) => {
-                    setFormData({ 
-                      ...formData, 
-                      custom_role_id: e.target.value ? Number(e.target.value) : undefined
-                    });
-                  }}
-                  label="Rol Personalizado"
-                >
-                  <MenuItem value="">
-                    <em>Sin rol personalizado</em>
-                  </MenuItem>
-                  {customRoles
-                    .filter(role => role.is_active)
-                    .map((role) => (
-                      <MenuItem key={role.id} value={role.id}>
-                        {role.display_name}
-                        {role.is_system_role && " (Sistema)"}
-                      </MenuItem>
-                    ))}
-                </Select>
-              </FormControl>
+              <CustomRoleAutocompleteField
+                value={formData.custom_role_id}
+                customRoles={customRoles}
+                onChange={(selectedRole) => {
+                  setFormData({ 
+                    ...formData, 
+                    custom_role_id: selectedRole?.value?.id || undefined
+                  });
+                }}
+              />
             </Box>
             
             <Alert severity="info" sx={{ mt: 1 }}>
@@ -722,6 +774,69 @@ const UsersManagement: React.FC = () => {
         </Alert>
       </Snackbar>
     </Box>
+  );
+};
+
+// Componente auxiliar para autocompletado de roles personalizados
+interface CustomRole {
+  id: number;
+  display_name: string;
+  is_active: boolean;
+  is_system_role: boolean;
+}
+
+const CustomRoleAutocompleteField: React.FC<{
+  value: number | undefined;
+  customRoles: CustomRole[];
+  onChange: (selectedRole: AutocompleteOption | null) => void;
+}> = ({ value, customRoles, onChange }) => {
+  
+  const handleChange = (value: AutocompleteOption | AutocompleteOption[] | null) => {
+    // Asegurar que solo manejamos selección única
+    if (Array.isArray(value)) {
+      onChange(value[0] || null);
+    } else {
+      onChange(value);
+    }
+  };
+  // Convertir roles a opciones de autocompletado
+  const roleOptions: AutocompleteOption[] = [
+    {
+      id: 'none',
+      label: 'Sin rol personalizado',
+      value: null,
+      description: 'No asignar rol personalizado',
+      category: 'Sistema',
+    },
+    ...customRoles
+      .filter(role => role.is_active)
+      .map(role => ({
+        id: role.id,
+        label: role.display_name,
+        value: role,
+        description: role.is_system_role ? 'Rol del sistema' : 'Rol personalizado',
+        category: role.is_system_role ? 'Sistema' : 'Personalizado',
+      }))
+  ];
+  
+  // Encontrar la opción seleccionada
+  const selectedOption = value 
+    ? roleOptions.find(option => option.value?.id === value) || null
+    : roleOptions[0]; // "Sin rol personalizado"
+  
+  return (
+    <AutocompleteField
+      label="Rol Personalizado"
+      placeholder="Buscar rol personalizado..."
+      value={selectedOption}
+      onChange={handleChange}
+      autocompleteOptions={{
+        staticOptions: roleOptions,
+        minSearchLength: 0, // Mostrar todas las opciones desde el inicio
+      }}
+      groupBy={(option) => option.category || 'Otros'}
+      helperText="El rol personalizado tiene prioridad sobre el rol del sistema"
+    />
   );
 };
 

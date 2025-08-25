@@ -43,14 +43,9 @@ class ApiService {
 
   // Métodos de autenticación
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const formData = new FormData();
-    formData.append('username', credentials.email);
-    formData.append('password', credentials.password);
-    
-    const response: AxiosResponse<LoginResponse> = await this.api.post('/auth/login', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const response: AxiosResponse<LoginResponse> = await this.api.post('/auth/login', {
+      email: credentials.email,
+      password: credentials.password
     });
     return response.data;
   }
@@ -58,6 +53,18 @@ class ApiService {
   async getCurrentUser(): Promise<User> {
     const response: AxiosResponse<User> = await this.api.get('/auth/me');
     return response.data;
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    await this.api.post('/auth/forgot-password', { email });
+  }
+
+  async resetPassword(data: { token: string; new_password: string }): Promise<void> {
+    await this.api.post('/auth/reset-password', data);
+  }
+
+  async changePassword(data: { current_password: string; new_password: string }): Promise<void> {
+    await this.api.put('/auth/change-password', data);
   }
 
   async logout(): Promise<void> {

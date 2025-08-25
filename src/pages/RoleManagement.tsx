@@ -52,6 +52,7 @@ import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { formatDateTime } from "../utils/dateUtils";
 import { UserRole } from "../types";
+import UppercaseTextField from "../components/UppercaseTextField";
 
 // Interfaces
 interface CustomRole {
@@ -432,7 +433,7 @@ const RoleManagement: React.FC = () => {
 
       {/* Search and Actions */}
       <Box display="flex" gap={2} mb={3}>
-        <TextField
+        <UppercaseTextField
           placeholder="Buscar roles..."
           variant="outlined"
           size="small"
@@ -563,7 +564,7 @@ const RoleManagement: React.FC = () => {
         <DialogContent>
           <Box sx={{ mt: 1 }}>
             <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-              <TextField
+              <UppercaseTextField
                 fullWidth
                 label="Nombre Técnico"
                 value={formData.name}
@@ -573,7 +574,7 @@ const RoleManagement: React.FC = () => {
                 placeholder="empleado_avanzado"
                 helperText="Nombre único sin espacios (ej: empleado_avanzado)"
               />
-              <TextField
+              <UppercaseTextField
                 fullWidth
                 label="Nombre para Mostrar"
                 value={formData.display_name}
@@ -585,7 +586,7 @@ const RoleManagement: React.FC = () => {
               />
             </Box>
             <Box sx={{ mb: 3 }}>
-              <TextField
+              <UppercaseTextField
                 fullWidth
                 multiline
                 rows={3}

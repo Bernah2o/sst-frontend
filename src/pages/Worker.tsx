@@ -29,6 +29,11 @@ import {
   Snackbar,
   Grid,
 } from "@mui/material";
+import UppercaseTextField from '../components/UppercaseTextField';
+import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
+import { useCargoAutocomplete } from '../hooks/useAutocomplete';
+import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
+import { getCitiesByDepartment } from '../data/colombianCities';
 import {
   Add,
   Edit,
@@ -129,6 +134,7 @@ const WorkersManagement: React.FC = () => {
   const [afpOptions, setAfpOptions] = useState<AdminConfig[]>([]);
   const [arlOptions, setArlOptions] = useState<AdminConfig[]>([]);
   const [cargoOptions, setCargos] = useState<Cargo[]>([]);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [formData, setFormData] = useState<WorkerFormData>({
     photo: "",
     gender: Gender.MALE,
@@ -350,6 +356,7 @@ const WorkersManagement: React.FC = () => {
       is_active: true,
       assigned_role: UserRole.EMPLOYEE,
     });
+    setAvailableCities([]);
     setOpenDialog(true);
   };
 
@@ -395,6 +402,11 @@ const WorkersManagement: React.FC = () => {
         is_active: fullWorker.is_active ?? true,
         assigned_role: fullWorker.assigned_role || UserRole.EMPLOYEE,
       });
+      
+      // Cargar ciudades disponibles si hay departamento seleccionado
+      if (fullWorker.department) {
+        setAvailableCities(getCitiesByDepartment(fullWorker.department));
+      }
       setOpenDialog(true);
     } catch (error) {
       console.error('Error fetching worker details:', error);
@@ -468,6 +480,16 @@ const WorkersManagement: React.FC = () => {
     setOpenDialog(false);
     setLoadingUserData(false);
     setUserDataFound(false);
+    setAvailableCities([]);
+  };
+
+  const handleDepartmentChange = (department: string) => {
+    setFormData(prev => ({
+      ...prev,
+      department,
+      city: "" // Limpiar ciudad cuando cambia el departamento
+    }));
+    setAvailableCities(getCitiesByDepartment(department));
   };
 
   const handleDeleteWorker = (worker: WorkerList) => {
@@ -819,7 +841,7 @@ const WorkersManagement: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
+              <UppercaseTextField
                 label="Número de Documento"
                 value={formData.document_number}
                 onChange={(e) => {
@@ -855,7 +877,7 @@ const WorkersManagement: React.FC = () => {
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
+              <UppercaseTextField
                 label="Nombres"
                 value={formData.first_name}
                 onChange={(e) =>
@@ -869,7 +891,7 @@ const WorkersManagement: React.FC = () => {
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
+              <UppercaseTextField
                 label="Apellidos"
                 value={formData.last_name}
                 onChange={(e) =>
@@ -958,30 +980,15 @@ const WorkersManagement: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth required>
-                <InputLabel>Cargo/Posición</InputLabel>
-                <Select
-                  value={formData.position}
-                  onChange={(e) =>
-                    setFormData({ 
-                      ...formData, 
-                      position: e.target.value
-                    })
-                  }
-                >
-                  {/* Si el valor actual no está en las opciones, agregarlo temporalmente */}
-                  {formData.position && !cargoOptions.find(c => c.nombre_cargo === formData.position) && (
-                    <MenuItem value={formData.position}>
-                      {formData.position} (No disponible)
-                    </MenuItem>
-                  )}
-                  {cargoOptions.map((cargo) => (
-                    <MenuItem key={cargo.id} value={cargo.nombre_cargo}>
-                      {cargo.nombre_cargo}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <CargoAutocompleteField
+                value={formData.position}
+                onChange={(selectedCargo) => {
+                  setFormData({ 
+                    ...formData, 
+                    position: selectedCargo?.value?.nombre_cargo || selectedCargo?.label || ''
+                  });
+                }}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
@@ -1011,17 +1018,23 @@ const WorkersManagement: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Departamento"
-                value={formData.department}
-                onChange={(e) =>
-                  setFormData({ 
-                    ...formData, 
-                    department: e.target.value
-                  })
-                }
-                fullWidth
-              />
+              <FormControl fullWidth>
+                <InputLabel>Departamento</InputLabel>
+                <Select
+                  value={formData.department || ''}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  label="Departamento"
+                >
+                  <MenuItem value="">
+                    <em>Seleccionar departamento</em>
+                  </MenuItem>
+                  {COLOMBIAN_DEPARTMENTS.map((department) => (
+                    <MenuItem key={department} value={department}>
+                      {department}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
@@ -1086,14 +1099,24 @@ const WorkersManagement: React.FC = () => {
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Ciudad"
-                value={formData.city}
-                onChange={(e) =>
-                  setFormData({ ...formData, city: e.target.value })
-                }
-                fullWidth
-              />
+              <FormControl fullWidth>
+                <InputLabel>Ciudad</InputLabel>
+                <Select
+                  value={formData.city || ''}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  label="Ciudad"
+                  disabled={!formData.department || availableCities.length === 0}
+                >
+                  <MenuItem value="">
+                    <em>Seleccionar ciudad</em>
+                  </MenuItem>
+                  {availableCities.map((city) => (
+                    <MenuItem key={city} value={city}>
+                      {city}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
@@ -1379,6 +1402,41 @@ const WorkersManagement: React.FC = () => {
         </Alert>
       </Snackbar>
     </Box>
+  );
+};
+
+// Componente auxiliar para autocompletado de cargos
+const CargoAutocompleteField: React.FC<{
+  value: string;
+  onChange: (selectedCargo: AutocompleteOption | null) => void;
+}> = ({ value, onChange }) => {
+  const { options, loading, error } = useCargoAutocomplete();
+  
+  const handleChange = (value: AutocompleteOption | AutocompleteOption[] | null) => {
+    // Asegurar que solo manejamos selección única
+    if (Array.isArray(value)) {
+      onChange(value[0] || null);
+    } else {
+      onChange(value);
+    }
+  };
+  
+  // Encontrar la opción correspondiente al valor actual
+  const selectedOption = value ? options.find(option => option.label === value) || null : null;
+  
+  return (
+    <AutocompleteField
+      label="Cargo/Posición"
+      placeholder="Buscar cargo..."
+      value={selectedOption}
+      onChange={handleChange}
+      required
+      autocompleteOptions={{
+        staticOptions: options,
+        minSearchLength: 1,
+      }}
+      helperText={error || "Selecciona o busca un cargo"}
+    />
   );
 };
 

@@ -11,10 +11,14 @@ import {
   Avatar,
   CssBaseline,
   MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
 import { PersonAdd } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
+import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
 
 interface RegisterFormData {
   email: string;
@@ -73,6 +77,18 @@ const Register: React.FC = () => {
       return false;
     }
 
+    // Validar que contenga al menos una letra
+    if (!/[a-zA-Z]/.test(formData.password)) {
+      setError('La contraseña debe contener al menos una letra');
+      return false;
+    }
+
+    // Validar que contenga al menos un número
+    if (!/\d/.test(formData.password)) {
+      setError('La contraseña debe contener al menos un número');
+      return false;
+    }
+
     // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
@@ -114,10 +130,22 @@ const Register: React.FC = () => {
       }, 2000);
       
     } catch (err: any) {
-      setError(
-        err.response?.data?.detail || 
-        'Error al registrarse. Por favor, intente nuevamente.'
-      );
+      const errorMessage = err.response?.data?.detail;
+      
+      // Manejar errores específicos de autorización
+      if (errorMessage?.includes('No se encontró un trabajador activo')) {
+        setError(
+          'No se encontró un empleado registrado con esos datos. Solo los empleados previamente registrados por el administrador pueden crear una cuenta. Contacte al administrador del sistema.'
+        );
+      } else if (errorMessage?.includes('ya tiene una cuenta registrada')) {
+        setError(
+          'Este empleado ya tiene una cuenta registrada en el sistema. Puede iniciar sesión directamente.'
+        );
+      } else {
+        setError(
+          errorMessage || 'Error al registrarse. Por favor, intente nuevamente.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -146,6 +174,13 @@ const Register: React.FC = () => {
         <Typography variant="body2" color="textSecondary" align="center" sx={{ mb: 2 }}>
           Ingrese su cédula y correo electrónico para completar su registro
         </Typography>
+        
+        <Alert severity="info" sx={{ mb: 2, width: '100%' }}>
+          <Typography variant="body2">
+            <strong>Importante:</strong> Solo los empleados previamente registrados por el administrador pueden crear una cuenta. 
+            Si no puede completar el registro, contacte al administrador del sistema.
+          </Typography>
+        </Alert>
         
         <Card sx={{ mt: 2, width: '100%' }}>
           <CardContent>
@@ -251,16 +286,26 @@ const Register: React.FC = () => {
                   onChange={handleChange}
                   disabled={loading}
                 />
-                <TextField
-                  margin="normal"
-                  fullWidth
-                  id="department"
-                  label="Departamento (Opcional)"
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  disabled={loading}
-                />
+                <FormControl fullWidth margin="normal">
+                   <InputLabel>Departamento (Opcional)</InputLabel>
+                   <Select
+                     id="department"
+                     name="department"
+                     value={formData.department || ''}
+                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                     label="Departamento (Opcional)"
+                     disabled={loading}
+                   >
+                     <MenuItem value="">
+                       <em>Seleccionar departamento</em>
+                     </MenuItem>
+                     {COLOMBIAN_DEPARTMENTS.map((department) => (
+                       <MenuItem key={department} value={department}>
+                         {department}
+                       </MenuItem>
+                     ))}
+                   </Select>
+                 </FormControl>
               </Box>
               
               <TextField
@@ -288,7 +333,7 @@ const Register: React.FC = () => {
                   value={formData.password}
                   onChange={handleChange}
                   disabled={loading}
-                  helperText="Mínimo 8 caracteres, debe incluir letras, números y símbolos"
+                  helperText="Mínimo 8 caracteres, debe incluir al menos una letra y un número"
                 />
                 <TextField
                   margin="normal"

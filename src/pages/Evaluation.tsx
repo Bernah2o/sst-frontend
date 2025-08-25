@@ -46,6 +46,7 @@ import {
   Grid,
   CircularProgress,
 } from "@mui/material";
+import UppercaseTextField from "../components/UppercaseTextField";
 import {
   Add,
   Edit,
@@ -1052,7 +1053,7 @@ const EvaluationsManagement: React.FC = () => {
           flexWrap: "wrap",
         }}
       >
-        <TextField
+        <UppercaseTextField
           placeholder="Buscar evaluaciones..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

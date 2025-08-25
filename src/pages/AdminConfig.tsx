@@ -35,6 +35,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
+import UppercaseTextField from '../components/UppercaseTextField';
 
 // Constantes para periodicidad EMO
 const PERIODICIDAD_EMO_OPTIONS = [
@@ -874,7 +875,7 @@ const AdminConfigPage: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid size={12}>
-              <TextField
+              <UppercaseTextField
                 fullWidth
                 label="Nombre"
                 value={formData.display_name}
@@ -941,7 +942,7 @@ const AdminConfigPage: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid size={12}>
-              <TextField
+              <UppercaseTextField
                 fullWidth
                 label="Nombre"
                 value={seguridadSocialFormData.nombre}
@@ -1023,7 +1024,7 @@ const AdminConfigPage: React.FC = () => {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={12}>
-              <TextField
+              <UppercaseTextField
                 fullWidth
                 label="Nombre del Programa"
                 value={programFormData.nombre_programa}
@@ -1134,7 +1135,7 @@ const AdminConfigPage: React.FC = () => {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={12}>
-              <TextField
+              <UppercaseTextField
                 fullWidth
                 label="Nombre del Cargo"
                 value={cargoFormData.nombre_cargo}
