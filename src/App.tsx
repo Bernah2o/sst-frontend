@@ -587,7 +587,10 @@ const DashboardRedirect: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  switch (user.rol) {
+  // Usar user.role en lugar de user.rol para consistencia
+  const userRole = user.role || user.rol;
+  
+  switch (userRole) {
     case "admin":
       return <Navigate to="/admin/dashboard" replace />;
     case "trainer":

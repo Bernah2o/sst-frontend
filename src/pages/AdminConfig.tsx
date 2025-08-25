@@ -206,7 +206,7 @@ const AdminConfigPage: React.FC = () => {
     try {
       const [seguridadSocialResponse, programasResponse, cargosResponse] =
         await Promise.all([
-          api.get("/seguridad-social/"),
+          api.get("/admin/config/seguridad-social/"),
           api.get("/admin/config/programas"),
           api.get("/admin/config/cargos"),
         ]);
@@ -264,7 +264,7 @@ const AdminConfigPage: React.FC = () => {
 
   const fetchSeguridadSocial = async () => {
     try {
-      const response = await api.get("/seguridad-social/");
+      const response = await api.get("/admin/config/seguridad-social/");
       // La API devuelve un objeto con estructura { items: [], total: number, ... }
       let data = [];
       if (response.data) {
@@ -348,11 +348,11 @@ const AdminConfigPage: React.FC = () => {
           updateData.is_active = dataToSend.is_active;
         }
         await api.put(
-          `/seguridad-social/${editingSeguridadSocial.id}`,
+          `/admin/config/seguridad-social/${editingSeguridadSocial.id}`,
           updateData
         );
       } else {
-        await api.post("/seguridad-social/", dataToSend);
+        await api.post("/admin/config/seguridad-social/", dataToSend);
       }
       fetchSeguridadSocial();
       handleCloseSeguridadSocialDialog();
@@ -558,7 +558,7 @@ const AdminConfigPage: React.FC = () => {
   const confirmDeleteSeguridadSocial = async () => {
     if (deletingSeguridadSocial) {
       try {
-        await api.delete(`/seguridad-social/${deletingSeguridadSocial.id}`);
+        await api.delete(`/admin/config/seguridad-social/${deletingSeguridadSocial.id}`);
         fetchSeguridadSocial();
         setOpenDeleteSeguridadSocialDialog(false);
         setDeletingSeguridadSocial(null);

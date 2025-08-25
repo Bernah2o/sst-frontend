@@ -185,10 +185,10 @@ const WorkersManagement: React.FC = () => {
   const fetchAdminConfigs = async () => {
     try {
       // Usar los nuevos endpoints de seguridad social
-      const [epsResponse, afpResponse, arlResponse] = await Promise.all([
-        api.get('/seguridad-social/tipo/eps?active_only=true'),
-        api.get('/seguridad-social/tipo/afp?active_only=true'),
-        api.get('/seguridad-social/tipo/arl?active_only=true')
+        const [epsResponse, afpResponse, arlResponse] = await Promise.all([
+           api.get('/admin/config/seguridad-social/tipo/eps'),
+           api.get('/admin/config/seguridad-social/tipo/afp'),
+           api.get('/admin/config/seguridad-social/tipo/arl')
       ]);
       
       // Mapear los datos al formato esperado por el frontend
@@ -242,7 +242,7 @@ const WorkersManagement: React.FC = () => {
 
   const fetchCargos = async () => {
     try {
-      const response = await api.get('/admin/config/cargos');
+      const response = await api.get('/admin/config/cargos/active');
       const cargos = response.data || [];
       setCargos(cargos.filter((cargo: Cargo) => cargo.activo));
     } catch (error) {
