@@ -196,6 +196,13 @@ const EnrollmentsManagement: React.FC = () => {
     fetchStats();
   }, [page, rowsPerPage, searchTerm, statusFilter]);
 
+  // Cargar trabajadores disponibles cuando se selecciona un curso para inscripción masiva
+  useEffect(() => {
+    if (bulkFormData.course_id && openBulkDialog) {
+      fetchAvailableWorkersForCourse(bulkFormData.course_id);
+    }
+  }, [bulkFormData.course_id, openBulkDialog]);
+
   const fetchEnrollments = async () => {
     try {
       setLoading(true);
@@ -321,16 +328,49 @@ const EnrollmentsManagement: React.FC = () => {
   const fetchWorkers = async () => {
     try {
       setLoadingWorkers(true);
-      const response = await api.get("/enrollments/workers/available", {
+      const response = await api.get("/workers/basic", {
         params: {
           search: workerSearchTerm || undefined,
-          limit: 100
+          limit: 100,
+          is_active: true
         },
       });
-      setWorkers(response.data.items || []);
+      setWorkers(response.data || []);
     } catch (error) {
       console.error("Error fetching workers:", error);
       showSnackbar("Error al cargar trabajadores", "error");
+    } finally {
+      setLoadingWorkers(false);
+    }
+  };
+
+  const fetchAvailableWorkersForCourse = async (courseId: number) => {
+    try {
+      setLoadingWorkers(true);
+      
+      // Obtener todos los trabajadores activos
+      const workersResponse = await api.get("/workers/basic", {
+        params: {
+          search: workerSearchTerm || undefined,
+          limit: 100,
+          is_active: true
+        },
+      });
+      
+      // Obtener trabajadores ya inscritos en el curso
+      const enrolledResponse = await api.get(`/enrollments/course/${courseId}/workers`);
+      const enrolledWorkerIds = (enrolledResponse.data.enrolled_workers || []).map((worker: any) => worker.worker_id || worker.user_id);
+      
+      // Filtrar trabajadores disponibles (no inscritos)
+      const availableWorkers = (workersResponse.data || []).filter((worker: any) => 
+        !enrolledWorkerIds.includes(worker.id)
+      );
+      
+      setWorkers(availableWorkers);
+    } catch (error) {
+      console.error("Error fetching available workers for course:", error);
+      // Si falla, cargar todos los trabajadores como fallback
+      fetchWorkers();
     } finally {
       setLoadingWorkers(false);
     }

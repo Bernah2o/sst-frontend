@@ -98,6 +98,12 @@ const Notification: React.FC = () => {
     status: '',
     search: ''
   });
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
   const [formData, setFormData] = useState({
     title: '',
     message: '',
@@ -190,25 +196,39 @@ const Notification: React.FC = () => {
   };
 
   const handleSendNotification = async (id: number) => {
-    if (window.confirm('¿Está seguro de que desea enviar esta notificación?')) {
-      try {
-        await api.post(`/notifications/${id}/send`);
-        fetchNotifications();
-      } catch (error) {
-        console.error('Error sending notification:', error);
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar envío',
+      message: '¿Está seguro de que desea enviar esta notificación?',
+      onConfirm: async () => {
+        try {
+          await api.post(`/notifications/${id}/send`);
+          fetchNotifications();
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error) {
+          console.error('Error sending notification:', error);
+          setConfirmDialog({ ...confirmDialog, open: false });
+        }
       }
-    }
+    });
   };
 
   const handleDeleteNotification = async (id: number) => {
-    if (window.confirm('¿Está seguro de que desea eliminar esta notificación?')) {
-      try {
-        await api.delete(`/notifications/${id}`);
-        fetchNotifications();
-      } catch (error) {
-        console.error('Error deleting notification:', error);
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar eliminación',
+      message: '¿Está seguro de que desea eliminar esta notificación?',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/notifications/${id}`);
+          fetchNotifications();
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error) {
+          console.error('Error deleting notification:', error);
+          setConfirmDialog({ ...confirmDialog, open: false });
+        }
       }
-    }
+    });
   };
 
   const handleFilterChange = (field: string, value: any) => {
@@ -641,6 +661,34 @@ const Notification: React.FC = () => {
               disabled={!formData.title || !formData.message}
             >
               {editingNotification ? 'Actualizar' : 'Crear'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Diálogo de confirmación */}
+        <Dialog
+          open={confirmDialog.open}
+          onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>{confirmDialog.title}</DialogTitle>
+          <DialogContent>
+            <Typography>{confirmDialog.message}</Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+              color="inherit"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={confirmDialog.onConfirm}
+              variant="contained"
+              color="primary"
+            >
+              Confirmar
             </Button>
           </DialogActions>
         </Dialog>

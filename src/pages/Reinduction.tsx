@@ -126,6 +126,8 @@ const Reinduction: React.FC = () => {
     notes: '',
     exemption_reason: ''
   });
+  const [enrollConfirmDialog, setEnrollConfirmDialog] = useState({ open: false, reinductionId: null as number | null });
+  const [notificationConfirmDialog, setNotificationConfirmDialog] = useState({ open: false, workerId: null as number | null });
 
   const statusConfig = {
     pending: { label: 'Pendiente', color: 'default', icon: <PendingIcon /> },
@@ -201,26 +203,44 @@ const Reinduction: React.FC = () => {
     }
   };
 
-  const handleEnrollWorker = async (id: number) => {
-    if (window.confirm('¿Está seguro de que desea inscribir al trabajador en el curso de reinducción?')) {
+  const handleEnrollWorker = (id: number) => {
+    setEnrollConfirmDialog({ open: true, reinductionId: id });
+  };
+
+  const handleConfirmEnroll = async () => {
+    if (enrollConfirmDialog.reinductionId) {
       try {
-        await api.post(`/reinduction/records/${id}/enroll`);
+        await api.post(`/reinduction/records/${enrollConfirmDialog.reinductionId}/enroll`);
         fetchReinductions();
       } catch (error) {
         console.error('Error enrolling worker:', error);
       }
     }
+    setEnrollConfirmDialog({ open: false, reinductionId: null });
   };
 
-  const handleSendNotification = async (workerId: number) => {
-    if (window.confirm('¿Está seguro de que desea enviar la notificación de aniversario?')) {
+  const handleCancelEnroll = () => {
+    setEnrollConfirmDialog({ open: false, reinductionId: null });
+  };
+
+  const handleSendNotification = (workerId: number) => {
+    setNotificationConfirmDialog({ open: true, workerId });
+  };
+
+  const handleConfirmSendNotification = async () => {
+    if (notificationConfirmDialog.workerId) {
       try {
-        await api.post(`/reinduction/send-anniversary-notification/${workerId}`);
+        await api.post(`/reinduction/send-anniversary-notification/${notificationConfirmDialog.workerId}`);
         fetchReinductions();
       } catch (error) {
         console.error('Error sending notification:', error);
       }
     }
+    setNotificationConfirmDialog({ open: false, workerId: null });
+  };
+
+  const handleCancelSendNotification = () => {
+    setNotificationConfirmDialog({ open: false, workerId: null });
   };
 
   const handleFilterChange = (field: string, value: any) => {
@@ -724,6 +744,56 @@ const Reinduction: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenViewDialog(false)}>Cerrar</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Diálogo de Confirmación para Inscribir Trabajador */}
+        <Dialog
+          open={enrollConfirmDialog.open}
+          onClose={handleCancelEnroll}
+          aria-labelledby="enroll-confirm-dialog-title"
+          aria-describedby="enroll-confirm-dialog-description"
+        >
+          <DialogTitle id="enroll-confirm-dialog-title">
+            Confirmar Inscripción
+          </DialogTitle>
+          <DialogContent>
+            <Typography id="enroll-confirm-dialog-description">
+              ¿Está seguro de que desea inscribir al trabajador en el curso de reinducción? Esta acción no se puede deshacer.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCancelEnroll} color="primary">
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmEnroll} color="primary" variant="contained">
+              Inscribir
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Diálogo de Confirmación para Enviar Notificación */}
+        <Dialog
+          open={notificationConfirmDialog.open}
+          onClose={handleCancelSendNotification}
+          aria-labelledby="notification-confirm-dialog-title"
+          aria-describedby="notification-confirm-dialog-description"
+        >
+          <DialogTitle id="notification-confirm-dialog-title">
+            Confirmar Envío de Notificación
+          </DialogTitle>
+          <DialogContent>
+            <Typography id="notification-confirm-dialog-description">
+              ¿Está seguro de que desea enviar la notificación de aniversario? Esta acción enviará un correo electrónico al trabajador.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCancelSendNotification} color="primary">
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmSendNotification} color="primary" variant="contained">
+              Enviar Notificación
+            </Button>
           </DialogActions>
         </Dialog>
       </Box>

@@ -199,6 +199,21 @@ const CoursesManagement: React.FC = () => {
     title: string;
   }>({ type: "pdf", content: "", title: "" });
 
+  // Estados para diálogos de error
+  const [errorDialog, setErrorDialog] = useState({
+    open: false,
+    title: "",
+    message: "",
+  });
+
+  // Estados para diálogos de confirmación
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
+
   // Estados para diálogos de edición
   const [openModuleEditDialog, setOpenModuleEditDialog] = useState(false);
   const [openMaterialEditDialog, setOpenMaterialEditDialog] = useState(false);
@@ -269,7 +284,10 @@ const CoursesManagement: React.FC = () => {
       setCourses(mappedCourses);
       setTotalCourses(response.data.total || 0);
     } catch (error) {
-      console.error("Error fetching courses:", error);
+      showErrorDialog(
+        "Error al cargar cursos",
+        "No se pudieron cargar los cursos. Por favor, verifique su conexión e intente nuevamente."
+      );
       showSnackbar("Error al cargar cursos", "error");
     } finally {
       setLoading(false);
@@ -289,7 +307,10 @@ const CoursesManagement: React.FC = () => {
       setEnrolledCourses(response.data.items || []);
       setTotalCourses(response.data.total || 0);
     } catch (error) {
-      console.error("Error fetching enrolled courses:", error);
+      showErrorDialog(
+        "Error al cargar mis cursos",
+        "No se pudieron cargar sus cursos inscritos. Por favor, verifique su conexión e intente nuevamente."
+      );
       showSnackbar("Error al cargar mis cursos", "error");
     } finally {
       setLoading(false);
@@ -358,30 +379,61 @@ const CoursesManagement: React.FC = () => {
   };
 
   const handleSaveCourse = async () => {
-    try {
-      // Validaciones para cursos que requieren encuesta, evaluación y certificación
-      const requiresFullProcess = [
-        CourseType.INDUCTION,
-        CourseType.REINDUCTION,
-      ].includes(formData.course_type) || formData.is_mandatory;
+    // Validaciones para cursos que requieren encuesta, evaluación y certificación
+    const requiresFullProcess = [
+      CourseType.INDUCTION,
+      CourseType.REINDUCTION,
+    ].includes(formData.course_type) || formData.is_mandatory;
 
-      if (requiresFullProcess && formData.status === CourseStatus.PUBLISHED) {
-        // Verificar que el curso tenga los componentes necesarios
-        const warningMessage = "Los cursos de Inducción, Reinducción y obligatorios requieren encuesta, evaluación y certificación antes de ser publicados. Asegúrese de configurar estos componentes.";
-        
-        // Mostrar advertencia pero permitir continuar
-        showSnackbar(warningMessage, "error");
-        
-        // Opcional: Preguntar al usuario si desea continuar
-        const shouldContinue = window.confirm(
-          warningMessage + "\n\n¿Desea continuar con la publicación?"
-        );
-        
-        if (!shouldContinue) {
+    if (requiresFullProcess && formData.status === CourseStatus.PUBLISHED) {
+      // Si es un curso existente, validar que tenga encuestas y evaluaciones
+      if (editingCourse?.id) {
+        try {
+          const response = await api.get(`/courses/${editingCourse.id}/validation`);
+          const validation = response.data;
+          
+          if (!validation.can_publish) {
+             const missingItems = validation.missing_requirements.filter((item: string | null) => item !== null);
+             const missingText = missingItems.map((item: string) => {
+               return item === 'surveys' ? 'encuestas' : 'evaluaciones';
+             }).join(' y ');
+            
+            const errorMessage = `Este curso requiere ${missingText} asociadas y publicadas antes de poder ser publicado. Por favor, cree y publique las ${missingText} necesarias primero.`;
+            
+            showSnackbar(errorMessage, "error");
+            return;
+          }
+          // Si la validación es exitosa, continuar con el guardado
+          await handleSaveCourseAfterConfirm();
+          return;
+        } catch (error) {
+          console.error('Error validating course requirements:', error);
+          showSnackbar("Error al validar los requisitos del curso", "error");
           return;
         }
+      } else {
+        // Para cursos nuevos, mostrar advertencia informativa
+        const warningMessage = "Los cursos de Inducción, Reinducción y obligatorios requieren encuesta y evaluación antes de ser publicados. La certificación se generará automáticamente cuando los trabajadores completen el curso. Recuerde crear y publicar las encuestas y evaluaciones después de guardar el curso.";
+        
+        showSnackbar(warningMessage, "error");
+        
+        showConfirmDialog(
+          "Confirmar publicación",
+          warningMessage + "\n\n¿Desea continuar con la publicación?",
+          () => {
+            handleSaveCourseAfterConfirm();
+          }
+        );
+        return;
       }
+    }
 
+    // Si no requiere confirmación, guardar directamente
+    await handleSaveCourseAfterConfirm();
+  };
+
+  const handleSaveCourseAfterConfirm = async () => {
+    try {
       // Mapear datos del formulario al formato del backend
       const backendData = {
         title: formData.title || formData.titulo,
@@ -411,7 +463,10 @@ const CoursesManagement: React.FC = () => {
       setOpenDialog(false);
       fetchCourses();
     } catch (error) {
-      console.error("Error saving course:", error);
+      showErrorDialog(
+        "Error al guardar curso",
+        "No se pudo guardar el curso. Por favor, verifique los datos ingresados e intente nuevamente."
+      );
       showSnackbar("Error al guardar curso", "error");
     }
   };
@@ -429,17 +484,27 @@ const CoursesManagement: React.FC = () => {
       showSnackbar("Curso eliminado exitosamente", "success");
       fetchCourses();
     } catch (error: any) {
-      console.error("Error deleting course:", error);
-
       // Manejar error específico cuando hay trabajadores asignados
       if (error.response?.status === 400 && error.response?.data?.message) {
         const errorMessage = error.response.data.message;
         if (errorMessage.includes("empleado(s) asignado(s)")) {
+          showErrorDialog(
+            "No se puede eliminar el curso",
+            errorMessage
+          );
           showSnackbar(errorMessage, "error");
         } else {
+          showErrorDialog(
+            "Error al eliminar curso",
+            errorMessage
+          );
           showSnackbar("Error al eliminar curso: " + errorMessage, "error");
         }
       } else {
+        showErrorDialog(
+          "Error al eliminar curso",
+          "No se pudo eliminar el curso. Por favor, intente nuevamente."
+        );
         showSnackbar("Error al eliminar curso", "error");
       }
     } finally {
@@ -475,18 +540,29 @@ const CoursesManagement: React.FC = () => {
 
       showSnackbar("Reporte de asistencia generado exitosamente", "success");
     } catch (error: any) {
-      console.error("Error generating attendance report:", error);
       if (error.response?.status === 400) {
+        showErrorDialog(
+          "Reporte no disponible",
+          "Los reportes de asistencia solo están disponibles para cursos OPCIONALES y de TRAINING"
+        );
         showSnackbar(
           "Los reportes de asistencia solo están disponibles para cursos OPCIONALES y de TRAINING",
           "error"
         );
       } else if (error.response?.status === 404) {
+        showErrorDialog(
+          "Sin datos para el reporte",
+          "No se encontraron trabajadores inscritos en este curso"
+        );
         showSnackbar(
           "No se encontraron trabajadores inscritos en este curso",
           "error"
         );
       } else {
+        showErrorDialog(
+          "Error al generar reporte",
+          "No se pudo generar el reporte de asistencia. Por favor, intente nuevamente."
+        );
         showSnackbar("Error al generar el reporte de asistencia", "error");
       }
     }
@@ -501,6 +577,16 @@ const CoursesManagement: React.FC = () => {
     setSnackbar({ open: true, message, severity });
   };
 
+  // Función para mostrar diálogos de error
+  const showErrorDialog = (title: string, message: string) => {
+    setErrorDialog({ open: true, title, message });
+  };
+
+  // Función para mostrar diálogos de confirmación
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ open: true, title, message, onConfirm });
+  };
+
   // Funciones para gestión de módulos
   const handleOpenModules = async (course: Course) => {
     setSelectedCourse(course);
@@ -508,7 +594,10 @@ const CoursesManagement: React.FC = () => {
       const response = await api.get(`/courses/${course.id}/modules`);
       setCourseModules(response.data);
     } catch (error) {
-      console.error("Error al cargar módulos:", error);
+      showErrorDialog(
+        "Error al cargar módulos",
+        "No se pudieron cargar los módulos del curso. Por favor, intente nuevamente."
+      );
       setCourseModules([]);
     }
     setOpenModuleDialog(true);
@@ -570,7 +659,10 @@ const CoursesManagement: React.FC = () => {
         is_required: true,
       });
     } catch (error) {
-      console.error("Error saving module:", error);
+      showErrorDialog(
+        "Error al guardar módulo",
+        "No se pudo guardar el módulo. Por favor, verifique los datos ingresados e intente nuevamente."
+      );
       showSnackbar("Error al guardar módulo", "error");
     }
   };
@@ -591,7 +683,10 @@ const CoursesManagement: React.FC = () => {
       const response = await api.get(`/courses/${selectedCourse.id}/modules`);
       setCourseModules(response.data);
     } catch (error) {
-      console.error("Error deleting module:", error);
+      showErrorDialog(
+        "Error al eliminar módulo",
+        "No se pudo eliminar el módulo. Por favor, intente nuevamente."
+      );
       showSnackbar("Error al eliminar módulo", "error");
     } finally {
       setOpenDeleteModuleDialog(false);
@@ -611,7 +706,10 @@ const CoursesManagement: React.FC = () => {
       const response = await api.get(`/courses/modules/${module.id}/materials`);
       setModuleMaterials(response.data);
     } catch (error) {
-      console.error("Error al cargar materiales:", error);
+      showErrorDialog(
+        "Error al cargar materiales",
+        "No se pudieron cargar los materiales del módulo. Por favor, intente nuevamente."
+      );
       setModuleMaterials([]);
     }
     setOpenMaterialDialog(true);
@@ -730,7 +828,10 @@ const CoursesManagement: React.FC = () => {
         is_required: true,
       });
     } catch (error) {
-      console.error("Error saving material:", error);
+      showErrorDialog(
+        "Error al guardar material",
+        "No se pudo guardar el material. Por favor, verifique los datos ingresados e intente nuevamente."
+      );
       showSnackbar("Error al guardar material", "error");
     }
   };
@@ -753,7 +854,10 @@ const CoursesManagement: React.FC = () => {
       );
       setModuleMaterials(response.data);
     } catch (error) {
-      console.error("Error deleting material:", error);
+      showErrorDialog(
+        "Error al eliminar material",
+        "No se pudo eliminar el material. Por favor, intente nuevamente."
+      );
       showSnackbar("Error al eliminar material", "error");
     } finally {
       setOpenDeleteMaterialDialog(false);

@@ -332,11 +332,8 @@ const Survey: React.FC = () => {
 
   const fetchCourses = async () => {
     try {
-      const response = await api.get('/courses', {
-        params: {
-          status: 'published'
-        }
-      });
+      // Obtener todos los cursos (no solo los publicados) para permitir asociación durante la creación
+      const response = await api.get('/courses');
       setCourses(response.data.items || []);
     } catch (error) {
       console.error('Error fetching courses:', error);

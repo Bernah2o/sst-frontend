@@ -103,6 +103,12 @@ const CertificatePage: React.FC = () => {
     start_date: null as Date | null,
     end_date: null as Date | null,
   });
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
   const [formData, setFormData] = useState({
     user_id: "",
     course_id: "",
@@ -215,14 +221,21 @@ const CertificatePage: React.FC = () => {
   };
 
   const handleRevokeCertificate = async (certificateId: number) => {
-    if (window.confirm("¿Está seguro de que desea revocar este certificado?")) {
-      try {
-        await api.put(`/certificates/${certificateId}/revoke`);
-        fetchCertificates();
-      } catch (error) {
-        console.error("Error revoking certificate:", error);
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar revocación',
+      message: '¿Está seguro de que desea revocar este certificado?',
+      onConfirm: async () => {
+        try {
+          await api.put(`/certificates/${certificateId}/revoke`);
+          fetchCertificates();
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error) {
+          console.error("Error revoking certificate:", error);
+          setConfirmDialog({ ...confirmDialog, open: false });
+        }
       }
-    }
+    });
   };
 
   const handleFilterChange = (field: string, value: any) => {
@@ -604,6 +617,34 @@ const CertificatePage: React.FC = () => {
               disabled={!formData.user_id || !formData.course_id}
             >
               Generar Certificado
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Diálogo de confirmación */}
+        <Dialog
+          open={confirmDialog.open}
+          onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>{confirmDialog.title}</DialogTitle>
+          <DialogContent>
+            <Typography>{confirmDialog.message}</Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+              color="inherit"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={confirmDialog.onConfirm}
+              variant="contained"
+              color="primary"
+            >
+              Confirmar
             </Button>
           </DialogActions>
         </Dialog>

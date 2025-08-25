@@ -140,6 +140,7 @@ const Seguimiento: React.FC = () => {
   const [viewingSeguimiento, setViewingSeguimiento] = useState<Seguimiento | null>(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   // const [openActionDialog, setOpenActionDialog] = useState(false); // Comentado - funcionalidad de acciones no incluida
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, seguimientoId: null as number | null });
   const [filters, setFilters] = useState({
     programa: '',
     estado: '',
@@ -296,15 +297,24 @@ const Seguimiento: React.FC = () => {
   //   }
   // }; // Comentado - funcionalidad de acciones no incluida
 
-  const handleDeleteSeguimiento = async (id: number) => {
-    if (window.confirm('¿Está seguro de que desea eliminar este seguimiento?')) {
+  const handleDeleteSeguimiento = (id: number) => {
+    setConfirmDialog({ open: true, seguimientoId: id });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (confirmDialog.seguimientoId) {
       try {
-        await api.delete(`/seguimientos/${id}`);
+        await api.delete(`/seguimientos/${confirmDialog.seguimientoId}`);
         fetchSeguimientos();
       } catch (error) {
         console.error('Error deleting seguimiento:', error);
       }
     }
+    setConfirmDialog({ open: false, seguimientoId: null });
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmDialog({ open: false, seguimientoId: null });
   };
 
   const handleUpdateStatus = async (id: number, newEstado: string) => {
@@ -1084,6 +1094,31 @@ const Seguimiento: React.FC = () => {
           </DialogActions>
         </Dialog>
         */}
+
+        {/* Diálogo de Confirmación para Eliminar */}
+        <Dialog
+          open={confirmDialog.open}
+          onClose={handleCancelDelete}
+          aria-labelledby="confirm-dialog-title"
+          aria-describedby="confirm-dialog-description"
+        >
+          <DialogTitle id="confirm-dialog-title">
+            Confirmar Eliminación
+          </DialogTitle>
+          <DialogContent>
+            <Typography id="confirm-dialog-description">
+              ¿Está seguro de que desea eliminar este seguimiento? Esta acción no se puede deshacer.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCancelDelete} color="primary">
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmDelete} color="error" variant="contained">
+              Eliminar
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </LocalizationProvider>
   );
