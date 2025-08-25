@@ -162,7 +162,7 @@ const RoleManagement: React.FC = () => {
 
   const fetchPermissions = async () => {
     try {
-      const response = await api.get("/permissions/?is_active=true&limit=150");
+      const response = await api.get("/permissions/?is_active=true&limit=500");
       setPermissions(response.data);
     } catch (error) {
       console.error("Error fetching permissions:", error);
@@ -383,7 +383,7 @@ const RoleManagement: React.FC = () => {
           variant="contained"
           startIcon={<Add />}
           onClick={() => handleOpenDialog()}
-          disabled={user?.rol !== "admin"}
+          disabled={user?.role !== "admin"}
         >
           Crear Rol
         </Button>
@@ -451,7 +451,7 @@ const RoleManagement: React.FC = () => {
           color="info"
           startIcon={<Notifications />} 
           onClick={handleNotifyUsers}
-          disabled={notifyingUsers || user?.rol !== "admin"}
+          disabled={notifyingUsers || user?.role !== "admin"}
         >
           {notifyingUsers ? 'Notificando...' : 'Notificar Usuarios'}
         </Button>
@@ -513,7 +513,7 @@ const RoleManagement: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleOpenDialog(role)}
-                      disabled={user?.rol !== "admin"}
+                      disabled={user?.role !== "admin"}
                     >
                       <Edit />
                     </IconButton>
@@ -523,7 +523,7 @@ const RoleManagement: React.FC = () => {
                         setRoleToDelete(role);
                         setDeleteDialogOpen(true);
                       }}
-                      disabled={user?.rol !== "admin" || role.is_system_role}
+                      disabled={user?.role !== "admin" || role.is_system_role}
                     >
                       <Delete />
                     </IconButton>
