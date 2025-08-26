@@ -69,26 +69,23 @@ interface MenuItem {
 const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
   const { user } = useAuth();
   const { 
-    canManageUsers, 
+    canUpdateUsers, 
     canAccessPage,
-    canViewCourses,
-    canManageCourses,
-    canViewEvaluations,
-    canManageEvaluations,
-    canViewSurveys,
-    canManageSurveys,
-    canViewAttendance,
-    canManageAttendance,
-    canViewWorkers,
-    canManageWorkers,
-    canViewCertificates,
-    canManageCertificates,
-    canViewReports,
-    canViewNotifications,
-    canViewOccupationalExam,
-    canViewSeguimiento,
-    canViewAdminConfig,
-    canViewReinduction
+    canViewCoursesPage,
+    canViewEvaluationsPage,
+    canViewSurveysPage,
+    canViewAttendancePage,
+    canUpdateAttendance,
+    canViewWorkersPage,
+    canUpdateWorkers,
+    canViewCertificatesPage,
+    canUpdateCertificates,
+    canViewReportsPage,
+    canViewNotificationsPage,
+    canViewOccupationalExamPage,
+    canViewSeguimientoPage,
+    canViewAdminConfigPage,
+    canViewReinductionPage
   } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
@@ -412,56 +409,56 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           'supervisor-dashboard': () => user.role === 'supervisor',
           'employee-dashboard': () => user.role === 'employee',
           
-          // Employee sections - solo para empleados
-          'employee-courses': () => user.role === 'employee',
-          'employee-surveys': () => user.role === 'employee',
-          'employee-evaluations': () => user.role === 'employee',
-          'employee-attendance': () => user.role === 'employee',
-          'employee-certificates': () => user.role === 'employee',
+          // Employee sections - para empleados o usuarios con permisos específicos
+          'employee-courses': () => user.role === 'employee' || canViewCoursesPage(),
+          'employee-surveys': () => user.role === 'employee' || canViewSurveysPage(),
+          'employee-evaluations': () => user.role === 'employee' || canViewEvaluationsPage(),
+          'employee-attendance': () => user.role === 'employee' || canViewAttendancePage(),
+          'employee-certificates': () => user.role === 'employee' || canViewCertificatesPage(),
           
           // Worker management
-          'worker-management': () => canViewWorkers() || canManageWorkers(),
-          'workers': canViewWorkers,
-          'workers-list': canViewWorkers,
-          'worker-detail': canViewWorkers,
+          'worker-management': () => canViewWorkersPage() || canUpdateWorkers(),
+          'workers': canViewWorkersPage,
+          'workers-list': canViewWorkersPage,
+          'worker-detail': canViewWorkersPage,
           
           // Course management
-          'courses': canViewCourses,
-          'courses-list': canViewCourses,
-          'enrollments': canViewCourses,
-          'reinduction': () => canViewReinduction(),
+          'courses': canViewCoursesPage,
+          'courses-list': canViewCoursesPage,
+          'enrollments': canViewCoursesPage,
+          'reinduction': () => canViewReinductionPage(),
           
           // Evaluation management
-          'evaluations': canViewEvaluations,
-          'evaluations-list': canViewEvaluations,
-          'evaluation-results': canViewEvaluations,
-          'surveys': canViewSurveys,
+          'evaluations': canViewEvaluationsPage,
+          'evaluations-list': canViewEvaluationsPage,
+          'evaluation-results': canViewEvaluationsPage,
+          'surveys': canViewSurveysPage,
           
           // Attendance
-          'attendance': canViewAttendance,
-          'attendance-list': canViewAttendance,
-          'admin-attendance': canManageAttendance,
+          'attendance': canViewAttendancePage,
+          'attendance-list': canViewAttendancePage,
+          'admin-attendance': canUpdateAttendance,
           
           // Health/Medical
-          'health': () => canViewOccupationalExam() || canViewSeguimiento(),
-          'occupational-exams': () => canViewOccupationalExam(),
-          'seguimientos': () => canViewSeguimiento(),
+          'health': () => canViewOccupationalExamPage() || canViewSeguimientoPage(),
+          'occupational-exams': () => canViewOccupationalExamPage(),
+          'seguimientos': () => canViewSeguimientoPage(),
           
           // Certificates
-          'certificates': canViewCertificates,
+          'certificates': canViewCertificatesPage,
           
           // Reports
-          'reports': canViewReports,
+          'reports': canViewReportsPage,
           
           // Notifications
-          'notifications': canViewNotifications,
+          'notifications': canViewNotificationsPage,
           
           // Administration (always check individual permissions)
           'administration': () => true, // Will be filtered by children
           'audit': () => user.role === 'admin', // Solo admins pueden ver auditoría
-          'config': () => canViewAdminConfig(),
+          'config': () => canViewAdminConfigPage(),
           'roles': () => user.role === 'admin', // Solo admins pueden gestionar roles
-          'users': canManageUsers
+          'users': canUpdateUsers
         };
 
         const permissionCheck = permissionMap[item.id];

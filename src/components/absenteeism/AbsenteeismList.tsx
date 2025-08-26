@@ -54,7 +54,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 
 const AbsenteeismList: React.FC = () => {
   const navigate = useNavigate();
-  const { canManageWorkers, canViewWorkers } = usePermissions();
+  const { canUpdateWorkers, canViewWorkersPage } = usePermissions();
   
   const [absenteeisms, setAbsenteeisms] = useState<AbsenteeismListResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,10 +96,10 @@ const AbsenteeismList: React.FC = () => {
   };
 
   useEffect(() => {
-    if (canViewWorkers()) {
+    if (canViewWorkersPage()) {
       loadAbsenteeisms();
     }
-  }, [page, rowsPerPage, filters, canViewWorkers]);
+  }, [page, rowsPerPage, filters, canViewWorkersPage]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -171,7 +171,7 @@ const AbsenteeismList: React.FC = () => {
     }
   };
 
-  if (!canViewWorkers()) {
+  if (!canViewWorkersPage()) {
     return (
       <Alert severity="error">
         No tienes permisos para ver los registros de absenteeism.
@@ -200,7 +200,7 @@ const AbsenteeismList: React.FC = () => {
           >
             Exportar
           </Button>
-          {canManageWorkers() && (
+          {canUpdateWorkers() && (
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -348,7 +348,7 @@ const AbsenteeismList: React.FC = () => {
                           >
                             <ViewIcon />
                           </IconButton>
-                          {canManageWorkers() && (
+                          {canUpdateWorkers() && (
                             <>
                               <IconButton
                                 size="small"

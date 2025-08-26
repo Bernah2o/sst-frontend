@@ -51,7 +51,7 @@ import {
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { formatDateTime } from "../utils/dateUtils";
-import { UserRole } from "../types";
+// Remove unused import
 import UppercaseTextField from "../components/UppercaseTextField";
 
 // Interfaces
@@ -94,6 +94,7 @@ const RoleManagement: React.FC = () => {
   const [roles, setRoles] = useState<CustomRole[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
+  const [rolesPermissionsMap, setRolesPermissionsMap] = useState<Record<number, Permission[]>>({});
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -116,23 +117,31 @@ const RoleManagement: React.FC = () => {
   const [roleToDelete, setRoleToDelete] = useState<CustomRole | null>(null);
   const [notifyingUsers, setNotifyingUsers] = useState(false);
 
-  // Mapeo de nombres amigables para recursos
+  // Mapeo de nombres amigables para recursos/páginas
   const resourceNames: Record<string, string> = {
-    user: "Usuarios",
-    course: "Cursos",
-    enrollment: "Inscripciones",
-    evaluation: "Evaluaciones",
-    survey: "Encuestas",
-    certificate: "Certificados",
-    attendance: "Asistencia",
-    report: "Reportes",
-    notification: "Notificaciones",
-    worker: "Trabajadores",
-    reinduction: "Reinducciones",
-    admin_config: "Configuración Administrativa",
-    seguimiento: "Seguimiento de Salud Ocupacional",
-    occupational_exam: "Exámenes Ocupacionales",
-    progress: "Progreso de Usuarios"
+    user: "👤 Usuarios",
+    course: "📚 Cursos",
+    modules: "📖 Módulos de Cursos",
+    materials: "📄 Materiales de Cursos",
+    evaluation: "📝 Evaluaciones",
+    survey: "📊 Encuestas",
+    certificate: "🏆 Certificados",
+    attendance: "📅 Asistencia",
+    report: "📈 Reportes",
+    notification: "🔔 Notificaciones",
+    worker: "👷 Trabajadores",
+    reinduction: "🔄 Reinducciones",
+    admin_config: "⚙️ Configuración Administrativa",
+    seguimiento: "🏥 Seguimiento de Salud",
+    role: "🔐 Gestión de Roles",
+    file: "📁 Gestión de Archivos",
+    dashboard: "📊 Panel de Control",
+    profile: "👤 Perfil de Usuario",
+    audit: "🔍 Auditoría",
+    absenteeism: "📉 Ausentismo",
+    enrollment: "📝 Inscripciones",
+    occupational_exam: "🩺 Exámenes Ocupacionales",
+    progress: "📈 Progreso de Usuarios"
   };
 
   // Agrupar permisos por recurso
@@ -150,6 +159,12 @@ const RoleManagement: React.FC = () => {
     fetchRoles();
     fetchPermissions();
   }, []);
+
+  useEffect(() => {
+    if (roles.length > 0) {
+      fetchAllRolePermissions();
+    }
+  }, [roles]);
 
   const fetchRoles = async () => {
     try {
@@ -171,6 +186,81 @@ const RoleManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAllRolePermissions = async () => {
+    try {
+      const permissionsMap: Record<number, Permission[]> = {};
+      
+      for (const role of roles) {
+        try {
+          const response = await api.get(`/permissions/roles/${role.id}/permissions/`);
+          permissionsMap[role.id] = response.data;
+        } catch (error) {
+          console.warn(`Error fetching permissions for role ${role.id}:`, error);
+          permissionsMap[role.id] = [];
+        }
+      }
+      
+      setRolesPermissionsMap(permissionsMap);
+    } catch (error) {
+      console.error("Error fetching role permissions:", error);
+    }
+  };
+
+  const getActionIcon = (action: string) => {
+    const iconMap: Record<string, React.ReactElement> = {
+      view: <Search sx={{ fontSize: 16, color: 'primary.main' }} />,
+      create: <Add sx={{ fontSize: 16, color: 'success.main' }} />,
+      read: <Search sx={{ fontSize: 16, color: 'info.main' }} />,
+      update: <Edit sx={{ fontSize: 16, color: 'warning.main' }} />,
+      delete: <Delete sx={{ fontSize: 16, color: 'error.main' }} />,
+      enroll: <Assignment sx={{ fontSize: 16, color: 'secondary.main' }} />,
+      submit: <Assignment sx={{ fontSize: 16, color: 'secondary.main' }} />,
+      download: <Assignment sx={{ fontSize: 16, color: 'info.main' }} />,
+      assign_permissions: <Security sx={{ fontSize: 16, color: 'primary.main' }} />,
+      export: <Assignment sx={{ fontSize: 16, color: 'info.main' }} />
+    };
+    return iconMap[action] || <Assignment sx={{ fontSize: 16, color: 'grey.500' }} />;
+  };
+
+  const renderPermissionIcons = (roleId: number) => {
+    const rolePerms = rolesPermissionsMap[roleId] || [];
+    const actionsSet = new Set(rolePerms.map(p => p.action));
+    const uniqueActions = Array.from(actionsSet);
+    
+    if (uniqueActions.length === 0) {
+      return <Typography variant="caption" color="text.secondary">Sin permisos</Typography>;
+    }
+    
+    return (
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxWidth: 120 }}>
+        {uniqueActions.slice(0, 6).map((action, index) => (
+          <Box
+            key={action}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 20,
+              height: 20,
+              borderRadius: '50%',
+              bgcolor: 'grey.100',
+              border: '1px solid',
+              borderColor: 'grey.300'
+            }}
+            title={`Permiso: ${action}`}
+          >
+            {getActionIcon(action)}
+          </Box>
+        ))}
+        {uniqueActions.length > 6 && (
+          <Typography variant="caption" color="text.secondary">
+            +{uniqueActions.length - 6}
+          </Typography>
+        )}
+      </Box>
+    );
   };
 
 
@@ -270,8 +360,7 @@ const RoleManagement: React.FC = () => {
 
         // Luego asignar los nuevos permisos seleccionados
         if (formData.permission_ids.length > 0) {
-          await api.post("/permissions/bulk-assign-permissions", {
-            role_id: editingRole.id,
+          await api.post(`/permissions/roles/${editingRole.id}/bulk-assign-permissions`, {
             permission_ids: formData.permission_ids,
           });
         }
@@ -287,8 +376,7 @@ const RoleManagement: React.FC = () => {
 
         // Asignar permisos al nuevo rol usando el endpoint correcto
         if (formData.permission_ids.length > 0) {
-          await api.post("/permissions/bulk-assign-permissions", {
-            role_id: response.data.id,
+          await api.post(`/permissions/roles/${response.data.id}/bulk-assign-permissions`, {
             permission_ids: formData.permission_ids,
           });
         }
@@ -390,7 +478,7 @@ const RoleManagement: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Ejemplo de rol de empleado */}
+      {/* Ejemplo de permisos granulares */}
       <Card
         sx={{
           mb: 3,
@@ -401,33 +489,41 @@ const RoleManagement: React.FC = () => {
       >
         <CardContent>
           <Typography variant="h6" gutterBottom color="primary">
-            💡 Ejemplo: Rol de Empleado Personalizado
+            💡 Sistema de Permisos Granulares por Página/Módulo
           </Typography>
           <Typography variant="body2" paragraph>
-            Un rol de "Empleado Avanzado" podría tener permisos para:
+            Ahora puedes asignar permisos específicos por página y acción. Ejemplos:
           </Typography>
           <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-            <Box sx={{ flex: 1, minWidth: "250px" }}>
+            <Box sx={{ flex: 1, minWidth: "300px" }}>
               <Typography variant="subtitle2" gutterBottom>
-                📚 Cursos:
+                📝 Evaluaciones - Permisos Granulares:
               </Typography>
               <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
-                <li>Ver cursos asignados</li>
-                <li>Completar evaluaciones</li>
-                <li>Descargar certificados</li>
+                <li><strong>VIEW:</strong> Acceder a la página de evaluaciones</li>
+                <li><strong>READ:</strong> Ver evaluaciones existentes</li>
+                <li><strong>submit:</strong> Responder/completar evaluaciones</li>
+                <li><strong>create:</strong> Crear nuevas evaluaciones</li>
+                <li><strong>update:</strong> Modificar evaluaciones</li>
+                <li><strong>delete:</strong> Eliminar evaluaciones</li>
               </Typography>
             </Box>
-            <Box sx={{ flex: 1, minWidth: "250px" }}>
+            <Box sx={{ flex: 1, minWidth: "300px" }}>
               <Typography variant="subtitle2" gutterBottom>
-                👤 Perfil:
+                📚 Cursos - Control de Acceso:
               </Typography>
               <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
-                <li>Actualizar información personal</li>
-                <li>Ver progreso de capacitaciones</li>
-                <li>Acceder a reportes personales</li>
+                <li><strong>VIEW:</strong> Acceder a la página de cursos</li>
+                <li><strong>read:</strong> Ver cursos disponibles</li>
+                <li><strong>create:</strong> Crear nuevos cursos</li>
+                <li><strong>update:</strong> Editar contenido de cursos</li>
+                <li><strong>delete:</strong> Eliminar cursos</li>
               </Typography>
             </Box>
           </Box>
+          <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic' }}>
+            ⚡ <strong>Nuevo:</strong> Cada página/módulo tiene permisos independientes para máximo control.
+          </Typography>
         </CardContent>
       </Card>
 
@@ -470,6 +566,7 @@ const RoleManagement: React.FC = () => {
                 <TableCell>Tipo</TableCell>
                 <TableCell>Estado</TableCell>
                 <TableCell>Fecha de Creación</TableCell>
+                <TableCell align="center">Permisos</TableCell>
                 <TableCell align="center">Acciones</TableCell>
               </TableRow>
             </TableHead>
@@ -509,6 +606,9 @@ const RoleManagement: React.FC = () => {
                     <Typography variant="body2">
                       {formatDateTime(role.created_at)}
                     </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    {renderPermissionIcons(role.id)}
                   </TableCell>
                   <TableCell align="center">
                     <IconButton

@@ -66,6 +66,7 @@ import {
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import api from "./../services/api";
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 
 interface Evaluation {
   id: number;
@@ -159,6 +160,7 @@ interface Course {
 
 const EvaluationsManagement: React.FC = () => {
   const { user } = useAuth();
+  const { canCreateEvaluations, canUpdateEvaluations, canDeleteEvaluations } = usePermissions();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1217,32 +1219,38 @@ const EvaluationsManagement: React.FC = () => {
 
                     {user?.rol !== 'employee' && (
                       <>
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleEditEvaluation(evaluation)}
-                          size="small"
-                          title="Editar"
-                        >
-                          <Edit />
-                        </IconButton>
-                        <IconButton
-                          color={evaluation.status === "published" ? "warning" : "success"}
-                          onClick={() =>
-                            handleToggleStatus(evaluation.id, evaluation.status)
-                          }
-                          size="small"
-                          title={evaluation.status === "published" ? "Archivar" : "Publicar"}
-                        >
-                          {evaluation.status === "published" ? <Cancel /> : <CheckCircle />}
-                        </IconButton>
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDeleteEvaluation(evaluation)}
-                          size="small"
-                          title="Eliminar"
-                        >
-                          <Delete />
-                        </IconButton>
+                        {canUpdateEvaluations() && (
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleEditEvaluation(evaluation)}
+                            size="small"
+                            title="Editar"
+                          >
+                            <Edit />
+                          </IconButton>
+                        )}
+                        {canCreateEvaluations() && (
+                          <IconButton
+                            color={evaluation.status === "published" ? "warning" : "success"}
+                            onClick={() =>
+                              handleToggleStatus(evaluation.id, evaluation.status)
+                            }
+                            size="small"
+                            title={evaluation.status === "published" ? "Archivar" : "Publicar"}
+                          >
+                            {evaluation.status === "published" ? <Cancel /> : <CheckCircle />}
+                          </IconButton>
+                        )}
+                        {canDeleteEvaluations() && (
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteEvaluation(evaluation)}
+                            size="small"
+                            title="Eliminar"
+                          >
+                            <Delete />
+                          </IconButton>
+                        )}
                       </>
                     )}
                   </TableCell>

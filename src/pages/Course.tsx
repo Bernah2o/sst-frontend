@@ -50,6 +50,7 @@ import {
   Quiz,
   VideoLibrary,
   PictureAsPdf,
+  LibraryBooks,
   PlayArrow,
   CheckCircle,
   Warning,
@@ -78,6 +79,7 @@ import {
 } from "./../types";
 import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../utils/dateUtils";
+import { usePermissions } from "../hooks/usePermissions";
 import api from "./../services/api";
 
 // Los enums ahora se importan desde types/index.ts
@@ -116,6 +118,19 @@ interface CourseFormData extends CourseBase {
 
 const CoursesManagement: React.FC = () => {
   const { user } = useAuth();
+  const { 
+    canCreateCourses, 
+    canUpdateCourses, 
+    canDeleteCourses,
+    canCreateModules,
+    canReadModules,
+    canUpdateModules,
+    canDeleteModules,
+    canCreateMaterials,
+    canReadMaterials,
+    canUpdateMaterials,
+    canDeleteMaterials
+  } = usePermissions();
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrolledCourses, setEnrolledCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -699,7 +714,39 @@ const CoursesManagement: React.FC = () => {
     setModuleToDelete(null);
   };
 
-  // Funciones para gestión de materiales
+  // Funciones para gestión de materiales de curso
+  const handleOpenCourseMaterials = async (course: Course) => {
+    setSelectedCourse(course);
+    try {
+      // Obtener todos los módulos del curso y sus materiales
+      const modulesResponse = await api.get(`/courses/${course.id}/modules`);
+      const modules = modulesResponse.data;
+      
+      // Obtener materiales de todos los módulos
+      const allMaterials: CourseMaterial[] = [];
+      for (const module of modules) {
+        try {
+          const materialsResponse = await api.get(`/courses/modules/${module.id}/materials`);
+          allMaterials.push(...materialsResponse.data);
+        } catch (error) {
+          console.warn(`Error loading materials for module ${module.id}:`, error);
+        }
+      }
+      
+      setModuleMaterials(allMaterials);
+      setCourseModules(modules);
+    } catch (error) {
+      showErrorDialog(
+        "Error al cargar materiales",
+        "No se pudieron cargar los materiales del curso. Por favor, intente nuevamente."
+      );
+      setModuleMaterials([]);
+      setCourseModules([]);
+    }
+    setOpenMaterialDialog(true);
+  };
+
+  // Funciones para gestión de materiales de módulo
   const handleOpenMaterials = async (module: CourseModule) => {
     setSelectedModule(module);
     try {
@@ -1070,22 +1117,36 @@ const CoursesManagement: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell align="center">
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleEditCourse(course)}
-                    size="small"
-                    title="Editar curso"
-                  >
-                    <Edit />
-                  </IconButton>
-                  <IconButton
-                    color="secondary"
-                    onClick={() => handleOpenModules(course)}
-                    size="small"
-                    title="Gestionar módulos"
-                  >
-                    <FolderOpen />
-                  </IconButton>
+                  {canUpdateCourses() && (
+                    <IconButton
+                      color="primary"
+                      onClick={() => handleEditCourse(course)}
+                      size="small"
+                      title="Editar curso"
+                    >
+                      <Edit />
+                    </IconButton>
+                  )}
+                  {(canCreateModules() || canReadModules()) && (
+                    <IconButton
+                      color="secondary"
+                      onClick={() => handleOpenModules(course)}
+                      size="small"
+                      title="Gestionar módulos"
+                    >
+                      <FolderOpen />
+                    </IconButton>
+                  )}
+                  {(canCreateMaterials() || canReadMaterials()) && (
+                    <IconButton
+                      color="primary"
+                      onClick={() => handleOpenCourseMaterials(course)}
+                      size="small"
+                      title="Gestionar materiales"
+                    >
+                      <LibraryBooks />
+                    </IconButton>
+                  )}
                   {(course.course_type === CourseType.OPTIONAL ||
                     course.course_type === CourseType.ENTERTAINMENT) && (
                     <IconButton
@@ -1097,14 +1158,16 @@ const CoursesManagement: React.FC = () => {
                       <PictureAsPdf />
                     </IconButton>
                   )}
-                  <IconButton
-                    color="error"
-                    onClick={() => handleDeleteCourse(course)}
-                    size="small"
-                    title="Eliminar curso"
-                  >
-                    <Delete />
-                  </IconButton>
+                  {canDeleteCourses() && (
+                    <IconButton
+                      color="error"
+                      onClick={() => handleDeleteCourse(course)}
+                      size="small"
+                      title="Eliminar curso"
+                    >
+                      <Delete />
+                    </IconButton>
+                  )}
                 </TableCell>
               </TableRow>
             ))
@@ -1161,20 +1224,33 @@ const CoursesManagement: React.FC = () => {
               </Typography>
             </CardContent>
             <CardActions>
-              <Button
-                size="small"
-                startIcon={<Edit />}
-                onClick={() => handleEditCourse(course)}
-              >
-                Editar
-              </Button>
-              <Button
-                size="small"
-                startIcon={<FolderOpen />}
-                onClick={() => handleOpenModules(course)}
-              >
-                Módulos
-              </Button>
+              {canUpdateCourses() && (
+                <Button
+                  size="small"
+                  startIcon={<Edit />}
+                  onClick={() => handleEditCourse(course)}
+                >
+                  Editar
+                </Button>
+              )}
+              {(canCreateModules() || canReadModules()) && (
+                <Button
+                  size="small"
+                  startIcon={<FolderOpen />}
+                  onClick={() => handleOpenModules(course)}
+                >
+                  Módulos
+                </Button>
+              )}
+              {(canCreateMaterials() || canReadMaterials()) && (
+                <Button
+                  size="small"
+                  startIcon={<LibraryBooks />}
+                  onClick={() => handleOpenCourseMaterials(course)}
+                >
+                  Materiales
+                </Button>
+              )}
               {(course.course_type === CourseType.OPTIONAL ||
                 course.course_type === CourseType.ENTERTAINMENT) && (
                 <Button
@@ -1186,14 +1262,16 @@ const CoursesManagement: React.FC = () => {
                   PDF
                 </Button>
               )}
-              <Button
-                size="small"
-                color="error"
-                startIcon={<Delete />}
-                onClick={() => handleDeleteCourse(course)}
-              >
-                Eliminar
-              </Button>
+              {canDeleteCourses() && (
+                <Button
+                  size="small"
+                  color="error"
+                  startIcon={<Delete />}
+                  onClick={() => handleDeleteCourse(course)}
+                >
+                  Eliminar
+                </Button>
+              )}
             </CardActions>
           </Card>
         </Grid>
@@ -1435,13 +1513,15 @@ const CoursesManagement: React.FC = () => {
               }}
               sx={{ minWidth: 300 }}
             />
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={handleCreateCourse}
-            >
-              Nuevo Curso
-            </Button>
+            {canCreateCourses() && (
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleCreateCourse}
+              >
+                Nuevo Curso
+              </Button>
+            )}
             <Button
               variant="outlined"
               startIcon={<Refresh />}

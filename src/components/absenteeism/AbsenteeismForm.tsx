@@ -65,7 +65,7 @@ const validationSchema = Yup.object({
 const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { canManageWorkers } = usePermissions();
+  const { canUpdateWorkers } = usePermissions();
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +75,7 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
   const [loadingWorkers, setLoadingWorkers] = useState(false);
 
   const isEditMode = mode === 'edit';
-  const canSubmit = canManageWorkers();
+  const canSubmit = canUpdateWorkers();
 
   const formik = useFormik<AbsenteeismCreate | AbsenteeismUpdate>({
     initialValues: {

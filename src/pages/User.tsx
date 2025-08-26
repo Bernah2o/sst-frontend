@@ -119,6 +119,12 @@ const UsersManagement: React.FC = () => {
       setCustomRoles(response.data || []);
     } catch (error) {
       console.error("Error fetching custom roles:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al cargar los roles personalizados. Verifique su conexión e intente nuevamente.",
+        severity: "error",
+      });
+      setCustomRoles([]); // Asegurar que el estado esté limpio
     }
   };
 
@@ -230,7 +236,7 @@ const UsersManagement: React.FC = () => {
       department: user.department || "",
       position: user.position || "",
       role: user.role,
-      custom_role_id: (user as any).custom_role_id || undefined,
+      custom_role_id: (user as any).custom_role?.id || (user as any).custom_role_id || undefined,
       is_active: user.is_active,
       hire_date: user.hire_date ? new Date(user.hire_date).toISOString().split('T')[0] : "",
       notes: user.notes || "",

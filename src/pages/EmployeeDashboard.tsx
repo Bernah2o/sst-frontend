@@ -103,9 +103,9 @@ const EmployeeDashboard: React.FC = () => {
     try {
       setLoading(true);
       
-      // Obtener inscripciones del empleado
-      const enrollmentsResponse = await api.get('/enrollments/my-enrollments?limit=10');
-      const enrollments = enrollmentsResponse.data.items || [];
+      // Obtener cursos del empleado (incluye datos de inscripción)
+      const coursesResponse = await api.get('/courses/user');
+      const userCourses = coursesResponse.data || [];
       
       // Obtener certificados del empleado
       const certificatesResponse = await api.get('/certificates/my-certificates?limit=10');
@@ -116,28 +116,28 @@ const EmployeeDashboard: React.FC = () => {
       const evaluations = evaluationsResponse.data.data || [];
       
       // Calcular estadísticas basadas en datos reales
-      const completedCourses = enrollments.filter((e: any) => e.status === 'completed').length;
-      const inProgressCourses = enrollments.filter((e: any) => e.status === 'in_progress').length;
+      const completedCourses = userCourses.filter((course: any) => course.completed).length;
+      const inProgressCourses = userCourses.filter((course: any) => !course.completed && course.progress > 0).length;
       const pendingEvaluations = evaluations.filter((e: any) => e.status === 'pending' || e.status === 'in_progress').length;
       
       setStats({
-        enrolled_courses: enrollments.length,
+        enrolled_courses: userCourses.length,
         completed_courses: completedCourses,
         in_progress_courses: inProgressCourses,
         pending_evaluations: pendingEvaluations,
         certificates_earned: certificates.length,
-        total_study_hours: enrollments.reduce((total: number, enrollment: any) => {
+        total_study_hours: userCourses.reduce((total: number, course: any) => {
           // Estimar horas basado en progreso (asumiendo 10 horas por curso completo)
-          return total + Math.round((enrollment.progress || 0) * 10 / 100);
+          return total + Math.round((course.progress || 0) * 10 / 100);
         }, 0)
       });
       
       // Mapear cursos con datos reales
-      const mappedCourses = enrollments.slice(0, 3).map((enrollment: any) => {
-        const progress = enrollment.progress || 0;
+      const mappedCourses = userCourses.slice(0, 3).map((course: any) => {
+        const progress = course.progress || 0;
         // Determinar status basado en progreso
-        let status = enrollment.status;
-        if (progress >= 100) {
+        let status;
+        if (course.completed || progress >= 100) {
           status = 'completed';
         } else if (progress > 0) {
           status = 'in_progress';
@@ -146,12 +146,12 @@ const EmployeeDashboard: React.FC = () => {
         }
         
         return {
-          id: enrollment.id,
-          title: enrollment.course?.title || 'Curso sin título',
+          id: course.id,
+          title: course.title || 'Curso sin título',
           progress: progress,
           status: status,
           due_date: null, // No disponible en el modelo actual
-          last_activity: enrollment.updated_at
+          last_activity: course.updated_at
         };
       });
       

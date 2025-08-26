@@ -110,8 +110,8 @@ const CourseDetail: React.FC = () => {
   const fetchCourseDetail = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/courses/${id}/detail`);
-      setCourse(response.data.course);
+      const response = await api.get(`/courses/${id}`);
+      setCourse(response.data);
       // Cargar estado de progreso/encuestas/evaluación
       const progressResp = await api.get(`/progress/course/${id}`);
       setProgressInfo(progressResp.data);

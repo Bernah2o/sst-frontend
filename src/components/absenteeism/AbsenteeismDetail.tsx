@@ -36,7 +36,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 const AbsenteeismDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { canViewWorkers, canManageWorkers } = usePermissions();
+  const { canViewWorkersPage, canUpdateWorkers } = usePermissions();
   
   const [absenteeism, setAbsenteeism] = useState<AbsenteeismResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,10 +58,10 @@ const AbsenteeismDetail: React.FC = () => {
   };
 
   useEffect(() => {
-    if (canViewWorkers()) {
+    if (canViewWorkersPage()) {
       loadAbsenteeism();
     }
-  }, [id, canViewWorkers]);
+  }, [id, canViewWorkersPage]);
 
   const getEventTypeColor = (eventType: EventTypeEnum) => {
     switch (eventType) {
@@ -82,7 +82,7 @@ const AbsenteeismDetail: React.FC = () => {
     window.print();
   };
 
-  if (!canViewWorkers()) {
+  if (!canViewWorkersPage()) {
     return (
       <Alert severity="error">
         No tienes permisos para ver los registros de absenteeism.
@@ -135,7 +135,7 @@ const AbsenteeismDetail: React.FC = () => {
           >
             Imprimir
           </Button>
-          {canManageWorkers() && (
+          {canUpdateWorkers() && (
             <Button
               variant="contained"
               startIcon={<EditIcon />}

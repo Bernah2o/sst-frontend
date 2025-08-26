@@ -22,67 +22,129 @@ export interface PageAccess {
 }
 
 export interface ResourcePermissions {
+  // Page access permissions (VIEW action)
+  canViewUsersPage: boolean;
+  canViewCoursesPage: boolean;
+  canViewEvaluationsPage: boolean;
+  canViewSurveysPage: boolean;
+  canViewCertificatesPage: boolean;
+  canViewAttendancePage: boolean;
+  canViewReportsPage: boolean;
+  canViewNotificationsPage: boolean;
+  canViewWorkersPage: boolean;
+  canViewReinductionPage: boolean;
+  canViewAdminConfigPage: boolean;
+  canViewSeguimientoPage: boolean;
+  canViewRolesPage: boolean;
+  canViewFilesPage: boolean;
+  canViewDashboardPage: boolean;
+  canViewProfilePage: boolean;
+  canViewAuditPage: boolean;
+  canViewAbsenteeismPage: boolean;
+  canViewEnrollmentPage: boolean;
+  canViewOccupationalExamPage: boolean;
+  canViewProgressPage: boolean;
+  
+  // CRUD permissions for each resource
   // User permissions
-  canManageUsers: boolean;
-  canViewUsers: boolean;
   canCreateUsers: boolean;
+  canReadUsers: boolean;
+  canUpdateUsers: boolean;
   canDeleteUsers: boolean;
   // Course permissions
-  canManageCourses: boolean;
-  canViewCourses: boolean;
   canCreateCourses: boolean;
+  canReadCourses: boolean;
+  canUpdateCourses: boolean;
   canDeleteCourses: boolean;
-  // Enrollment permissions
-  canManageEnrollments: boolean;
-  canViewEnrollments: boolean;
-  canCreateEnrollments: boolean;
-  canDeleteEnrollments: boolean;
   // Evaluation permissions
-  canManageEvaluations: boolean;
-  canViewEvaluations: boolean;
   canCreateEvaluations: boolean;
+  canReadEvaluations: boolean;
+  canUpdateEvaluations: boolean;
   canDeleteEvaluations: boolean;
-  // Report permissions
-  canViewReports: boolean;
-  canExportReports: boolean;
+  canSubmitEvaluations: boolean;
   // Survey permissions
-  canManageSurveys: boolean;
-  canViewSurveys: boolean;
   canCreateSurveys: boolean;
+  canReadSurveys: boolean;
+  canUpdateSurveys: boolean;
   canDeleteSurveys: boolean;
+  canSubmitSurveys: boolean;
   // Certificate permissions
-  canManageCertificates: boolean;
-  canViewCertificates: boolean;
   canCreateCertificates: boolean;
+  canReadCertificates: boolean;
+  canUpdateCertificates: boolean;
+  canDeleteCertificates: boolean;
   // Attendance permissions
-  canManageAttendance: boolean;
-  canViewAttendance: boolean;
+  canCreateAttendance: boolean;
+  canReadAttendance: boolean;
   canUpdateAttendance: boolean;
-  // Worker permissions
-  canManageWorkers: boolean;
-  canViewWorkers: boolean;
-  canCreateWorkers: boolean;
-  canDeleteWorkers: boolean;
+  canDeleteAttendance: boolean;
+  // Report permissions
+  canCreateReports: boolean;
+  canReadReports: boolean;
+  canUpdateReports: boolean;
+  canDeleteReports: boolean;
   // Notification permissions
-  canManageNotifications: boolean;
-  canViewNotifications: boolean;
   canCreateNotifications: boolean;
+  canReadNotifications: boolean;
+  canUpdateNotifications: boolean;
+  canDeleteNotifications: boolean;
+  // Worker permissions
+  canCreateWorkers: boolean;
+  canReadWorkers: boolean;
+  canUpdateWorkers: boolean;
+  canDeleteWorkers: boolean;
   // Reinduction permissions
-  canManageReinduction: boolean;
-  canViewReinduction: boolean;
   canCreateReinduction: boolean;
-  // Occupational exam permissions
-  canManageOccupationalExam: boolean;
-  canViewOccupationalExam: boolean;
-  canCreateOccupationalExam: boolean;
-  // Seguimiento permissions
-  canManageSeguimiento: boolean;
-  canViewSeguimiento: boolean;
-  canCreateSeguimiento: boolean;
+  canReadReinduction: boolean;
+  canUpdateReinduction: boolean;
+  canDeleteReinduction: boolean;
   // Admin config permissions
-  canManageAdminConfig: boolean;
-  canViewAdminConfig: boolean;
+  canCreateAdminConfig: boolean;
+  canReadAdminConfig: boolean;
   canUpdateAdminConfig: boolean;
+  canDeleteAdminConfig: boolean;
+  // Seguimiento permissions
+  canCreateSeguimiento: boolean;
+  canReadSeguimiento: boolean;
+  canUpdateSeguimiento: boolean;
+  canDeleteSeguimiento: boolean;
+  // Role permissions
+  canCreateRoles: boolean;
+  canReadRoles: boolean;
+  canUpdateRoles: boolean;
+  canDeleteRoles: boolean;
+  // File permissions
+  canCreateFiles: boolean;
+  canReadFiles: boolean;
+  canUpdateFiles: boolean;
+  canDeleteFiles: boolean;
+  // Enrollment permissions
+  canCreateEnrollment: boolean;
+  canReadEnrollment: boolean;
+  canUpdateEnrollment: boolean;
+  canDeleteEnrollment: boolean;
+  // Occupational exam permissions
+  canCreateOccupationalExam: boolean;
+  canReadOccupationalExam: boolean;
+  canUpdateOccupationalExam: boolean;
+  canDeleteOccupationalExam: boolean;
+  // Progress permissions
+  canCreateProgress: boolean;
+  canReadProgress: boolean;
+  canUpdateProgress: boolean;
+  canDeleteProgress: boolean;
+  // Module permissions
+  canCreateModules: boolean;
+  canReadModules: boolean;
+  canUpdateModules: boolean;
+  canDeleteModules: boolean;
+  canViewModulesPage: boolean;
+  // Material permissions
+  canCreateMaterials: boolean;
+  canReadMaterials: boolean;
+  canUpdateMaterials: boolean;
+  canDeleteMaterials: boolean;
+  canViewMaterialsPage: boolean;
 }
 
 export const usePermissions = () => {
@@ -90,67 +152,127 @@ export const usePermissions = () => {
   const [pageAccesses, setPageAccesses] = useState<PageAccess[]>([]);
   const [loading, setLoading] = useState(false);
   const [userPermissions, setUserPermissions] = useState<ResourcePermissions>({
+    // Page access permissions
+    canViewUsersPage: false,
+    canViewCoursesPage: false,
+    canViewEvaluationsPage: false,
+    canViewSurveysPage: false,
+    canViewCertificatesPage: false,
+    canViewAttendancePage: false,
+    canViewReportsPage: false,
+    canViewNotificationsPage: false,
+    canViewWorkersPage: false,
+    canViewReinductionPage: false,
+    canViewAdminConfigPage: false,
+    canViewSeguimientoPage: false,
+    canViewRolesPage: false,
+    canViewFilesPage: false,
+    canViewDashboardPage: false,
+    canViewProfilePage: false,
+    canViewAuditPage: false,
+    canViewAbsenteeismPage: false,
+    canViewEnrollmentPage: false,
+    canViewOccupationalExamPage: false,
+    canViewProgressPage: false,
     // User permissions
-    canManageUsers: false,
-    canViewUsers: false,
     canCreateUsers: false,
+    canReadUsers: false,
+    canUpdateUsers: false,
     canDeleteUsers: false,
     // Course permissions
-    canManageCourses: false,
-    canViewCourses: false,
     canCreateCourses: false,
+    canReadCourses: false,
+    canUpdateCourses: false,
     canDeleteCourses: false,
-    // Enrollment permissions
-    canManageEnrollments: false,
-    canViewEnrollments: false,
-    canCreateEnrollments: false,
-    canDeleteEnrollments: false,
     // Evaluation permissions
-    canManageEvaluations: false,
-    canViewEvaluations: false,
     canCreateEvaluations: false,
+    canReadEvaluations: false,
+    canUpdateEvaluations: false,
     canDeleteEvaluations: false,
-    // Report permissions
-    canViewReports: false,
-    canExportReports: false,
+    canSubmitEvaluations: false,
     // Survey permissions
-    canManageSurveys: false,
-    canViewSurveys: false,
     canCreateSurveys: false,
+    canReadSurveys: false,
+    canUpdateSurveys: false,
     canDeleteSurveys: false,
+    canSubmitSurveys: false,
     // Certificate permissions
-    canManageCertificates: false,
-    canViewCertificates: false,
     canCreateCertificates: false,
+    canReadCertificates: false,
+    canUpdateCertificates: false,
+    canDeleteCertificates: false,
     // Attendance permissions
-    canManageAttendance: false,
-    canViewAttendance: false,
+    canCreateAttendance: false,
+    canReadAttendance: false,
     canUpdateAttendance: false,
-    // Worker permissions
-    canManageWorkers: false,
-    canViewWorkers: false,
-    canCreateWorkers: false,
-    canDeleteWorkers: false,
+    canDeleteAttendance: false,
+    // Report permissions
+    canCreateReports: false,
+    canReadReports: false,
+    canUpdateReports: false,
+    canDeleteReports: false,
     // Notification permissions
-    canManageNotifications: false,
-    canViewNotifications: false,
     canCreateNotifications: false,
+    canReadNotifications: false,
+    canUpdateNotifications: false,
+    canDeleteNotifications: false,
+    // Worker permissions
+    canCreateWorkers: false,
+    canReadWorkers: false,
+    canUpdateWorkers: false,
+    canDeleteWorkers: false,
     // Reinduction permissions
-    canManageReinduction: false,
-    canViewReinduction: false,
     canCreateReinduction: false,
-    // Occupational exam permissions
-    canManageOccupationalExam: false,
-    canViewOccupationalExam: false,
-    canCreateOccupationalExam: false,
-    // Seguimiento permissions
-    canManageSeguimiento: false,
-    canViewSeguimiento: false,
-    canCreateSeguimiento: false,
+    canReadReinduction: false,
+    canUpdateReinduction: false,
+    canDeleteReinduction: false,
     // Admin config permissions
-    canManageAdminConfig: false,
-    canViewAdminConfig: false,
-    canUpdateAdminConfig: false
+    canCreateAdminConfig: false,
+    canReadAdminConfig: false,
+    canUpdateAdminConfig: false,
+    canDeleteAdminConfig: false,
+    // Seguimiento permissions
+    canCreateSeguimiento: false,
+    canReadSeguimiento: false,
+    canUpdateSeguimiento: false,
+    canDeleteSeguimiento: false,
+    // Role permissions
+    canCreateRoles: false,
+    canReadRoles: false,
+    canUpdateRoles: false,
+    canDeleteRoles: false,
+    // File permissions
+    canCreateFiles: false,
+    canReadFiles: false,
+    canUpdateFiles: false,
+    canDeleteFiles: false,
+    // Enrollment permissions
+    canCreateEnrollment: false,
+    canReadEnrollment: false,
+    canUpdateEnrollment: false,
+    canDeleteEnrollment: false,
+    // Occupational exam permissions
+    canCreateOccupationalExam: false,
+    canReadOccupationalExam: false,
+    canUpdateOccupationalExam: false,
+    canDeleteOccupationalExam: false,
+    // Progress permissions
+    canCreateProgress: false,
+    canReadProgress: false,
+    canUpdateProgress: false,
+    canDeleteProgress: false,
+    // Module permissions
+    canCreateModules: false,
+    canReadModules: false,
+    canUpdateModules: false,
+    canDeleteModules: false,
+    canViewModulesPage: false,
+    // Material permissions
+    canCreateMaterials: false,
+    canReadMaterials: false,
+    canUpdateMaterials: false,
+    canDeleteMaterials: false,
+    canViewMaterialsPage: false
   });
 
   // Función para cargar datos del usuario
@@ -158,67 +280,128 @@ export const usePermissions = () => {
       if (!user) {
         setPageAccesses([]);
         setUserPermissions({
+          // Page access permissions
+          canViewUsersPage: false,
+          canViewCoursesPage: false,
+          canViewEvaluationsPage: false,
+          canViewSurveysPage: false,
+          canViewCertificatesPage: false,
+          canViewAttendancePage: false,
+          canViewReportsPage: false,
+          canViewNotificationsPage: false,
+          canViewWorkersPage: false,
+          canViewReinductionPage: false,
+          canViewAdminConfigPage: false,
+          canViewSeguimientoPage: false,
+          canViewRolesPage: false,
+          canViewFilesPage: false,
+          canViewDashboardPage: false,
+          canViewProfilePage: false,
+          canViewAuditPage: false,
+          canViewAbsenteeismPage: false,
+          canViewEnrollmentPage: false,
+          canViewOccupationalExamPage: false,
+          canViewProgressPage: false,
+          
           // User permissions
-          canManageUsers: false,
-          canViewUsers: false,
           canCreateUsers: false,
+          canReadUsers: false,
+          canUpdateUsers: false,
           canDeleteUsers: false,
           // Course permissions
-          canManageCourses: false,
-          canViewCourses: false,
           canCreateCourses: false,
+          canReadCourses: false,
+          canUpdateCourses: false,
           canDeleteCourses: false,
-          // Enrollment permissions
-          canManageEnrollments: false,
-          canViewEnrollments: false,
-          canCreateEnrollments: false,
-          canDeleteEnrollments: false,
           // Evaluation permissions
-          canManageEvaluations: false,
-          canViewEvaluations: false,
           canCreateEvaluations: false,
+          canReadEvaluations: false,
+          canUpdateEvaluations: false,
           canDeleteEvaluations: false,
-          // Report permissions
-          canViewReports: false,
-          canExportReports: false,
+          canSubmitEvaluations: false,
           // Survey permissions
-          canManageSurveys: false,
-          canViewSurveys: false,
           canCreateSurveys: false,
+          canReadSurveys: false,
+          canUpdateSurveys: false,
           canDeleteSurveys: false,
+          canSubmitSurveys: false,
           // Certificate permissions
-          canManageCertificates: false,
-          canViewCertificates: false,
           canCreateCertificates: false,
+          canReadCertificates: false,
+          canUpdateCertificates: false,
+          canDeleteCertificates: false,
           // Attendance permissions
-          canManageAttendance: false,
-          canViewAttendance: false,
+          canCreateAttendance: false,
+          canReadAttendance: false,
           canUpdateAttendance: false,
-          // Worker permissions
-          canManageWorkers: false,
-          canViewWorkers: false,
-          canCreateWorkers: false,
-          canDeleteWorkers: false,
+          canDeleteAttendance: false,
+          // Report permissions
+          canCreateReports: false,
+          canReadReports: false,
+          canUpdateReports: false,
+          canDeleteReports: false,
           // Notification permissions
-          canManageNotifications: false,
-          canViewNotifications: false,
           canCreateNotifications: false,
+          canReadNotifications: false,
+          canUpdateNotifications: false,
+          canDeleteNotifications: false,
+          // Worker permissions
+          canCreateWorkers: false,
+          canReadWorkers: false,
+          canUpdateWorkers: false,
+          canDeleteWorkers: false,
           // Reinduction permissions
-          canManageReinduction: false,
-          canViewReinduction: false,
           canCreateReinduction: false,
-          // Occupational exam permissions
-          canManageOccupationalExam: false,
-          canViewOccupationalExam: false,
-          canCreateOccupationalExam: false,
-          // Seguimiento permissions
-          canManageSeguimiento: false,
-          canViewSeguimiento: false,
-          canCreateSeguimiento: false,
+          canReadReinduction: false,
+          canUpdateReinduction: false,
+          canDeleteReinduction: false,
           // Admin config permissions
-          canManageAdminConfig: false,
-          canViewAdminConfig: false,
-          canUpdateAdminConfig: false
+          canCreateAdminConfig: false,
+          canReadAdminConfig: false,
+          canUpdateAdminConfig: false,
+          canDeleteAdminConfig: false,
+          // Seguimiento permissions
+          canCreateSeguimiento: false,
+          canReadSeguimiento: false,
+          canUpdateSeguimiento: false,
+          canDeleteSeguimiento: false,
+          // Role permissions
+          canCreateRoles: false,
+          canReadRoles: false,
+          canUpdateRoles: false,
+          canDeleteRoles: false,
+          // File permissions
+          canCreateFiles: false,
+          canReadFiles: false,
+          canUpdateFiles: false,
+          canDeleteFiles: false,
+          // Enrollment permissions
+          canCreateEnrollment: false,
+          canReadEnrollment: false,
+          canUpdateEnrollment: false,
+          canDeleteEnrollment: false,
+          // Occupational exam permissions
+          canCreateOccupationalExam: false,
+          canReadOccupationalExam: false,
+          canUpdateOccupationalExam: false,
+          canDeleteOccupationalExam: false,
+          // Progress permissions
+          canCreateProgress: false,
+          canReadProgress: false,
+          canUpdateProgress: false,
+          canDeleteProgress: false,
+          // Module permissions
+          canCreateModules: false,
+          canReadModules: false,
+          canUpdateModules: false,
+          canDeleteModules: false,
+          canViewModulesPage: false,
+          // Material permissions
+          canCreateMaterials: false,
+          canReadMaterials: false,
+          canUpdateMaterials: false,
+          canDeleteMaterials: false,
+          canViewMaterialsPage: false
         });
         return;
       }
@@ -236,67 +419,127 @@ export const usePermissions = () => {
 
         // Cargar permisos específicos
         const permissions: ResourcePermissions = {
+          // Page access permissions
+          canViewUsersPage: false,
+          canViewCoursesPage: false,
+          canViewEvaluationsPage: false,
+          canViewSurveysPage: false,
+          canViewCertificatesPage: false,
+          canViewAttendancePage: false,
+          canViewReportsPage: false,
+          canViewNotificationsPage: false,
+          canViewWorkersPage: false,
+          canViewReinductionPage: false,
+          canViewAdminConfigPage: false,
+          canViewSeguimientoPage: false,
+          canViewRolesPage: false,
+          canViewFilesPage: false,
+          canViewDashboardPage: false,
+          canViewProfilePage: false,
+          canViewAuditPage: false,
+          canViewAbsenteeismPage: false,
+          canViewEnrollmentPage: false,
+          canViewOccupationalExamPage: false,
+          canViewProgressPage: false,
           // User permissions
-          canManageUsers: false,
-          canViewUsers: false,
           canCreateUsers: false,
+          canReadUsers: false,
+          canUpdateUsers: false,
           canDeleteUsers: false,
           // Course permissions
-          canManageCourses: false,
-          canViewCourses: false,
           canCreateCourses: false,
+          canReadCourses: false,
+          canUpdateCourses: false,
           canDeleteCourses: false,
-          // Enrollment permissions
-          canManageEnrollments: false,
-          canViewEnrollments: false,
-          canCreateEnrollments: false,
-          canDeleteEnrollments: false,
           // Evaluation permissions
-          canManageEvaluations: false,
-          canViewEvaluations: false,
           canCreateEvaluations: false,
+          canReadEvaluations: false,
+          canUpdateEvaluations: false,
           canDeleteEvaluations: false,
-          // Report permissions
-          canViewReports: false,
-          canExportReports: false,
+          canSubmitEvaluations: false,
           // Survey permissions
-          canManageSurveys: false,
-          canViewSurveys: false,
           canCreateSurveys: false,
+          canReadSurveys: false,
+          canUpdateSurveys: false,
           canDeleteSurveys: false,
+          canSubmitSurveys: false,
           // Certificate permissions
-          canManageCertificates: false,
-          canViewCertificates: false,
           canCreateCertificates: false,
+          canReadCertificates: false,
+          canUpdateCertificates: false,
+          canDeleteCertificates: false,
           // Attendance permissions
-          canManageAttendance: false,
-          canViewAttendance: false,
+          canCreateAttendance: false,
+          canReadAttendance: false,
           canUpdateAttendance: false,
-          // Worker permissions
-          canManageWorkers: false,
-          canViewWorkers: false,
-          canCreateWorkers: false,
-          canDeleteWorkers: false,
+          canDeleteAttendance: false,
+          // Report permissions
+          canCreateReports: false,
+          canReadReports: false,
+          canUpdateReports: false,
+          canDeleteReports: false,
           // Notification permissions
-          canManageNotifications: false,
-          canViewNotifications: false,
           canCreateNotifications: false,
+          canReadNotifications: false,
+          canUpdateNotifications: false,
+          canDeleteNotifications: false,
+          // Worker permissions
+          canCreateWorkers: false,
+          canReadWorkers: false,
+          canUpdateWorkers: false,
+          canDeleteWorkers: false,
           // Reinduction permissions
-          canManageReinduction: false,
-          canViewReinduction: false,
           canCreateReinduction: false,
-          // Occupational exam permissions
-          canManageOccupationalExam: false,
-          canViewOccupationalExam: false,
-          canCreateOccupationalExam: false,
-          // Seguimiento permissions
-          canManageSeguimiento: false,
-          canViewSeguimiento: false,
-          canCreateSeguimiento: false,
+          canReadReinduction: false,
+          canUpdateReinduction: false,
+          canDeleteReinduction: false,
           // Admin config permissions
-          canManageAdminConfig: false,
-          canViewAdminConfig: false,
-          canUpdateAdminConfig: false
+          canCreateAdminConfig: false,
+          canReadAdminConfig: false,
+          canUpdateAdminConfig: false,
+          canDeleteAdminConfig: false,
+          // Seguimiento permissions
+          canCreateSeguimiento: false,
+          canReadSeguimiento: false,
+          canUpdateSeguimiento: false,
+          canDeleteSeguimiento: false,
+          // Role permissions
+          canCreateRoles: false,
+          canReadRoles: false,
+          canUpdateRoles: false,
+          canDeleteRoles: false,
+          // File permissions
+          canCreateFiles: false,
+          canReadFiles: false,
+          canUpdateFiles: false,
+          canDeleteFiles: false,
+          // Enrollment permissions
+          canCreateEnrollment: false,
+          canReadEnrollment: false,
+          canUpdateEnrollment: false,
+          canDeleteEnrollment: false,
+          // Occupational exam permissions
+          canCreateOccupationalExam: false,
+          canReadOccupationalExam: false,
+          canUpdateOccupationalExam: false,
+          canDeleteOccupationalExam: false,
+          // Progress permissions
+          canCreateProgress: false,
+          canReadProgress: false,
+          canUpdateProgress: false,
+          canDeleteProgress: false,
+          // Module permissions
+          canCreateModules: false,
+          canReadModules: false,
+          canUpdateModules: false,
+          canDeleteModules: false,
+          canViewModulesPage: false,
+          // Material permissions
+          canCreateMaterials: false,
+          canReadMaterials: false,
+          canUpdateMaterials: false,
+          canDeleteMaterials: false,
+          canViewMaterialsPage: false
         };
 
         // Si es admin (rol básico), tiene todos los permisos independientemente de si tiene rol personalizado
@@ -309,67 +552,125 @@ export const usePermissions = () => {
           // Para usuarios con rol personalizado, verificar permisos específicos
           try {
             const permissionChecks = [
+              // Page access permissions
+              { key: 'canViewUsersPage', resource: 'users', action: 'view' },
+              { key: 'canViewCoursesPage', resource: 'courses', action: 'view' },
+              { key: 'canViewEvaluationsPage', resource: 'evaluations', action: 'view' },
+              { key: 'canViewSurveysPage', resource: 'surveys', action: 'view' },
+              { key: 'canViewCertificatesPage', resource: 'certificates', action: 'view' },
+              { key: 'canViewAttendancePage', resource: 'attendance', action: 'view' },
+              { key: 'canViewReportsPage', resource: 'reports', action: 'view' },
+              { key: 'canViewNotificationsPage', resource: 'notifications', action: 'view' },
+              { key: 'canViewWorkersPage', resource: 'workers', action: 'view' },
+              { key: 'canViewReinductionPage', resource: 'reinduction', action: 'view' },
+              { key: 'canViewAdminConfigPage', resource: 'admin_config', action: 'view' },
+              { key: 'canViewSeguimientoPage', resource: 'seguimiento', action: 'view' },
+              { key: 'canViewRolesPage', resource: 'roles', action: 'view' },
+              { key: 'canViewFilesPage', resource: 'files', action: 'view' },
+              { key: 'canViewDashboardPage', resource: 'dashboard', action: 'view' },
+              { key: 'canViewProfilePage', resource: 'profile', action: 'view' },
+              { key: 'canViewAuditPage', resource: 'audit', action: 'view' },
+              { key: 'canViewAbsenteeismPage', resource: 'absenteeism', action: 'view' },
+              { key: 'canViewEnrollmentPage', resource: 'enrollment', action: 'view' },
+              { key: 'canViewOccupationalExamPage', resource: 'occupational_exam', action: 'view' },
+              { key: 'canViewProgressPage', resource: 'progress', action: 'view' },
               // User permissions
-              { key: 'canManageUsers', resource: 'USER', action: 'UPDATE' },
-              { key: 'canViewUsers', resource: 'USER', action: 'READ' },
-              { key: 'canCreateUsers', resource: 'USER', action: 'CREATE' },
-              { key: 'canDeleteUsers', resource: 'USER', action: 'DELETE' },
+              { key: 'canCreateUsers', resource: 'users', action: 'create' },
+              { key: 'canReadUsers', resource: 'users', action: 'read' },
+              { key: 'canUpdateUsers', resource: 'users', action: 'update' },
+              { key: 'canDeleteUsers', resource: 'users', action: 'delete' },
               // Course permissions
-              { key: 'canManageCourses', resource: 'COURSE', action: 'READ' },
-              { key: 'canViewCourses', resource: 'COURSE', action: 'READ' },
-              { key: 'canCreateCourses', resource: 'COURSE', action: 'CREATE' },
-              { key: 'canDeleteCourses', resource: 'COURSE', action: 'DELETE' },
-              // Enrollment permissions
-              { key: 'canManageEnrollments', resource: 'ENROLLMENT', action: 'UPDATE' },
-              { key: 'canViewEnrollments', resource: 'ENROLLMENT', action: 'READ' },
-              { key: 'canCreateEnrollments', resource: 'ENROLLMENT', action: 'CREATE' },
-              { key: 'canDeleteEnrollments', resource: 'ENROLLMENT', action: 'DELETE' },
+              { key: 'canCreateCourses', resource: 'courses', action: 'create' },
+              { key: 'canReadCourses', resource: 'courses', action: 'read' },
+              { key: 'canUpdateCourses', resource: 'courses', action: 'update' },
+              { key: 'canDeleteCourses', resource: 'courses', action: 'delete' },
               // Evaluation permissions
-              { key: 'canManageEvaluations', resource: 'EVALUATION', action: 'UPDATE' },
-              { key: 'canViewEvaluations', resource: 'EVALUATION', action: 'READ' },
-              { key: 'canCreateEvaluations', resource: 'EVALUATION', action: 'CREATE' },
-              { key: 'canDeleteEvaluations', resource: 'EVALUATION', action: 'DELETE' },
-              // Report permissions
-              { key: 'canViewReports', resource: 'REPORT', action: 'READ' },
-              { key: 'canExportReports', resource: 'REPORT', action: 'EXPORT' },
+              { key: 'canCreateEvaluations', resource: 'evaluations', action: 'create' },
+              { key: 'canReadEvaluations', resource: 'evaluations', action: 'read' },
+              { key: 'canUpdateEvaluations', resource: 'evaluations', action: 'update' },
+              { key: 'canDeleteEvaluations', resource: 'evaluations', action: 'delete' },
+              { key: 'canSubmitEvaluations', resource: 'evaluations', action: 'submit' },
               // Survey permissions
-              { key: 'canManageSurveys', resource: 'SURVEY', action: 'UPDATE' },
-              { key: 'canViewSurveys', resource: 'SURVEY', action: 'READ' },
-              { key: 'canCreateSurveys', resource: 'SURVEY', action: 'CREATE' },
-              { key: 'canDeleteSurveys', resource: 'SURVEY', action: 'DELETE' },
+              { key: 'canCreateSurveys', resource: 'surveys', action: 'create' },
+              { key: 'canReadSurveys', resource: 'surveys', action: 'read' },
+              { key: 'canUpdateSurveys', resource: 'surveys', action: 'update' },
+              { key: 'canDeleteSurveys', resource: 'surveys', action: 'delete' },
+              { key: 'canSubmitSurveys', resource: 'surveys', action: 'submit' },
               // Certificate permissions
-              { key: 'canManageCertificates', resource: 'CERTIFICATE', action: 'UPDATE' },
-              { key: 'canViewCertificates', resource: 'CERTIFICATE', action: 'READ' },
-              { key: 'canCreateCertificates', resource: 'CERTIFICATE', action: 'CREATE' },
+              { key: 'canCreateCertificates', resource: 'certificates', action: 'create' },
+              { key: 'canReadCertificates', resource: 'certificates', action: 'read' },
+              { key: 'canUpdateCertificates', resource: 'certificates', action: 'update' },
+              { key: 'canDeleteCertificates', resource: 'certificates', action: 'delete' },
               // Attendance permissions
-              { key: 'canManageAttendance', resource: 'ATTENDANCE', action: 'UPDATE' },
-              { key: 'canViewAttendance', resource: 'ATTENDANCE', action: 'READ' },
-              { key: 'canUpdateAttendance', resource: 'ATTENDANCE', action: 'UPDATE' },
-              // Worker permissions
-              { key: 'canManageWorkers', resource: 'WORKER', action: 'UPDATE' },
-              { key: 'canViewWorkers', resource: 'WORKER', action: 'READ' },
-              { key: 'canCreateWorkers', resource: 'WORKER', action: 'CREATE' },
-              { key: 'canDeleteWorkers', resource: 'WORKER', action: 'DELETE' },
+              { key: 'canCreateAttendance', resource: 'attendance', action: 'create' },
+              { key: 'canReadAttendance', resource: 'attendance', action: 'read' },
+              { key: 'canUpdateAttendance', resource: 'attendance', action: 'update' },
+              { key: 'canDeleteAttendance', resource: 'attendance', action: 'delete' },
+              // Report permissions
+              { key: 'canCreateReports', resource: 'reports', action: 'create' },
+              { key: 'canReadReports', resource: 'reports', action: 'read' },
+              { key: 'canUpdateReports', resource: 'reports', action: 'update' },
+              { key: 'canDeleteReports', resource: 'reports', action: 'delete' },
               // Notification permissions
-              { key: 'canManageNotifications', resource: 'NOTIFICATION', action: 'UPDATE' },
-              { key: 'canViewNotifications', resource: 'NOTIFICATION', action: 'READ' },
-              { key: 'canCreateNotifications', resource: 'NOTIFICATION', action: 'CREATE' },
+              { key: 'canCreateNotifications', resource: 'notifications', action: 'create' },
+              { key: 'canReadNotifications', resource: 'notifications', action: 'read' },
+              { key: 'canUpdateNotifications', resource: 'notifications', action: 'update' },
+              { key: 'canDeleteNotifications', resource: 'notifications', action: 'delete' },
+              // Worker permissions
+              { key: 'canCreateWorkers', resource: 'workers', action: 'create' },
+              { key: 'canReadWorkers', resource: 'workers', action: 'read' },
+              { key: 'canUpdateWorkers', resource: 'workers', action: 'update' },
+              { key: 'canDeleteWorkers', resource: 'workers', action: 'delete' },
               // Reinduction permissions
-              { key: 'canManageReinduction', resource: 'REINDUCTION', action: 'UPDATE' },
-              { key: 'canViewReinduction', resource: 'REINDUCTION', action: 'READ' },
-              { key: 'canCreateReinduction', resource: 'REINDUCTION', action: 'CREATE' },
-              // Occupational exam permissions
-              { key: 'canManageOccupationalExam', resource: 'OCCUPATIONAL_EXAM', action: 'UPDATE' },
-              { key: 'canViewOccupationalExam', resource: 'OCCUPATIONAL_EXAM', action: 'READ' },
-              { key: 'canCreateOccupationalExam', resource: 'OCCUPATIONAL_EXAM', action: 'CREATE' },
-              // Seguimiento permissions
-              { key: 'canManageSeguimiento', resource: 'SEGUIMIENTO', action: 'UPDATE' },
-              { key: 'canViewSeguimiento', resource: 'SEGUIMIENTO', action: 'READ' },
-              { key: 'canCreateSeguimiento', resource: 'SEGUIMIENTO', action: 'CREATE' },
+              { key: 'canCreateReinduction', resource: 'reinduction', action: 'create' },
+              { key: 'canReadReinduction', resource: 'reinduction', action: 'read' },
+              { key: 'canUpdateReinduction', resource: 'reinduction', action: 'update' },
+              { key: 'canDeleteReinduction', resource: 'reinduction', action: 'delete' },
               // Admin config permissions
-              { key: 'canManageAdminConfig', resource: 'ADMIN_CONFIG', action: 'UPDATE' },
-              { key: 'canViewAdminConfig', resource: 'ADMIN_CONFIG', action: 'READ' },
-              { key: 'canUpdateAdminConfig', resource: 'ADMIN_CONFIG', action: 'UPDATE' }
+              { key: 'canCreateAdminConfig', resource: 'admin_config', action: 'create' },
+              { key: 'canReadAdminConfig', resource: 'admin_config', action: 'read' },
+              { key: 'canUpdateAdminConfig', resource: 'admin_config', action: 'update' },
+              { key: 'canDeleteAdminConfig', resource: 'admin_config', action: 'delete' },
+              // Seguimiento permissions
+              { key: 'canCreateSeguimiento', resource: 'seguimiento', action: 'create' },
+              { key: 'canReadSeguimiento', resource: 'seguimiento', action: 'read' },
+              { key: 'canUpdateSeguimiento', resource: 'seguimiento', action: 'update' },
+              { key: 'canDeleteSeguimiento', resource: 'seguimiento', action: 'delete' },
+              // Role permissions
+              { key: 'canCreateRoles', resource: 'roles', action: 'create' },
+              { key: 'canReadRoles', resource: 'roles', action: 'read' },
+              { key: 'canUpdateRoles', resource: 'roles', action: 'update' },
+              { key: 'canDeleteRoles', resource: 'roles', action: 'delete' },
+              // File permissions
+              { key: 'canCreateFiles', resource: 'files', action: 'create' },
+              { key: 'canReadFiles', resource: 'files', action: 'read' },
+              { key: 'canUpdateFiles', resource: 'files', action: 'update' },
+              { key: 'canDeleteFiles', resource: 'files', action: 'delete' },
+              // Enrollment permissions
+              { key: 'canCreateEnrollment', resource: 'enrollment', action: 'create' },
+              { key: 'canReadEnrollment', resource: 'enrollment', action: 'read' },
+              { key: 'canUpdateEnrollment', resource: 'enrollment', action: 'update' },
+              { key: 'canDeleteEnrollment', resource: 'enrollment', action: 'delete' },
+              // Occupational exam permissions
+              { key: 'canCreateOccupationalExam', resource: 'occupational_exam', action: 'create' },
+              { key: 'canReadOccupationalExam', resource: 'occupational_exam', action: 'read' },
+              { key: 'canUpdateOccupationalExam', resource: 'occupational_exam', action: 'update' },
+              { key: 'canDeleteOccupationalExam', resource: 'occupational_exam', action: 'delete' },
+              // Progress permissions
+              { key: 'canCreateProgress', resource: 'progress', action: 'create' },
+              { key: 'canReadProgress', resource: 'progress', action: 'read' },
+              { key: 'canUpdateProgress', resource: 'progress', action: 'update' },
+              { key: 'canDeleteProgress', resource: 'progress', action: 'delete' },
+              // Module permissions
+              { key: 'canCreateModules', resource: 'modules', action: 'create' },
+              { key: 'canReadModules', resource: 'modules', action: 'read' },
+              { key: 'canUpdateModules', resource: 'modules', action: 'update' },
+              { key: 'canDeleteModules', resource: 'modules', action: 'delete' },
+              // Material permissions
+              { key: 'canCreateMaterials', resource: 'materials', action: 'create' },
+              { key: 'canReadMaterials', resource: 'materials', action: 'read' },
+              { key: 'canUpdateMaterials', resource: 'materials', action: 'update' },
+              { key: 'canDeleteMaterials', resource: 'materials', action: 'delete' }
             ];
 
             const responses = await Promise.all(
@@ -394,67 +695,127 @@ export const usePermissions = () => {
         console.error('Error loading user data:', error);
         setPageAccesses([]);
         setUserPermissions({
+          // Page access permissions
+          canViewUsersPage: false,
+          canViewCoursesPage: false,
+          canViewReinductionPage: false,
+          canViewEvaluationsPage: false,
+          canViewSurveysPage: false,
+          canViewAttendancePage: false,
+          canViewOccupationalExamPage: false,
+          canViewSeguimientoPage: false,
+          canViewCertificatesPage: false,
+          canViewReportsPage: false,
+          canViewNotificationsPage: false,
+          canViewAdminConfigPage: false,
+          canViewWorkersPage: false,
+          canViewRolesPage: false,
+          canViewFilesPage: false,
+          canViewDashboardPage: false,
+          canViewProfilePage: false,
+          canViewAuditPage: false,
+          canViewAbsenteeismPage: false,
+          canViewEnrollmentPage: false,
+          canViewProgressPage: false,
           // User permissions
-          canManageUsers: false,
-          canViewUsers: false,
           canCreateUsers: false,
+          canReadUsers: false,
+          canUpdateUsers: false,
           canDeleteUsers: false,
           // Course permissions
-          canManageCourses: false,
-          canViewCourses: false,
           canCreateCourses: false,
+          canReadCourses: false,
+          canUpdateCourses: false,
           canDeleteCourses: false,
           // Enrollment permissions
-          canManageEnrollments: false,
-          canViewEnrollments: false,
-          canCreateEnrollments: false,
-          canDeleteEnrollments: false,
+          canCreateEnrollment: false,
+          canReadEnrollment: false,
+          canUpdateEnrollment: false,
+          canDeleteEnrollment: false,
           // Evaluation permissions
-          canManageEvaluations: false,
-          canViewEvaluations: false,
           canCreateEvaluations: false,
+          canReadEvaluations: false,
+          canUpdateEvaluations: false,
           canDeleteEvaluations: false,
-          // Report permissions
-          canViewReports: false,
-          canExportReports: false,
+          canSubmitEvaluations: false,
           // Survey permissions
-          canManageSurveys: false,
-          canViewSurveys: false,
           canCreateSurveys: false,
+          canReadSurveys: false,
+          canUpdateSurveys: false,
           canDeleteSurveys: false,
+          canSubmitSurveys: false,
           // Certificate permissions
-          canManageCertificates: false,
-          canViewCertificates: false,
           canCreateCertificates: false,
+          canReadCertificates: false,
+          canUpdateCertificates: false,
+          canDeleteCertificates: false,
           // Attendance permissions
-          canManageAttendance: false,
-          canViewAttendance: false,
+          canCreateAttendance: false,
+          canReadAttendance: false,
           canUpdateAttendance: false,
-          // Worker permissions
-          canManageWorkers: false,
-          canViewWorkers: false,
-          canCreateWorkers: false,
-          canDeleteWorkers: false,
+          canDeleteAttendance: false,
+          // Report permissions
+          canCreateReports: false,
+          canReadReports: false,
+          canUpdateReports: false,
+          canDeleteReports: false,
           // Notification permissions
-          canManageNotifications: false,
-          canViewNotifications: false,
           canCreateNotifications: false,
+          canReadNotifications: false,
+          canUpdateNotifications: false,
+          canDeleteNotifications: false,
+          // Worker permissions
+          canCreateWorkers: false,
+          canReadWorkers: false,
+          canUpdateWorkers: false,
+          canDeleteWorkers: false,
           // Reinduction permissions
-          canManageReinduction: false,
-          canViewReinduction: false,
           canCreateReinduction: false,
+          canReadReinduction: false,
+          canUpdateReinduction: false,
+          canDeleteReinduction: false,
           // Occupational exam permissions
-          canManageOccupationalExam: false,
-          canViewOccupationalExam: false,
           canCreateOccupationalExam: false,
+          canReadOccupationalExam: false,
+          canUpdateOccupationalExam: false,
+          canDeleteOccupationalExam: false,
           // Seguimiento permissions
-          canManageSeguimiento: false,
-          canViewSeguimiento: false,
           canCreateSeguimiento: false,
+          canReadSeguimiento: false,
+          canUpdateSeguimiento: false,
+          canDeleteSeguimiento: false,
           // Admin config permissions
-          canManageAdminConfig: false,
-          canViewAdminConfig: false,
-          canUpdateAdminConfig: false
+          canCreateAdminConfig: false,
+          canReadAdminConfig: false,
+          canUpdateAdminConfig: false,
+          canDeleteAdminConfig: false,
+          // Role permissions
+          canCreateRoles: false,
+          canReadRoles: false,
+          canUpdateRoles: false,
+          canDeleteRoles: false,
+          // File permissions
+          canCreateFiles: false,
+          canReadFiles: false,
+          canUpdateFiles: false,
+          canDeleteFiles: false,
+          // Progress permissions
+          canCreateProgress: false,
+          canReadProgress: false,
+          canUpdateProgress: false,
+          canDeleteProgress: false,
+          // Module permissions
+          canCreateModules: false,
+          canReadModules: false,
+          canUpdateModules: false,
+          canDeleteModules: false,
+          canViewModulesPage: false,
+          // Material permissions
+          canCreateMaterials: false,
+          canReadMaterials: false,
+          canUpdateMaterials: false,
+          canDeleteMaterials: false,
+          canViewMaterialsPage: false
         });
       } finally {
         setLoading(false);
@@ -487,6 +848,450 @@ export const usePermissions = () => {
     }
   }, [user]);
 
+  // Placeholder for canAccessPage - will be defined after all permission functions
+
+  // Funciones síncronas para verificar permisos (basadas en el estado cargado)
+  // Page access permissions
+  const canViewUsersPage = useCallback((): boolean => {
+    return userPermissions.canViewUsersPage;
+  }, [userPermissions.canViewUsersPage]);
+
+  const canViewCoursesPage = useCallback((): boolean => {
+    return userPermissions.canViewCoursesPage;
+  }, [userPermissions.canViewCoursesPage]);
+
+  const canViewEvaluationsPage = useCallback((): boolean => {
+    return userPermissions.canViewEvaluationsPage;
+  }, [userPermissions.canViewEvaluationsPage]);
+
+  const canViewSurveysPage = useCallback((): boolean => {
+    return userPermissions.canViewSurveysPage;
+  }, [userPermissions.canViewSurveysPage]);
+
+  const canViewCertificatesPage = useCallback((): boolean => {
+    return userPermissions.canViewCertificatesPage;
+  }, [userPermissions.canViewCertificatesPage]);
+
+  const canViewAttendancePage = useCallback((): boolean => {
+    return userPermissions.canViewAttendancePage;
+  }, [userPermissions.canViewAttendancePage]);
+
+  const canViewReportsPage = useCallback((): boolean => {
+    return userPermissions.canViewReportsPage;
+  }, [userPermissions.canViewReportsPage]);
+
+  const canViewNotificationsPage = useCallback((): boolean => {
+    return userPermissions.canViewNotificationsPage;
+  }, [userPermissions.canViewNotificationsPage]);
+
+  const canViewWorkersPage = useCallback((): boolean => {
+    return userPermissions.canViewWorkersPage;
+  }, [userPermissions.canViewWorkersPage]);
+
+  const canViewReinductionPage = useCallback((): boolean => {
+    return userPermissions.canViewReinductionPage;
+  }, [userPermissions.canViewReinductionPage]);
+
+  const canViewAdminConfigPage = useCallback((): boolean => {
+    return userPermissions.canViewAdminConfigPage;
+  }, [userPermissions.canViewAdminConfigPage]);
+
+  const canViewSeguimientoPage = useCallback((): boolean => {
+    return userPermissions.canViewSeguimientoPage;
+  }, [userPermissions.canViewSeguimientoPage]);
+
+  const canViewRolesPage = useCallback((): boolean => {
+    return userPermissions.canViewRolesPage;
+  }, [userPermissions.canViewRolesPage]);
+
+  const canViewFilesPage = useCallback((): boolean => {
+    return userPermissions.canViewFilesPage;
+  }, [userPermissions.canViewFilesPage]);
+
+  const canViewDashboardPage = useCallback((): boolean => {
+    return userPermissions.canViewDashboardPage;
+  }, [userPermissions.canViewDashboardPage]);
+
+  const canViewProfilePage = useCallback((): boolean => {
+    return userPermissions.canViewProfilePage;
+  }, [userPermissions.canViewProfilePage]);
+
+  const canViewAuditPage = useCallback((): boolean => {
+    return userPermissions.canViewAuditPage;
+  }, [userPermissions.canViewAuditPage]);
+
+  const canViewAbsenteeismPage = useCallback((): boolean => {
+    return userPermissions.canViewAbsenteeismPage;
+  }, [userPermissions.canViewAbsenteeismPage]);
+
+  const canViewEnrollmentPage = useCallback((): boolean => {
+    return userPermissions.canViewEnrollmentPage;
+  }, [userPermissions.canViewEnrollmentPage]);
+
+  const canViewOccupationalExamPage = useCallback((): boolean => {
+    return userPermissions.canViewOccupationalExamPage;
+  }, [userPermissions.canViewOccupationalExamPage]);
+
+  const canViewProgressPage = useCallback((): boolean => {
+    return userPermissions.canViewProgressPage;
+  }, [userPermissions.canViewProgressPage]);
+
+  // User permissions
+  const canCreateUsers = useCallback((): boolean => {
+    return userPermissions.canCreateUsers;
+  }, [userPermissions.canCreateUsers]);
+
+  const canReadUsers = useCallback((): boolean => {
+    return userPermissions.canReadUsers;
+  }, [userPermissions.canReadUsers]);
+
+  const canUpdateUsers = useCallback((): boolean => {
+    return userPermissions.canUpdateUsers;
+  }, [userPermissions.canUpdateUsers]);
+
+  const canDeleteUsers = useCallback((): boolean => {
+    return userPermissions.canDeleteUsers;
+  }, [userPermissions.canDeleteUsers]);
+
+  // Course permissions
+  const canCreateCourses = useCallback((): boolean => {
+    return userPermissions.canCreateCourses;
+  }, [userPermissions.canCreateCourses]);
+
+  const canReadCourses = useCallback((): boolean => {
+    return userPermissions.canReadCourses;
+  }, [userPermissions.canReadCourses]);
+
+  const canUpdateCourses = useCallback((): boolean => {
+    return userPermissions.canUpdateCourses;
+  }, [userPermissions.canUpdateCourses]);
+
+  const canDeleteCourses = useCallback((): boolean => {
+    return userPermissions.canDeleteCourses;
+  }, [userPermissions.canDeleteCourses]);
+
+  // Evaluation permissions
+  const canCreateEvaluations = useCallback((): boolean => {
+    return userPermissions.canCreateEvaluations;
+  }, [userPermissions.canCreateEvaluations]);
+
+  const canReadEvaluations = useCallback((): boolean => {
+    return userPermissions.canReadEvaluations;
+  }, [userPermissions.canReadEvaluations]);
+
+  const canUpdateEvaluations = useCallback((): boolean => {
+    return userPermissions.canUpdateEvaluations;
+  }, [userPermissions.canUpdateEvaluations]);
+
+  const canDeleteEvaluations = useCallback((): boolean => {
+    return userPermissions.canDeleteEvaluations;
+  }, [userPermissions.canDeleteEvaluations]);
+
+  const canSubmitEvaluations = useCallback((): boolean => {
+    return userPermissions.canSubmitEvaluations;
+  }, [userPermissions.canSubmitEvaluations]);
+
+  // Survey permissions
+  const canCreateSurveys = useCallback((): boolean => {
+    return userPermissions.canCreateSurveys;
+  }, [userPermissions.canCreateSurveys]);
+
+  const canReadSurveys = useCallback((): boolean => {
+    return userPermissions.canReadSurveys;
+  }, [userPermissions.canReadSurveys]);
+
+  const canUpdateSurveys = useCallback((): boolean => {
+    return userPermissions.canUpdateSurveys;
+  }, [userPermissions.canUpdateSurveys]);
+
+  const canDeleteSurveys = useCallback((): boolean => {
+    return userPermissions.canDeleteSurveys;
+  }, [userPermissions.canDeleteSurveys]);
+
+  const canSubmitSurveys = useCallback((): boolean => {
+    return userPermissions.canSubmitSurveys;
+  }, [userPermissions.canSubmitSurveys]);
+
+  // Certificate permissions
+  const canCreateCertificates = useCallback((): boolean => {
+    return userPermissions.canCreateCertificates;
+  }, [userPermissions.canCreateCertificates]);
+
+  const canReadCertificates = useCallback((): boolean => {
+    return userPermissions.canReadCertificates;
+  }, [userPermissions.canReadCertificates]);
+
+  const canUpdateCertificates = useCallback((): boolean => {
+    return userPermissions.canUpdateCertificates;
+  }, [userPermissions.canUpdateCertificates]);
+
+  const canDeleteCertificates = useCallback((): boolean => {
+    return userPermissions.canDeleteCertificates;
+  }, [userPermissions.canDeleteCertificates]);
+
+  // Attendance permissions
+  const canCreateAttendance = useCallback((): boolean => {
+    return userPermissions.canCreateAttendance;
+  }, [userPermissions.canCreateAttendance]);
+
+  const canReadAttendance = useCallback((): boolean => {
+    return userPermissions.canReadAttendance;
+  }, [userPermissions.canReadAttendance]);
+
+  const canUpdateAttendance = useCallback((): boolean => {
+    return userPermissions.canUpdateAttendance;
+  }, [userPermissions.canUpdateAttendance]);
+
+  const canDeleteAttendance = useCallback((): boolean => {
+    return userPermissions.canDeleteAttendance;
+  }, [userPermissions.canDeleteAttendance]);
+
+  // Report permissions
+  const canCreateReports = useCallback((): boolean => {
+    return userPermissions.canCreateReports;
+  }, [userPermissions.canCreateReports]);
+
+  const canReadReports = useCallback((): boolean => {
+    return userPermissions.canReadReports;
+  }, [userPermissions.canReadReports]);
+
+  const canUpdateReports = useCallback((): boolean => {
+    return userPermissions.canUpdateReports;
+  }, [userPermissions.canUpdateReports]);
+
+  const canDeleteReports = useCallback((): boolean => {
+    return userPermissions.canDeleteReports;
+  }, [userPermissions.canDeleteReports]);
+
+  // Notification permissions
+  const canCreateNotifications = useCallback((): boolean => {
+    return userPermissions.canCreateNotifications;
+  }, [userPermissions.canCreateNotifications]);
+
+  const canReadNotifications = useCallback((): boolean => {
+    return userPermissions.canReadNotifications;
+  }, [userPermissions.canReadNotifications]);
+
+  const canUpdateNotifications = useCallback((): boolean => {
+    return userPermissions.canUpdateNotifications;
+  }, [userPermissions.canUpdateNotifications]);
+
+  const canDeleteNotifications = useCallback((): boolean => {
+    return userPermissions.canDeleteNotifications;
+  }, [userPermissions.canDeleteNotifications]);
+
+  // Worker permissions
+  const canCreateWorkers = useCallback((): boolean => {
+    return userPermissions.canCreateWorkers;
+  }, [userPermissions.canCreateWorkers]);
+
+  const canReadWorkers = useCallback((): boolean => {
+    return userPermissions.canReadWorkers;
+  }, [userPermissions.canReadWorkers]);
+
+  const canUpdateWorkers = useCallback((): boolean => {
+    return userPermissions.canUpdateWorkers;
+  }, [userPermissions.canUpdateWorkers]);
+
+  const canDeleteWorkers = useCallback((): boolean => {
+    return userPermissions.canDeleteWorkers;
+  }, [userPermissions.canDeleteWorkers]);
+
+  // Reinduction permissions
+  const canCreateReinduction = useCallback((): boolean => {
+    return userPermissions.canCreateReinduction;
+  }, [userPermissions.canCreateReinduction]);
+
+  const canReadReinduction = useCallback((): boolean => {
+    return userPermissions.canReadReinduction;
+  }, [userPermissions.canReadReinduction]);
+
+  const canUpdateReinduction = useCallback((): boolean => {
+    return userPermissions.canUpdateReinduction;
+  }, [userPermissions.canUpdateReinduction]);
+
+  const canDeleteReinduction = useCallback((): boolean => {
+    return userPermissions.canDeleteReinduction;
+  }, [userPermissions.canDeleteReinduction]);
+
+  // Admin config permissions
+  const canCreateAdminConfig = useCallback((): boolean => {
+    return userPermissions.canCreateAdminConfig;
+  }, [userPermissions.canCreateAdminConfig]);
+
+  const canReadAdminConfig = useCallback((): boolean => {
+    return userPermissions.canReadAdminConfig;
+  }, [userPermissions.canReadAdminConfig]);
+
+  const canUpdateAdminConfig = useCallback((): boolean => {
+    return userPermissions.canUpdateAdminConfig;
+  }, [userPermissions.canUpdateAdminConfig]);
+
+  const canDeleteAdminConfig = useCallback((): boolean => {
+    return userPermissions.canDeleteAdminConfig;
+  }, [userPermissions.canDeleteAdminConfig]);
+
+  // Seguimiento permissions
+  const canCreateSeguimiento = useCallback((): boolean => {
+    return userPermissions.canCreateSeguimiento;
+  }, [userPermissions.canCreateSeguimiento]);
+
+  const canReadSeguimiento = useCallback((): boolean => {
+    return userPermissions.canReadSeguimiento;
+  }, [userPermissions.canReadSeguimiento]);
+
+  const canUpdateSeguimiento = useCallback((): boolean => {
+    return userPermissions.canUpdateSeguimiento;
+  }, [userPermissions.canUpdateSeguimiento]);
+
+  const canDeleteSeguimiento = useCallback((): boolean => {
+    return userPermissions.canDeleteSeguimiento;
+  }, [userPermissions.canDeleteSeguimiento]);
+
+  // Role permissions
+  const canCreateRoles = useCallback((): boolean => {
+    return userPermissions.canCreateRoles;
+  }, [userPermissions.canCreateRoles]);
+
+  const canReadRoles = useCallback((): boolean => {
+    return userPermissions.canReadRoles;
+  }, [userPermissions.canReadRoles]);
+
+  const canUpdateRoles = useCallback((): boolean => {
+    return userPermissions.canUpdateRoles;
+  }, [userPermissions.canUpdateRoles]);
+
+  const canDeleteRoles = useCallback((): boolean => {
+    return userPermissions.canDeleteRoles;
+  }, [userPermissions.canDeleteRoles]);
+
+  // File permissions
+  const canCreateFiles = useCallback((): boolean => {
+    return userPermissions.canCreateFiles;
+  }, [userPermissions.canCreateFiles]);
+
+  const canReadFiles = useCallback((): boolean => {
+    return userPermissions.canReadFiles;
+  }, [userPermissions.canReadFiles]);
+
+  const canUpdateFiles = useCallback((): boolean => {
+    return userPermissions.canUpdateFiles;
+  }, [userPermissions.canUpdateFiles]);
+
+  const canDeleteFiles = useCallback((): boolean => {
+    return userPermissions.canDeleteFiles;
+  }, [userPermissions.canDeleteFiles]);
+
+  // Enrollment permissions
+  const canCreateEnrollment = useCallback((): boolean => {
+    return userPermissions.canCreateEnrollment;
+  }, [userPermissions.canCreateEnrollment]);
+
+  const canReadEnrollment = useCallback((): boolean => {
+    return userPermissions.canReadEnrollment;
+  }, [userPermissions.canReadEnrollment]);
+
+  const canUpdateEnrollment = useCallback((): boolean => {
+    return userPermissions.canUpdateEnrollment;
+  }, [userPermissions.canUpdateEnrollment]);
+
+  const canDeleteEnrollment = useCallback((): boolean => {
+    return userPermissions.canDeleteEnrollment;
+  }, [userPermissions.canDeleteEnrollment]);
+
+  // Occupational exam permissions
+  const canCreateOccupationalExam = useCallback((): boolean => {
+    return userPermissions.canCreateOccupationalExam;
+  }, [userPermissions.canCreateOccupationalExam]);
+
+  const canReadOccupationalExam = useCallback((): boolean => {
+    return userPermissions.canReadOccupationalExam;
+  }, [userPermissions.canReadOccupationalExam]);
+
+  const canUpdateOccupationalExam = useCallback((): boolean => {
+    return userPermissions.canUpdateOccupationalExam;
+  }, [userPermissions.canUpdateOccupationalExam]);
+
+  const canDeleteOccupationalExam = useCallback((): boolean => {
+    return userPermissions.canDeleteOccupationalExam;
+  }, [userPermissions.canDeleteOccupationalExam]);
+
+  // Progress permissions
+  const canCreateProgress = useCallback((): boolean => {
+    return userPermissions.canCreateProgress;
+  }, [userPermissions.canCreateProgress]);
+
+  const canReadProgress = useCallback((): boolean => {
+    return userPermissions.canReadProgress;
+  }, [userPermissions.canReadProgress]);
+
+  const canUpdateProgress = useCallback((): boolean => {
+    return userPermissions.canUpdateProgress;
+  }, [userPermissions.canUpdateProgress]);
+
+  const canDeleteProgress = useCallback((): boolean => {
+    return userPermissions.canDeleteProgress;
+  }, [userPermissions.canDeleteProgress]);
+
+  // Module permission functions
+  const canCreateModules = useCallback((): boolean => {
+    return userPermissions.canCreateModules;
+  }, [userPermissions.canCreateModules]);
+
+  const canReadModules = useCallback((): boolean => {
+    return userPermissions.canReadModules;
+  }, [userPermissions.canReadModules]);
+
+  const canUpdateModules = useCallback((): boolean => {
+    return userPermissions.canUpdateModules;
+  }, [userPermissions.canUpdateModules]);
+
+  const canDeleteModules = useCallback((): boolean => {
+    return userPermissions.canDeleteModules;
+  }, [userPermissions.canDeleteModules]);
+
+  const canViewModulesPage = useCallback((): boolean => {
+    return userPermissions.canViewModulesPage;
+  }, [userPermissions.canViewModulesPage]);
+
+  // Material permission functions
+  const canCreateMaterials = useCallback((): boolean => {
+    return userPermissions.canCreateMaterials;
+  }, [userPermissions.canCreateMaterials]);
+
+  const canReadMaterials = useCallback((): boolean => {
+    return userPermissions.canReadMaterials;
+  }, [userPermissions.canReadMaterials]);
+
+  const canUpdateMaterials = useCallback((): boolean => {
+    return userPermissions.canUpdateMaterials;
+  }, [userPermissions.canUpdateMaterials]);
+
+  const canDeleteMaterials = useCallback((): boolean => {
+    return userPermissions.canDeleteMaterials;
+  }, [userPermissions.canDeleteMaterials]);
+
+  const canViewMaterialsPage = useCallback((): boolean => {
+    return userPermissions.canViewMaterialsPage;
+  }, [userPermissions.canViewMaterialsPage]);
+
+  // Funciones asíncronas para verificación en tiempo real (para casos específicos)
+  const checkCanManageUsers = useCallback(async (): Promise<boolean> => {
+    return await checkPermission('USER', 'UPDATE');
+  }, [checkPermission]);
+
+  const checkCanViewUsers = useCallback(async (): Promise<boolean> => {
+    return await checkPermission('USER', 'READ');
+  }, [checkPermission]);
+
+  const checkCanCreateUsers = useCallback(async (): Promise<boolean> => {
+    return await checkPermission('USER', 'CREATE');
+  }, [checkPermission]);
+
+  const checkCanDeleteUsers = useCallback(async (): Promise<boolean> => {
+    return await checkPermission('USER', 'DELETE');
+  }, [checkPermission]);
+
   // Verificar acceso a una página específica
   const canAccessPage = useCallback((pageRoute: string): boolean => {
     // Si no tiene rol personalizado, usar lógica tradicional
@@ -497,60 +1302,60 @@ export const usePermissions = () => {
     // Mapeo de rutas a permisos específicos para usuarios con rol personalizado
     const routePermissionMap: Record<string, () => boolean> = {
       // User management routes
-      '/admin/users': canManageUsers,
-      '/users': canViewUsers,
+      '/admin/users': canUpdateUsers,
+      '/users': canViewUsersPage,
       
       // Course management routes
-      '/courses': canViewCourses,
-      '/courses/list': canViewCourses,
+      '/courses': canViewCoursesPage,
+      '/courses/list': canViewCoursesPage,
       '/courses/create': canCreateCourses,
-      '/courses/edit': canManageCourses,
+      '/courses/edit': canUpdateCourses,
       
       // Enrollment management routes
-      '/enrollments': canViewEnrollments,
-      '/enrollments/list': canViewEnrollments,
-      '/enrollments/create': canCreateEnrollments,
-      '/enrollments/edit': canManageEnrollments,
-      '/admin/enrollments': canManageEnrollments,
-      '/reinduction': canViewCourses,
+      '/enrollments': canViewEnrollmentPage,
+      '/enrollments/list': canViewEnrollmentPage,
+      '/enrollments/create': canCreateEnrollment,
+      '/enrollments/edit': canUpdateEnrollment,
+      '/admin/enrollments': canUpdateEnrollment,
+      '/reinduction': canViewReinductionPage,
       
       // Evaluation routes
-      '/evaluations': canViewEvaluations,
-      '/evaluations/list': canViewEvaluations,
+      '/evaluations': canViewEvaluationsPage,
+      '/evaluations/list': canViewEvaluationsPage,
       '/evaluations/create': canCreateEvaluations,
-      '/evaluations/edit': canManageEvaluations,
-      '/evaluation-results': canViewEvaluations,
+      '/evaluations/edit': canUpdateEvaluations,
+      '/evaluation-results': canViewEvaluationsPage,
       
       // Survey routes
-      '/surveys': canViewSurveys,
+      '/surveys': canViewSurveysPage,
       '/surveys/create': canCreateSurveys,
-      '/surveys/edit': canManageSurveys,
+      '/surveys/edit': canUpdateSurveys,
       
       // Attendance routes
-      '/attendance': canViewAttendance,
-      '/attendance/list': canViewAttendance,
-      '/admin/attendance': canManageAttendance,
+      '/attendance': canViewAttendancePage,
+      '/attendance/list': canViewAttendancePage,
+      '/admin/attendance': canUpdateAttendance,
       
       // Worker/Health routes
-      '/workers': canViewWorkers,
-      '/workers/list': canViewWorkers,
+      '/workers': canViewWorkersPage,
+      '/workers/list': canViewWorkersPage,
       '/workers/create': canCreateWorkers,
-      '/workers/edit': canManageWorkers,
-      '/admin/workers': canViewWorkers,  // Ruta faltante para administración de trabajadores
-      '/occupational-exams': () => canViewWorkers() || canManageWorkers(),
-      '/admin/occupational-exams': () => canViewWorkers() || canManageWorkers(),
-      '/seguimientos': () => canViewWorkers() || canManageWorkers(),
+      '/workers/edit': canUpdateWorkers,
+      '/admin/workers': canViewWorkersPage,
+      '/occupational-exams': canViewOccupationalExamPage,
+      '/admin/occupational-exams': canViewOccupationalExamPage,
+      '/seguimientos': canViewSeguimientoPage,
       
       // Certificate routes
-      '/certificates': canViewCertificates,
+      '/certificates': canViewCertificatesPage,
       '/certificates/create': canCreateCertificates,
       
       // Report routes
-      '/reports': canViewReports,
-      '/reports/export': canExportReports,
-      
+      '/reports': canViewReportsPage,
+      '/reports/export': canViewReportsPage,
+
       // Notification routes
-      '/notifications': canViewNotifications,
+      '/notifications': canViewNotificationsPage,
       
       // Admin routes (only for system admins)
       '/admin/audit': () => {
@@ -582,227 +1387,37 @@ export const usePermissions = () => {
     
     // Si no hay configuración específica para la página, denegar acceso por defecto para mayor seguridad
     return pageAccess ? pageAccess.can_access : false;
-  }, [user, pageAccesses, userPermissions]);
-
-  // Funciones síncronas para verificar permisos (basadas en el estado cargado)
-  // User permissions
-  const canManageUsers = useCallback((): boolean => {
-    return userPermissions.canManageUsers;
-  }, [userPermissions.canManageUsers]);
-
-  const canViewUsers = useCallback((): boolean => {
-    return userPermissions.canViewUsers;
-  }, [userPermissions.canViewUsers]);
-
-  const canCreateUsers = useCallback((): boolean => {
-    return userPermissions.canCreateUsers;
-  }, [userPermissions.canCreateUsers]);
-
-  const canDeleteUsers = useCallback((): boolean => {
-    return userPermissions.canDeleteUsers;
-  }, [userPermissions.canDeleteUsers]);
-
-  // Course permissions
-  const canManageCourses = useCallback((): boolean => {
-    return userPermissions.canManageCourses;
-  }, [userPermissions.canManageCourses]);
-
-  const canViewCourses = useCallback((): boolean => {
-    return userPermissions.canViewCourses;
-  }, [userPermissions.canViewCourses]);
-
-  const canCreateCourses = useCallback((): boolean => {
-    return userPermissions.canCreateCourses;
-  }, [userPermissions.canCreateCourses]);
-
-  const canDeleteCourses = useCallback((): boolean => {
-    return userPermissions.canDeleteCourses;
-  }, [userPermissions.canDeleteCourses]);
-
-  // Enrollment permissions
-  const canManageEnrollments = useCallback((): boolean => {
-    return userPermissions.canManageEnrollments;
-  }, [userPermissions.canManageEnrollments]);
-
-  const canViewEnrollments = useCallback((): boolean => {
-    return userPermissions.canViewEnrollments;
-  }, [userPermissions.canViewEnrollments]);
-
-  const canCreateEnrollments = useCallback((): boolean => {
-    return userPermissions.canCreateEnrollments;
-  }, [userPermissions.canCreateEnrollments]);
-
-  const canDeleteEnrollments = useCallback((): boolean => {
-    return userPermissions.canDeleteEnrollments;
-  }, [userPermissions.canDeleteEnrollments]);
-
-  // Evaluation permissions
-  const canManageEvaluations = useCallback((): boolean => {
-    return userPermissions.canManageEvaluations;
-  }, [userPermissions.canManageEvaluations]);
-
-  const canViewEvaluations = useCallback((): boolean => {
-    return userPermissions.canViewEvaluations;
-  }, [userPermissions.canViewEvaluations]);
-
-  const canCreateEvaluations = useCallback((): boolean => {
-    return userPermissions.canCreateEvaluations;
-  }, [userPermissions.canCreateEvaluations]);
-
-  const canDeleteEvaluations = useCallback((): boolean => {
-    return userPermissions.canDeleteEvaluations;
-  }, [userPermissions.canDeleteEvaluations]);
-
-  // Report permissions
-  const canViewReports = useCallback((): boolean => {
-    return userPermissions.canViewReports;
-  }, [userPermissions.canViewReports]);
-
-  const canExportReports = useCallback((): boolean => {
-    return userPermissions.canExportReports;
-  }, [userPermissions.canExportReports]);
-
-  // Survey permissions
-  const canManageSurveys = useCallback((): boolean => {
-    return userPermissions.canManageSurveys;
-  }, [userPermissions.canManageSurveys]);
-
-  const canViewSurveys = useCallback((): boolean => {
-    return userPermissions.canViewSurveys;
-  }, [userPermissions.canViewSurveys]);
-
-  const canCreateSurveys = useCallback((): boolean => {
-    return userPermissions.canCreateSurveys;
-  }, [userPermissions.canCreateSurveys]);
-
-  const canDeleteSurveys = useCallback((): boolean => {
-    return userPermissions.canDeleteSurveys;
-  }, [userPermissions.canDeleteSurveys]);
-
-  // Certificate permissions
-  const canManageCertificates = useCallback((): boolean => {
-    return userPermissions.canManageCertificates;
-  }, [userPermissions.canManageCertificates]);
-
-  const canViewCertificates = useCallback((): boolean => {
-    return userPermissions.canViewCertificates;
-  }, [userPermissions.canViewCertificates]);
-
-  const canCreateCertificates = useCallback((): boolean => {
-    return userPermissions.canCreateCertificates;
-  }, [userPermissions.canCreateCertificates]);
-
-  // Attendance permissions
-  const canManageAttendance = useCallback((): boolean => {
-    return userPermissions.canManageAttendance;
-  }, [userPermissions.canManageAttendance]);
-
-  const canViewAttendance = useCallback((): boolean => {
-    return userPermissions.canViewAttendance;
-  }, [userPermissions.canViewAttendance]);
-
-  const canUpdateAttendance = useCallback((): boolean => {
-    return userPermissions.canUpdateAttendance;
-  }, [userPermissions.canUpdateAttendance]);
-
-  // Worker permissions
-  const canManageWorkers = useCallback((): boolean => {
-    return userPermissions.canManageWorkers;
-  }, [userPermissions.canManageWorkers]);
-
-  const canViewWorkers = useCallback((): boolean => {
-    return userPermissions.canViewWorkers;
-  }, [userPermissions.canViewWorkers]);
-
-  const canCreateWorkers = useCallback((): boolean => {
-    return userPermissions.canCreateWorkers;
-  }, [userPermissions.canCreateWorkers]);
-
-  const canDeleteWorkers = useCallback((): boolean => {
-    return userPermissions.canDeleteWorkers;
-  }, [userPermissions.canDeleteWorkers]);
-
-  // Notification permissions
-  const canManageNotifications = useCallback((): boolean => {
-    return userPermissions.canManageNotifications;
-  }, [userPermissions.canManageNotifications]);
-
-  const canViewNotifications = useCallback((): boolean => {
-    return userPermissions.canViewNotifications;
-  }, [userPermissions.canViewNotifications]);
-
-  const canCreateNotifications = useCallback((): boolean => {
-    return userPermissions.canCreateNotifications;
-  }, [userPermissions.canCreateNotifications]);
-
-  // Reinduction permissions
-  const canManageReinduction = useCallback((): boolean => {
-    return userPermissions.canManageReinduction;
-  }, [userPermissions.canManageReinduction]);
-
-  const canViewReinduction = useCallback((): boolean => {
-    return userPermissions.canViewReinduction;
-  }, [userPermissions.canViewReinduction]);
-
-  const canCreateReinduction = useCallback((): boolean => {
-    return userPermissions.canCreateReinduction;
-  }, [userPermissions.canCreateReinduction]);
-
-  // Occupational exam permissions
-  const canManageOccupationalExam = useCallback((): boolean => {
-    return userPermissions.canManageOccupationalExam;
-  }, [userPermissions.canManageOccupationalExam]);
-
-  const canViewOccupationalExam = useCallback((): boolean => {
-    return userPermissions.canViewOccupationalExam;
-  }, [userPermissions.canViewOccupationalExam]);
-
-  const canCreateOccupationalExam = useCallback((): boolean => {
-    return userPermissions.canCreateOccupationalExam;
-  }, [userPermissions.canCreateOccupationalExam]);
-
-  // Seguimiento permissions
-  const canManageSeguimiento = useCallback((): boolean => {
-    return userPermissions.canManageSeguimiento;
-  }, [userPermissions.canManageSeguimiento]);
-
-  const canViewSeguimiento = useCallback((): boolean => {
-    return userPermissions.canViewSeguimiento;
-  }, [userPermissions.canViewSeguimiento]);
-
-  const canCreateSeguimiento = useCallback((): boolean => {
-    return userPermissions.canCreateSeguimiento;
-  }, [userPermissions.canCreateSeguimiento]);
-
-  // Admin config permissions
-  const canManageAdminConfig = useCallback((): boolean => {
-    return userPermissions.canManageAdminConfig;
-  }, [userPermissions.canManageAdminConfig]);
-
-  const canViewAdminConfig = useCallback((): boolean => {
-    return userPermissions.canViewAdminConfig;
-  }, [userPermissions.canViewAdminConfig]);
-
-  const canUpdateAdminConfig = useCallback((): boolean => {
-    return userPermissions.canUpdateAdminConfig;
-  }, [userPermissions.canUpdateAdminConfig]);
-
-  // Funciones asíncronas para verificación en tiempo real (para casos específicos)
-  const checkCanManageUsers = useCallback(async (): Promise<boolean> => {
-    return await checkPermission('USER', 'UPDATE');
-  }, [checkPermission]);
-
-  const checkCanViewUsers = useCallback(async (): Promise<boolean> => {
-    return await checkPermission('USER', 'READ');
-  }, [checkPermission]);
-
-  const checkCanCreateUsers = useCallback(async (): Promise<boolean> => {
-    return await checkPermission('USER', 'CREATE');
-  }, [checkPermission]);
-
-  const checkCanDeleteUsers = useCallback(async (): Promise<boolean> => {
-    return await checkPermission('USER', 'DELETE');
-  }, [checkPermission]);
+  }, [
+    user, 
+    pageAccesses, 
+    userPermissions,
+    canUpdateUsers,
+    canViewUsersPage,
+    canViewCoursesPage,
+    canCreateCourses,
+    canUpdateCourses,
+    canViewEnrollmentPage,
+    canCreateEnrollment,
+    canUpdateEnrollment,
+    canViewReinductionPage,
+    canViewEvaluationsPage,
+    canCreateEvaluations,
+    canUpdateEvaluations,
+    canViewSurveysPage,
+    canCreateSurveys,
+    canUpdateSurveys,
+    canViewAttendancePage,
+    canUpdateAttendance,
+    canViewWorkersPage,
+    canCreateWorkers,
+    canUpdateWorkers,
+    canViewOccupationalExamPage,
+    canViewSeguimientoPage,
+    canViewCertificatesPage,
+    canCreateCertificates,
+    canViewReportsPage,
+    canViewNotificationsPage
+  ]);
 
   return {
     loading,
@@ -810,67 +1425,127 @@ export const usePermissions = () => {
     userPermissions,
     checkPermission,
     canAccessPage,
-    // User permissions
-    canManageUsers,
-    canViewUsers,
+    // Page access permission functions
+    canViewUsersPage,
+    canViewCoursesPage,
+    canViewEvaluationsPage,
+    canViewSurveysPage,
+    canViewCertificatesPage,
+    canViewAttendancePage,
+    canViewReportsPage,
+    canViewNotificationsPage,
+    canViewWorkersPage,
+    canViewReinductionPage,
+    canViewAdminConfigPage,
+    canViewSeguimientoPage,
+    canViewRolesPage,
+    canViewFilesPage,
+    canViewDashboardPage,
+    canViewProfilePage,
+    canViewAuditPage,
+    canViewAbsenteeismPage,
+    canViewEnrollmentPage,
+    canViewOccupationalExamPage,
+    canViewProgressPage,
+    // User permission functions
     canCreateUsers,
+    canReadUsers,
+    canUpdateUsers,
     canDeleteUsers,
-    // Course permissions
-    canManageCourses,
-    canViewCourses,
+    // Course permission functions
     canCreateCourses,
+    canReadCourses,
+    canUpdateCourses,
     canDeleteCourses,
-    // Enrollment permissions
-    canManageEnrollments,
-    canViewEnrollments,
-    canCreateEnrollments,
-    canDeleteEnrollments,
-    // Evaluation permissions
-    canManageEvaluations,
-    canViewEvaluations,
+    // Evaluation permission functions
     canCreateEvaluations,
+    canReadEvaluations,
+    canUpdateEvaluations,
     canDeleteEvaluations,
-    // Report permissions
-    canViewReports,
-    canExportReports,
-    // Survey permissions
-    canManageSurveys,
-    canViewSurveys,
+    canSubmitEvaluations,
+    // Survey permission functions
     canCreateSurveys,
+    canReadSurveys,
+    canUpdateSurveys,
     canDeleteSurveys,
-    // Certificate permissions
-    canManageCertificates,
-    canViewCertificates,
+    canSubmitSurveys,
+    // Certificate permission functions
     canCreateCertificates,
-    // Attendance permissions
-    canManageAttendance,
-    canViewAttendance,
+    canReadCertificates,
+    canUpdateCertificates,
+    canDeleteCertificates,
+    // Attendance permission functions
+    canCreateAttendance,
+    canReadAttendance,
     canUpdateAttendance,
-    // Worker permissions
-    canManageWorkers,
-    canViewWorkers,
-    canCreateWorkers,
-    canDeleteWorkers,
-    // Notification permissions
-    canManageNotifications,
-    canViewNotifications,
+    canDeleteAttendance,
+    // Report permission functions
+    canCreateReports,
+    canReadReports,
+    canUpdateReports,
+    canDeleteReports,
+    // Notification permission functions
     canCreateNotifications,
-    // Reinduction permissions
-    canManageReinduction,
-    canViewReinduction,
+    canReadNotifications,
+    canUpdateNotifications,
+    canDeleteNotifications,
+    // Worker permission functions
+    canCreateWorkers,
+    canReadWorkers,
+    canUpdateWorkers,
+    canDeleteWorkers,
+    // Reinduction permission functions
     canCreateReinduction,
-    // Occupational exam permissions
-    canManageOccupationalExam,
-    canViewOccupationalExam,
-    canCreateOccupationalExam,
-    // Seguimiento permissions
-    canManageSeguimiento,
-    canViewSeguimiento,
-    canCreateSeguimiento,
-    // Admin config permissions
-    canManageAdminConfig,
-    canViewAdminConfig,
+    canReadReinduction,
+    canUpdateReinduction,
+    canDeleteReinduction,
+    // Admin config permission functions
+    canCreateAdminConfig,
+    canReadAdminConfig,
     canUpdateAdminConfig,
+    canDeleteAdminConfig,
+    // Seguimiento permission functions
+    canCreateSeguimiento,
+    canReadSeguimiento,
+    canUpdateSeguimiento,
+    canDeleteSeguimiento,
+    // Role permission functions
+    canCreateRoles,
+    canReadRoles,
+    canUpdateRoles,
+    canDeleteRoles,
+    // File permission functions
+    canCreateFiles,
+    canReadFiles,
+    canUpdateFiles,
+    canDeleteFiles,
+    // Enrollment permission functions
+    canCreateEnrollment,
+    canReadEnrollment,
+    canUpdateEnrollment,
+    canDeleteEnrollment,
+    // Occupational exam permission functions
+    canCreateOccupationalExam,
+    canReadOccupationalExam,
+    canUpdateOccupationalExam,
+    canDeleteOccupationalExam,
+    // Progress permission functions
+    canCreateProgress,
+    canReadProgress,
+    canUpdateProgress,
+    canDeleteProgress,
+    // Module permission functions
+    canCreateModules,
+    canReadModules,
+    canUpdateModules,
+    canDeleteModules,
+    canViewModulesPage,
+    // Material permission functions
+    canCreateMaterials,
+    canReadMaterials,
+    canUpdateMaterials,
+    canDeleteMaterials,
+    canViewMaterialsPage,
     // Async functions for real-time checks
     checkCanManageUsers,
     checkCanViewUsers,

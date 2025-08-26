@@ -130,7 +130,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
     if (userRole === UserRole.SUPERVISOR) {
       // Los supervisores necesitan permisos granulares
-      if (!permissions.canManageUsers()) {
+      if (!permissions.canUpdateUsers()) {
         return <Navigate to="/unauthorized" replace />;
       }
       return <>{children}</>;

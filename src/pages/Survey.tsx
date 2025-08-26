@@ -77,6 +77,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import api from '../services/api';
 
@@ -201,6 +202,7 @@ interface EmployeeSurvey {
 
 const Survey: React.FC = () => {
   const { user } = useAuth();
+  const { canCreateSurveys, canDeleteSurveys } = usePermissions();
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [employeeSurveys, setEmployeeSurveys] = useState<EmployeeSurvey[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -1208,22 +1210,26 @@ const Survey: React.FC = () => {
                                   <CopyIcon />
                                 </IconButton>
                               </Tooltip>
-                              <Tooltip title="Editar">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleOpenDialog(survey)}
-                                >
-                                  <EditIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Eliminar">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleDeleteSurvey(survey)}
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </Tooltip>
+                              {canCreateSurveys() && (
+                                <Tooltip title="Editar">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleOpenDialog(survey)}
+                                  >
+                                    <EditIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              {canDeleteSurveys() && (
+                                <Tooltip title="Eliminar">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteSurvey(survey)}
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                             </>
                           )}
                         </Box>

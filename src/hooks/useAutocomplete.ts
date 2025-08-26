@@ -129,8 +129,13 @@ export const useAutocomplete = ({
   
   // Función principal de búsqueda
   const performSearch = useCallback(async (term: string) => {
+    // Si minSearchLength es 0 y tenemos opciones estáticas, mostrar todas cuando no hay término
     if (term.length < minSearchLength) {
-      setOptions([]);
+      if (minSearchLength === 0 && staticOptions.length > 0 && !apiEndpoint) {
+        setOptions(staticOptions);
+      } else {
+        setOptions([]);
+      }
       setError(null);
       return;
     }
@@ -157,8 +162,15 @@ export const useAutocomplete = ({
     } finally {
       setLoading(false);
     }
-  }, [minSearchLength, apiEndpoint, fetchApiOptions, filterStaticOptions]);
+  }, [minSearchLength, apiEndpoint, fetchApiOptions, filterStaticOptions, staticOptions]);
   
+  // Efecto inicial para cargar opciones estáticas cuando minSearchLength es 0
+  useEffect(() => {
+    if (minSearchLength === 0 && staticOptions.length > 0 && !apiEndpoint && searchTerm === '') {
+      setOptions(staticOptions);
+    }
+  }, [minSearchLength, staticOptions, apiEndpoint, searchTerm]);
+
   // Efecto para manejar la búsqueda con debounce
   useEffect(() => {
     if (searchTimeoutRef.current) {
