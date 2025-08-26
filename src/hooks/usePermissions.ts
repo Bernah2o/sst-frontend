@@ -673,17 +673,21 @@ export const usePermissions = () => {
               { key: 'canDeleteMaterials', resource: 'materials', action: 'delete' }
             ];
 
-            const responses = await Promise.all(
-              permissionChecks.map(check => 
-                api.post('/permissions/check', { 
-                  resource_type: check.resource, 
-                  action: check.action 
-                }).catch(() => ({ data: { has_permission: false } }))
-              )
-            );
+            // Usar el endpoint batch para optimizar las llamadas a la API
+            const permissionRequests = permissionChecks.map(check => ({
+              resource_type: check.resource,
+              action: check.action
+            }));
 
+            const response = await api.post('/permissions/check-batch', permissionRequests);
+            const permissionResults = response.data.permissions;
+
+            // Mapear los resultados a los permisos correspondientes
             permissionChecks.forEach((check, index) => {
-              (permissions as any)[check.key] = responses[index].data.has_permission;
+              const result = permissionResults.find(
+                (p: any) => p.resource_type === check.resource && p.action === check.action
+              );
+              (permissions as any)[check.key] = result ? result.has_permission : false;
             });
           } catch (error) {
             console.error('Error checking permissions:', error);
@@ -1569,6 +1573,19 @@ function checkTraditionalPageAccess(pageRoute: string, userRole?: string): boole
     '/admin/roles': ['admin'],
     '/admin/config': ['admin'],
     '/admin/workers': ['admin', 'supervisor'],
+    '/admin/audit': ['admin'],
+    '/admin/absenteeism': ['admin', 'supervisor'],
+    '/admin/occupational-exams': ['admin', 'supervisor'],
+    '/admin/seguimientos': ['admin', 'supervisor'],
+    '/admin/attendance': ['admin', 'trainer', 'supervisor'],
+    '/admin/admin-attendance': ['admin'],
+    '/admin/evaluations': ['admin', 'trainer'],
+    '/admin/evaluation-results': ['admin', 'trainer'],
+    '/admin/surveys': ['admin', 'trainer'],
+    '/admin/certificates': ['admin', 'trainer', 'supervisor'],
+    '/admin/reports': ['admin', 'supervisor'],
+    '/admin/notifications': ['admin', 'trainer', 'supervisor'],
+    '/admin/reinduction': ['admin', 'trainer', 'supervisor'],
     '/courses': ['admin', 'supervisor', 'trainer'],
     '/evaluations': ['admin', 'supervisor', 'trainer'],
     '/reports': ['admin', 'supervisor', 'trainer'],
@@ -1582,7 +1599,9 @@ function checkTraditionalPageAccess(pageRoute: string, userRole?: string): boole
   };
 
   const allowedRoles = traditionalAccess[pageRoute];
-  return allowedRoles ? allowedRoles.includes(normalizedRole) : true;
+  // Cambio importante: retornar false por defecto para mayor seguridad
+  // Solo permitir acceso a rutas explícitamente definidas
+  return allowedRoles ? allowedRoles.includes(normalizedRole) : false;
 }
 
 export default usePermissions;

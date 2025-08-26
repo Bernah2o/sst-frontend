@@ -64,7 +64,7 @@ interface Survey {
   survey_id: number;
   survey_title: string;
   completed_at: string | null;
-  is_completed: boolean;
+  status: string;
 }
 
 interface Evaluation {
@@ -72,10 +72,10 @@ interface Evaluation {
   evaluation_id: number;
   evaluation_title: string;
   score: number | null;
-  max_score: number | null;
+  max_points: number | null;
   passed: boolean | null;
   completed_at: string | null;
-  is_completed: boolean;
+  status: string;
 }
 
 interface WorkerDetailData {
@@ -216,7 +216,8 @@ const WorkerDetail: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+    if (!status) return 'default';
     switch (status.toLowerCase()) {
       case 'completed':
         return 'success';
@@ -224,6 +225,8 @@ const WorkerDetail: React.FC = () => {
         return 'primary';
       case 'in_progress':
         return 'warning';
+      case 'unknown':
+        return 'default';
       default:
         return 'default';
     }
@@ -391,8 +394,8 @@ const WorkerDetail: React.FC = () => {
                       <TableCell>{formatDate(course.completion_date)}</TableCell>
                       <TableCell>
                         <Chip
-                          label={course.status}
-                          color={getStatusColor(course.status)}
+                          label={course.status || 'N/A'}
+                          color={getStatusColor(course.status || 'unknown')}
                           size="small"
                         />
                       </TableCell>
@@ -439,8 +442,8 @@ const WorkerDetail: React.FC = () => {
                       <TableCell>{survey.survey_title}</TableCell>
                       <TableCell>
                         <Chip
-                          label={survey.is_completed ? 'Completada' : 'Pendiente'}
-                          color={survey.is_completed ? 'success' : 'warning'}
+                          label={survey.status === 'COMPLETED' ? 'Completada' : 'Pendiente'}
+                          color={survey.status === 'COMPLETED' ? 'success' : 'warning'}
                           size="small"
                         />
                       </TableCell>
@@ -489,14 +492,14 @@ const WorkerDetail: React.FC = () => {
                       <TableCell>{evaluation.evaluation_title}</TableCell>
                       <TableCell>
                         <Chip
-                          label={evaluation.is_completed ? 'Completada' : 'Pendiente'}
-                          color={evaluation.is_completed ? 'success' : 'warning'}
+                          label={evaluation.status === 'COMPLETED' ? 'Completada' : 'Pendiente'}
+                          color={evaluation.status === 'COMPLETED' ? 'success' : 'warning'}
                           size="small"
                         />
                       </TableCell>
                       <TableCell>
-                        {evaluation.score !== null && evaluation.max_score !== null
-                          ? `${evaluation.score}/${evaluation.max_score}`
+                        {evaluation.score !== null && evaluation.max_points !== null
+                          ? `${evaluation.score}/${evaluation.max_points}`
                           : 'N/A'
                         }
                       </TableCell>

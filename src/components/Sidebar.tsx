@@ -409,12 +409,12 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           'supervisor-dashboard': () => user.role === 'supervisor',
           'employee-dashboard': () => user.role === 'employee',
           
-          // Employee sections - para empleados o usuarios con permisos específicos
-          'employee-courses': () => user.role === 'employee' || canViewCoursesPage(),
-          'employee-surveys': () => user.role === 'employee' || canViewSurveysPage(),
-          'employee-evaluations': () => user.role === 'employee' || canViewEvaluationsPage(),
-          'employee-attendance': () => user.role === 'employee' || canViewAttendancePage(),
-          'employee-certificates': () => user.role === 'employee' || canViewCertificatesPage(),
+          // Employee sections - siempre visibles para empleados
+          'employee-courses': () => user.role === 'employee',
+          'employee-surveys': () => user.role === 'employee',
+          'employee-evaluations': () => user.role === 'employee',
+          'employee-attendance': () => user.role === 'employee',
+          'employee-certificates': () => user.role === 'employee',
           
           // Worker management
           'worker-management': () => canViewWorkersPage() || canUpdateWorkers(),

@@ -123,6 +123,36 @@ const CourseDetail: React.FC = () => {
     }
   };
 
+  // Helper function to check if a material is completed
+  const isMaterialCompleted = (materialId: number): boolean => {
+    if (!progressInfo || !progressInfo.modules) return false;
+    
+    for (const moduleProgress of progressInfo.modules) {
+      const materialProgress = moduleProgress.materials?.find(
+        (m: any) => m.material_id === materialId
+      );
+      if (materialProgress && materialProgress.status === 'completed') {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Helper function to get material progress percentage
+  const getMaterialProgress = (materialId: number): number => {
+    if (!progressInfo || !progressInfo.modules) return 0;
+    
+    for (const moduleProgress of progressInfo.modules) {
+      const materialProgress = moduleProgress.materials?.find(
+        (m: any) => m.material_id === materialId
+      );
+      if (materialProgress) {
+        return materialProgress.progress_percentage || 0;
+      }
+    }
+    return 0;
+  };
+
   const handleModuleAccordionChange = (moduleId: number) => {
     setExpandedModule(expandedModule === moduleId ? false : moduleId);
   };
@@ -155,10 +185,11 @@ const CourseDetail: React.FC = () => {
     try {
       await api.post(`/progress/material/${material.id}/complete`);
       // Refresh course data to update progress
-      fetchCourseDetail();
+      await fetchCourseDetail();
       setOpenMaterialDialog(false);
     } catch (error: any) {
       console.error("Error completing material:", error);
+      setError("Error al completar el material");
     }
   };
 
@@ -464,10 +495,10 @@ const CourseDetail: React.FC = () => {
                         <ListItem key={material.id} disablePadding>
                           <ListItemButton
                             onClick={() => handleMaterialClick(material)}
-                            disabled={material.completed}
+                            disabled={isMaterialCompleted(material.id)}
                           >
                             <ListItemIcon>
-                              {material.completed ? (
+                              {isMaterialCompleted(material.id) ? (
                                 <CheckCircle color="success" />
                               ) : (
                                 getMaterialIcon(material.material_type)
@@ -507,7 +538,7 @@ const CourseDetail: React.FC = () => {
                               }
                             />
                             <Box sx={{ ml: 2 }}>
-                              {material.completed ? (
+                              {isMaterialCompleted(material.id) ? (
                                 <Chip
                                   label="Completado"
                                   color="success"
@@ -519,7 +550,7 @@ const CourseDetail: React.FC = () => {
                                   startIcon={<PlayArrow />}
                                   variant="outlined"
                                 >
-                                  {material.progress ? "Continuar" : "Iniciar"}
+                                  {getMaterialProgress(material.id) > 0 ? "Continuar" : "Iniciar"}
                                 </Button>
                               )}
                             </Box>
@@ -613,7 +644,7 @@ const CourseDetail: React.FC = () => {
 
         <DialogActions>
           <Button onClick={() => setOpenMaterialDialog(false)}>Cerrar</Button>
-          {selectedMaterial && !selectedMaterial.completed && (
+          {selectedMaterial && !isMaterialCompleted(selectedMaterial.id) && (
             <Button
               variant="contained"
               onClick={() => handleMaterialComplete(selectedMaterial)}

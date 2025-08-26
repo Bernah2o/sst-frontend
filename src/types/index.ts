@@ -3,27 +3,27 @@ export enum UserRole {
   ADMIN = "admin",
   TRAINER = "trainer",
   EMPLOYEE = "employee",
-  SUPERVISOR = "supervisor"
+  SUPERVISOR = "supervisor",
 }
 
 export enum Gender {
   MALE = "masculino",
   FEMALE = "femenino",
-  OTHER = "otro"
+  OTHER = "otro",
 }
 
 export enum DocumentType {
   CEDULA = "cedula",
   PASSPORT = "pasaporte",
   OTHER = "otro",
-  SPECIAL_PERMIT = "permiso_especial_permanencia"
+  SPECIAL_PERMIT = "permiso_especial_permanencia",
 }
 
 export enum ContractType {
   INDEFINITE = "indefinido",
   FIXED = "fijo",
   SERVICES = "prestacion_servicios",
-  WORK_LABOR = "obra_labor"
+  WORK_LABOR = "obra_labor",
 }
 
 export enum WorkModality {
@@ -31,7 +31,7 @@ export enum WorkModality {
   REMOTE = "trabajo_remoto",
   TELEWORK = "teletrabajo",
   HOME_OFFICE = "trabajo_en_casa",
-  MOBILE = "trabajo_movil_itinerante"
+  MOBILE = "trabajo_movil_itinerante",
 }
 
 export enum RiskLevel {
@@ -39,7 +39,7 @@ export enum RiskLevel {
   LEVEL_II = "nivel_2",
   LEVEL_III = "nivel_3",
   LEVEL_IV = "nivel_4",
-  LEVEL_V = "nivel_5"
+  LEVEL_V = "nivel_5",
 }
 
 export enum BloodType {
@@ -50,132 +50,130 @@ export enum BloodType {
   AB_POSITIVE = "AB+",
   AB_NEGATIVE = "AB-",
   O_POSITIVE = "O+",
-  O_NEGATIVE = "O-"
+  O_NEGATIVE = "O-",
 }
-
-
 
 // Reinduction Enums
 export enum ReinductionStatus {
-  PENDING = 'pending',
-  SCHEDULED = 'scheduled',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  OVERDUE = 'overdue',
-  EXEMPTED = 'exempted'
+  PENDING = "pending",
+  SCHEDULED = "scheduled",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  OVERDUE = "overdue",
+  EXEMPTED = "exempted",
 }
 
 // Seguimiento Enums
 export enum EstadoSeguimiento {
-  INICIADO = 'iniciado',
-  TERMINADO = 'terminado'
+  INICIADO = "iniciado",
+  TERMINADO = "terminado",
 }
 
 export enum ValoracionRiesgo {
-  BAJO = 'bajo',
-  MEDIO = 'medio',
-  ALTO = 'alto',
-  MUY_ALTO = 'muy_alto'
+  BAJO = "bajo",
+  MEDIO = "medio",
+  ALTO = "alto",
+  MUY_ALTO = "muy_alto",
 }
 
 // Audit Enums
 export enum AuditAction {
-  CREATE = 'create',
-  READ = 'read',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LOGIN = 'login',
-  LOGOUT = 'logout',
-  EXPORT = 'export',
-  IMPORT = 'import',
-  DOWNLOAD = 'download',
-  UPLOAD = 'upload',
-  APPROVE = 'approve',
-  REJECT = 'reject',
-  SUBMIT = 'submit',
-  COMPLETE = 'complete',
-  CANCEL = 'cancel'
+  CREATE = "create",
+  READ = "read",
+  UPDATE = "update",
+  DELETE = "delete",
+  LOGIN = "login",
+  LOGOUT = "logout",
+  EXPORT = "export",
+  IMPORT = "import",
+  DOWNLOAD = "download",
+  UPLOAD = "upload",
+  APPROVE = "approve",
+  REJECT = "reject",
+  SUBMIT = "submit",
+  COMPLETE = "complete",
+  CANCEL = "cancel",
 }
 
 // Occupational Exam Enums
 export enum ExamType {
-  INGRESO = 'examen_ingreso',
-  PERIODICO = 'examen_periodico',
-  REINTEGRO = 'examen_reintegro',
-  RETIRO = 'examen_retiro'
+  INGRESO = "examen_ingreso",
+  PERIODICO = "examen_periodico",
+  REINTEGRO = "examen_reintegro",
+  RETIRO = "examen_retiro",
 }
 
 export enum MedicalAptitude {
-  APTO = 'apto',
-  APTO_CON_RECOMENDACIONES = 'apto_con_recomendaciones',
-  NO_APTO = 'no_apto'
+  APTO = "apto",
+  APTO_CON_RECOMENDACIONES = "apto_con_recomendaciones",
+  NO_APTO = "no_apto",
 }
 
 // User Progress Enums
 export enum MaterialProgressStatus {
-  NOT_STARTED = 'not_started',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  SKIPPED = 'skipped'
+  NOT_STARTED = "not_started",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  SKIPPED = "skipped",
 }
 
 // Course Enums
 export enum CourseType {
-  INDUCTION = 'induction',
-  REINDUCTION = 'reinduction',
-  SPECIALIZED = 'specialized',
-  MANDATORY = 'mandatory',
-  OPTIONAL = 'optional',
-  TRAINING = 'training',
-  ENTERTAINMENT = 'entertainment'
+  INDUCTION = "induction",
+  REINDUCTION = "reinduction",
+  SPECIALIZED = "specialized",
+  MANDATORY = "mandatory",
+  OPTIONAL = "optional",
+  TRAINING = "training",
+  ENTERTAINMENT = "entertainment",
 }
 
 export enum CourseStatus {
-  DRAFT = 'draft',
-  PUBLISHED = 'published',
-  ARCHIVED = 'archived'
+  DRAFT = "draft",
+  PUBLISHED = "published",
+  ARCHIVED = "archived",
 }
 
 export enum MaterialType {
-  PDF = 'pdf',
-  VIDEO = 'video',
-  PRESENTATION = 'presentation',
-  DOCUMENT = 'document',
-  LINK = 'link',
-  QUIZ = 'quiz'
+  PDF = "pdf",
+  VIDEO = "video",
+  PRESENTATION = "presentation",
+  DOCUMENT = "document",
+  LINK = "link",
+  QUIZ = "quiz",
 }
 
 // Survey Enums
 export enum SurveyStatus {
-  DRAFT = 'draft',
-  PUBLISHED = 'published',
-  CLOSED = 'closed',
-  ARCHIVED = 'archived'
+  DRAFT = "draft",
+  PUBLISHED = "published",
+  CLOSED = "closed",
+  ARCHIVED = "archived",
 }
 
 export enum SurveyQuestionType {
-  MULTIPLE_CHOICE = 'multiple_choice',
-  SINGLE_CHOICE = 'single_choice',
-  TEXT = 'text',
-  TEXTAREA = 'textarea',
-  RATING = 'rating',
-  YES_NO = 'yes_no',
-  SCALE = 'scale'
+  MULTIPLE_CHOICE = "multiple_choice",
+  SINGLE_CHOICE = "single_choice",
+  TEXT = "text",
+  TEXTAREA = "textarea",
+  RATING = "rating",
+  YES_NO = "yes_no",
+  SCALE = "scale",
 }
 
 export enum UserSurveyStatus {
-  NOT_STARTED = 'not_started',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  EXPIRED = 'expired'
+  NOT_STARTED = "not_started",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  EXPIRED = "expired",
 }
 
 // Report Enums
 export enum ExportFormat {
-  CSV = 'csv',
-  EXCEL = 'excel',
-  PDF = 'pdf',
-  JSON = 'json'
+  CSV = "csv",
+  EXCEL = "excel",
+  PDF = "pdf",
+  JSON = "json",
 }
 
 // User Schemas
@@ -381,18 +379,18 @@ export interface Inscripcion {
 
 // Tipos para asistencia (alineados con schemas del backend)
 export enum AttendanceStatus {
-  PRESENT = 'present',
-  ABSENT = 'absent',
-  LATE = 'late',
-  EXCUSED = 'excused',
-  PARTIAL = 'partial'
+  PRESENT = "present",
+  ABSENT = "absent",
+  LATE = "late",
+  EXCUSED = "excused",
+  PARTIAL = "partial",
 }
 
 export enum AttendanceType {
-  IN_PERSON = 'in_person',
-  VIRTUAL = 'virtual',
-  HYBRID = 'hybrid',
-  SELF_PACED = 'self_paced'
+  IN_PERSON = "in_person",
+  VIRTUAL = "virtual",
+  HYBRID = "hybrid",
+  SELF_PACED = "self_paced",
 }
 
 export interface AttendanceBase {
@@ -540,42 +538,42 @@ export interface AttendanceStats {
 
 // Tipos para notificaciones (alineados con schemas del backend)
 export enum NotificationType {
-  EMAIL = 'email',
-  SMS = 'sms',
-  IN_APP = 'in_app',
-  PUSH = 'push',
-  COURSE_UPDATE = 'course_update',
-  ASSIGNMENT_DUE = 'assignment_due',
-  GRADE_POSTED = 'grade_posted',
-  ANNOUNCEMENT = 'announcement',
-  REMINDER = 'reminder',
-  SYSTEM_ALERT = 'system_alert',
-  MESSAGE = 'message',
-  INFO = 'info',
-  WARNING = 'warning',
-  ERROR = 'error',
-  SUCCESS = 'success',
-  CURSO = 'curso',
-  EVALUACION = 'evaluacion',
-  EVENTO = 'evento'
+  EMAIL = "email",
+  SMS = "sms",
+  IN_APP = "in_app",
+  PUSH = "push",
+  COURSE_UPDATE = "course_update",
+  ASSIGNMENT_DUE = "assignment_due",
+  GRADE_POSTED = "grade_posted",
+  ANNOUNCEMENT = "announcement",
+  REMINDER = "reminder",
+  SYSTEM_ALERT = "system_alert",
+  MESSAGE = "message",
+  INFO = "info",
+  WARNING = "warning",
+  ERROR = "error",
+  SUCCESS = "success",
+  CURSO = "curso",
+  EVALUACION = "evaluacion",
+  EVENTO = "evento",
 }
 
 export enum NotificationStatus {
-  PENDING = 'pending',
-  SENT = 'sent',
-  FAILED = 'failed',
-  READ = 'read',
-  UNREAD = 'unread',
-  ARCHIVED = 'archived',
-  FAVORITE = 'favorite'
+  PENDING = "pending",
+  SENT = "sent",
+  FAILED = "failed",
+  READ = "read",
+  UNREAD = "unread",
+  ARCHIVED = "archived",
+  FAVORITE = "favorite",
 }
 
 export enum NotificationPriority {
-  LOW = 'low',
-  NORMAL = 'normal',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  URGENT = 'urgent'
+  LOW = "low",
+  NORMAL = "normal",
+  MEDIUM = "medium",
+  HIGH = "high",
+  URGENT = "urgent",
 }
 
 export interface NotificationBase {
@@ -611,12 +609,12 @@ export interface NotificationPreferences {
 
 // Tipos para certificados (alineados con schemas del backend)
 export enum CertificateStatus {
-  PENDING = 'pending',
-  ISSUED = 'issued',
-  VALID = 'valid',
-  ACTIVE = 'active',
-  REVOKED = 'revoked',
-  EXPIRED = 'expired'
+  PENDING = "pending",
+  ISSUED = "issued",
+  VALID = "valid",
+  ACTIVE = "active",
+  REVOKED = "revoked",
+  EXPIRED = "expired",
 }
 
 export interface CertificateBase {
@@ -650,24 +648,24 @@ export interface CertificateResponse extends CertificateBase {
 
 // Evaluation Enums
 export enum QuestionType {
-  MULTIPLE_CHOICE = 'multiple_choice',
-  TRUE_FALSE = 'true_false',
-  OPEN_TEXT = 'open_text',
-  MATCHING = 'matching',
-  ORDERING = 'ordering'
+  MULTIPLE_CHOICE = "multiple_choice",
+  TRUE_FALSE = "true_false",
+  OPEN_TEXT = "open_text",
+  MATCHING = "matching",
+  ORDERING = "ordering",
 }
 
 export enum EvaluationStatus {
-  DRAFT = 'draft',
-  PUBLISHED = 'published',
-  ARCHIVED = 'archived'
+  DRAFT = "draft",
+  PUBLISHED = "published",
+  ARCHIVED = "archived",
 }
 
 export enum UserEvaluationStatus {
-  NOT_STARTED = 'not_started',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  EXPIRED = 'expired'
+  NOT_STARTED = "not_started",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  EXPIRED = "expired",
 }
 
 // Answer Schemas
@@ -866,10 +864,10 @@ export interface EvaluationSubmission {
 }
 
 export enum CertificateType {
-  COMPLETION = 'completion',
-  ACHIEVEMENT = 'achievement',
-  PARTICIPATION = 'participation',
-  EXCELLENCE = 'excellence'
+  COMPLETION = "completion",
+  ACHIEVEMENT = "achievement",
+  PARTICIPATION = "participation",
+  EXCELLENCE = "excellence",
 }
 
 // Tipos para la API
@@ -1314,7 +1312,14 @@ export interface SessionUpdate {
 
 // Admin Config Types
 // Tipo para periodicidad EMO
-export type PeriodicidadEMO = 'anual' | 'semestral' | 'trimestral' | 'bianual' | 'mensual' | 'quincenal' | 'semanal';
+export type PeriodicidadEMO =
+  | "anual"
+  | "semestral"
+  | "trimestral"
+  | "bianual"
+  | "mensual"
+  | "quincenal"
+  | "semanal";
 
 export interface AdminConfig {
   id: number;
@@ -1571,6 +1576,9 @@ export interface CourseMaterialResponse extends CourseMaterialBase {
   module_id: number;
   created_at: string; // datetime
   updated_at: string; // datetime
+  completed?: boolean;
+  progress_percentage?: number;
+  status?: string;
 }
 
 // Course Module Schemas
@@ -1689,4 +1697,9 @@ export interface SeguridadSocialResponse {
 
 // Legacy interfaces for backward compatibility
 export interface CourseModule extends CourseModuleResponse {}
-export interface CourseMaterial extends CourseMaterialResponse {}
+export interface CourseMaterial extends CourseMaterialResponse {
+  // User progress information
+  completed?: boolean;
+  progress_percentage?: number;
+  status?: string;
+}

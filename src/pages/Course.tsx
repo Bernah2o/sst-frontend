@@ -48,11 +48,11 @@ import {
   CloudUpload,
   Link as LinkIcon,
   Quiz,
+  CheckCircle,
   VideoLibrary,
   PictureAsPdf,
   LibraryBooks,
   PlayArrow,
-  CheckCircle,
   Warning,
   Error,
 } from "@mui/icons-material";
@@ -796,6 +796,50 @@ const CoursesManagement: React.FC = () => {
       is_required: material.is_required,
     });
     setOpenMaterialEditDialog(true);
+  };
+
+  const handleMaterialComplete = async (material: CourseMaterial) => {
+    try {
+      // Primero iniciar el progreso del material si no existe
+      try {
+        await api.post(`/progress/material/${material.id}/start`);
+      } catch (startError: any) {
+        // Si el material ya está iniciado, continuar con el completado
+        if (startError.response?.status !== 400) {
+          throw startError;
+        }
+      }
+      
+      // Luego marcar como completado
+      await api.post(`/progress/material/${material.id}/complete`);
+      showSnackbar("Material marcado como completado", "success");
+      
+      // Recargar materiales para actualizar el estado
+      if (selectedModule) {
+        const response = await api.get(
+          `/courses/modules/${selectedModule.id}/materials`
+        );
+        setModuleMaterials(response.data);
+      } else if (selectedCourse) {
+        // Si estamos viendo materiales de todo el curso, recargar todos
+        const modulesResponse = await api.get(`/courses/${selectedCourse.id}/modules`);
+        const modules = modulesResponse.data;
+        
+        const allMaterials: CourseMaterial[] = [];
+        for (const module of modules) {
+          try {
+            const materialsResponse = await api.get(`/courses/modules/${module.id}/materials`);
+            allMaterials.push(...materialsResponse.data);
+          } catch (error) {
+            console.warn(`Error loading materials for module ${module.id}:`, error);
+          }
+        }
+        setModuleMaterials(allMaterials);
+      }
+    } catch (error: any) {
+      console.error("Error completing material:", error);
+      showSnackbar("Error al marcar material como completado", "error");
+    }
   };
 
   const handleSaveMaterial = async () => {
@@ -1758,15 +1802,17 @@ const CoursesManagement: React.FC = () => {
       >
         <DialogTitle>
           Gestionar Módulos - {selectedCourse?.title}
-          <Button
-            onClick={handleCreateModule}
-            variant="contained"
-            size="small"
-            startIcon={<Add />}
-            sx={{ float: "right" }}
-          >
-            Nuevo Módulo
-          </Button>
+          {canCreateModules() && (
+            <Button
+              onClick={handleCreateModule}
+              variant="contained"
+              size="small"
+              startIcon={<Add />}
+              sx={{ float: "right" }}
+            >
+              Nuevo Módulo
+            </Button>
+          )}
         </DialogTitle>
         <DialogContent>
           {courseModules && courseModules.length > 0 ? (
@@ -1811,22 +1857,26 @@ const CoursesManagement: React.FC = () => {
                       </Button>
                     </TableCell>
                     <TableCell align="center">
-                      <IconButton
-                        color="primary"
-                        onClick={() => handleEditModule(module)}
-                        size="small"
-                        title="Editar módulo"
-                      >
-                        <Edit />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteModule(module)}
-                        size="small"
-                        title="Eliminar módulo"
-                      >
-                        <Delete />
-                      </IconButton>
+                      {canUpdateModules() && (
+                        <IconButton
+                          color="primary"
+                          onClick={() => handleEditModule(module)}
+                          size="small"
+                          title="Editar módulo"
+                        >
+                          <Edit />
+                        </IconButton>
+                      )}
+                      {canDeleteModules() && (
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDeleteModule(module)}
+                          size="small"
+                          title="Eliminar módulo"
+                        >
+                          <Delete />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1980,15 +2030,17 @@ const CoursesManagement: React.FC = () => {
       >
         <DialogTitle>
           Gestionar Materiales - {selectedModule?.title}
-          <Button
-            onClick={handleCreateMaterial}
-            variant="contained"
-            size="small"
-            startIcon={<Add />}
-            sx={{ float: "right" }}
-          >
-            Nuevo Material
-          </Button>
+          {canCreateMaterials() && (
+            <Button
+              onClick={handleCreateMaterial}
+              variant="contained"
+              size="small"
+              startIcon={<Add />}
+              sx={{ float: "right" }}
+            >
+              Nuevo Material
+            </Button>
+          )}
         </DialogTitle>
         <DialogContent>
           {moduleMaterials && moduleMaterials.length > 0 ? (
@@ -2001,6 +2053,7 @@ const CoursesManagement: React.FC = () => {
                   <TableCell>Orden</TableCell>
                   <TableCell>Requerido</TableCell>
                   <TableCell>Descargable</TableCell>
+                  <TableCell>Estado</TableCell>
                   <TableCell align="center">Acciones</TableCell>
                 </TableRow>
               </TableHead>
@@ -2045,6 +2098,14 @@ const CoursesManagement: React.FC = () => {
                         size="small"
                       />
                     </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={material.completed ? "Completado" : "Pendiente"}
+                        color={material.completed ? "success" : "warning"}
+                        size="small"
+                        icon={material.completed ? <CheckCircle /> : undefined}
+                      />
+                    </TableCell>
                     <TableCell align="center">
                       <IconButton
                         color="info"
@@ -2068,21 +2129,33 @@ const CoursesManagement: React.FC = () => {
                       >
                         <Visibility />
                       </IconButton>
+                      {canUpdateMaterials() && (
+                        <IconButton
+                          color="primary"
+                          onClick={() => handleEditMaterial(material)}
+                          size="small"
+                          title="Editar material"
+                        >
+                          <Edit />
+                        </IconButton>
+                      )}
+                      {canDeleteMaterials() && (
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDeleteMaterial(material)}
+                          size="small"
+                          title="Eliminar material"
+                        >
+                          <Delete />
+                        </IconButton>
+                      )}
                       <IconButton
-                        color="primary"
-                        onClick={() => handleEditMaterial(material)}
+                        color="success"
+                        onClick={() => handleMaterialComplete(material)}
                         size="small"
-                        title="Editar material"
+                        title="Marcar como completado"
                       >
-                        <Edit />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteMaterial(material)}
-                        size="small"
-                        title="Eliminar material"
-                      >
-                        <Delete />
+                        <CheckCircle />
                       </IconButton>
                     </TableCell>
                   </TableRow>
