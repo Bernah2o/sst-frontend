@@ -130,6 +130,8 @@ const CourseDetail: React.FC = () => {
       
       // Verificar si hay encuestas disponibles
       const checkSurveys = async () => {
+        if (!id) return;
+        
         try {
           const surveysResponse = await api.get(`/surveys/?course_id=${id}`);
           const availableSurveys = surveysResponse.data.items || [];
@@ -153,6 +155,8 @@ const CourseDetail: React.FC = () => {
       
       // Verificar si hay evaluación disponible
       const checkEvaluation = async () => {
+        if (!id) return;
+        
         try {
           const evaluationResponse = await api.get(`/evaluations/?course_id=${id}`);
           const availableEvaluations = evaluationResponse.data.items || [];
@@ -192,6 +196,12 @@ const CourseDetail: React.FC = () => {
   }, [course, progressInfo, id]);
 
   const fetchCourseDetail = async () => {
+    if (!id) {
+      setError("ID del curso no válido");
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await api.get(`/courses/${id}`);
@@ -278,10 +288,19 @@ const CourseDetail: React.FC = () => {
   };
 
   const goToSurveys = () => {
+    if (!id) {
+      setError("ID del curso no válido");
+      return;
+    }
     navigate(`/employee/courses/${id}/surveys`);
   };
 
   const goToEvaluation = async () => {
+    if (!id) {
+      setError("ID del curso no válido");
+      return;
+    }
+    
     try {
       // Obtener las evaluaciones del curso
       const response = await api.get(`/evaluations/?course_id=${id}`);
@@ -561,7 +580,13 @@ const CourseDetail: React.FC = () => {
                       <Button 
                         variant="contained" 
                         color="success" 
-                        onClick={() => navigate(`/employee/certificates/${id}`)} 
+                        onClick={() => {
+                          if (id) {
+                            navigate(`/employee/certificates/${id}`);
+                          } else {
+                            setError("ID del curso no válido");
+                          }
+                        }} 
                         sx={{ mt: 2 }}
                       >
                         Ver Certificado

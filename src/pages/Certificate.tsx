@@ -40,6 +40,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../utils/dateUtils";
 import api from "../services/api";
+import { UserRole } from "../types";
 
 interface User {
   id: number;
@@ -119,19 +120,28 @@ const CertificatePage: React.FC = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      params.append("page", page.toString());
-      params.append("size", "20");
+      params.append("skip", ((page - 1) * 20).toString());
+      params.append("limit", "20");
 
-      if (filters.user_id) params.append("user_id", filters.user_id);
-      if (filters.course_id) params.append("course_id", filters.course_id);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.search) params.append("search", filters.search);
-      if (filters.start_date)
-        params.append("start_date", filters.start_date.toISOString());
-      if (filters.end_date)
-        params.append("end_date", filters.end_date.toISOString());
+      // Use different endpoint for employees vs admins
+      let endpoint = '/certificates/';
+      if (user?.role === 'employee') {
+        endpoint = '/certificates/my-certificates';
+        // For employees, only apply status and search filters
+        if (filters.status) params.append("status", filters.status);
+      } else {
+        // For admins, apply all filters
+        if (filters.user_id) params.append("user_id", filters.user_id);
+        if (filters.course_id) params.append("course_id", filters.course_id);
+        if (filters.status) params.append("status", filters.status);
+        if (filters.search) params.append("search", filters.search);
+        if (filters.start_date)
+          params.append("start_date", filters.start_date.toISOString());
+        if (filters.end_date)
+          params.append("end_date", filters.end_date.toISOString());
+      }
 
-      const response = await api.get(`/certificates/?${params.toString()}`);
+      const response = await api.get(`${endpoint}?${params.toString()}`);
       setCertificates(response.data.items || []);
       setTotalPages(response.data.pages || 1);
     } catch (error) {
@@ -139,13 +149,16 @@ const CertificatePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, filters]);
+  }, [page, filters, user?.role]);
 
   useEffect(() => {
     fetchCertificates();
-    fetchWorkers();
-    fetchCourses();
-  }, [page, filters, fetchCertificates]);
+    // Only fetch workers and courses for admin users
+    if (user?.role === UserRole.ADMIN || user?.role === UserRole.TRAINER) {
+      fetchWorkers();
+      fetchCourses();
+    }
+  }, [page, filters, fetchCertificates, user?.role]);
 
   const fetchWorkers = async () => {
     try {
@@ -316,43 +329,48 @@ const CertificatePage: React.FC = () => {
                   }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Usuario</InputLabel>
-                  <Select
-                    value={filters.user_id}
-                    onChange={(e) =>
-                      handleFilterChange("user_id", e.target.value)
-                    }
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {workers.map((worker) => (
-                      <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.first_name || worker.nombre}{" "}
-                        {worker.last_name || worker.apellido}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid size={{ xs: 12, md: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Curso</InputLabel>
-                  <Select
-                    value={filters.course_id}
-                    onChange={(e) =>
-                      handleFilterChange("course_id", e.target.value)
-                    }
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {courses.map((course) => (
-                      <MenuItem key={course.id} value={course.id.toString()}>
-                        {course.title || course.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+              {/* Only show user and course filters for admin users */}
+              {(user?.role === UserRole.ADMIN || user?.role === UserRole.TRAINER) && (
+                <>
+                  <Grid size={{ xs: 12, md: 2 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Usuario</InputLabel>
+                      <Select
+                        value={filters.user_id}
+                        onChange={(e) =>
+                          handleFilterChange("user_id", e.target.value)
+                        }
+                      >
+                        <MenuItem value="">Todos</MenuItem>
+                        {workers.map((worker) => (
+                          <MenuItem key={worker.id} value={worker.id.toString()}>
+                            {worker.first_name || worker.nombre}{" "}
+                            {worker.last_name || worker.apellido}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 2 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Curso</InputLabel>
+                      <Select
+                        value={filters.course_id}
+                        onChange={(e) =>
+                          handleFilterChange("course_id", e.target.value)
+                        }
+                      >
+                        <MenuItem value="">Todos</MenuItem>
+                        {courses.map((course) => (
+                          <MenuItem key={course.id} value={course.id.toString()}>
+                            {course.title || course.nombre}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </>
+              )}
               <Grid size={{ xs: 12, md: 2 }}>
                 <FormControl fullWidth>
                   <InputLabel>Estado</InputLabel>
@@ -392,7 +410,7 @@ const CertificatePage: React.FC = () => {
                   >
                     Limpiar filtros
                   </Button>
-                  {user?.rol !== "employee" && (
+                  {user?.role !== UserRole.EMPLOYEE && (
                     <Button
                       variant="contained"
                       startIcon={<AddIcon />}
@@ -517,7 +535,7 @@ const CertificatePage: React.FC = () => {
                               </IconButton>
                             </Tooltip>
                             {certificate.status === "issued" &&
-                              user?.rol !== "employee" && (
+                              user?.role !== "employee" && (
                                 <Button
                                   size="small"
                                   color="error"

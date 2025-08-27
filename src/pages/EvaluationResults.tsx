@@ -214,7 +214,7 @@ const EvaluationResults: React.FC = () => {
   });
 
   // Check if user has admin or trainer permissions
-  if (user?.rol !== 'admin' && user?.rol !== 'trainer') {
+  if (user?.role !== 'admin' && user?.role !== 'trainer') {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">
@@ -414,7 +414,7 @@ const EvaluationResults: React.FC = () => {
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {/* Botón de reasignar solo para evaluaciones completadas y usuarios con permisos */}
-                      {result.status === 'completed' && (user?.rol === 'admin' || user?.rol === 'trainer') && (
+                      {result.status === 'completed' && (user?.role === 'admin' || user?.role === 'trainer') && (
                         <IconButton
                           color="warning"
                           onClick={() => handleReassignEvaluation(result)}

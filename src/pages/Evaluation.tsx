@@ -45,6 +45,7 @@ import {
   Slider,
   Grid,
   CircularProgress,
+  useTheme,
 } from "@mui/material";
 import UppercaseTextField from "../components/UppercaseTextField";
 import {
@@ -58,6 +59,7 @@ import {
   Save,
   Search,
   Send,
+  Warning,
   Timer,
   Visibility,
 } from "@mui/icons-material";
@@ -65,6 +67,7 @@ import { formatDate, formatDateTime } from '../utils/dateUtils';
 import api from "./../services/api";
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
+import { UserRole } from '../types';
 
 interface Evaluation {
   id: number;
@@ -159,6 +162,7 @@ interface Course {
 const EvaluationsManagement: React.FC = () => {
   const { user } = useAuth();
   const { canCreateEvaluations, canUpdateEvaluations, canDeleteEvaluations } = usePermissions();
+  const theme = useTheme();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -231,20 +235,24 @@ const EvaluationsManagement: React.FC = () => {
   const [openResetDialog, setOpenResetDialog] = useState(false);
   const [resettingEvaluation, setResettingEvaluation] = useState<Evaluation | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
+  
+  // Maximum attempts dialog states
+  const [openMaxAttemptsDialog, setOpenMaxAttemptsDialog] = useState(false);
+  const [maxAttemptsEvaluation, setMaxAttemptsEvaluation] = useState<Evaluation | null>(null);
 
   useEffect(() => {
     // Detectar parámetro evaluation_id para modo de respuesta de empleado
     const urlParams = new URLSearchParams(window.location.search);
     const evaluationId = urlParams.get('evaluation_id');
     
-    if (evaluationId && user?.rol === 'employee') {
+    if (evaluationId && user?.role === 'employee') {
       setIsEmployeeResponseMode(true);
       fetchEvaluationToRespond(parseInt(evaluationId));
     } else {
       setIsEmployeeResponseMode(false);
       fetchEvaluations();
       fetchCourses();
-      if (user?.rol === 'employee') {
+      if (user?.role === 'employee') {
         fetchEmployeeResponses();
       }
     }
@@ -298,14 +306,35 @@ const EvaluationsManagement: React.FC = () => {
       setEvaluations(response.data.items || []);
       setTotalEvaluations(response.data.total || 0);
       
-      // Calculate stats
-      const statsResponse = await api.get('/evaluations/stats');
-      setStats(statsResponse.data || {
-        total: 0,
-        draft: 0,
-        published: 0,
-        archived: 0,
-      });
+      // Only fetch stats if user has admin or trainer permissions
+      if (user?.role === UserRole.ADMIN || user?.role === UserRole.TRAINER) {
+        try {
+          const statsResponse = await api.get('/evaluations/stats');
+          setStats(statsResponse.data || {
+            total: 0,
+            draft: 0,
+            published: 0,
+            archived: 0,
+          });
+        } catch (statsError) {
+          console.error('Error fetching evaluation stats:', statsError);
+          // Set default stats if stats fetch fails
+          setStats({
+            total: 0,
+            draft: 0,
+            published: 0,
+            archived: 0,
+          });
+        }
+      } else {
+        // Set default stats for employees
+        setStats({
+          total: 0,
+          draft: 0,
+          published: 0,
+          archived: 0,
+        });
+      }
     } catch (error) {
       console.error('Error fetching evaluations:', error);
       showSnackbar('Error al cargar las evaluaciones', 'error');
@@ -337,25 +366,27 @@ const EvaluationsManagement: React.FC = () => {
         results.forEach((result: any) => {
           const evaluationId = result.evaluation_id;
           
-          // If we already have a response for this evaluation, keep the most relevant one
+          // If we already have a response for this evaluation, keep the most recent one
           if (responses[evaluationId]) {
-            // Priority: completed > in_progress > blocked > not_started
-            const currentPriority = getStatusPriority(responses[evaluationId].status);
-            const newPriority = getStatusPriority(result.status);
+            // Compare attempt numbers to get the most recent attempt
+            const currentAttempt = responses[evaluationId].attempt_number || 0;
+            const newAttempt = result.attempt_number || 0;
             
-            // Only update if the new result has higher priority or if it's completed
-            if (newPriority > currentPriority || result.status === 'completed') {
+            // Keep the most recent attempt (highest attempt number)
+            if (newAttempt > currentAttempt) {
               responses[evaluationId] = {
                 responded: result.responded,
                 passed: result.passed,
-                status: result.status
+                status: result.status,
+                attempt_number: result.attempt_number
               };
             }
           } else {
             responses[evaluationId] = {
               responded: result.responded,
               passed: result.passed,
-              status: result.status
+              status: result.status,
+              attempt_number: result.attempt_number
             };
           }
         });
@@ -449,10 +480,19 @@ const EvaluationsManagement: React.FC = () => {
     } catch (error: any) {
       console.error('Error fetching evaluation to respond:', error);
       console.error('Error details:', error.response?.data);
-      showSnackbar(
-        error.response?.data?.detail || 'Error al cargar la evaluación',
-        'error'
-      );
+      
+      // Check if error is about maximum attempts exceeded
+        const errorDetail = error.response?.data?.detail || '';
+        if (errorDetail.includes('Maximum attempts') && errorDetail.includes('exceeded')) {
+          // Show custom dialog for maximum attempts
+          setMaxAttemptsEvaluation(evaluationToRespond);
+          setOpenMaxAttemptsDialog(true);
+      } else {
+        showSnackbar(
+          errorDetail || 'Error al cargar la evaluación',
+          'error'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -550,28 +590,29 @@ const EvaluationsManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      // Prepare user_answers for submission
-      const user_answers = Object.entries(employeeAnswers).map(([questionId, answer]) => {
+      // Prepare answers for submission (backend expects List[AnswerSubmission])
+      const answers = Object.entries(employeeAnswers).map(([questionId, answer]) => {
         const question = evaluationToRespond.questions?.find(q => q.id === parseInt(questionId));
         
         if (question?.question_type === 'multiple_choice' || question?.question_type === 'true_false') {
           return {
             question_id: parseInt(questionId),
-            selected_answer_ids: JSON.stringify([parseInt(answer)]),
-            time_spent_seconds: Math.floor((new Date().getTime() - (startTime?.getTime() || new Date().getTime())) / 1000)
+            selected_option_id: parseInt(answer)
+          };
+        } else if (question?.question_type === 'open_text') {
+          return {
+            question_id: parseInt(questionId),
+            text_answer: answer
           };
         } else {
           return {
             question_id: parseInt(questionId),
-            answer_text: answer,
-            time_spent_seconds: Math.floor((new Date().getTime() - (startTime?.getTime() || new Date().getTime())) / 1000)
+            text_answer: answer
           };
         }
       });
 
-      const response = await api.post(`/evaluations/${evaluationToRespond.id}/submit`, {
-        user_answers: user_answers
-      });
+      const response = await api.post(`/evaluations/${evaluationToRespond.id}/submit`, answers);
 
       if (response.data.success) {
         const message = isAutoSubmit ? 'Evaluación guardada automáticamente por tiempo expirado' : 'Evaluación enviada exitosamente';
@@ -610,9 +651,14 @@ const EvaluationsManagement: React.FC = () => {
         setEvaluationToRespond(null);
         setEmployeeAnswers({});
         
-        // Refresh data
-        if (user.rol === 'employee') {
-          fetchEmployeeResponses();
+        // Refresh data - Update employee responses to reflect completed status
+        if (user.role === 'employee') {
+          await fetchEmployeeResponses();
+        }
+        
+        // Also refresh evaluations list if needed
+        if (user.role !== 'employee') {
+          fetchEvaluations();
         }
       } else {
         showSnackbar('Error al enviar la evaluación', 'error');
@@ -995,55 +1041,7 @@ const EvaluationsManagement: React.FC = () => {
             Gestión de Evaluaciones
           </Typography>
 
-          {/* Stats Cards */}
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Total Evaluaciones
-              </Typography>
-              <Typography variant="h4">{stats.total}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Borradores
-              </Typography>
-              <Typography variant="h4" color="warning.main">
-                {stats.draft}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Publicadas
-              </Typography>
-              <Typography variant="h4" color="success.main">
-                {stats.published}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Archivadas
-              </Typography>
-              <Typography variant="h4" color="default">
-                {stats.archived}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+
 
           {/* Search and Filter Controls */}
       <Box
@@ -1077,7 +1075,7 @@ const EvaluationsManagement: React.FC = () => {
             <MenuItem value="archived">Archivada</MenuItem>
           </Select>
         </FormControl>
-        {user?.rol !== 'employee' && (
+        {user?.role !== 'employee' && (
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -1157,7 +1155,7 @@ const EvaluationsManagement: React.FC = () => {
                   <TableCell>{evaluation.passing_score}</TableCell>
                   <TableCell>{evaluation.max_attempts}</TableCell>
                   <TableCell align="center">
-                    {user?.rol === 'employee' && employeeResponses[evaluation.id]?.status === 'in_progress' ? (
+                    {user?.role === 'employee' && employeeResponses[evaluation.id]?.status === 'in_progress' ? (
                       <IconButton
                         color="warning"
                         onClick={() => fetchEvaluationToRespond(evaluation.id)}
@@ -1166,15 +1164,20 @@ const EvaluationsManagement: React.FC = () => {
                       >
                         <Quiz />
                       </IconButton>
-                    ) : user?.rol === 'employee' && employeeResponses[evaluation.id]?.responded ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    ) : user?.role === 'employee' && employeeResponses[evaluation.id]?.responded ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                        <Chip
+                          label="Evaluación Completada"
+                          color="success"
+                          size="small"
+                        />
                         <Chip
                           label={employeeResponses[evaluation.id]?.passed ? "Aprobada" : "Reprobada"}
                           color={employeeResponses[evaluation.id]?.passed ? "success" : "error"}
                           size="small"
                         />
                       </Box>
-                    ) : user?.rol === 'employee' && evaluation.status === 'published' ? (
+                    ) : user?.role === 'employee' && evaluation.status === 'published' ? (
                       <IconButton
                         color="primary"
                         onClick={() => fetchEvaluationToRespond(evaluation.id)}
@@ -1183,7 +1186,7 @@ const EvaluationsManagement: React.FC = () => {
                       >
                         <Quiz />
                       </IconButton>
-                    ) : user?.rol === 'employee' ? (
+                    ) : user?.role === 'employee' ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Chip
                           label="No disponible"
@@ -1202,7 +1205,7 @@ const EvaluationsManagement: React.FC = () => {
                           <Visibility />
                         </IconButton>
                         {/* Botón de reinicio para administradores y capacitadores */}
-                        {(user?.rol === 'admin' || user?.rol === 'trainer') && 
+                        {(user?.role === 'admin' || user?.role === 'trainer') && 
                          employeeResponses[evaluation.id]?.responded &&
                          !employeeResponses[evaluation.id]?.passed && (
                           <IconButton
@@ -1217,7 +1220,7 @@ const EvaluationsManagement: React.FC = () => {
                       </Box>
                     )}
 
-                    {user?.rol !== 'employee' && (
+                    {user?.role !== 'employee' && (
                       <>
                         {canUpdateEvaluations() && (
                           <IconButton
@@ -1993,6 +1996,120 @@ const EvaluationsManagement: React.FC = () => {
           )}
         </>
       )}
+
+      {/* Maximum attempts exceeded dialog */}
+      <Dialog
+        open={openMaxAttemptsDialog}
+        onClose={() => setOpenMaxAttemptsDialog(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: theme.shadows[10]
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                bgcolor: 'warning.light',
+                color: 'warning.contrastText'
+              }}
+            >
+              <Warning fontSize="large" />
+            </Box>
+            <Box>
+              <Typography variant="h5" component="div" fontWeight="bold">
+                Máximo de Intentos Alcanzado
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                No se pueden realizar más intentos
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
+              Has alcanzado el número máximo de intentos permitidos para esta evaluación.
+            </Typography>
+            
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 2, 
+                bgcolor: 'primary.light', 
+                color: 'primary.contrastText',
+                borderRadius: 1,
+                mb: 2
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                📋 {maxAttemptsEvaluation?.title}
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                Intentos máximos: 3 | Estado: Completado
+              </Typography>
+            </Paper>
+            
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  bgcolor: 'info.main',
+                  mt: 1,
+                  flexShrink: 0
+                }}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                Si consideras que necesitas realizar la evaluación nuevamente, contacta con tu supervisor o administrador del sistema.
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  bgcolor: 'info.main',
+                  mt: 1,
+                  flexShrink: 0
+                }}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                Puedes revisar tus resultados anteriores en la sección de historial de evaluaciones.
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button 
+            onClick={() => setOpenMaxAttemptsDialog(false)}
+            variant="contained"
+            color="primary"
+            size="large"
+            sx={{ 
+              minWidth: 120,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+          >
+            Entendido
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar for notifications */}
       <Snackbar

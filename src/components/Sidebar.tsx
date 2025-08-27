@@ -113,6 +113,20 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     }
   }, [expandedItems]);
 
+  // Listener para refrescar el sidebar cuando se actualicen permisos
+  useEffect(() => {
+    const handleSidebarRefresh = () => {
+      // Forzar re-render limpiando y recargando el estado
+      setExpandedItems(prev => [...prev]);
+    };
+
+    window.addEventListener('sidebar-refresh', handleSidebarRefresh);
+    
+    return () => {
+      window.removeEventListener('sidebar-refresh', handleSidebarRefresh);
+    };
+  }, []);
+
   const handleExpand = (itemId: string) => {
     setExpandedItems(prev => 
       prev.includes(itemId) 
@@ -148,7 +162,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         {
           id: 'trainer-dashboard',
           label: 'Panel Entrenador',
-          icon: <School />,
+          icon: <SupervisorAccount />,
           path: '/trainer/dashboard',
           roles: ['trainer']
         },
@@ -233,7 +247,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         {
           id: 'courses-list',
           label: 'Cursos',
-          icon: <School />,
+          icon: <Folder />,
           path: '/admin/courses',
           roles: ['admin', 'trainer']
         },
@@ -397,7 +411,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
   const filterMenuByRole = (items: MenuItem[]): MenuItem[] => {
     if (!user) return [];
     
-    return items.filter(item => {
+    return items.map(item => {
+      // Crear una copia profunda del item para evitar mutaciones
+      const newItem: MenuItem = {
+        ...item,
+        children: item.children ? [...item.children] : undefined
+      };
+      
       // Verificación granular por permisos específicos para usuarios con rol personalizado
       if (user.custom_role_id) {
         // Mapeo de elementos del menú a permisos específicos
@@ -409,12 +429,12 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           'supervisor-dashboard': () => user.role === 'supervisor',
           'employee-dashboard': () => user.role === 'employee',
           
-          // Employee sections - siempre visibles para empleados
-          'employee-courses': () => user.role === 'employee',
-          'employee-surveys': () => user.role === 'employee',
-          'employee-evaluations': () => user.role === 'employee',
-          'employee-attendance': () => user.role === 'employee',
-          'employee-certificates': () => user.role === 'employee',
+          // Employee sections - verificar permisos específicos
+          'employee-courses': () => user.role === 'employee' && canViewCoursesPage(),
+          'employee-surveys': () => user.role === 'employee' && canViewSurveysPage(),
+          'employee-evaluations': () => user.role === 'employee' && canViewEvaluationsPage(),
+          'employee-attendance': () => user.role === 'employee' && canViewAttendancePage(),
+          'employee-certificates': () => user.role === 'employee' && canViewCertificatesPage(),
           
           // Worker management
           'worker-management': () => canViewWorkersPage() || canUpdateWorkers(),
@@ -422,11 +442,11 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           'workers-list': canViewWorkersPage,
           'worker-detail': canViewWorkersPage,
           
-          // Course management
-          'courses': canViewCoursesPage,
-          'courses-list': canViewCoursesPage,
-          'enrollments': canViewCoursesPage,
-          'reinduction': () => canViewReinductionPage(),
+          // Course management - Solo para roles administrativos, no para employees
+          'courses': () => user.role !== 'employee' && canViewCoursesPage(),
+          'courses-list': () => user.role !== 'employee' && canViewCoursesPage(),
+          'enrollments': () => user.role !== 'employee' && canViewCoursesPage(),
+          'reinduction': () => user.role !== 'employee' && canViewReinductionPage(),
           
           // Evaluation management
           'evaluations': canViewEvaluationsPage,
@@ -444,8 +464,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           'occupational-exams': () => canViewOccupationalExamPage(),
           'seguimientos': () => canViewSeguimientoPage(),
           
-          // Certificates
-          'certificates': canViewCertificatesPage,
+          // Certificates - Solo para roles administrativos, no para employees
+          'certificates': () => user.role !== 'employee' && canViewCertificatesPage(),
           
           // Reports
           'reports': canViewReportsPage,
@@ -461,25 +481,26 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           'users': canUpdateUsers
         };
 
-        const permissionCheck = permissionMap[item.id];
+        const permissionCheck = permissionMap[newItem.id];
         if (permissionCheck && !permissionCheck()) {
-          return false;
+          return null;
         }
       } else {
         // Verificación tradicional por roles del sistema para usuarios sin rol personalizado
-        if (item.roles && !item.roles.includes(user.role)) {
-          return false;
+        if (newItem.roles && !newItem.roles.includes(user.role)) {
+          return null;
         }
       }
       
-      // Para elementos con hijos, filtrar recursivamente
-      if (item.children) {
-        item.children = filterMenuByRole(item.children);
-        return item.children.length > 0;
+      // Para elementos con hijos, filtrar recursivamente sin mutar el original
+      if (newItem.children) {
+        const filteredChildren = filterMenuByRole(newItem.children);
+        newItem.children = filteredChildren;
+        return filteredChildren.length > 0 ? newItem : null;
       }
       
-      return true;
-    });
+      return newItem;
+    }).filter((item): item is MenuItem => item !== null);
   };
 
   const renderMenuItem = (item: MenuItem, level: number = 0) => {
@@ -543,7 +564,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     );
   };
 
-  const filteredMenuItems = filterMenuByRole(menuItems);
+  // Memoizar los elementos filtrados para evitar duplicaciones en re-renders
+  const filteredMenuItems = React.useMemo(() => {
+    return filterMenuByRole(menuItems);
+  }, [user, canViewCoursesPage, canViewEvaluationsPage, canViewSurveysPage, canViewAttendancePage, canUpdateAttendance, canViewWorkersPage, canUpdateWorkers, canViewCertificatesPage, canUpdateCertificates, canViewReportsPage, canViewNotificationsPage, canViewOccupationalExamPage, canViewSeguimientoPage, canViewAdminConfigPage, canViewReinductionPage, canUpdateUsers]);
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

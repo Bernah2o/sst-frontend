@@ -30,10 +30,16 @@ const PermissionRefreshNotification: React.FC<PermissionRefreshNotificationProps
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      // Refrescar datos del usuario y permisos
+      // Refrescar datos del usuario y permisos de forma secuencial
       await refreshUserData();
+      // Pequeña pausa para evitar problemas de concurrencia
+      await new Promise(resolve => setTimeout(resolve, 100));
       await refreshPermissions();
+      
       setRefreshed(true);
+      
+      // Disparar evento para forzar re-render del sidebar
+      window.dispatchEvent(new CustomEvent('sidebar-refresh'));
       
       // Auto-cerrar después de 2 segundos
       setTimeout(() => {

@@ -332,7 +332,7 @@ const UserProgress: React.FC = () => {
     );
   };
 
-  const renderEvaluationProgress = (detail: CourseProgressDetail) => {
+  const renderEvaluationProgress = (detail: CourseProgressDetail, courseTitle?: string) => {
     const getEvaluationStatus = () => {
       if (detail.evaluation_completed) return 'completed';
       if (detail.can_take_evaluation) return 'current';
@@ -340,14 +340,16 @@ const UserProgress: React.FC = () => {
     };
 
     const description = detail.evaluation_completed
-      ? `Puntuación: ${detail.evaluation_score}/${detail.passing_score}`
+      ? `Completada - ${courseTitle ? `Curso: ${courseTitle} - ` : ''}Puntuación: ${detail.evaluation_score}/${detail.passing_score}`
       : detail.can_take_evaluation
         ? 'Evaluación disponible'
         : 'Completa las encuestas para habilitar la evaluación';
 
+    const title = detail.evaluation_completed ? 'Evaluación Completada' : 'Evaluación';
+
     return renderProgressStep(
       <EvaluationIcon />,
-      'Evaluación',
+      title,
       getEvaluationStatus(),
       description
     );
@@ -533,7 +535,7 @@ const UserProgress: React.FC = () => {
                                         {courseDetails.has(progress.course_id) && (
                                           <>
                                             {renderSurveyProgress(courseDetails.get(progress.course_id)!)}
-                                            {renderEvaluationProgress(courseDetails.get(progress.course_id)!)}
+                                            {renderEvaluationProgress(courseDetails.get(progress.course_id)!, progress.course_title)}
                                             {renderCertificateProgress(progress.course_id, courseDetails.get(progress.course_id)!)}
                                           </>
                                         )}

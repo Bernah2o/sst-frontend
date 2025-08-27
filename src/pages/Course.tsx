@@ -310,7 +310,7 @@ const CoursesManagement: React.FC = () => {
   }, [selectedCourse]);
 
   useEffect(() => {
-    if (user?.rol === "employee") {
+    if (user?.role === "employee") {
       fetchEnrolledCourses();
     } else {
       fetchCourses();
@@ -1852,7 +1852,11 @@ const CoursesManagement: React.FC = () => {
                     }
                     onClick={() => {
                       // Navegar al curso
-                      window.location.href = `/employee/courses/${enrollment.course?.id}`;
+                      if (enrollment.course?.id) {
+                        window.location.href = `/employee/courses/${enrollment.course.id}`;
+                      } else {
+                        console.error('Course ID is undefined for enrollment:', enrollment);
+                      }
                     }}
                   >
                     {(enrollment.status || "").toLowerCase() === "completed" ||
@@ -1886,7 +1890,7 @@ const CoursesManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {user?.rol === "employee" ? (
+      {user?.role === "employee" ? (
         renderEmployeeView()
       ) : (
         <>

@@ -202,7 +202,7 @@ interface EmployeeSurvey {
 
 const Survey: React.FC = () => {
   const { user } = useAuth();
-  const { canCreateSurveys, canDeleteSurveys } = usePermissions();
+  const { canCreateSurveys, canDeleteSurveys, canReadSurveys } = usePermissions();
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [employeeSurveys, setEmployeeSurveys] = useState<EmployeeSurvey[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -282,7 +282,7 @@ const Survey: React.FC = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const surveyId = urlParams.get('survey_id');
     
-    if (surveyId && user?.rol === 'employee') {
+    if (surveyId && user?.role === 'employee') {
       setIsEmployeeResponseMode(true);
       fetchSurveyForResponse(parseInt(surveyId));
     } else {
@@ -297,7 +297,7 @@ const Survey: React.FC = () => {
     try {
       setLoading(true);
       
-      if (user?.rol === 'employee') {
+      if (user?.role === 'employee') {
         // For employees, get their assigned surveys
         const response = await api.get('/surveys/my-surveys');
         setEmployeeSurveys(response.data.items || []);
@@ -1063,7 +1063,7 @@ const Survey: React.FC = () => {
                       <RefreshIcon />
                     </IconButton>
                   </Tooltip>
-                  {user?.rol !== 'employee' && (
+                  {canCreateSurveys() && (
                     <Button
                       variant="contained"
                       startIcon={<AddIcon />}
@@ -1088,31 +1088,31 @@ const Survey: React.FC = () => {
                     <TableCell>Título</TableCell>
                     <TableCell>Estado</TableCell>
                     <TableCell>Curso</TableCell>
-                    {user?.rol !== 'employee' && (
+                    {canReadSurveys() && (
                       <>
                         <TableCell>Anónima</TableCell>
                         <TableCell>Respuestas Múltiples</TableCell>
                         <TableCell>Fechas</TableCell>
                       </>
                     )}
-                    {user?.rol === 'employee' && <TableCell>Fecha Completado</TableCell>}
+                    {user?.role === 'employee' && <TableCell>Fecha Completado</TableCell>}
                     <TableCell>Acciones</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={user?.rol === 'employee' ? 5 : 7} align="center">
+                      <TableCell colSpan={user?.role === 'employee' ? 5 : 7} align="center">
                         Cargando encuestas...
                       </TableCell>
                     </TableRow>
-                  ) : (user?.rol === 'employee' ? employeeSurveys.length === 0 : surveys.length === 0) ? (
+                  ) : (user?.role === 'employee' ? employeeSurveys.length === 0 : surveys.length === 0) ? (
                     <TableRow>
-                      <TableCell colSpan={user?.rol === 'employee' ? 5 : 7} align="center">
+                      <TableCell colSpan={user?.role === 'employee' ? 5 : 7} align="center">
                         No se encontraron encuestas
                       </TableCell>
                     </TableRow>
-                  ) : user?.rol === 'employee' ? (
+                  ) : user?.role === 'employee' ? (
                     // Employee view - show their assigned surveys
                     employeeSurveys.map((employeeSurvey) => (
                       <TableRow key={employeeSurvey.id}>
@@ -1147,11 +1147,30 @@ const Survey: React.FC = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Chip
-                            label={employeeSurvey.status === 'completed' ? 'Completado' : 'No completado'}
-                            color={employeeSurvey.status === 'completed' ? 'success' : 'default'}
-                            size="small"
-                          />
+                          <Box display="flex" gap={1}>
+                            {employeeSurvey.status === 'completed' ? (
+                              <Chip
+                                label="Completada"
+                                color="success"
+                                size="small"
+                                icon={<CompleteIcon />}
+                              />
+                            ) : (
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<AssignmentIcon />}
+                                onClick={() => {
+                                  // Navegar al modo de respuesta de encuesta
+                                  setIsEmployeeResponseMode(true);
+                                  fetchSurveyForResponse(employeeSurvey.survey_id);
+                                }}
+                                disabled={employeeSurvey.status === 'expired'}
+                              >
+                                Contestar
+                              </Button>
+                            )}
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))
@@ -1212,7 +1231,7 @@ const Survey: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Box display="flex" gap={1}>
-                          {user?.rol !== 'employee' && (
+                          {canReadSurveys() && (
                             <>
                               <Tooltip title="Ver detalles">
                                 <IconButton

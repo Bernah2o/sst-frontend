@@ -188,7 +188,7 @@ const AttendanceManagement: React.FC = () => {
       };
 
       // Para empleados, solo mostrar sus propios registros
-      if (user?.rol === "employee") {
+      if (user?.role === "employee") {
         params.user_id = user.id;
       } else {
         // Para administradores, permitir búsqueda por empleado
@@ -210,7 +210,7 @@ const AttendanceManagement: React.FC = () => {
 
   const fetchUsers = async () => {
     // Solo cargar usuarios para administradores
-    if (user?.rol === "employee") {
+    if (user?.role === "employee") {
       return;
     }
 
@@ -494,7 +494,7 @@ const AttendanceManagement: React.FC = () => {
             flexWrap: "wrap",
           }}
         >
-          {user?.rol !== "employee" && (
+          {user?.role !== "employee" && (
             <TextField
               placeholder="Buscar por empleado..."
               value={searchTerm}
@@ -530,7 +530,7 @@ const AttendanceManagement: React.FC = () => {
               },
             }}
           />
-          {user?.rol !== "employee" && (
+          {user?.role !== "employee" && (
             <>
               <Button
                 variant="contained"
@@ -563,7 +563,7 @@ const AttendanceManagement: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell>ID</TableCell>
-                {user?.rol !== "employee" && <TableCell>Usuario</TableCell>}
+                {user?.role !== "employee" && <TableCell>Usuario</TableCell>}
                 <TableCell>Curso</TableCell>
                 <TableCell>Fecha Sesión</TableCell>
                 <TableCell>Estado</TableCell>
@@ -573,7 +573,7 @@ const AttendanceManagement: React.FC = () => {
                 <TableCell>Duración</TableCell>
                 <TableCell>% Completado</TableCell>
                 <TableCell>Notas</TableCell>
-                {user?.rol !== "employee" && (
+                {user?.role !== "employee" && (
                   <TableCell align="center">Acciones</TableCell>
                 )}
               </TableRow>
@@ -582,7 +582,7 @@ const AttendanceManagement: React.FC = () => {
               {loading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={user?.rol === "employee" ? 11 : 13}
+                    colSpan={user?.role === "employee" ? 11 : 13}
                     align="center"
                   >
                     Cargando registros de asistencia...
@@ -591,7 +591,7 @@ const AttendanceManagement: React.FC = () => {
               ) : !attendances || attendances.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={user?.rol === "employee" ? 11 : 13}
+                    colSpan={user?.role === "employee" ? 11 : 13}
                     align="center"
                   >
                     No se encontraron registros de asistencia
@@ -601,7 +601,7 @@ const AttendanceManagement: React.FC = () => {
                 (attendances || []).map((attendance) => (
                   <TableRow key={attendance.id}>
                     <TableCell>{attendance.id}</TableCell>
-                    {user?.rol !== "employee" && (
+                    {user?.role !== "employee" && (
                       <TableCell>
                         {attendance.user
                           ? attendance.user.full_name
@@ -661,7 +661,7 @@ const AttendanceManagement: React.FC = () => {
                     </TableCell>
                     <TableCell>{attendance.completion_percentage}%</TableCell>
                     <TableCell>{attendance.notes || "N/A"}</TableCell>
-                    {user?.rol !== "employee" && (
+                    {user?.role !== "employee" && (
                       <TableCell align="center">
                         <IconButton
                           color="primary"
