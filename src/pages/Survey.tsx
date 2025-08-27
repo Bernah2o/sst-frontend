@@ -405,6 +405,34 @@ const Survey: React.FC = () => {
       setSurveyToRespond(null);
       setEmployeeAnswers({});
       
+      // Verificar si todas las encuestas requeridas para el curso están completadas
+      if (surveyToRespond.course_id) {
+        try {
+          // Obtener el progreso del curso para verificar el estado de las encuestas
+          const progressResponse = await api.get(`/progress/course/${surveyToRespond.course_id}`);
+          const courseProgress = progressResponse.data;
+          
+          // Verificar si hay encuestas pendientes
+          if (courseProgress.pending_surveys && courseProgress.pending_surveys.length === 0) {
+            // Si no hay encuestas pendientes, habilitar la evaluación
+            setSnackbar({
+              open: true,
+              message: '¡Todas las encuestas completadas! Ahora puedes acceder a la evaluación',
+              severity: 'success'
+            });
+            
+            // Habilitar la evaluación para el usuario
+            try {
+              await api.post(`/evaluations/enable-for-user/${surveyToRespond.course_id}`);
+            } catch (evalError) {
+              console.error('Error habilitando evaluación:', evalError);
+            }
+          }
+        } catch (progressError) {
+          console.error('Error verificando progreso del curso:', progressError);
+        }
+      }
+      
       // Redirect to courses or surveys list
       window.location.href = '/employee/courses';
       

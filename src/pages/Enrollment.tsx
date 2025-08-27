@@ -188,6 +188,22 @@ const EnrollmentsManagement: React.FC = () => {
   // Estados para diálogo de confirmación de eliminación
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [enrollmentToDelete, setEnrollmentToDelete] = useState<Enrollment | null>(null);
+  
+
+  
+  // Estados para diálogo de edición
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [enrollmentToEdit, setEnrollmentToEdit] = useState<Enrollment | null>(null);
+  const [editFormData, setEditFormData] = useState<EnrollmentFormData>({
+    worker_id: 0,
+    course_id: 0,
+    status: EnrollmentStatus.PENDING,
+    progress: 0,
+    grade: undefined,
+    notes: "",
+    usuario_id: 0,
+    curso_id: 0,
+  });
 
   useEffect(() => {
     fetchEnrollments();
@@ -232,8 +248,16 @@ const EnrollmentsManagement: React.FC = () => {
         created_at: enrollment.created_at,
         updated_at: enrollment.updated_at,
         user: enrollment.user,
-        worker: enrollment.worker,
-        course: enrollment.course,
+        // Crear objetos con los datos del backend para compatibilidad
+        worker: enrollment.worker || {
+          full_name: enrollment.full_name,
+          first_name: enrollment.full_name?.split(' ')[0] || '',
+          last_name: enrollment.full_name?.split(' ').slice(1).join(' ') || ''
+        },
+        course: enrollment.course || {
+          title: enrollment.course_title,
+          titulo: enrollment.course_title
+        },
         evaluation: enrollment.evaluation,
         // Campos legacy para compatibilidad
         usuario_id: enrollment.user_id || enrollment.worker_id,
@@ -510,6 +534,53 @@ const EnrollmentsManagement: React.FC = () => {
     setEnrollmentToDelete(null);
   };
 
+
+
+  const handleEditEnrollment = (enrollment: Enrollment) => {
+    setEnrollmentToEdit(enrollment);
+    setEditFormData({
+      worker_id: enrollment.worker_id || enrollment.user_id || enrollment.usuario_id || 0,
+      course_id: enrollment.course_id || enrollment.curso_id || 0,
+      status: enrollment.status || EnrollmentStatus.PENDING,
+      progress: enrollment.progress || 0,
+      grade: enrollment.grade || enrollment.calificacion,
+      notes: enrollment.notes || "",
+      usuario_id: enrollment.worker_id || enrollment.user_id || enrollment.usuario_id || 0,
+      curso_id: enrollment.course_id || enrollment.curso_id || 0,
+    });
+    setOpenEditDialog(true);
+  };
+
+  const handleSaveEditEnrollment = async () => {
+    if (!enrollmentToEdit) return;
+    
+    try {
+      const enrollmentData = {
+        worker_id: editFormData.worker_id || editFormData.usuario_id,
+        course_id: editFormData.course_id || editFormData.curso_id,
+        status: editFormData.status,
+        progress: editFormData.progress || 0,
+        grade: editFormData.grade,
+        notes: editFormData.notes || '',
+      };
+      
+      await api.put(`/enrollments/${enrollmentToEdit.id}`, enrollmentData);
+      showSnackbar("Inscripción actualizada exitosamente", "success");
+      setOpenEditDialog(false);
+      setEnrollmentToEdit(null);
+      fetchEnrollments();
+      fetchStats();
+    } catch (error) {
+      console.error("Error updating enrollment:", error);
+      showSnackbar("Error al actualizar inscripción", "error");
+    }
+  };
+
+  const cancelEditEnrollment = () => {
+    setOpenEditDialog(false);
+    setEnrollmentToEdit(null);
+  };
+
   const handleToggleCompletion = async (
     enrollmentId: number,
     currentStatus: EnrollmentStatus
@@ -774,12 +845,24 @@ const EnrollmentsManagement: React.FC = () => {
                       {(enrollment.status || (enrollment.completado ? EnrollmentStatus.COMPLETED : EnrollmentStatus.PENDING)) === EnrollmentStatus.COMPLETED ? <Cancel /> : <CheckCircle />}
                     </IconButton>
                     <IconButton
+                      color="primary"
+                      onClick={() => handleEditEnrollment(enrollment)}
+                      size="small"
+                      title="Editar inscripción"
+                      sx={{ ml: 0.5 }}
+                    >
+                      <Edit />
+                    </IconButton>
+                    <IconButton
                       color="error"
                       onClick={() => handleDeleteEnrollment(enrollment)}
                       size="small"
+                      title="Cancelar inscripción"
+                      sx={{ ml: 0.5 }}
                     >
                       <Delete />
                     </IconButton>
+
                   </TableCell>
                 </TableRow>
               ))
@@ -1117,6 +1200,142 @@ const EnrollmentsManagement: React.FC = () => {
           </Button>
           <Button onClick={confirmDeleteEnrollment} color="error" variant="contained">
             Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+
+
+      {/* Diálogo para editar inscripción */}
+      <Dialog
+        open={openEditDialog}
+        onClose={cancelEditEnrollment}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Editar Inscripción</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid size={12}>
+              <FormControl fullWidth required>
+                <InputLabel>Empleado</InputLabel>
+                <Select
+                  value={editFormData.worker_id || editFormData.usuario_id}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      worker_id: e.target.value as number,
+                      usuario_id: e.target.value as number,
+                    })
+                  }
+                  label="Empleado"
+                >
+                  {users.map((user) => (
+                    <MenuItem key={user.id} value={user.id}>
+                      {user.full_name || `${user.first_name || user.nombre || ''} ${user.last_name || user.apellido || ''}`} ({user.email})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={12}>
+              <FormControl fullWidth required>
+                <InputLabel>Curso</InputLabel>
+                <Select
+                  value={editFormData.course_id || editFormData.curso_id}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      course_id: e.target.value as number,
+                      curso_id: e.target.value as number,
+                    })
+                  }
+                  label="Curso"
+                >
+                  {courses.map((course) => (
+                    <MenuItem key={course.id} value={course.id}>
+                      {course.title || course.titulo}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={12}>
+              <FormControl fullWidth>
+                <InputLabel>Estado</InputLabel>
+                <Select
+                  value={editFormData.status}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      status: e.target.value as EnrollmentStatus,
+                    })
+                  }
+                  label="Estado"
+                >
+                  <MenuItem value={EnrollmentStatus.PENDING}>Pendiente</MenuItem>
+                  <MenuItem value={EnrollmentStatus.ACTIVE}>Activo</MenuItem>
+                  <MenuItem value={EnrollmentStatus.COMPLETED}>Completado</MenuItem>
+                  <MenuItem value={EnrollmentStatus.SUSPENDED}>Suspendido</MenuItem>
+                  <MenuItem value={EnrollmentStatus.CANCELLED}>Cancelado</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Progreso (%)"
+                type="number"
+                value={editFormData.progress}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    progress: parseInt(e.target.value) || 0,
+                  })
+                }
+                inputProps={{ min: 0, max: 100 }}
+              />
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Calificación"
+                type="number"
+                value={editFormData.grade || ''}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    grade: e.target.value ? parseFloat(e.target.value) : undefined,
+                  })
+                }
+                inputProps={{ min: 0, max: 100, step: 0.1 }}
+              />
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Notas"
+                multiline
+                rows={3}
+                value={editFormData.notes}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    notes: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelEditEnrollment}>Cancelar</Button>
+          <Button
+            onClick={handleSaveEditEnrollment}
+            variant="contained"
+            disabled={!editFormData.worker_id || !editFormData.course_id}
+          >
+            Guardar Cambios
           </Button>
         </DialogActions>
       </Dialog>

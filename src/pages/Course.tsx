@@ -296,19 +296,17 @@ const CoursesManagement: React.FC = () => {
     }
   };
 
-  // Log para monitorear cambios en selectedFile
+  // Efectos para monitorear cambios en los estados
   useEffect(() => {
-    console.log("=== selectedFile cambió ===", selectedFile);
+    // Monitorear cambios en selectedFile
   }, [selectedFile]);
 
-  // Log para monitorear cambios en selectedModule
   useEffect(() => {
-    console.log("=== selectedModule cambió ===", selectedModule);
+    // Monitorear cambios en selectedModule
   }, [selectedModule]);
 
-  // Log para monitorear cambios en selectedCourse
   useEffect(() => {
-    console.log("=== selectedCourse cambió ===", selectedCourse);
+    // Monitorear cambios en selectedCourse
   }, [selectedCourse]);
 
   useEffect(() => {
@@ -491,7 +489,6 @@ const CoursesManagement: React.FC = () => {
           await handleSaveCourseAfterConfirm();
           return;
         } catch (error) {
-          console.error("Error validating course requirements:", error);
           showSnackbar("Error al validar los requisitos del curso", "error");
           return;
         }
@@ -821,24 +818,18 @@ const CoursesManagement: React.FC = () => {
 
   // Funciones para gestión de materiales de módulo
   const handleOpenMaterials = async (module: CourseModule) => {
-    console.log("handleOpenMaterials - Estableciendo selectedModule:", module);
     setSelectedModule(module);
     
     // Buscar y establecer el curso correspondiente al módulo
     const modulesCourse = courses.find(course => course.id === module.course_id);
     if (modulesCourse) {
-      console.log("handleOpenMaterials - Estableciendo selectedCourse:", modulesCourse);
       setSelectedCourse(modulesCourse);
-    } else {
-      console.log("handleOpenMaterials - No se encontró el curso para el módulo:", module.course_id);
     }
     
     try {
       const response = await api.get(`/courses/modules/${module.id}/materials`);
       setModuleMaterials(response.data);
-      console.log("handleOpenMaterials - Materiales cargados:", response.data.length);
     } catch (error) {
-      console.log("handleOpenMaterials - Error al cargar materiales:", error);
       showErrorDialog(
         "Error al cargar materiales",
         "No se pudieron cargar los materiales del módulo. Por favor, intente nuevamente."
@@ -846,13 +837,9 @@ const CoursesManagement: React.FC = () => {
       setModuleMaterials([]);
     }
     setOpenMaterialDialog(true);
-    console.log("handleOpenMaterials - Diálogo abierto");
   };
 
   const handleCreateMaterial = () => {
-    console.log("Creando material - selectedModule:", selectedModule);
-    console.log("Creando material - selectedCourse:", selectedCourse);
-    
     // Validar que selectedModule y selectedCourse estén establecidos
     if (!selectedModule || !selectedCourse) {
       showSnackbar("Debe seleccionar un módulo y curso. Intente abrir los materiales del módulo primero.", "error");
@@ -873,20 +860,15 @@ const CoursesManagement: React.FC = () => {
   };
 
   const handleEditMaterial = (material: CourseMaterial) => {
-    console.log("Editando material:", material);
-    
     // Asegurar que selectedModule y selectedCourse estén establecidos
     // Si no están establecidos, buscarlos basándose en el material
     if (!selectedModule || !selectedCourse) {
-      console.log("selectedModule o selectedCourse no están establecidos, buscando...");
-      
       // Buscar el módulo que contiene este material
       const foundModule = courseModules.find((module: CourseModuleResponse) => 
         module.materials?.some((mat: CourseMaterialResponse) => mat.id === material.id)
       );
       
       if (foundModule && selectedCourse) {
-        console.log("Módulo encontrado:", foundModule);
         setSelectedModule(foundModule);
       } else if (foundModule && courses.length > 0) {
         // Si no hay curso seleccionado, buscar el curso que contiene este módulo
@@ -894,7 +876,6 @@ const CoursesManagement: React.FC = () => {
           course.modules?.some((mod: CourseModuleResponse) => mod.id === foundModule.id)
         );
         if (foundCourse) {
-          console.log("Curso encontrado:", foundCourse);
           setSelectedCourse(foundCourse);
           setSelectedModule(foundModule);
         }
@@ -942,12 +923,74 @@ const CoursesManagement: React.FC = () => {
       await api.post(`/progress/material/${material.id}/complete`);
       showSnackbar("Material marcado como completado", "success");
 
-      // Recargar materiales para actualizar el estado
+      // Actualizar el estado del material en la interfaz
+      const updatedMaterials = moduleMaterials.map(m => {
+        if (m.id === material.id) {
+          return { ...m, completed: true };
+        }
+        return m;
+      });
+      setModuleMaterials(updatedMaterials);
+
+      // Verificar si el curso está completado después de marcar el material
+      if (selectedCourse) {
+        try {
+          const progressResponse = await api.get(`/progress/course/${selectedCourse.id}`);
+          const courseProgress = progressResponse.data;
+          
+          // Si el curso está completado (100% de progreso)
+          if (courseProgress.overall_progress === 100) {
+            // Obtener el ID de la inscripción del usuario en este curso
+            try {
+              const enrollmentResponse = await api.get(`/enrollments/my-enrollments?course_id=${selectedCourse.id}`);
+              const enrollments = enrollmentResponse.data.items || [];
+              
+              if (enrollments.length > 0) {
+                const enrollmentId = enrollments[0].id;
+                // Actualizar el estado de la inscripción a completado usando el endpoint correcto
+                await api.put(`/enrollments/${enrollmentId}`, {
+                  status: "COMPLETED",
+                  progress: 100
+                });
+              } else {
+                console.error('No se encontró la inscripción para este curso');
+              }
+            } catch (enrollmentError) {
+              console.error('Error al obtener la inscripción:', enrollmentError);
+            }
+            
+            showSnackbar("¡Curso completado! Ahora puedes acceder a la encuesta", "success");
+            
+            // Verificar si hay encuestas disponibles para este curso
+            const surveysResponse = await api.get(`/surveys/?course_id=${selectedCourse.id}`);
+            const availableSurveys = surveysResponse.data.items || [];
+            
+            if (availableSurveys.length > 0) {
+              // Habilitar encuestas para el usuario
+              await api.post(`/surveys/enable-for-user/${selectedCourse.id}`);
+            }
+          }
+        } catch (progressError) {
+          console.error("Error verificando progreso del curso:", progressError);
+        }
+      }
+
+      // Recargar materiales para actualizar el estado completo desde el servidor
       if (selectedModule) {
         const response = await api.get(
           `/courses/modules/${selectedModule.id}/materials`
         );
-        setModuleMaterials(response.data);
+        // Combinar los datos del servidor con el estado local actualizado
+        const serverMaterials = response.data;
+        const updatedFromServer = serverMaterials.map((serverMaterial: CourseMaterial) => {
+          // Buscar si ya tenemos este material marcado como completado localmente
+          const localMaterial = updatedMaterials.find(m => m.id === serverMaterial.id);
+          if (localMaterial && localMaterial.completed) {
+            return { ...serverMaterial, completed: true };
+          }
+          return serverMaterial;
+        });
+        setModuleMaterials(updatedFromServer);
       } else if (selectedCourse) {
         // Si estamos viendo materiales de todo el curso, recargar todos
         const modulesResponse = await api.get(
@@ -961,7 +1004,16 @@ const CoursesManagement: React.FC = () => {
             const materialsResponse = await api.get(
               `/courses/modules/${module.id}/materials`
             );
-            allMaterials.push(...materialsResponse.data);
+            // Combinar con el estado local actualizado
+            const moduleMats = materialsResponse.data.map((serverMaterial: CourseMaterial) => {
+              // Buscar si ya tenemos este material marcado como completado localmente
+              const localMaterial = updatedMaterials.find(m => m.id === serverMaterial.id);
+              if (localMaterial && localMaterial.completed) {
+                return { ...serverMaterial, completed: true };
+              }
+              return serverMaterial;
+            });
+            allMaterials.push(...moduleMats);
           } catch (error) {
             console.warn(
               `Error loading materials for module ${module.id}:`,
@@ -1006,7 +1058,6 @@ const CoursesManagement: React.FC = () => {
          );
         
         if (foundModule) {
-          console.log("Módulo recuperado:", foundModule);
           setSelectedModule(foundModule);
           
           // Buscar el curso que contiene este módulo
@@ -1015,11 +1066,9 @@ const CoursesManagement: React.FC = () => {
                course.modules?.some((mod: CourseModuleResponse) => mod.id === foundModule.id)
              );
             if (foundCourse) {
-              console.log("Curso recuperado:", foundCourse);
               setSelectedCourse(foundCourse);
               
               // Reintentar el guardado después de establecer el contexto
-              console.log("Contexto recuperado, reintentando guardado...");
               setTimeout(() => handleSaveMaterial(), 100);
               return;
             }
@@ -1037,47 +1086,36 @@ const CoursesManagement: React.FC = () => {
 
     // Si estamos editando un material existente, permitir todas las operaciones
     if (editingMaterial) {
-      console.log("Modo: EDITAR material existente");
       // Validar que el título no esté vacío
       if (!materialFormData.title.trim()) {
-        console.log("ERROR: Título vacío en modo edición");
         showSnackbar("Por favor, ingresa un título para el material", "error");
         return;
       }
     } else {
-      console.log("Modo: CREAR nuevo material");
       // Validar que el título no esté vacío
       if (!materialFormData.title.trim()) {
-        console.log("ERROR: Título vacío en modo creación");
         showSnackbar("Por favor, ingresa un título para el material", "error");
         return;
       }
 
       // Validar según el tipo de material
       if (materialFormData.material_type === MaterialType.LINK) {
-        console.log("Tipo de material: LINK");
         // Para enlaces, validar que se haya ingresado una URL
         if (!materialFormData.file_url) {
-          console.log("ERROR: URL vacía para material tipo LINK");
           showSnackbar("Por favor, ingresa una URL para el enlace", "error");
           return;
         }
       } else {
-        console.log("Tipo de material: PDF/VIDEO");
         // Para archivos PDF y VIDEO, validar que se haya subido un archivo
         if (!uploadedFileInfo || !selectedFile) {
-          console.log("ERROR: No hay archivo subido para material PDF/VIDEO");
           showSnackbar("Por favor, sube un archivo antes de crear el material", "error");
           return;
         }
       }
     }
-    
-    console.log("Validaciones pasadas, iniciando proceso de guardado...");
 
     try {
       if (editingMaterial) {
-        console.log("Ejecutando actualización de material existente...");
         // Actualizar material existente
         const materialData = {
           title: materialFormData.title,
@@ -1089,17 +1127,11 @@ const CoursesManagement: React.FC = () => {
           file_url: materialFormData.material_type === MaterialType.LINK ? materialFormData.file_url : undefined,
         };
         
-        console.log("Datos para actualizar:", materialData);
-        console.log("URL de actualización:", `/courses/materials/${editingMaterial.id}`);
-        
         const updateResponse = await api.put(`/courses/materials/${editingMaterial.id}`, materialData);
-        console.log("Respuesta de actualización:", updateResponse);
         showSnackbar("Material actualizado exitosamente", "success");
       } else {
-        console.log("Ejecutando creación de nuevo material...");
         // Crear nuevo material
         if (materialFormData.material_type === MaterialType.LINK) {
-          console.log("Creando material tipo LINK...");
           // Para enlaces, usar la API de materiales
           const materialData = {
             title: materialFormData.title,
@@ -1112,30 +1144,16 @@ const CoursesManagement: React.FC = () => {
             file_url: materialFormData.file_url,
           };
           
-          console.log("Datos para crear material LINK:", materialData);
-          console.log("URL de creación:", `/courses/modules/${selectedModule.id}/materials`);
-          
           const linkResponse = await api.post(`/courses/modules/${selectedModule.id}/materials`, materialData);
-          console.log("Respuesta de creación LINK:", linkResponse);
         } else {
-          console.log("Creando material tipo PDF/VIDEO...");
           // Para archivos PDF y VIDEO, usar la API de subida de archivos
           if (!selectedFile) {
-            console.log("ERROR: No hay archivo seleccionado para subida");
             showSnackbar("No hay archivo seleccionado", "error");
             return;
           }
           
-          console.log("Archivo a subir:", {
-            name: selectedFile.name,
-            size: selectedFile.size,
-            type: selectedFile.type
-          });
-          
           const formData = new FormData();
           formData.append("file", selectedFile);
-          
-          console.log("FormData creado, enviando a:", `/files/course-material/${selectedModule.id}`);
           
           const response = await api.post(`/files/course-material/${selectedModule.id}`, formData, {
             headers: {
@@ -1143,13 +1161,9 @@ const CoursesManagement: React.FC = () => {
             },
           });
           
-          console.log("Respuesta de subida de archivo:", response);
-          
           // Actualizar el título y descripción si es necesario
           if (materialFormData.title !== selectedFile.name.split('.')[0] || materialFormData.description) {
-            console.log("Actualizando título y descripción del material subido...");
             const materialId = response.data.material_id;
-            console.log("Material ID obtenido:", materialId);
             
             const updateData = {
               title: materialFormData.title,
@@ -1159,17 +1173,10 @@ const CoursesManagement: React.FC = () => {
               is_required: materialFormData.is_required,
             };
             
-            console.log("Datos para actualizar material:", updateData);
-            console.log("URL de actualización:", `/courses/materials/${materialId}`);
-            
             const updateResponse = await api.put(`/courses/materials/${materialId}`, updateData);
-            console.log("Respuesta de actualización:", updateResponse);
-          } else {
-            console.log("No es necesario actualizar título/descripción");
           }
         }
         
-        console.log("Material creado exitosamente, mostrando mensaje...");
         showSnackbar("Material creado exitosamente", "success");
       }
 
@@ -1197,13 +1204,7 @@ const CoursesManagement: React.FC = () => {
       setUploadedFileInfo(null);
       setSelectedFile(null);
       
-      console.log("=== FIN handleSaveMaterial EXITOSO ===");
     } catch (error: any) {
-      console.log("=== ERROR en handleSaveMaterial ===");
-      console.error("Error completo:", error);
-      console.error("Error message:", error.message);
-      console.error("Error response:", error.response);
-      console.error("Error stack:", error.stack);
       
       showErrorDialog(
         "Error al guardar material",
@@ -1220,16 +1221,11 @@ const CoursesManagement: React.FC = () => {
 
   const confirmDeleteMaterial = async () => {
     if (!materialToDelete) {
-      console.log("ERROR: No hay material para eliminar");
       return;
     }
 
     // Validación mejorada: intentar recuperar selectedModule y selectedCourse si no están disponibles
     if (!selectedModule || !selectedCourse) {
-      console.log("ERROR en eliminación: Falta selectedModule o selectedCourse");
-      console.log("- selectedModule:", selectedModule);
-      console.log("- selectedCourse:", selectedCourse);
-      console.log("- materialToDelete:", materialToDelete);
       
       // Buscar el módulo que contiene este material
       const foundModule = courseModules.find((module: CourseModuleResponse) => 
@@ -1246,11 +1242,9 @@ const CoursesManagement: React.FC = () => {
             course.modules?.some((mod: CourseModuleResponse) => mod.id === foundModule.id)
           );
           if (foundCourse) {
-            console.log("Curso recuperado para eliminación:", foundCourse);
             setSelectedCourse(foundCourse);
             
             // Reintentar la eliminación después de establecer el contexto
-            console.log("Contexto recuperado, reintentando eliminación...");
             setTimeout(() => confirmDeleteMaterial(), 100);
             return;
           }
@@ -2416,7 +2410,6 @@ const CoursesManagement: React.FC = () => {
                 <TableRow>
                   <TableCell>Tipo</TableCell>
                   <TableCell>Título</TableCell>
-                  <TableCell>Tamaño</TableCell>
                   <TableCell>Orden</TableCell>
                   <TableCell>Requerido</TableCell>
                   <TableCell>Descargable</TableCell>
@@ -2445,9 +2438,6 @@ const CoursesManagement: React.FC = () => {
                         {material.description || "Sin descripción"}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      {material.file_url ? "Archivo disponible" : "-"}
-                    </TableCell>
                     <TableCell>{material.order_index}</TableCell>
                     <TableCell>
                       <Chip
@@ -2464,12 +2454,20 @@ const CoursesManagement: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={material.completed ? "Completado" : "Pendiente"}
-                        color={material.completed ? "success" : "warning"}
-                        size="small"
-                        icon={material.completed ? <CheckCircle /> : undefined}
-                      />
+                      {user?.role === 'admin' ? (
+                        <Chip
+                          label="N/A"
+                          color="default"
+                          size="small"
+                        />
+                      ) : (
+                        <Chip
+                          label={material.completed ? "Completado" : "Pendiente"}
+                          color={material.completed ? "success" : "warning"}
+                          size="small"
+                          icon={material.completed ? <CheckCircle /> : undefined}
+                        />
+                      )}
                     </TableCell>
                     <TableCell align="center">
                       <IconButton
@@ -2525,14 +2523,16 @@ const CoursesManagement: React.FC = () => {
                           <Delete />
                         </IconButton>
                       )}
-                      <IconButton
-                        color="success"
-                        onClick={() => handleMaterialComplete(material)}
-                        size="small"
-                        title="Marcar como completado"
-                      >
-                        <CheckCircle />
-                      </IconButton>
+                      {user?.role !== 'admin' && (
+                        <IconButton
+                          color="success"
+                          onClick={() => handleMaterialComplete(material)}
+                          size="small"
+                          title="Marcar como completado"
+                        >
+                          <CheckCircle />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

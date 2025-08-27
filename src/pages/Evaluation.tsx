@@ -49,19 +49,17 @@ import {
 import UppercaseTextField from "../components/UppercaseTextField";
 import {
   Add,
-  Edit,
   Delete,
-  Search,
-  Refresh,
-  Visibility,
-  Quiz,
+  Edit,
   ExpandMore,
-  CheckCircle,
-  Cancel,
-  Send,
+  Quiz,
+  Refresh,
   RestartAlt,
   Save,
+  Search,
+  Send,
   Timer,
+  Visibility,
 } from "@mui/icons-material";
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import api from "./../services/api";
@@ -587,6 +585,26 @@ const EvaluationsManagement: React.FC = () => {
         setTimeRemaining(null);
         setTimeExpired(false);
         
+        // Verificar si el usuario aprobó la evaluación y generar certificado
+        if (response.data.passed && evaluationToRespond.course_id && user.rol === 'employee') {
+          try {
+            // Generar certificado si el usuario aprobó
+            const certificateResponse = await api.post(`/certificates/generate`, {
+              course_id: evaluationToRespond.course_id,
+              user_id: user.id
+            });
+            
+            if (certificateResponse.data.success) {
+              showSnackbar('¡Felicidades! Has aprobado la evaluación y se ha generado tu certificado', 'success');
+            }
+          } catch (certError: any) {
+            console.error('Error generando certificado:', certError);
+            // No mostrar error al usuario para no afectar la experiencia
+          }
+        } else if (!response.data.passed && user.rol === 'employee') {
+          showSnackbar('Has completado la evaluación pero no has alcanzado el puntaje mínimo para aprobar', 'error');
+        }
+        
         // Return to evaluation list
         setIsEmployeeResponseMode(false);
         setEvaluationToRespond(null);
@@ -772,25 +790,7 @@ const EvaluationsManagement: React.FC = () => {
     }
   };
 
-  const handleToggleStatus = async (
-    evaluationId: number,
-    currentStatus: string
-  ) => {
-    try {
-      const newStatus = currentStatus === "published" ? "archived" : "published";
-      await api.patch(`/evaluations/${evaluationId}/status`, {
-        status: newStatus,
-      });
-      showSnackbar(
-        `Evaluación ${newStatus === "published" ? "publicada" : "archivada"} exitosamente`,
-        'success'
-      );
-      fetchEvaluations();
-    } catch (error: any) {
-      console.error('Error updating evaluation status:', error);
-      showSnackbar('Error al actualizar el estado de la evaluación', 'error');
-    }
-  };
+
 
   const handleViewEvaluation = async (evaluation: Evaluation) => {
     try {
@@ -1229,18 +1229,7 @@ const EvaluationsManagement: React.FC = () => {
                             <Edit />
                           </IconButton>
                         )}
-                        {canCreateEvaluations() && (
-                          <IconButton
-                            color={evaluation.status === "published" ? "warning" : "success"}
-                            onClick={() =>
-                              handleToggleStatus(evaluation.id, evaluation.status)
-                            }
-                            size="small"
-                            title={evaluation.status === "published" ? "Archivar" : "Publicar"}
-                          >
-                            {evaluation.status === "published" ? <Cancel /> : <CheckCircle />}
-                          </IconButton>
-                        )}
+
                         {canDeleteEvaluations() && (
                           <IconButton
                             color="error"

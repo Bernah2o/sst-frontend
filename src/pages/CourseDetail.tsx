@@ -25,6 +25,11 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  Paper,
 } from "@mui/material";
 import {
   ExpandMore,
@@ -100,12 +105,91 @@ const CourseDetail: React.FC = () => {
   const [materialContent, setMaterialContent] = useState<string>("");
   const [progressInfo, setProgressInfo] = useState<any | null>(null);
   const [evaluationId, setEvaluationId] = useState<number | null>(null);
+  const [activeStep, setActiveStep] = useState<number>(0);
+  const [hasSurveys, setHasSurveys] = useState<boolean>(false);
+  const [hasEvaluation, setHasEvaluation] = useState<boolean>(false);
+  const [hasCertificate, setHasCertificate] = useState<boolean>(false);
 
   useEffect(() => {
     if (id) {
       fetchCourseDetail();
     }
   }, [id]);
+
+  // Determinar el paso activo en el flujo de progresión
+  useEffect(() => {
+    if (course && progressInfo) {
+      // Paso 1: Curso en progreso
+      if (progressInfo.overall_progress < 100) {
+        setActiveStep(0);
+        return;
+      }
+      
+      // Paso 2: Curso completado, verificar encuestas
+      setActiveStep(1);
+      
+      // Verificar si hay encuestas disponibles
+      const checkSurveys = async () => {
+        try {
+          const surveysResponse = await api.get(`/surveys/?course_id=${id}`);
+          const availableSurveys = surveysResponse.data.items || [];
+          setHasSurveys(availableSurveys.length > 0);
+          
+          if (availableSurveys.length > 0) {
+            // Verificar si el usuario ya completó todas las encuestas
+            const userSurveysResponse = await api.get(`/surveys/user-responses?course_id=${id}`);
+            const userSurveys = userSurveysResponse.data.items || [];
+            
+            if (userSurveys.length >= availableSurveys.length) {
+              setActiveStep(2); // Encuestas completadas
+            }
+          } else {
+            setActiveStep(2); // No hay encuestas, pasar a evaluación
+          }
+        } catch (error) {
+          console.error("Error verificando encuestas:", error);
+        }
+      };
+      
+      // Verificar si hay evaluación disponible
+      const checkEvaluation = async () => {
+        try {
+          const evaluationResponse = await api.get(`/evaluations/?course_id=${id}`);
+          const availableEvaluations = evaluationResponse.data.items || [];
+          
+          if (availableEvaluations.length > 0) {
+            setHasEvaluation(true);
+            setEvaluationId(availableEvaluations[0].id);
+            
+            // Verificar si el usuario ya completó la evaluación
+            const userEvalResponse = await api.get(`/evaluations/${availableEvaluations[0].id}/results`);
+            if (userEvalResponse.data && userEvalResponse.data.completed) {
+              setActiveStep(3); // Evaluación completada
+              
+              // Verificar si hay certificado disponible
+              const certificateResponse = await api.get(`/certificates/course/${id}/check`);
+              if (certificateResponse.data && certificateResponse.data.available) {
+                setHasCertificate(true);
+                setActiveStep(4); // Certificado disponible
+              }
+            }
+          } else {
+            // No hay evaluación, verificar certificado directamente
+            const certificateResponse = await api.get(`/certificates/course/${id}/check`);
+            if (certificateResponse.data && certificateResponse.data.available) {
+              setHasCertificate(true);
+              setActiveStep(4); // Certificado disponible
+            }
+          }
+        } catch (error) {
+          console.error("Error verificando evaluación:", error);
+        }
+      };
+      
+      checkSurveys();
+      checkEvaluation();
+    }
+  }, [course, progressInfo, id]);
 
   const fetchCourseDetail = async () => {
     try {
@@ -291,6 +375,34 @@ const CourseDetail: React.FC = () => {
     );
   }
 
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error || "Curso no encontrado"}</Alert>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate("/employee/courses")}
+          sx={{ mt: 2 }}
+        >
+          Volver a Mis Cursos
+        </Button>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -355,72 +467,110 @@ const CourseDetail: React.FC = () => {
               </Alert>
             )}
 
-            {/* Flujo curso → encuestas → evaluación */}
-            {progressInfo && (
-              <Box sx={{ mt: 2 }}>
-                {progressInfo.overall_progress >= 100 &&
-                  progressInfo.pending_surveys &&
-                  progressInfo.pending_surveys.length > 0 && (
-                    <Alert
-                      severity="warning"
-                      sx={{ mb: 2 }}
-                      action={
-                        <Button
-                          color="inherit"
-                          size="small"
-                          onClick={goToSurveys}
-                        >
-                          Realizar Encuestas
-                        </Button>
-                      }
-                    >
-                      Ya puedes realizar la encuesta del curso.
-                    </Alert>
-                  )}
-
-                {progressInfo.can_take_evaluation && (
-                    <Alert
-                      severity="info"
-                      sx={{ mb: 2 }}
-                      action={
-                        <Button
-                          color="inherit"
-                          size="small"
-                          onClick={goToEvaluation}
-                        >
-                          Realizar Evaluación
-                        </Button>
-                      }
-                    >
-                      Ya puedes realizar la evaluación del curso.
-                    </Alert>
-                  )}
-
-                {progressInfo.overall_progress >= 100 &&
-                  progressInfo.evaluation_status === "blocked" && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                      La evaluación está bloqueada. Has agotado todos los intentos disponibles sin superar la puntuación mínima requerida. Contacta al administrador para rehabilitar la evaluación.
-                    </Alert>
-                  )}
-
-                {progressInfo.overall_progress >= 100 &&
-                  progressInfo.evaluation_status === "completed" && (
-                    <>
-                      {progressInfo.evaluation_completed ? (
-                        <Alert severity="success">
-                          ¡Excelente! Completaste la evaluación exitosamente con {progressInfo.evaluation_score}%. Tu certificado
-                          estará disponible en la sección de certificados.
-                        </Alert>
-                      ) : (
-                        <Alert severity="error">
-                          Has completado la evaluación pero no alcanzaste la puntuación mínima requerida ({progressInfo.passing_score}%). 
-                          Tu puntuación fue {progressInfo.evaluation_score}%. {progressInfo.evaluation_status === "blocked" ? "Has agotado todos los intentos disponibles." : "Puedes intentar nuevamente."}
-                        </Alert>
-                      )}
-                    </>
-                  )}
-              </Box>
-            )}
+            {/* Flujo de progresión del curso */}
+            <Paper elevation={3} sx={{ mt: 3, p: 3, mb: 2, borderRadius: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Progreso del Curso
+              </Typography>
+              <Stepper activeStep={activeStep} orientation="vertical">
+                <Step>
+                  <StepLabel>
+                    <Typography variant="subtitle1">Completar Materiales del Curso</Typography>
+                  </StepLabel>
+                  <StepContent>
+                    <Typography>
+                      Completa todos los materiales del curso para avanzar al siguiente paso.
+                      Progreso actual: {progressInfo?.overall_progress || 0}%
+                    </Typography>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={progressInfo?.overall_progress || 0} 
+                      sx={{ mt: 1, mb: 1 }}
+                    />
+                  </StepContent>
+                </Step>
+                
+                <Step>
+                  <StepLabel>
+                    <Typography variant="subtitle1">Encuestas de Satisfacción</Typography>
+                  </StepLabel>
+                  <StepContent>
+                    <Typography>
+                      {hasSurveys 
+                        ? "Completa las encuestas de satisfacción para evaluar el curso." 
+                        : "No hay encuestas disponibles para este curso."}
+                    </Typography>
+                    {hasSurveys && (
+                      <Button 
+                        variant="contained" 
+                        color="primary" 
+                        onClick={goToSurveys} 
+                        sx={{ mt: 2 }}
+                      >
+                        Ir a Encuestas
+                      </Button>
+                    )}
+                  </StepContent>
+                </Step>
+                
+                <Step>
+                  <StepLabel>
+                    <Typography variant="subtitle1">Evaluación Final</Typography>
+                  </StepLabel>
+                  <StepContent>
+                    <Typography>
+                      {hasEvaluation 
+                        ? "Completa la evaluación final para demostrar tus conocimientos." 
+                        : "No hay evaluación disponible para este curso."}
+                    </Typography>
+                    {hasEvaluation && evaluationId && (
+                      <Button 
+                        variant="contained" 
+                        color="primary" 
+                        onClick={goToEvaluation} 
+                        sx={{ mt: 2 }}
+                      >
+                        Ir a Evaluación
+                      </Button>
+                    )}
+                    {progressInfo?.evaluation_status === "blocked" && (
+                      <Alert severity="error" sx={{ mt: 2 }}>
+                        La evaluación está bloqueada. Has agotado todos los intentos disponibles sin superar la puntuación mínima requerida.
+                      </Alert>
+                    )}
+                    {progressInfo?.evaluation_status === "completed" && !progressInfo?.evaluation_completed && (
+                      <Alert severity="warning" sx={{ mt: 2 }}>
+                        Has completado la evaluación pero no alcanzaste la puntuación mínima requerida ({progressInfo.passing_score}%).
+                        Tu puntuación fue {progressInfo.evaluation_score}%.
+                      </Alert>
+                    )}
+                  </StepContent>
+                </Step>
+                
+                <Step>
+                  <StepLabel>
+                    <Typography variant="subtitle1">Certificado</Typography>
+                  </StepLabel>
+                  <StepContent>
+                    <Typography>
+                      {hasCertificate 
+                        ? "¡Felicidades! Has completado el curso y puedes descargar tu certificado." 
+                        : "El certificado estará disponible cuando completes todos los requisitos."}
+                    </Typography>
+                    {hasCertificate && (
+                      <Button 
+                        variant="contained" 
+                        color="success" 
+                        onClick={() => navigate(`/employee/certificates/${id}`)} 
+                        sx={{ mt: 2 }}
+                      >
+                        Ver Certificado
+                      </Button>
+                    )}
+                  </StepContent>
+                </Step>
+              </Stepper>
+            </Paper>
           </CardContent>
         </Card>
       </Box>

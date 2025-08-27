@@ -612,6 +612,521 @@ const EmployeeDashboard: React.FC = () => {
           </Grid>
         </Grid>
 
+        {/* Resumen de Progreso General */}
+        <Card 
+          sx={{ 
+            mb: 4,
+            borderRadius: 3,
+            boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.02)} 0%, ${alpha(theme.palette.info.main, 0.02)} 100%)`
+          }}
+        >
+          <CardContent sx={{ p: 4 }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                color: theme.palette.primary.main,
+                mb: 1,
+                textAlign: 'center'
+              }}
+            >
+              Resumen de Mi Progreso
+            </Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: theme.palette.text.secondary,
+                textAlign: 'center',
+                mb: 4
+              }}
+            >
+              Tu avance general en el programa de capacitaciones
+            </Typography>
+            
+            <Grid container spacing={4} justifyContent="center">
+              {/* Progreso General */}
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      display: 'inline-flex',
+                      mb: 2
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 140,
+                        height: 140,
+                        borderRadius: '50%',
+                        background: `conic-gradient(${theme.palette.success.main} ${stats.enrolled_courses > 0 ? (stats.completed_courses / stats.enrolled_courses) * 360 : 0}deg, ${alpha(theme.palette.success.main, 0.1)} 0deg)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          width: 110,
+                          height: 110,
+                          borderRadius: '50%',
+                          backgroundColor: 'white'
+                        }
+                      }}
+                    >
+                      <Typography 
+                        variant="h3" 
+                        sx={{ 
+                          fontWeight: 700,
+                          color: theme.palette.success.main,
+                          position: 'relative',
+                          zIndex: 1
+                        }}
+                      >
+                        {stats.enrolled_courses > 0 ? Math.round((stats.completed_courses / stats.enrolled_courses) * 100) : 0}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
+                      mb: 1
+                    }}
+                  >
+                    Progreso General
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.secondary
+                    }}
+                  >
+                    {stats.completed_courses} de {stats.enrolled_courses} cursos completados
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              {/* Horas de Estudio */}
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      display: 'inline-flex',
+                      mb: 2
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 140,
+                        height: 140,
+                        borderRadius: '50%',
+                        background: `conic-gradient(${theme.palette.info.main} ${Math.min((stats.total_study_hours / 100) * 360, 360)}deg, ${alpha(theme.palette.info.main, 0.1)} 0deg)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          width: 110,
+                          height: 110,
+                          borderRadius: '50%',
+                          backgroundColor: 'white'
+                        }
+                      }}
+                    >
+                      <Typography 
+                        variant="h3" 
+                        sx={{ 
+                          fontWeight: 700,
+                          color: theme.palette.info.main,
+                          position: 'relative',
+                          zIndex: 1
+                        }}
+                      >
+                        {stats.total_study_hours}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
+                      mb: 1
+                    }}
+                  >
+                    Horas de Estudio
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.secondary
+                    }}
+                  >
+                    Tiempo total invertido
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              {/* Certificados */}
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      display: 'inline-flex',
+                      mb: 2
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 140,
+                        height: 140,
+                        borderRadius: '50%',
+                        background: `conic-gradient(#FFD700 ${Math.min((stats.certificates_earned / Math.max(stats.completed_courses, 1)) * 360, 360)}deg, ${alpha('#FFD700', 0.1)} 0deg)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          width: 110,
+                          height: 110,
+                          borderRadius: '50%',
+                          backgroundColor: 'white'
+                        }
+                      }}
+                    >
+                      <Typography 
+                        variant="h3" 
+                        sx={{ 
+                          fontWeight: 700,
+                          color: '#FF8C00',
+                          position: 'relative',
+                          zIndex: 1
+                        }}
+                      >
+                        {stats.certificates_earned}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
+                      mb: 1
+                    }}
+                  >
+                    Certificados
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.secondary
+                    }}
+                  >
+                    Logros obtenidos
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              {/* Evaluaciones Pendientes */}
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      display: 'inline-flex',
+                      mb: 2
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 140,
+                        height: 140,
+                        borderRadius: '50%',
+                        background: stats.pending_evaluations > 0 ? 
+                          `conic-gradient(${theme.palette.warning.main} 360deg, ${alpha(theme.palette.warning.main, 0.1)} 0deg)` :
+                          `${alpha(theme.palette.success.main, 0.1)}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          width: 110,
+                          height: 110,
+                          borderRadius: '50%',
+                          backgroundColor: 'white'
+                        }
+                      }}
+                    >
+                      <Typography 
+                        variant="h3" 
+                        sx={{ 
+                          fontWeight: 700,
+                          color: stats.pending_evaluations > 0 ? theme.palette.warning.main : theme.palette.success.main,
+                          position: 'relative',
+                          zIndex: 1
+                        }}
+                      >
+                        {stats.pending_evaluations}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
+                      mb: 1
+                    }}
+                  >
+                    Evaluaciones
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.secondary
+                    }}
+                  >
+                    {stats.pending_evaluations > 0 ? 'Pendientes' : 'Al día'}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Sección de Progreso Visual de Cursos */}
+        <Card 
+          sx={{ 
+            mb: 5,
+            borderRadius: 3,
+            boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`
+          }}
+        >
+          <CardContent sx={{ p: 4 }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                color: theme.palette.primary.main,
+                mb: 1,
+                textAlign: 'center'
+              }}
+            >
+              Progreso de Mis Cursos
+            </Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: theme.palette.text.secondary,
+                textAlign: 'center',
+                mb: 4
+              }}
+            >
+              Visualiza tu avance en cada curso de manera detallada
+            </Typography>
+            
+            {myCourses.length > 0 ? (
+              <Grid container spacing={3}>
+                {myCourses.map((course) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={course.id}>
+                    <Card 
+                      sx={{ 
+                        height: '100%',
+                        borderRadius: 3,
+                        border: `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                        background: 'white',
+                        transition: 'all 0.3s ease-in-out',
+                        position: 'relative',
+                        overflow: 'visible',
+                        '&:hover': {
+                          transform: 'translateY(-8px)',
+                          boxShadow: `0 12px 30px ${alpha(theme.palette.primary.main, 0.2)}`,
+                          border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                        }
+                      }}
+                    >
+                      <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                        {/* Círculo de progreso visual */}
+                        <Box 
+                          sx={{ 
+                            position: 'relative',
+                            display: 'inline-flex',
+                            mb: 3
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 120,
+                              height: 120,
+                              borderRadius: '50%',
+                              background: `conic-gradient(${theme.palette.primary.main} ${course.progress * 3.6}deg, ${alpha(theme.palette.primary.main, 0.1)} 0deg)`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                width: 90,
+                                height: 90,
+                                borderRadius: '50%',
+                                backgroundColor: 'white'
+                              }
+                            }}
+                          >
+                            <Typography 
+                              variant="h4" 
+                              sx={{ 
+                                fontWeight: 700,
+                                color: theme.palette.primary.main,
+                                position: 'relative',
+                                zIndex: 1
+                              }}
+                            >
+                              {course.progress}%
+                            </Typography>
+                          </Box>
+                        </Box>
+                        
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            fontWeight: 600,
+                            color: theme.palette.text.primary,
+                            mb: 2,
+                            minHeight: 48,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          {course.title}
+                        </Typography>
+                        
+                        <Chip
+                          label={course.status === 'completed' ? 'Completado' : 
+                                 course.status === 'in_progress' ? 'En Progreso' : 
+                                 course.status === 'pending' ? 'Pendiente' : 
+                                 course.status === 'expired' ? 'Vencido' : course.status}
+                          color={getStatusColor(course.status) as any}
+                          sx={{ 
+                            fontWeight: 600,
+                            borderRadius: 2,
+                            mb: 3,
+                            px: 2
+                          }}
+                        />
+                        
+                        {/* Barra de progreso adicional */}
+                        <Box sx={{ mb: 3 }}>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={course.progress} 
+                            sx={{ 
+                              height: 12,
+                              borderRadius: 6,
+                              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                              '& .MuiLinearProgress-bar': {
+                                borderRadius: 6,
+                                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+                              }
+                            }}
+                          />
+                        </Box>
+                        
+                        {course.status === 'completed' ? (
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            color="success"
+                            startIcon={<CheckCircleIcon />}
+                            disabled
+                            sx={{ 
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              py: 1.5
+                            }}
+                          >
+                            Completado
+                          </Button>
+                        ) : (
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            startIcon={<PlayArrowIcon />}
+                            onClick={() => navigate(`/employee/courses/${course.id}`)}
+                            sx={{ 
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              py: 1.5,
+                              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                              '&:hover': {
+                                background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                                transform: 'scale(1.02)'
+                              }
+                            }}
+                          >
+                            Continuar Curso
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <SchoolIcon 
+                  sx={{ 
+                    fontSize: 80, 
+                    color: alpha(theme.palette.primary.main, 0.3),
+                    mb: 2
+                  }} 
+                />
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    mb: 2
+                  }}
+                >
+                  No tienes cursos inscritos
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<SchoolIcon />}
+                  onClick={() => navigate('/employee/courses')}
+                  sx={{ 
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+                  }}
+                >
+                  Explorar Cursos
+                </Button>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+
         <Grid container spacing={4}>
           {/* Mis cursos */}
           <Grid size={{ xs: 12, md: 8 }}>
