@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (including dev dependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -19,14 +19,28 @@ RUN npm run build
 # Production stage with nginx
 FROM nginx:alpine
 
+# Install envsubst for environment variable substitution
+RUN apk add --no-cache gettext
+
 # Copy built assets from build stage
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy nginx configuration if exists
-COPY nginx.conf /etc/nginx/conf.d/default.conf 2>/dev/null || echo "No nginx.conf found, using default"
+# Copy nginx configuration template
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# Expose port 80
-EXPOSE 80
+# Create startup script for dynamic port configuration
+RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
+    echo 'export PORT=${PORT:-80}' >> /docker-entrypoint.sh && \
+    echo 'envsubst "\$PORT" < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
+    echo 'nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Expose dynamic port
+EXPOSE $PORT
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-80}/ || exit 1
+
+# Start with custom entrypoint
+CMD ["/docker-entrypoint.sh"]
