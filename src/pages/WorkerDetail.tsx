@@ -251,10 +251,10 @@ const WorkerDetail: React.FC = () => {
         <Alert severity="error">{error}</Alert>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/workers')}
+          onClick={() => navigate(-1)}
           sx={{ mt: 2 }}
         >
-          Volver a Trabajadores
+          Volver
         </Button>
       </Box>
     );
@@ -266,10 +266,10 @@ const WorkerDetail: React.FC = () => {
         <Alert severity="warning">No se encontraron datos del trabajador</Alert>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/workers')}
+          onClick={() => navigate(-1)}
           sx={{ mt: 2 }}
         >
-          Volver a Trabajadores
+          Volver
         </Button>
       </Box>
     );
@@ -280,7 +280,7 @@ const WorkerDetail: React.FC = () => {
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => navigate('/workers')}>
+          <IconButton onClick={() => navigate(-1)}>
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h4" component="h1">

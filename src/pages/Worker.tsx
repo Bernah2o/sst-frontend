@@ -28,6 +28,7 @@ import {
   Alert,
   Snackbar,
   Grid,
+  CircularProgress,
 } from "@mui/material";
 import UppercaseTextField from '../components/UppercaseTextField';
 import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
@@ -48,6 +49,7 @@ import {
   PersonAdd,
   CheckCircle,
   Cancel,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import api from "./../services/api";
 import { formatDate } from '../utils/dateUtils';
@@ -181,6 +183,11 @@ const WorkersManagement: React.FC = () => {
   const [workerToDelete, setWorkerToDelete] = useState<WorkerList | null>(null);
   const [loadingUserData, setLoadingUserData] = useState(false);
   const [userDataFound, setUserDataFound] = useState(false);
+  
+  // Estados para modal de previsualización
+  const [previewDialog, setPreviewDialog] = useState(false);
+  const [previewWorker, setPreviewWorker] = useState<Worker | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
     fetchWorkers();
@@ -391,9 +398,9 @@ const WorkersManagement: React.FC = () => {
         salary_ibc: fullWorker.salary_ibc || 0,
         fecha_de_ingreso: fullWorker.fecha_de_ingreso ? fullWorker.fecha_de_ingreso.split("T")[0] : "",
         fecha_de_retiro: fullWorker.fecha_de_retiro ? fullWorker.fecha_de_retiro.split("T")[0] : "",
-        eps_id: fullWorker.eps?.id || fullWorker.eps_id || undefined,
-        afp_id: fullWorker.afp?.id || fullWorker.afp_id || undefined,
-        arl_id: fullWorker.arl?.id || fullWorker.arl_id || undefined,
+        eps_id: fullWorker.eps ? epsOptions.find(eps => eps.display_name === fullWorker.eps)?.id : undefined,
+        afp_id: fullWorker.afp ? afpOptions.find(afp => afp.display_name === fullWorker.afp)?.id : undefined,
+        arl_id: fullWorker.arl ? arlOptions.find(arl => arl.display_name === fullWorker.arl)?.id : undefined,
         country: fullWorker.country || "Colombia",
         department: fullWorker.department || "",
         city: fullWorker.city || "",
@@ -442,9 +449,9 @@ const WorkersManagement: React.FC = () => {
         salary_ibc: formData.salary_ibc,
         fecha_de_ingreso: formData.fecha_de_ingreso || undefined,
         fecha_de_retiro: formData.fecha_de_retiro || undefined,
-        eps_id: formData.eps_id || undefined,
-        afp_id: formData.afp_id || undefined,
-        arl_id: formData.arl_id || undefined,
+        eps: formData.eps_id ? epsOptions.find(eps => eps.id === formData.eps_id)?.display_name : undefined,
+        afp: formData.afp_id ? afpOptions.find(afp => afp.id === formData.afp_id)?.display_name : undefined,
+        arl: formData.arl_id ? arlOptions.find(arl => arl.id === formData.arl_id)?.display_name : undefined,
         country: formData.country,
         department: formData.department || undefined,
         city: formData.city || undefined,
@@ -495,6 +502,23 @@ const WorkersManagement: React.FC = () => {
   const handleDeleteWorker = (worker: WorkerList) => {
     setWorkerToDelete(worker);
     setOpenDeleteDialog(true);
+  };
+
+  const handlePreviewWorker = async (worker: WorkerList) => {
+    try {
+      setLoadingPreview(true);
+      setPreviewDialog(true);
+      
+      // Obtener los datos completos del trabajador
+      const response = await api.get(`/workers/${worker.id}`);
+      setPreviewWorker(response.data);
+    } catch (error) {
+      console.error('Error fetching worker preview:', error);
+      showSnackbar('Error al cargar la previsualización del trabajador', 'error');
+      setPreviewDialog(false);
+    } finally {
+      setLoadingPreview(false);
+    }
   };
 
   // Funciones para gestión administrativa de usuarios
@@ -708,9 +732,9 @@ const WorkersManagement: React.FC = () => {
                   <TableCell align="center">
                     <IconButton
                       color="info"
-                      onClick={() => navigate(`/admin/workers/${worker.id}`)}
+                      onClick={() => handlePreviewWorker(worker)}
                       size="small"
-                      title="Ver detalle del trabajador"
+                      title="Ver previsualización del trabajador"
                     >
                       <Visibility />
                     </IconButton>
@@ -1384,6 +1408,263 @@ const WorkersManagement: React.FC = () => {
             disabled={!selectedUserId}
           >
             Vincular Usuario
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de previsualización del trabajador */}
+      <Dialog
+        open={previewDialog}
+        onClose={() => setPreviewDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Previsualización del Trabajador
+          <IconButton
+            aria-label="close"
+            onClick={() => setPreviewDialog(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingPreview ? (
+            <Box display="flex" justifyContent="center" p={3}>
+              <CircularProgress />
+            </Box>
+          ) : previewWorker ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Información Personal */}
+              <Box>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Información Personal
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                  <TextField
+                    label="Nombres"
+                    value={previewWorker.first_name || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Apellidos"
+                    value={previewWorker.last_name || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Tipo de Documento"
+                    value={previewWorker.document_type || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Número de Documento"
+                    value={previewWorker.document_number || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Género"
+                    value={previewWorker.gender || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Fecha de Nacimiento"
+                    value={previewWorker.birth_date || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Email"
+                    value={previewWorker.email || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Teléfono"
+                    value={previewWorker.phone || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                </Box>
+              </Box>
+              
+              {/* Información Laboral */}
+              <Box>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Información Laboral
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                  <TextField
+                    label="Tipo de Contrato"
+                    value={previewWorker.contract_type || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Modalidad de Trabajo"
+                    value={previewWorker.work_modality || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Cargo"
+                    value={previewWorker.position || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Ocupación"
+                    value={previewWorker.occupation || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                </Box>
+              </Box>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mt: 2 }}>
+                  <TextField
+                    label="Profesión"
+                    value={previewWorker.profession || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Nivel de Riesgo"
+                    value={previewWorker.risk_level || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Salario IBC"
+                    value={previewWorker.salary_ibc ? `$${previewWorker.salary_ibc.toLocaleString()}` : ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Fecha de Ingreso"
+                    value={previewWorker.fecha_de_ingreso || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                </Box>
+              
+              {/* Información de Seguridad Social */}
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Seguridad Social
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+                  <TextField
+                    label="EPS"
+                    value={previewWorker.eps || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="AFP"
+                    value={previewWorker.afp || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="ARL"
+                    value={previewWorker.arl || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                </Box>
+              </Box>
+              
+              {/* Información de Ubicación */}
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Ubicación
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+                  <TextField
+                    label="País"
+                    value={previewWorker.country || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Departamento"
+                    value={previewWorker.department || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  <TextField
+                    label="Ciudad"
+                    value={previewWorker.city || ''}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                </Box>
+              </Box>
+              
+              {/* Estado de Registro */}
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Estado
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                  <TextField
+                    label="Estado de Registro"
+                    value={previewWorker.is_registered ? 'Registrado' : 'No Registrado'}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                    variant="outlined"
+                  />
+                  {previewWorker.fecha_de_retiro && (
+                     <TextField
+                       label="Fecha de Retiro"
+                       value={previewWorker.fecha_de_retiro}
+                       fullWidth
+                       InputProps={{ readOnly: true }}
+                       variant="outlined"
+                     />
+                   )}
+                 </Box>
+               </Box>
+            </Box>
+          ) : (
+            <Typography>No se pudieron cargar los datos del trabajador.</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewDialog(false)} variant="outlined">
+            Cerrar
           </Button>
         </DialogActions>
       </Dialog>

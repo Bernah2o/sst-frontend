@@ -1,16 +1,16 @@
 export enum MonthEnum {
-  ENERO = 'ENERO',
-  FEBRERO = 'FEBRERO',
-  MARZO = 'MARZO',
-  ABRIL = 'ABRIL',
-  MAYO = 'MAYO',
-  JUNIO = 'JUNIO',
-  JULIO = 'JULIO',
-  AGOSTO = 'AGOSTO',
-  SEPTIEMBRE = 'SEPTIEMBRE',
-  OCTUBRE = 'OCTUBRE',
-  NOVIEMBRE = 'NOVIEMBRE',
-  DICIEMBRE = 'DICIEMBRE'
+  ENERO = 'enero',
+  FEBRERO = 'febrero',
+  MARZO = 'marzo',
+  ABRIL = 'abril',
+  MAYO = 'mayo',
+  JUNIO = 'junio',
+  JULIO = 'julio',
+  AGOSTO = 'agosto',
+  SEPTIEMBRE = 'septiembre',
+  OCTUBRE = 'octubre',
+  NOVIEMBRE = 'noviembre',
+  DICIEMBRE = 'diciembre'
 }
 
 export enum EventTypeEnum {
@@ -38,6 +38,7 @@ export interface AbsenteeismBase {
   disability_days: number;
   extension?: number;
   charged_days?: number;
+  disability_or_charged_days: number;
   diagnostic_code: string;
   health_condition_description: string;
   observations?: string;
@@ -58,6 +59,7 @@ export interface AbsenteeismUpdate {
   disability_days?: number;
   extension?: number;
   charged_days?: number;
+  disability_or_charged_days?: number;
   diagnostic_code?: string;
   health_condition_description?: string;
   observations?: string;

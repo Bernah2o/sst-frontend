@@ -1030,27 +1030,15 @@ const CoursesManagement: React.FC = () => {
   };
 
   const handleSaveMaterial = async () => {
-    console.log("=== INICIO handleSaveMaterial ===");
-    console.log("selectedModule:", selectedModule);
-    console.log("selectedCourse:", selectedCourse);
-    console.log("editingMaterial:", editingMaterial);
-    console.log("materialFormData:", materialFormData);
-    console.log("uploadedFileInfo:", uploadedFileInfo);
-    console.log("selectedFile:", selectedFile);
+
     
     // Validación mejorada: intentar recuperar selectedModule y selectedCourse si no están disponibles
     if (!selectedModule || !selectedCourse) {
-      console.log("ERROR: Falta selectedModule o selectedCourse");
-      console.log("Estado detallado:");
-      console.log("- selectedModule:", selectedModule);
-      console.log("- selectedCourse:", selectedCourse);
-      console.log("- editingMaterial:", editingMaterial);
-      console.log("- openMaterialDialog:", openMaterialDialog);
-      console.log("- openMaterialEditDialog:", openMaterialEditDialog);
+
       
       // Si estamos editando un material, intentar recuperar el contexto
       if (editingMaterial) {
-        console.log("Intentando recuperar contexto para material en edición...");
+  
         
         // Buscar el módulo que contiene este material
          const foundModule = courseModules.find((module: CourseModuleResponse) => 
@@ -1180,15 +1168,13 @@ const CoursesManagement: React.FC = () => {
         showSnackbar("Material creado exitosamente", "success");
       }
 
-      console.log("Recargando lista de materiales...");
       // Recargar materiales
       const response = await api.get(
         `/courses/modules/${selectedModule.id}/materials`
       );
-      console.log("Materiales recargados:", response.data);
       setModuleMaterials(response.data);
 
-      console.log("Cerrando diálogo y limpiando formulario...");
+
       // Cerrar diálogo y limpiar formulario
       setOpenMaterialEditDialog(false);
       setEditingMaterial(null);
@@ -1233,7 +1219,7 @@ const CoursesManagement: React.FC = () => {
       );
       
       if (foundModule) {
-        console.log("Módulo recuperado para eliminación:", foundModule);
+
         setSelectedModule(foundModule);
         
         // Buscar el curso que contiene este módulo
@@ -1298,94 +1284,64 @@ const CoursesManagement: React.FC = () => {
 
   // Funciones para previsualización de contenido
   const handlePreviewMaterial = (material: CourseMaterialResponse) => {
-    console.log('=== INICIO handlePreviewMaterial ===');
-    console.log('Material recibido:', material);
-    console.log('Tipo de material:', material.material_type);
-    console.log('URL del archivo:', material.file_url);
-    console.log('Título:', material.title);
-    console.log('Estado actual openPreviewDialog:', openPreviewDialog);
-    console.log('Estado actual previewContent:', previewContent);
-    console.log('Evento del click capturado en:', new Date().toISOString());
     
     if (material.material_type === MaterialType.PDF && material.file_url) {
-      console.log('Procesando material PDF');
       const newPreviewContent = {
          type: "pdf" as const,
          content: material.file_url,
          title: material.title,
        };
-      console.log('Nuevo contenido de previsualización PDF:', newPreviewContent);
-      console.log('URL final para PDF:', material.file_url);
       setPreviewContent(newPreviewContent);
-      console.log('Abriendo dialog de previsualización PDF...');
       setOpenPreviewDialog(true);
-      console.log('Dialog PDF abierto, estado actualizado');
     } else if (
       material.material_type === MaterialType.VIDEO &&
       material.file_url
     ) {
-      console.log('Procesando material VIDEO');
       const newPreviewContent = {
          type: "video" as const,
          content: material.file_url,
          title: material.title,
        };
-      console.log('Nuevo contenido de previsualización VIDEO:', newPreviewContent);
       setPreviewContent(newPreviewContent);
-      console.log('Abriendo dialog de previsualización VIDEO...');
       setOpenPreviewDialog(true);
-      console.log('Dialog VIDEO abierto, estado actualizado');
     } else if (
       material.material_type === MaterialType.LINK &&
       material.file_url
     ) {
-      console.log('Procesando material LINK');
       // Verificar si es un enlace de YouTube
       const youtubeEmbedUrl = getYouTubeEmbedUrl(material.file_url);
-      console.log('Verificando YouTube, URL embed:', youtubeEmbedUrl);
       if (youtubeEmbedUrl) {
-        console.log('Es YouTube, configurando embed');
         const newPreviewContent = {
            type: "youtube" as const,
            content: youtubeEmbedUrl,
            title: material.title,
          };
-        console.log('Nuevo contenido de previsualización YOUTUBE:', newPreviewContent);
+
         setPreviewContent(newPreviewContent);
       } else {
-        console.log('Es URL genérica');
+
         const newPreviewContent = {
            type: "url" as const,
            content: material.file_url,
            title: material.title,
          };
-        console.log('Nuevo contenido de previsualización URL:', newPreviewContent);
+
         setPreviewContent(newPreviewContent);
       }
-      console.log('Abriendo dialog de previsualización LINK...');
       setOpenPreviewDialog(true);
-      console.log('Dialog LINK abierto, estado actualizado');
     } else {
-      console.log('Material no válido para previsualización');
-      console.log('Tipo:', material.material_type, 'URL:', material.file_url);
+
       showSnackbar(
         "Este tipo de material no se puede previsualizar o no tiene URL/archivo configurado",
         "error"
       );
     }
-    console.log('=== FIN handlePreviewMaterial ===');
+
   };
 
   const handleClosePreview = () => {
-    console.log('=== INICIO handleClosePreview ===');
-    console.log('Estado antes de cerrar:');
-    console.log('- openPreviewDialog:', openPreviewDialog);
-    console.log('- previewContent:', previewContent);
-    console.log('Cerrando dialog y limpiando contenido...');
     setOpenPreviewDialog(false);
     setPreviewContent({ type: "pdf", content: "", title: "" });
-    console.log('Dialog cerrado y contenido limpiado');
-    console.log('=== FIN handleClosePreview ===');
   };
 
   const getMaterialIcon = (type: MaterialType) => {
@@ -2387,7 +2343,6 @@ const CoursesManagement: React.FC = () => {
       <Dialog
         open={openMaterialDialog}
         onClose={() => {
-          console.log("Cerrando diálogo de materiales - selectedModule:", selectedModule);
           setOpenMaterialDialog(false);
         }}
         maxWidth="lg"
@@ -2477,15 +2432,8 @@ const CoursesManagement: React.FC = () => {
                       <IconButton
                         color="info"
                         onClick={(e) => {
-                          console.log('=== CLICK EN BOTÓN PREVISUALIZAR ===');
-                          console.log('Evento click:', e);
-                          console.log('Material seleccionado:', material);
-                          console.log('Timestamp:', new Date().toISOString());
-                          console.log('Target del evento:', e.target);
-                          console.log('CurrentTarget del evento:', e.currentTarget);
                           e.preventDefault();
                           e.stopPropagation();
-                          console.log('Llamando a handlePreviewMaterial...');
                           handlePreviewMaterial(material);
                         }}
                         size="small"
@@ -2693,21 +2641,10 @@ const CoursesManagement: React.FC = () => {
                                 : "video/*"
                             }
                             onChange={(e) => {
-                              console.log("=== onChange del input de archivo ===");
-                              console.log("e.target.files:", e.target.files);
                               const file = e.target.files?.[0];
-                              console.log("Archivo seleccionado:", file);
                               if (file) {
-                                console.log("Llamando setSelectedFile con:", {
-                                  name: file.name,
-                                  size: file.size,
-                                  type: file.type
-                                });
                                 setSelectedFile(file);
-                                console.log("Llamando handleFileUpload...");
                                 handleFileUpload(file);
-                              } else {
-                                console.log("No se seleccionó ningún archivo");
                               }
                             }}
                           />
@@ -2830,12 +2767,6 @@ const CoursesManagement: React.FC = () => {
             Cancelar
           </Button>
           <Button onClick={() => {
-            console.log("=== BOTÓN CREAR/ACTUALIZAR PRESIONADO ===");
-            console.log("Estado antes de handleSaveMaterial:");
-            console.log("- selectedModule:", selectedModule);
-            console.log("- selectedCourse:", selectedCourse);
-            console.log("- openMaterialDialog:", openMaterialDialog);
-            console.log("- openMaterialEditDialog:", openMaterialEditDialog);
             handleSaveMaterial();
           }} variant="contained">
             {editingMaterial ? "Actualizar" : "Crear"}
@@ -2847,8 +2778,6 @@ const CoursesManagement: React.FC = () => {
       <Dialog
         open={openPreviewDialog}
         onClose={() => {
-          console.log('=== CERRANDO DIALOG DE PREVISUALIZACIÓN ===');
-          console.log('Estado antes de cerrar:', { openPreviewDialog, previewContent });
           handleClosePreview();
         }}
         maxWidth="lg"
@@ -2860,11 +2789,6 @@ const CoursesManagement: React.FC = () => {
         <DialogTitle>Previsualización: {previewContent.title}</DialogTitle>
         <DialogContent sx={{ p: 0, height: "100%" }}>
           {(() => {
-            console.log('=== RENDERIZANDO CONTENIDO DE PREVISUALIZACIÓN ===');
-            console.log('Tipo de contenido:', previewContent.type);
-            console.log('Contenido:', previewContent.content);
-            console.log('Título:', previewContent.title);
-            console.log('Dialog abierto:', openPreviewDialog);
             return null;
           })()}
           {previewContent.type === "pdf" ? (
@@ -2876,10 +2800,7 @@ const CoursesManagement: React.FC = () => {
                 const finalSrc = previewContent.content.startsWith('http') 
                   ? previewContent.content 
                   : `${baseUrl}/uploads/${previewContent.content.replace(/^\/uploads\//, '')}`;
-                console.log('=== RENDERIZANDO PDF CON IFRAME ===');
-                console.log('URL original:', previewContent.content);
-                console.log('Base URL:', baseUrl);
-                console.log('URL final para PDFViewer:', finalSrc);
+
                 return (
                   <PDFViewer
                     url={finalSrc}

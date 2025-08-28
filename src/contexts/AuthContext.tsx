@@ -24,7 +24,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar si hay un token guardado al cargar la aplicación
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     
@@ -34,14 +33,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Validar que el usuario tenga las propiedades necesarias
         if (parsedUser && parsedUser.id && parsedUser.email) {
           setUser(parsedUser);
+          
+          // Obtener información completa del usuario incluyendo custom_role
+          apiService.getCurrentUser()
+            .then(completeUser => {
+              setUser(completeUser);
+              localStorage.setItem('user', JSON.stringify(completeUser));
+            })
+            .catch(error => {
+              // Mantener el usuario del localStorage si falla la actualización
+            });
         } else {
           // Datos corruptos, limpiar localStorage
-          console.warn('Invalid user data found, clearing localStorage');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         }
       } catch (error) {
-        console.error('Error parsing user data:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
@@ -63,13 +70,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (response.access_token && response.user) {
         localStorage.setItem('token', response.access_token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        setUser(response.user);
+        
+        // Get complete user information including custom_role
+        try {
+          const completeUser = await apiService.getCurrentUser();
+          localStorage.setItem('user', JSON.stringify(completeUser));
+          setUser(completeUser);
+        } catch (userError) {
+          // Fallback to basic user info from login response
+          localStorage.setItem('user', JSON.stringify(response.user));
+          setUser(response.user);
+        }
       }
       
       return response;
     } catch (error) {
-      console.error('Login error:', error);
       throw error;
     }
   };
@@ -78,7 +93,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await apiService.logout();
     } catch (error) {
-      console.error('Logout error:', error);
     } finally {
       clearAuthData();
     }
@@ -96,13 +110,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('No token found');
       }
 
-      const response = await apiService.get('/users/me/refresh');
-      if (response.data.user) {
-        setUser(response.data.user);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+      const completeUser = await apiService.getCurrentUser();
+       if (completeUser) {
+         setUser(completeUser);
+         localStorage.setItem('user', JSON.stringify(completeUser));
       }
     } catch (error) {
-      console.error('Error refreshing user data:', error);
       // Si hay error, limpiar datos de autenticación
       clearAuthData();
     }

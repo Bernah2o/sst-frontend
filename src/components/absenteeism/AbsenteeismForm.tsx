@@ -53,6 +53,10 @@ const validationSchema = Yup.object({
     .required('Los días de incapacidad son requeridos'),
   extension: Yup.number().min(0, 'La prórroga no puede ser negativa').default(0),
   charged_days: Yup.number().min(0, 'Los días cargados no pueden ser negativos').default(0),
+  disability_or_charged_days: Yup.number()
+    .min(0, 'Los días de incapacidad o cargados no pueden ser negativos')
+    .nullable()
+    .optional(),
   diagnostic_code: Yup.string(),
   health_condition_description: Yup.string(),
   observations: Yup.string(),
@@ -87,6 +91,7 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
       disability_days: 0,
       extension: 0,
       charged_days: 0,
+      disability_or_charged_days: 0,
       diagnostic_code: '',
       health_condition_description: '',
       observations: '',
@@ -101,10 +106,31 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
         setLoading(true);
         setError(null);
         
+
+        
+        // Ensure all numeric fields are properly converted
+        const processedValues = {
+          ...values,
+          disability_days: Number(values.disability_days) || 0,
+          extension: Number(values.extension) || 0,
+          charged_days: Number(values.charged_days) || 0,
+          insured_costs_at: Number(values.insured_costs_at) || 0,
+          insured_costs_ac_eg: Number(values.insured_costs_ac_eg) || 0,
+          assumed_costs_at: Number(values.assumed_costs_at) || 0,
+          assumed_costs_ac_eg: Number(values.assumed_costs_ac_eg) || 0
+        };
+        
+        // Only include disability_or_charged_days if it has a value
+        if (values.disability_or_charged_days !== null && values.disability_or_charged_days !== undefined && values.disability_or_charged_days !== 0) {
+          processedValues.disability_or_charged_days = Number(values.disability_or_charged_days);
+        }
+        
+
+        
         if (isEditMode && id) {
-          await absenteeismService.updateAbsenteeism(parseInt(id), values as AbsenteeismUpdate);
+          await absenteeismService.updateAbsenteeism(parseInt(id), processedValues as AbsenteeismUpdate);
         } else {
-          await absenteeismService.createAbsenteeism(values as AbsenteeismCreate);
+          await absenteeismService.createAbsenteeism(processedValues as AbsenteeismCreate);
         }
         
         navigate('/admin/absenteeism');
@@ -156,6 +182,7 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
         disability_days: data.disability_days,
         extension: data.extension,
         charged_days: data.charged_days,
+        disability_or_charged_days: data.disability_or_charged_days || 0,
         diagnostic_code: data.diagnostic_code || '',
         health_condition_description: data.health_condition_description || '',
         observations: data.observations || '',
@@ -404,6 +431,20 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
                   onBlur={formik.handleBlur}
                   error={formik.touched.charged_days && Boolean(formik.errors.charged_days)}
                   helperText={formik.touched.charged_days && formik.errors.charged_days}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Días de Incapacidad o Cargados"
+                  type="number"
+                  name="disability_or_charged_days"
+                  value={formik.values.disability_or_charged_days}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.disability_or_charged_days && Boolean(formik.errors.disability_or_charged_days)}
+                  helperText={formik.touched.disability_or_charged_days && formik.errors.disability_or_charged_days}
                 />
               </Grid>
 

@@ -64,6 +64,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../utils/dateUtils";
 import api from "../services/api";
+import { adminConfigService } from "../services/adminConfigService";
 import jsPDF from "jspdf";
 
 // Enums que coinciden con el backend
@@ -302,12 +303,11 @@ const OccupationalExam: React.FC = () => {
 
   const fetchProgramas = async () => {
     try {
-      const response = await api.get("/admin/config/programas");
-      setProgramas(
-        response.data.filter((programa: Programa) => programa.activo)
-      );
+      const programas = await adminConfigService.getActiveProgramas();
+      setProgramas(programas);
     } catch (error) {
       console.error("Error fetching programas:", error);
+      setProgramas([]);
     }
   };
 

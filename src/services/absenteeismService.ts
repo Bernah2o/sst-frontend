@@ -1,4 +1,4 @@
-import api from './api';
+import { apiService } from './api';
 import {
   AbsenteeismCreate,
   AbsenteeismUpdate,
@@ -30,7 +30,7 @@ export const absenteeismService = {
       if (filters.year) params.append('year', filters.year.toString());
     }
 
-    const response = await api.get(`/absenteeism?${params.toString()}`);
+    const response = await apiService.get(`/absenteeism?${params.toString()}`);
     
     // Asegurar que la respuesta tenga todas las propiedades requeridas
     return {
@@ -46,25 +46,31 @@ export const absenteeismService = {
 
   // Obtener un absenteeism específico
   getAbsenteeism: async (id: number): Promise<AbsenteeismResponse> => {
-    const response = await api.get(`/absenteeism/${id}`);
+    const response = await apiService.get(`/absenteeism/${id}`);
     return response.data;
   },
 
   // Crear nuevo absenteeism
   createAbsenteeism: async (data: AbsenteeismCreate): Promise<AbsenteeismResponse> => {
-    const response = await api.post('/absenteeism', data);
+    // Ensure disability_or_charged_days is a valid number
+    const cleanedData = {
+      ...data,
+      disability_or_charged_days: Number(data.disability_or_charged_days) || 0
+    };
+    
+    const response = await apiService.post('/absenteeism', cleanedData);
     return response.data;
   },
 
   // Actualizar absenteeism
   updateAbsenteeism: async (id: number, data: AbsenteeismUpdate): Promise<AbsenteeismResponse> => {
-    const response = await api.put(`/absenteeism/${id}`, data);
+    const response = await apiService.put(`/absenteeism/${id}`, data);
     return response.data;
   },
 
   // Eliminar absenteeism
   deleteAbsenteeism: async (id: number): Promise<void> => {
-    await api.delete(`/absenteeism/${id}`);
+    await apiService.delete(`/absenteeism/${id}`);
   },
 
   // Obtener estadísticas
@@ -73,13 +79,13 @@ export const absenteeismService = {
     if (year) params.append('year', year.toString());
     if (workerId) params.append('worker_id', workerId.toString());
 
-    const response = await api.get(`/absenteeism/stats/summary?${params.toString()}`);
+    const response = await apiService.get(`/absenteeism/stats/summary?${params.toString()}`);
     return response.data;
   },
 
   // Obtener absenteeism de un trabajador específico
   getWorkerAbsenteeisms: async (workerId: number): Promise<AbsenteeismListResponse[]> => {
-    const response = await api.get(`/absenteeism/workers/${workerId}`);
+    const response = await apiService.get(`/absenteeism/workers/${workerId}`);
     return response.data;
   },
 
@@ -95,7 +101,7 @@ export const absenteeismService = {
       if (filters.year) params.append('year', filters.year.toString());
     }
 
-    const response = await api.get(`/absenteeism/export?${params.toString()}`, {
+    const response = await apiService.get(`/absenteeism/export?${params.toString()}`, {
       responseType: 'blob'
     });
     return response.data;

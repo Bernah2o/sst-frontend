@@ -167,26 +167,53 @@ const Notification: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get('/users/');
-      setUsers(response.data);
+      const response = await api.get('/users/list');
+      setUsers(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching users:', error);
+      setUsers([]);
     }
   };
 
   const handleSaveNotification = async () => {
     try {
-      const payload = {
-        ...formData,
-        recipient_ids: formData.recipient_type === 'specific' ? formData.recipient_ids : undefined,
-        recipient_role: formData.recipient_type === 'role' ? formData.recipient_role : undefined,
-        scheduled_at: !formData.send_immediately ? formData.scheduled_at?.toISOString() : undefined
-      };
-
       if (editingNotification) {
+        // For editing, use the original endpoint
+        const payload = {
+          ...formData,
+          recipient_ids: formData.recipient_type === 'specific' ? formData.recipient_ids : undefined,
+          recipient_role: formData.recipient_type === 'role' ? formData.recipient_role : undefined,
+          scheduled_at: !formData.send_immediately ? formData.scheduled_at?.toISOString() : undefined
+        };
         await api.put(`/notifications/${editingNotification.id}`, payload);
       } else {
-        await api.post('/notifications/', payload);
+        // For creating new notifications, use the bulk endpoint
+        // Map frontend channel values to backend notification_type
+        const notificationTypeMap: { [key: string]: string } = {
+          'system': 'in_app',
+          'email': 'email',
+          'sms': 'sms',
+          'push': 'push'
+        };
+        
+        // Map frontend type to backend priority
+        const priorityMap: { [key: string]: string } = {
+          'info': 'normal',
+          'warning': 'high',
+          'error': 'urgent',
+          'success': 'normal'
+        };
+        
+        const bulkPayload = {
+          title: formData.title,
+          message: formData.message,
+          notification_type: notificationTypeMap[formData.channel] || 'in_app',
+          priority: priorityMap[formData.type] || 'normal',
+          user_ids: formData.recipient_type === 'specific' ? formData.recipient_ids : undefined,
+          user_roles: formData.recipient_type === 'role' ? [formData.recipient_role] : undefined,
+          scheduled_at: !formData.send_immediately ? formData.scheduled_at?.toISOString() : undefined
+        };
+        await api.post('/notifications/bulk', bulkPayload);
       }
       fetchNotifications();
       handleCloseDialog();
@@ -621,7 +648,7 @@ const Notification: React.FC = () => {
                         recipient_ids: (e.target.value as string[]).map(Number) 
                       })}
                     >
-                      {users.map((user) => (
+                      {Array.isArray(users) && users.map((user) => (
                         <MenuItem key={user.id} value={user.id.toString()}>
                           {user.nombre} {user.apellido} - {user.email}
                         </MenuItem>

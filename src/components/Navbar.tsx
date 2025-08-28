@@ -71,6 +71,30 @@ const Navbar: React.FC = () => {
     }
   };
 
+  const getUserRoleInfo = () => {
+    // Priorizar custom_role si existe
+    if (user?.custom_role?.display_name) {
+      return {
+        label: user.custom_role.display_name,
+        color: getRoleColor(user.role || '')
+      };
+    }
+    
+    // Usar role del backend
+    if (user?.role) {
+      return {
+        label: getRoleLabel(user.role),
+        color: getRoleColor(user.role)
+      };
+    }
+    
+    // Fallback a rol legacy
+    return {
+      label: getRoleLabel(user?.rol || ''),
+      color: getRoleColor(user?.rol || '')
+    };
+  };
+
   return (
     <AppBar position="static">
       <Toolbar>
@@ -166,13 +190,18 @@ const Navbar: React.FC = () => {
             )}
             
             {/* Información del usuario */}
-            <Chip
-              label={getRoleLabel(user.rol)}
-              color={getRoleColor(user.rol) as any}
-              size="small"
-              variant="outlined"
-              sx={{ color: 'white', borderColor: 'white' }}
-            />
+            {(() => {
+              const roleInfo = getUserRoleInfo();
+              return (
+                <Chip
+                  label={roleInfo.label}
+                  color={roleInfo.color as any}
+                  size="small"
+                  variant="outlined"
+                  sx={{ color: 'white', borderColor: 'white' }}
+                />
+              );
+            })()}
             
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="body2">

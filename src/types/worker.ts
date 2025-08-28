@@ -17,20 +17,23 @@ export interface Worker {
 
 export interface WorkerList {
   id: number;
-  name: string;
-  cedula: string;
   first_name: string;
   last_name: string;
+  full_name: string;
   document_number: string;
-  email?: string;
-  phone?: string;
-  position?: string;
+  email: string;
+  position: string;
   department?: string;
+  age: number;
+  risk_level: string;
   fecha_de_ingreso?: string;
-  base_salary?: number;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  assigned_role: string;
+  is_registered: boolean;
+  photo?: string;
+  // Legacy fields for compatibility
+  cedula: string;
+  base_salary?: number;
 }
 
 export interface WorkerFilters {

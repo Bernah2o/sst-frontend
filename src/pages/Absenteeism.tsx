@@ -73,6 +73,7 @@ interface AbsenteeismFormData {
   disability_days: number;
   extension: number;
   charged_days: number;
+  disability_or_charged_days: number;
   diagnostic_code: string;
   health_condition_description: string;
   observations: string;
@@ -110,6 +111,7 @@ const AbsenteeismManagement: React.FC = () => {
     disability_days: 0,
     extension: 0,
     charged_days: 0,
+    disability_or_charged_days: 0,
     diagnostic_code: "",
     health_condition_description: "",
     observations: "",
@@ -166,7 +168,7 @@ const AbsenteeismManagement: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get("/absenteeism/stats");
+      const response = await api.get("/absenteeism/stats/summary");
       setStats(response.data);
       setOpenStatsDialog(true);
     } catch (error) {
@@ -233,6 +235,7 @@ const AbsenteeismManagement: React.FC = () => {
         disability_days: fullRecord.disability_days,
         extension: fullRecord.extension,
         charged_days: fullRecord.charged_days,
+        disability_or_charged_days: fullRecord.disability_or_charged_days,
         diagnostic_code: fullRecord.diagnostic_code,
         health_condition_description: fullRecord.health_condition_description,
         observations: fullRecord.observations || "",
@@ -277,6 +280,7 @@ const AbsenteeismManagement: React.FC = () => {
       disability_days: 0,
       extension: 0,
       charged_days: 0,
+      disability_or_charged_days: 0,
       diagnostic_code: "",
       health_condition_description: "",
       observations: "",

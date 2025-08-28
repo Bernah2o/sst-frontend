@@ -477,7 +477,7 @@ const AttendanceManagement: React.FC = () => {
                   Tasa de Asistencia
                 </Typography>
                 <Typography variant="h4" color="primary.main">
-                  {stats.attendance_rate.toFixed(1)}%
+                  {stats.attendance_rate ? stats.attendance_rate.toFixed(1) : '0.0'}%
                 </Typography>
               </CardContent>
             </Card>

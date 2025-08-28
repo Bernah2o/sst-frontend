@@ -28,7 +28,9 @@ class ApiService {
 
     // Interceptor para manejar respuestas
     this.api.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        return response;
+      },
       (error) => {
         if (error.response?.status === 401) {
           // Token expirado o inválido
@@ -51,7 +53,7 @@ class ApiService {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response: AxiosResponse<User> = await this.api.get('/auth/me');
+    const response: AxiosResponse<User> = await this.api.get('/users/me');
     return response.data;
   }
 

@@ -76,6 +76,10 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import api from '../services/api';
+import { workerService } from '../services/workerService';
+import { adminConfigService, ProgramaOption } from '../services/adminConfigService';
+import { WorkerList } from '../types/worker';
+import { User } from '../types';
 
 interface Seguimiento {
   id: number;
@@ -111,27 +115,12 @@ interface SeguimientoAction {
   next_action?: string;
 }
 
-interface Worker {
-  id: number;
-  nombre: string;
-  apellido: string;
-  documento: string;
-  cargo: string;
-  area: string;
-}
-
-interface User {
-  id: number;
-  nombre: string;
-  apellido: string;
-  rol: string;
-}
-
 const Seguimiento: React.FC = () => {
   const { user } = useAuth();
   const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([]);
-  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [workers, setWorkers] = useState<WorkerList[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [programas, setProgramas] = useState<ProgramaOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -171,14 +160,7 @@ const Seguimiento: React.FC = () => {
   //   next_action: ''
   // }); // Comentado - funcionalidad de acciones no incluida
 
-  const programas = [
-    { value: 'psv', label: 'Programa de Vigilancia Psicosocial', color: 'primary', icon: <AssessmentIcon /> },
-    { value: 'osteomuscular', label: 'Programa Osteomuscular', color: 'secondary', icon: <TaskIcon /> },
-    { value: 'auditivo', label: 'Programa de Conservación Auditiva', color: 'info', icon: <InfoIcon /> },
-    { value: 'respiratorio', label: 'Programa de Protección Respiratoria', color: 'warning', icon: <WarningIcon /> },
-    { value: 'visual', label: 'Programa de Protección Visual', color: 'success', icon: <ViewIcon /> },
-    { value: 'cardiovascular', label: 'Programa Cardiovascular', color: 'error', icon: <ErrorIcon /> }
-  ];
+  // Los programas ahora se cargan dinámicamente desde el backend
 
   const valoracionesRiesgo = [
     { value: 'bajo', label: 'Bajo', color: 'success' },
@@ -206,6 +188,11 @@ const Seguimiento: React.FC = () => {
     fetchUsers();
   }, [page, filters]);
 
+  useEffect(() => {
+    // Cargar programas solo una vez al montar el componente
+    fetchProgramas();
+  }, []);
+
   const fetchSeguimientos = async () => {
     try {
       setLoading(true);
@@ -232,8 +219,8 @@ const Seguimiento: React.FC = () => {
 
   const fetchWorkers = async () => {
     try {
-      const response = await api.get('/workers/');
-      setWorkers(response.data);
+      const response = await workerService.getWorkers(1, 1000); // Get all workers
+      setWorkers(response.items);
     } catch (error) {
       console.error('Error fetching workers:', error);
     }
@@ -248,11 +235,32 @@ const Seguimiento: React.FC = () => {
     }
   };
 
+  const fetchProgramas = async () => {
+    try {
+      const programasOptions = await adminConfigService.getActiveProgramasAsOptions();
+      setProgramas(programasOptions);
+    } catch (error) {
+      console.error('Error fetching programas:', error);
+      // En caso de error, usar array vacío
+      setProgramas([]);
+    }
+  };
+
   const handleSaveSeguimiento = async () => {
     try {
+      // Obtener información completa del trabajador seleccionado
+      const selectedWorker = workers.find(w => w.id === parseInt(formData.worker_id));
+      if (!selectedWorker) {
+        console.error('Trabajador no encontrado');
+        return;
+      }
+
       const payload = {
         ...formData,
         worker_id: parseInt(formData.worker_id),
+        nombre_trabajador: `${selectedWorker.first_name} ${selectedWorker.last_name}`,
+        cedula: selectedWorker.document_number,
+        cargo: selectedWorker.position,
         fecha_inicio: formData.fecha_inicio?.toISOString().split('T')[0],
         fecha_final: formData.fecha_final?.toISOString().split('T')[0]
       };
@@ -496,7 +504,7 @@ const Seguimiento: React.FC = () => {
                     <MenuItem value="">Todos</MenuItem>
                     {workers.map((worker) => (
                       <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.nombre} {worker.apellido}
+                        {worker.first_name} {worker.last_name}
                       </MenuItem>
                     ))}
                   </Select>
@@ -698,7 +706,7 @@ const Seguimiento: React.FC = () => {
                   >
                     {workers.map((worker) => (
                       <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.nombre} {worker.apellido} - {worker.documento}
+                        {worker.first_name} {worker.last_name} - {worker.document_number}
                       </MenuItem>
                     ))}
                   </Select>
@@ -944,7 +952,6 @@ const Seguimiento: React.FC = () => {
                             <Chip
                               label={programas.find(p => p.value === viewingSeguimiento.programa)?.label || viewingSeguimiento.programa}
                               color={programas.find(p => p.value === viewingSeguimiento.programa)?.color as any || 'default'}
-                              icon={programas.find(p => p.value === viewingSeguimiento.programa)?.icon}
                             />
                           </Box>
                           {viewingSeguimiento.valoracion_riesgo && (

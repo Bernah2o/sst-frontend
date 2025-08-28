@@ -35,6 +35,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
+import { adminConfigService } from "../services/adminConfigService";
 import UppercaseTextField from '../components/UppercaseTextField';
 
 // Constantes para periodicidad EMO
@@ -285,10 +286,11 @@ const AdminConfigPage: React.FC = () => {
 
   const fetchProgramas = async () => {
     try {
-      const response = await api.get("/admin/config/programas");
-      setProgramas(response.data);
+      const programas = await adminConfigService.fetchAllProgramas();
+      setProgramas(programas);
     } catch (error) {
       console.error("Error fetching programas:", error);
+      setProgramas([]);
     } finally {
       setLoading(false);
     }
