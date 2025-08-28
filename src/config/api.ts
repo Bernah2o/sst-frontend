@@ -1,11 +1,17 @@
 // API Configuration
 export const API_CONFIG = {
   // Base API URL
-  BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1',
+  BASE_URL: process.env.REACT_APP_API_URL || 
+    (process.env.NODE_ENV === 'production' 
+      ? 'https://sst-backend-93br.onrender.com/api/v1' 
+      : 'http://localhost:8000/api/v1'),
   
   // Base URL for uploads and static files
   UPLOADS_URL: (() => {
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+    const apiUrl = process.env.REACT_APP_API_URL || 
+      (process.env.NODE_ENV === 'production' 
+        ? 'https://sst-backend-93br.onrender.com/api/v1' 
+        : 'http://localhost:8000/api/v1');
     return apiUrl.replace('/api/v1', '');
   })(),
   
