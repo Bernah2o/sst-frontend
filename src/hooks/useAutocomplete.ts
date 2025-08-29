@@ -279,12 +279,10 @@ export const useCargoAutocomplete = () => {
     })),
   });
   
-  // Cargar datos inicialmente
+  // Cargar datos inicialmente solo una vez
   useEffect(() => {
-    if (result.options.length === 0 && !result.loading && !result.error) {
-      result.setSearchTerm('');
-    }
-  }, []);
+    result.setSearchTerm('');
+  }, []); // Dependencias vacías para ejecutar solo una vez
   
   return result;
 };
