@@ -32,7 +32,8 @@ import {
 } from "@mui/material";
 import UppercaseTextField from '../components/UppercaseTextField';
 import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
-import { useCargoAutocomplete } from '../hooks/useAutocomplete';
+import { useCargoAutocompleteOptimized } from '../hooks/useCargoAutocompleteOptimized';
+
 import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
 import { getCitiesByDepartment } from '../data/colombianCities';
 import {
@@ -120,6 +121,9 @@ interface Cargo {
 }
 
 const WorkersManagement: React.FC = () => {
+  // Debug: Contar renders del componente principal
+
+  
   const navigate = useNavigate();
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1691,7 +1695,13 @@ const CargoAutocompleteField: React.FC<{
   value: string;
   onChange: (selectedCargo: AutocompleteOption | null) => void;
 }> = ({ value, onChange }) => {
-  const { options, loading, error } = useCargoAutocomplete();
+  // Debug: Contar renders del componente de cargo
+  
+  
+  const { options, loading, error } = useCargoAutocompleteOptimized();
+  
+  // Log para debugging
+
   
   const handleChange = (value: AutocompleteOption | AutocompleteOption[] | null) => {
     // Asegurar que solo manejamos selección única
