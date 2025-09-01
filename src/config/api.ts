@@ -1,40 +1,46 @@
-// API Configuration
+/**
+ * API Configuration
+ * 
+ * Esta configuración sigue las mejores prácticas de seguridad:
+ * - Variables de entorno para configuración sensible
+ * - Valores por defecto seguros para desarrollo local
+ * - Sin URLs hardcodeadas en el código
+ * 
+ * Para desarrollo local: usar archivo .env.local
+ * Para producción: configurar variables de entorno directamente en el servidor
+ */
+
+// Configuración base de la API
+const getApiBaseUrl = (): string => {
+  // En desarrollo local, usar localhost por defecto
+  // En producción, la variable debe estar configurada en el servidor
+  return process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1";
+};
+
+const getUploadsBaseUrl = (): string => {
+  const apiUrl = getApiBaseUrl();
+  return apiUrl.replace("/api/v1", "");
+};
+
 export const API_CONFIG = {
-  // Base API URL
-  BASE_URL:
-    process.env.REACT_APP_API_URL ||
-    (process.env.NODE_ENV === "production"
-      ? "https://sst-backend-upmch1-b95ca4-5-252-53-108.traefik.me/api/v1"
-      : "http://localhost:8000/api/v1"),
+  // URLs base - configuradas desde variables de entorno
+  BASE_URL: getApiBaseUrl(),
+  UPLOADS_URL: getUploadsBaseUrl(),
 
-  // Base URL for uploads and static files
-  UPLOADS_URL: (() => {
-    const apiUrl =
-      process.env.REACT_APP_API_URL ||
-      (process.env.NODE_ENV === "production"
-        ? "https://sst-backend-upmch1-b95ca4-5-252-53-108.traefik.me/api/v1"
-        : "http://localhost:8000/api/v1");
-    return apiUrl.replace("/api/v1", "");
-  })(),
-
-  // API Version
+  // Configuración de la API
   VERSION: process.env.REACT_APP_API_VERSION || "v1",
+  TIMEOUT: parseInt(process.env.REACT_APP_API_TIMEOUT || "30000", 10),
 
-  // Request timeout (in milliseconds)
-  TIMEOUT: 30000,
-
-  // Default headers
+  // Headers por defecto
   DEFAULT_HEADERS: {
     "Content-Type": "application/json",
+    "Accept": "application/json",
   },
 
-  // Environment checks
-  IS_DEVELOPMENT: process.env.NODE_ENV === "development",
-  IS_PRODUCTION: process.env.NODE_ENV === "production",
-
-  // Feature flags
+  // Banderas de características - configurables por entorno
   ENABLE_DEBUG: process.env.REACT_APP_ENABLE_DEBUG === "true",
   ENABLE_ANALYTICS: process.env.REACT_APP_ENABLE_ANALYTICS === "true",
+  ENABLE_LOGGING: process.env.REACT_APP_ENABLE_LOGGING !== "false", // habilitado por defecto
 };
 
 // Helper functions
