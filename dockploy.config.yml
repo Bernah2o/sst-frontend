@@ -1,0 +1,80 @@
+# Dockploy Configuration for SST Platform Frontend
+# This file contains the deployment configuration for Dockploy
+
+name: sst-frontend
+description: "SST Platform Frontend - React Application"
+version: "1.0.0"
+
+# Build Configuration
+build:
+  context: .
+  dockerfile: Dockerfile
+  args:
+    - NODE_ENV=production
+  cache_from:
+    - node:18-alpine
+    - nginx:alpine
+
+# Runtime Configuration
+runtime:
+  port: 80
+  health_check:
+    path: "/health"
+    interval: 30
+    timeout: 10
+    retries: 3
+    start_period: 30
+
+# Environment Variables
+environment:
+  - NODE_ENV=production
+  - PORT=80
+  - REACT_APP_ENVIRONMENT=production
+  - GENERATE_SOURCEMAP=false
+
+# Resource Limits
+resources:
+  limits:
+    memory: "512M"
+    cpu: "0.5"
+  reservations:
+    memory: "256M"
+    cpu: "0.25"
+
+# Networking
+networking:
+  expose:
+    - 80
+  labels:
+    - "traefik.enable=true"
+    - "traefik.http.routers.sst-frontend.tls=true"
+    - "traefik.http.routers.sst-frontend.tls.certresolver=letsencrypt"
+
+# Deployment Strategy
+deployment:
+  strategy: "rolling"
+  max_unavailable: 0
+  max_surge: 1
+  
+# Volumes (if needed)
+# volumes:
+#   - type: bind
+#     source: ./nginx.conf
+#     target: /etc/nginx/templates/default.conf.template
+#     read_only: true
+
+# Dependencies
+depends_on:
+  - sst-backend
+
+# Monitoring
+monitoring:
+  enabled: true
+  metrics_path: "/health"
+  
+# Logging
+logging:
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
