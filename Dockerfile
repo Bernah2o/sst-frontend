@@ -14,8 +14,6 @@ RUN npm ci --only=production --silent
 COPY public/ ./public/
 COPY src/ ./src/
 COPY tsconfig.json ./
-COPY tailwind.config.js ./
-COPY postcss.config.js ./
 
 # Build the application with optimizations
 RUN npm run build
