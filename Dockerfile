@@ -18,54 +18,42 @@ COPY tsconfig.json ./
 # Build the application with optimizations
 RUN npm run build
 
-# Production stage with nginx
-FROM nginx:alpine
+# Production stage with serve (lightweight HTTP server)
+FROM node:18-alpine
 
-# Install curl for health checks and envsubst for environment variable substitution
-RUN apk add --no-cache gettext curl
+# Install serve globally for serving static files
+RUN npm install -g serve
 
-# Remove default nginx configuration
-RUN rm /etc/nginx/conf.d/default.conf
-
-# Copy built assets from build stage
-COPY --from=build /app/build /usr/share/nginx/html
-
-# Copy nginx configuration template
-COPY nginx.conf /etc/nginx/templates/default.conf.template
-
-# Create startup script for dynamic port configuration
-RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
-    echo 'export PORT=${PORT:-80}' >> /docker-entrypoint.sh && \
-    echo 'envsubst "\$PORT" < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
-    echo 'nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
-    chmod +x /docker-entrypoint.sh
+# Install curl for health checks
+RUN apk add --no-cache curl
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
+# Set working directory
+WORKDIR /app
+
+# Copy built assets from build stage
+COPY --from=build /app/build ./build
+
 # Set proper permissions
-RUN chown -R nextjs:nodejs /usr/share/nginx/html && \
-    chown -R nextjs:nodejs /var/cache/nginx && \
-    chown -R nextjs:nodejs /var/log/nginx && \
-    chown -R nextjs:nodejs /etc/nginx/conf.d && \
-    touch /var/run/nginx.pid && \
-    chown -R nextjs:nodejs /var/run/nginx.pid
+RUN chown -R nextjs:nodejs /app
 
 # Switch to non-root user
 USER nextjs
 
-# Expose dynamic port
-EXPOSE $PORT
+# Expose port
+EXPOSE 3000
 
 # Health check optimized for Dockploy
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-80}/health || exit 1
+    CMD curl -f http://localhost:3000 || exit 1
 
 # Labels for better container management
 LABEL maintainer="SST Platform Team" \
       version="1.0" \
       description="SST Platform Frontend - React Application"
 
-# Start with custom entrypoint
-CMD ["/docker-entrypoint.sh"]
+# Start serve with SPA support
+CMD ["serve", "-s", "build", "-l", "3000"]

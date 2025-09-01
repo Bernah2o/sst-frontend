@@ -7,19 +7,17 @@ services:
       dockerfile: Dockerfile
     container_name: sst-frontend
     ports:
-      - "${FRONTEND_PORT:-3000}:${PORT:-80}"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
-      - PORT=${PORT:-80}
       - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8000}
       - REACT_APP_ENVIRONMENT=production
-    volumes:
-      - ./nginx.conf:/etc/nginx/templates/default.conf.template:ro
+
     restart: unless-stopped
     networks:
       - sst-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-80}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,7 +27,7 @@ services:
       - "traefik.http.routers.sst-frontend.rule=Host(`${FRONTEND_DOMAIN:-localhost}`)"
       - "traefik.http.routers.sst-frontend.tls=true"
       - "traefik.http.routers.sst-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.sst-frontend.loadbalancer.server.port=${PORT:-80}"
+      - "traefik.http.services.sst-frontend.loadbalancer.server.port=3000"
     depends_on:
       - sst-backend
     deploy:
