@@ -23,11 +23,10 @@ PORT=80
 FRONTEND_PORT=3000
 
 # API Configuration
-REACT_APP_API_URL=https://api.tudominio.com
-REACT_APP_ENVIRONMENT=production
+REACT_APP_API_URL=https://api.dh2o.com.co
 
 # Domain Configuration
-FRONTEND_DOMAIN=tudominio.com
+FRONTEND_DOMAIN=sst.dh2o.com.co
 
 # Build Configuration
 GENERATE_SOURCEMAP=false
@@ -52,8 +51,7 @@ REACT_APP_ENABLE_HTTPS=true
 # En Dockploy, usar estos settings:
 Build Context: .
 Dockerfile: Dockerfile
-Build Args:
-  - NODE_ENV=production
+
 ```
 
 #### 3. Configuración de Red
@@ -62,7 +60,7 @@ Build Args:
 # Network Settings:
 Port Mapping: 3000:80
 Health Check: /health
-Domain: tu-dominio.com
+Domain: sst.dh2o.com.co
 SSL: Enabled (Let's Encrypt)
 ```
 
@@ -72,23 +70,13 @@ Configura estas variables en la interfaz de Dockploy:
 
 - `NODE_ENV=production`
 - `PORT=80`
-- `REACT_APP_API_URL=https://api.tudominio.com`
+- `REACT_APP_API_URL=https://api.dh2o.com.co`
 - `REACT_APP_ENVIRONMENT=production`
-- `FRONTEND_DOMAIN=tudominio.com`
+- `FRONTEND_DOMAIN=sst.dh2o.com.co`
 - `GENERATE_SOURCEMAP=false`
 
 ### 🔧 Configuración Avanzada
 
-#### Proxy Reverso
-
-El nginx está configurado para hacer proxy de las requests `/api/` al backend:
-
-```nginx
-location /api/ {
-    proxy_pass ${REACT_APP_API_URL}/;
-    # ... configuración adicional
-}
-```
 
 #### Health Checks
 
@@ -119,10 +107,6 @@ El contenedor expone un endpoint de health check en `/health`:
 - `X-XSS-Protection: 1; mode=block`
 - `Strict-Transport-Security: max-age=31536000`
 - `Content-Security-Policy` configurado
-
-#### Usuario No-Root
-
-El contenedor ejecuta nginx con un usuario no-root (`nextjs:nodejs`) para mayor seguridad.
 
 ### 📊 Monitoreo
 
@@ -189,6 +173,21 @@ dockploy rollback sst-frontend
    - Verificar cache headers
    - Analizar bundle size
 
+4. **CORS Errors**:
+   - Verificar que `ALLOWED_ORIGINS` incluya el dominio del frontend
+   - Confirmar que `REACT_APP_API_URL` apunte al dominio correcto
+   - Revisar configuración de CORS en el backend
+
+5. **Variables de Entorno Expuestas**:
+   - Verificar que archivos `.env*` estén en `.gitignore`
+   - Confirmar que no hay archivos `.env` en el repositorio Git
+   - Usar `git ls-files --cached | grep \.env` para verificar
+
+6. **Problemas de Dominio**:
+   - Verificar configuración DNS
+   - Confirmar que SSL esté habilitado
+   - Validar que los dominios coincidan en frontend y backend
+
 #### Comandos Útiles
 
 ```bash
@@ -203,15 +202,57 @@ docker exec -it sst-frontend sh
 
 # Verificar configuración de nginx
 docker exec sst-frontend cat /etc/nginx/conf.d/default.conf
+
+# Verificar que archivos .env no estén en Git
+git ls-files --cached | grep \.env
+
+# Verificar que archivos .env estén siendo ignorados
+git check-ignore .env.production
+
+# Verificar configuración de CORS desde el frontend
+curl -H "Origin: https://sst.dh2o.com.co" \
+     -H "Access-Control-Request-Method: GET" \
+     -H "Access-Control-Request-Headers: Content-Type" \
+     -X OPTIONS https://api.dh2o.com.co/health
+
+# Verificar conectividad entre frontend y backend
+curl -f https://api.dh2o.com.co/health
+```
+
+### 🔐 Configuración de Seguridad Actual
+
+#### Variables de Entorno Sensibles
+
+**IMPORTANTE**: Los archivos `.env` y `.env.production` contienen información sensible y están correctamente excluidos del control de versiones:
+
+- ✅ `.env.production` eliminado del repositorio Git
+- ✅ `.gitignore` configurado para ignorar archivos `.env*`
+- ✅ Variables de entorno configuradas directamente en Dockploy
+
+#### Dominios de Producción
+
+- **Frontend**: `https://sst.dh2o.com.co`
+- **Backend API**: `https://api.dh2o.com.co`
+- **Configuración CORS**: Permite peticiones solo desde el dominio del frontend
+
+#### Configuración de Red
+
+```bash
+# Configuración actual de producción
+FRONTEND_URL=https://sst.dh2o.com.co
+ALLOWED_ORIGINS=https://sst.dh2o.com.co
+REACT_APP_API_URL=https://api.dh2o.com.co
 ```
 
 ### 📝 Notas Importantes
 
-1. **SSL/TLS**: Configurar certificados SSL en Dockploy
-2. **Domain**: Apuntar DNS al servidor de Dockploy
-3. **Backup**: Configurar backups regulares
-4. **Monitoring**: Implementar alertas de monitoreo
-5. **Updates**: Planificar actualizaciones regulares
+1. **SSL/TLS**: Certificados SSL configurados automáticamente
+2. **Domain**: DNS apuntando a `sst.dh2o.com.co` y `api.dh2o.com.co`
+3. **Security**: Variables sensibles nunca en el repositorio
+4. **CORS**: Configurado para permitir solo el dominio de producción
+5. **Backup**: Configurar backups regulares
+6. **Monitoring**: Implementar alertas de monitoreo
+7. **Updates**: Planificar actualizaciones regulares
 
 ### 🔗 Enlaces Útiles
 
