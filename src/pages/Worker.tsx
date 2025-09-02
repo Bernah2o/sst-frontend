@@ -318,7 +318,7 @@ const WorkersManagement: React.FC = () => {
       setTotalWorkers(response.data?.length || 0);
     } catch (error) {
       console.error("Error fetching workers:", error);
-      showSnackbar("Error al cargar trabajadores", "error");
+      showSnackbar("No se pudieron cargar los trabajadores. Verifique su conexión e intente nuevamente.", "error");
       // Reset to empty array on error
       setWorkers([]);
       setTotalWorkers(0);
@@ -422,7 +422,7 @@ const WorkersManagement: React.FC = () => {
       setOpenDialog(true);
     } catch (error) {
       console.error('Error fetching worker details:', error);
-      showSnackbar('Error al cargar los detalles del trabajador', 'error');
+      showSnackbar('No se pudieron cargar los detalles del trabajador. Verifique su conexión e intente nuevamente.', 'error');
     }
   };
 
@@ -519,7 +519,7 @@ const WorkersManagement: React.FC = () => {
       setPreviewWorker(response.data);
     } catch (error) {
       console.error('Error fetching worker preview:', error);
-      showSnackbar('Error al cargar la previsualización del trabajador', 'error');
+      showSnackbar('No se pudo cargar la previsualización del trabajador. Verifique su conexión e intente nuevamente.', 'error');
       setPreviewDialog(false);
     } finally {
       setLoadingPreview(false);

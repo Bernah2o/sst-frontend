@@ -158,7 +158,7 @@ export const useAutocomplete = ({
       setOptions(results);
     } catch (error: any) {
       console.error('Error en búsqueda de autocompletado:', error);
-      setError(error.message || 'Error al buscar opciones');
+      setError(error.message || 'No se pudieron buscar las opciones. Verifique su conexión e intente nuevamente.');
       setOptions([]);
     } finally {
       setLoading(false);

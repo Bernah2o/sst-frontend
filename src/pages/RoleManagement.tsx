@@ -173,7 +173,7 @@ const RoleManagement: React.FC = () => {
       setRoles(response.data);
     } catch (error) {
       console.error("Error fetching roles:", error);
-      showSnackbar("Error al cargar los roles", "error");
+      showSnackbar("No se pudieron cargar los roles. Verifique su conexión e intente nuevamente.", "error");
     }
   };
 
@@ -183,7 +183,7 @@ const RoleManagement: React.FC = () => {
       setPermissions(response.data);
     } catch (error) {
       console.error("Error fetching permissions:", error);
-      showSnackbar("Error al cargar los permisos", "error");
+      showSnackbar("No se pudieron cargar los permisos. Verifique su conexión e intente nuevamente.", "error");
     } finally {
       setLoading(false);
     }

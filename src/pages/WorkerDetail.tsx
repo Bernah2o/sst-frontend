@@ -140,7 +140,7 @@ const WorkerDetail: React.FC = () => {
       setWorkerData(response.data);
     } catch (error: any) {
       console.error('Error fetching worker data:', error);
-      setError(error.response?.data?.detail || 'Error al cargar los datos del trabajador');
+      setError(error.response?.data?.detail || 'No se pudieron cargar los datos del trabajador. Verifique su conexión e intente nuevamente.');
     } finally {
       setLoading(false);
     }

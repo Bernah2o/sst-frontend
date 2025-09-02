@@ -41,7 +41,7 @@ const EmployeeCourseSurveys: React.FC = () => {
       } catch (e: any) {
         console.error("Error fetching required surveys:", e);
         setError(
-          e?.response?.data?.detail || "Error al cargar las encuestas del curso"
+          e?.response?.data?.detail || "No se pudieron cargar las encuestas del curso. Verifique su conexión e intente nuevamente."
         );
       } finally {
         setLoading(false);

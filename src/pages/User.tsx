@@ -196,7 +196,7 @@ const UsersManagement: React.FC = () => {
       console.error("Error fetching users:", error);
       setUsers([]);
       setTotalUsers(0);
-      showSnackbar("Error al cargar usuarios", "error");
+      showSnackbar("No se pudieron cargar los usuarios. Verifique su conexión e intente nuevamente.", "error");
     } finally {
       setLoading(false);
     }

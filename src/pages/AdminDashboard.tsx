@@ -115,7 +115,7 @@ const AdminDashboard: React.FC = () => {
       
     } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
-      setError('Error al cargar los datos del dashboard');
+      setError('No se pudieron cargar los datos del dashboard. Verifique su conexión e intente nuevamente.');
       
       // Datos de fallback en caso de error
       setStats({

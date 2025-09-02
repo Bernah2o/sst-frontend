@@ -152,7 +152,7 @@ const AbsenteeismManagement: React.FC = () => {
       setTotalRecords(response.data.total);
     } catch (error) {
       console.error("Error fetching absenteeism records:", error);
-      showSnackbar("Error al cargar los registros", "error");
+      showSnackbar("No se pudieron cargar los registros. Verifique su conexión e intente nuevamente.", "error");
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ const AbsenteeismManagement: React.FC = () => {
       setOpenStatsDialog(true);
     } catch (error) {
       console.error("Error fetching stats:", error);
-      showSnackbar("Error al cargar las estadísticas", "error");
+      showSnackbar("No se pudieron cargar las estadísticas. Verifique su conexión e intente nuevamente.", "error");
     }
   };
 
@@ -252,7 +252,7 @@ const AbsenteeismManagement: React.FC = () => {
       setOpenDialog(true);
     } catch (error) {
       console.error("Error fetching absenteeism record:", error);
-      showSnackbar("Error al cargar el registro", "error");
+      showSnackbar("No se pudo cargar el registro. Verifique su conexión e intente nuevamente.", "error");
     }
   };
 

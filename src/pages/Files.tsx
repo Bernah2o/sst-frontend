@@ -90,7 +90,7 @@ const Files: React.FC = () => {
       console.error('Error fetching files:', error);
       setSnackbar({
         open: true,
-        message: 'Error al cargar los archivos',
+        message: 'No se pudieron cargar los archivos. Verifique su conexión e intente nuevamente.',
         severity: 'error',
       });
     } finally {

@@ -62,7 +62,7 @@ const WorkerSearch: React.FC = () => {
       setWorkers(response.data);
       setFilteredWorkers(response.data);
     } catch (err) {
-      setError('Error al cargar los trabajadores');
+      setError('No se pudieron cargar los trabajadores. Verifique su conexión e intente nuevamente.');
       console.error('Error fetching workers:', err);
     } finally {
       setLoading(false);

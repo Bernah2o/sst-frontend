@@ -51,7 +51,7 @@ const AbsenteeismDetail: React.FC = () => {
       const data = await absenteeismService.getAbsenteeism(parseInt(id));
       setAbsenteeism(data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error al cargar el registro');
+      setError(err.response?.data?.detail || 'No se pudo cargar el registro. Verifique su conexión e intente nuevamente.');
     } finally {
       setLoading(false);
     }

@@ -73,7 +73,7 @@ const Profile: React.FC = () => {
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setError('Error al cargar el perfil');
+      setError('No se pudo cargar el perfil. Verifique su conexión e intente nuevamente.');
     } finally {
       setLoading(false);
     }

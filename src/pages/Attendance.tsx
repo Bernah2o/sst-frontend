@@ -204,7 +204,7 @@ const AttendanceManagement: React.FC = () => {
       setTotalAttendances(response.data.total || 0);
     } catch (error) {
       console.error("Error fetching attendances:", error);
-      showSnackbar("Error al cargar asistencias", "error");
+      showSnackbar("No se pudieron cargar los registros de asistencia. Verifique su conexión e intente nuevamente.", "error");
     } finally {
       setLoading(false);
     }

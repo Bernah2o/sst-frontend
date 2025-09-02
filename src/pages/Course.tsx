@@ -376,7 +376,7 @@ const CoursesManagement: React.FC = () => {
         "Error al cargar cursos",
         "No se pudieron cargar los cursos. Por favor, verifique su conexión e intente nuevamente."
       );
-      showSnackbar("Error al cargar cursos", "error");
+      showSnackbar("No se pudieron cargar los cursos. Verifique su conexión e intente nuevamente.", "error");
     } finally {
       setLoading(false);
     }
@@ -399,7 +399,7 @@ const CoursesManagement: React.FC = () => {
         "Error al cargar mis cursos",
         "No se pudieron cargar sus cursos inscritos. Por favor, verifique su conexión e intente nuevamente."
       );
-      showSnackbar("Error al cargar mis cursos", "error");
+      showSnackbar("No se pudieron cargar sus cursos inscritos. Verifique su conexión e intente nuevamente.", "error");
     } finally {
       setLoading(false);
     }
@@ -687,8 +687,8 @@ const CoursesManagement: React.FC = () => {
       setCourseModules(response.data);
     } catch (error) {
       showErrorDialog(
-        "Error al cargar módulos",
-        "No se pudieron cargar los módulos del curso. Por favor, intente nuevamente."
+        "Módulos no disponibles",
+        "No se pudieron cargar los módulos del curso. Verifique su conexión e intente nuevamente."
       );
       setCourseModules([]);
     }
@@ -819,8 +819,8 @@ const CoursesManagement: React.FC = () => {
       setCourseModules(modules);
     } catch (error) {
       showErrorDialog(
-        "Error al cargar materiales",
-        "No se pudieron cargar los materiales del curso. Por favor, intente nuevamente."
+        "Materiales no disponibles",
+        "No se pudieron cargar los materiales del curso. Verifique su conexión e intente nuevamente."
       );
       setModuleMaterials([]);
       setCourseModules([]);
@@ -843,8 +843,8 @@ const CoursesManagement: React.FC = () => {
       setModuleMaterials(response.data);
     } catch (error) {
       showErrorDialog(
-        "Error al cargar materiales",
-        "No se pudieron cargar los materiales del módulo. Por favor, intente nuevamente."
+        "Materiales no disponibles",
+        "No se pudieron cargar los materiales del módulo. Verifique su conexión e intente nuevamente."
       );
       setModuleMaterials([]);
     }

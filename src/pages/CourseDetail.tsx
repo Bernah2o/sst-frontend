@@ -212,7 +212,7 @@ const CourseDetail: React.FC = () => {
       setProgressInfo(progressResp.data);
     } catch (error: any) {
       console.error("Error fetching course detail:", error);
-      setError("Error al cargar el curso");
+      setError("No se pudo cargar el curso. Verifique su conexión e intente nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -272,7 +272,7 @@ const CourseDetail: React.FC = () => {
       setOpenMaterialDialog(true);
     } catch (error: any) {
       console.error("Error loading material:", error);
-      setError("Error al cargar el material");
+      setError("No se pudo cargar el material. Verifique su conexión e intente nuevamente.");
     }
   };
 

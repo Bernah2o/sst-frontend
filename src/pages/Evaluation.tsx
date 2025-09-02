@@ -339,7 +339,7 @@ const EvaluationsManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching evaluations:', error);
-      showSnackbar('Error al cargar las evaluaciones', 'error');
+      showSnackbar('No se pudieron cargar las evaluaciones. Verifique su conexión e intente nuevamente.', 'error');
     } finally {
       setLoading(false);
     }
@@ -491,7 +491,7 @@ const EvaluationsManagement: React.FC = () => {
           setOpenMaxAttemptsDialog(true);
       } else {
         showSnackbar(
-          errorDetail || 'Error al cargar la evaluación',
+          errorDetail || 'No se pudo cargar la evaluación. Verifique su conexión e intente nuevamente.',
           'error'
         );
       }
@@ -750,7 +750,7 @@ const EvaluationsManagement: React.FC = () => {
       setOpenDialog(true);
     } catch (error) {
       console.error('Error fetching evaluation details:', error);
-      showSnackbar('Error al cargar los detalles de la evaluación', 'error');
+      showSnackbar('No se pudieron cargar los detalles de la evaluación. Verifique su conexión e intente nuevamente.', 'error');
     }
   };
 
@@ -846,7 +846,7 @@ const EvaluationsManagement: React.FC = () => {
       setViewingEvaluation(response.data);
     } catch (error) {
       console.error('Error fetching evaluation details:', error);
-      showSnackbar('Error al cargar los detalles de la evaluación', 'error');
+      showSnackbar('No se pudieron cargar los detalles de la evaluación. Verifique su conexión e intente nuevamente.', 'error');
     }
   };
 

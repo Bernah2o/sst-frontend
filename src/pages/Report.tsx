@@ -222,7 +222,7 @@ const ReportsManagement: React.FC = () => {
       });
     } catch (error) {
       console.error("Error fetching report data:", error);
-      showSnackbar("Error al cargar datos del reporte", "error");
+      showSnackbar("No se pudieron cargar los datos del reporte. Verifique su conexión e intente nuevamente.", "error");
     } finally {
       setLoading(false);
     }

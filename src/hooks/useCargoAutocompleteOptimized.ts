@@ -75,7 +75,7 @@ const loadCargos = async (): Promise<AutocompleteOption[]> => {
       notifySubscribers({ 
         options: cargoCache?.data || [], 
         loading: false, 
-        error: 'Error al cargar cargos' 
+        error: 'No se pudieron cargar los cargos. Verifique su conexión e intente nuevamente.' 
       });
       
       throw error;

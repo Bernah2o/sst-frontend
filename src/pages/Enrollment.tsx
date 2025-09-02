@@ -272,7 +272,7 @@ const EnrollmentsManagement: React.FC = () => {
       setTotalEnrollments(response.data.total);
     } catch (error) {
       console.error("Error fetching enrollments:", error);
-      showSnackbar("Error al cargar inscripciones", "error");
+      showSnackbar("No se pudieron cargar las inscripciones. Verifique su conexión e intente nuevamente.", "error");
     } finally {
       setLoading(false);
     }
@@ -365,7 +365,7 @@ const EnrollmentsManagement: React.FC = () => {
       setWorkers(response.data || []);
     } catch (error) {
       console.error("Error fetching workers:", error);
-      showSnackbar("Error al cargar trabajadores", "error");
+      showSnackbar("No se pudieron cargar los trabajadores. Verifique su conexión e intente nuevamente.", "error");
     } finally {
       setLoadingWorkers(false);
     }

@@ -89,7 +89,7 @@ const AbsenteeismList: React.FC = () => {
       setAbsenteeisms(response.items);
       setTotal(response.total);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error al cargar los registros de absenteeism');
+      setError(err.response?.data?.detail || 'No se pudieron cargar los registros de ausentismo. Verifique su conexión e intente nuevamente.');
     } finally {
       setLoading(false);
     }

@@ -132,7 +132,7 @@ const EvaluationResults: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching evaluation results:', error);
-      showSnackbar('Error al cargar los resultados de evaluaciones', 'error');
+      showSnackbar('No se pudieron cargar los resultados de evaluaciones. Verifique su conexión e intente nuevamente.', 'error');
     } finally {
       setLoading(false);
     }
