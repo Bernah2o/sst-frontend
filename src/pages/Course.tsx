@@ -1,4 +1,25 @@
-import React, { useState, useEffect } from "react";
+import {
+  Add,
+  Edit,
+  Delete,
+  Search,
+  Refresh,
+  Visibility,
+  People,
+  Schedule,
+  FolderOpen,
+  Description,
+  CloudUpload,
+  Link as LinkIcon,
+  Quiz,
+  CheckCircle,
+  VideoLibrary,
+  PictureAsPdf,
+  LibraryBooks,
+  PlayArrow,
+  Warning,
+  Error,
+} from "@mui/icons-material";
 import {
   Box,
   Paper,
@@ -33,30 +54,16 @@ import {
   Grid,
   LinearProgress,
 } from "@mui/material";
-import UppercaseTextField from "../components/UppercaseTextField";
+import React, { useState, useEffect } from "react";
+
 import PDFViewer from '../components/PDFViewerNew';
-import {
-  Add,
-  Edit,
-  Delete,
-  Search,
-  Refresh,
-  Visibility,
-  People,
-  Schedule,
-  FolderOpen,
-  Description,
-  CloudUpload,
-  Link as LinkIcon,
-  Quiz,
-  CheckCircle,
-  VideoLibrary,
-  PictureAsPdf,
-  LibraryBooks,
-  PlayArrow,
-  Warning,
-  Error,
-} from "@mui/icons-material";
+import UppercaseTextField from "../components/UppercaseTextField";
+import { getApiUrl } from "../config/env";
+import { useAuth } from "../contexts/AuthContext";
+import { usePermissions } from "../hooks/usePermissions";
+import { formatDate } from "../utils/dateUtils";
+
+import api from "./../services/api";
 import {
   Curso,
   CourseType,
@@ -78,11 +85,6 @@ import {
   CourseModuleUpdate,
   CourseModuleResponse,
 } from "./../types";
-import { getApiUrl } from "../config/env";
-import { useAuth } from "../contexts/AuthContext";
-import { formatDate } from "../utils/dateUtils";
-import { usePermissions } from "../hooks/usePermissions";
-import api from "./../services/api";
 
 // Los enums ahora se importan desde types/index.ts
 

@@ -1,4 +1,19 @@
-import React, { useState, useEffect } from "react";
+import {
+  Download,
+  Refresh,
+  Assessment,
+  School,
+  Person,
+  Event,
+  TrendingUp,
+  ExpandMore,
+  CheckCircle,
+  Cancel,
+  Schedule,
+  Grade,
+  PictureAsPdf,
+  MedicalServices,
+} from "@mui/icons-material";
 import {
   Box,
   Paper,
@@ -34,27 +49,9 @@ import {
   CircularProgress,
   Grid,
 } from "@mui/material";
-import {
-  Download,
-  Refresh,
-  Assessment,
-  School,
-  Person,
-  Event,
-  TrendingUp,
-  ExpandMore,
-  CheckCircle,
-  Cancel,
-  Schedule,
-  Grade,
-  PictureAsPdf,
-  MedicalServices,
-} from "@mui/icons-material";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -67,7 +64,11 @@ import {
   PointElement,
   LineElement,
 } from "chart.js";
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import React, { useState, useEffect } from "react";
 import { Bar, Line } from "react-chartjs-2";
+
 import api from "./../services/api";
 
 ChartJS.register(

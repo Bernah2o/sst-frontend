@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Edit as EditIcon,
+  ArrowBack as ArrowBackIcon,
+  Print as PrintIcon
+} from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -17,21 +21,17 @@ import {
   TableRow,
   Paper
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  ArrowBack as ArrowBackIcon,
-  Print as PrintIcon
-} from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
+import { usePermissions } from '../../hooks/usePermissions';
 import { absenteeismService } from '../../services/absenteeismService';
 import {
   AbsenteeismResponse,
   EventTypeEnum
 } from '../../types/absenteeism';
-import { usePermissions } from '../../hooks/usePermissions';
 
 const AbsenteeismDetail: React.FC = () => {
   const navigate = useNavigate();

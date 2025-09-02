@@ -1,5 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  Add,
+  Edit,
+  Delete,
+  Search,
+  Refresh,
+  Visibility,
+  Warning,
+  Error,
+  Link,
+  LinkOff,
+  PersonAdd,
+  CheckCircle,
+  Cancel,
+  Close as CloseIcon,
+} from "@mui/icons-material";
 import {
   Box,
   Paper,
@@ -30,30 +44,14 @@ import {
   Grid,
   CircularProgress,
 } from "@mui/material";
-import UppercaseTextField from '../components/UppercaseTextField';
-import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
-import { useCargoAutocompleteOptimized } from '../hooks/useCargoAutocompleteOptimized';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
+import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
+import UppercaseTextField from '../components/UppercaseTextField';
 import { getCitiesByDepartment } from '../data/colombianCities';
-import {
-  Add,
-  Edit,
-  Delete,
-  Search,
-  Refresh,
-  Visibility,
-  Warning,
-  Error,
-  Link,
-  LinkOff,
-  PersonAdd,
-  CheckCircle,
-  Cancel,
-  Close as CloseIcon,
-} from "@mui/icons-material";
-import api from "./../services/api";
-import { formatDate } from '../utils/dateUtils';
+import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
+import { useCargoAutocompleteOptimized } from '../hooks/useCargoAutocompleteOptimized';
 import { 
   Worker, 
   WorkerCreate, 
@@ -67,6 +65,9 @@ import {
   BloodType, 
   UserRole
 } from "../types";
+import { formatDate } from '../utils/dateUtils';
+
+import api from "./../services/api";
 
 interface WorkerFormData {
   photo?: string;

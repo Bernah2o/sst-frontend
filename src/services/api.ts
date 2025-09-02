@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { LoginRequest, LoginResponse, User, Curso, CursoCreate, Inscripcion, ApiResponse, PaginatedResponse } from '../types';
+
 import { getApiUrl } from '../config/env';
+import { LoginRequest, LoginResponse, User, Curso, CursoCreate, Inscripcion, ApiResponse, PaginatedResponse } from '../types';
 
 class ApiService {
   private api: AxiosInstance;

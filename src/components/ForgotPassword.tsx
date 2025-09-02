@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { EmailOutlined } from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -11,8 +11,9 @@ import {
   Avatar,
   CssBaseline,
 } from '@mui/material';
-import { EmailOutlined } from '@mui/icons-material';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+
 import { apiService } from '../services/api';
 
 const ForgotPassword: React.FC = () => {

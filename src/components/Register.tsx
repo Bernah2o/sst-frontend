@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { PersonAdd } from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -15,10 +15,11 @@ import {
   InputLabel,
   Select,
 } from '@mui/material';
-import { PersonAdd } from '@mui/icons-material';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../services/api';
+
 import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
+import api from '../services/api';
 
 interface RegisterFormData {
   email: string;

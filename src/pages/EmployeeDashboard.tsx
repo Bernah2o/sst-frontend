@@ -1,4 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Dashboard as DashboardIcon,
+  School as SchoolIcon,
+  Assignment as AssignmentIcon,
+  Schedule as ScheduleIcon,
+  TrendingUp as TrendingUpIcon,
+  CheckCircle as CheckCircleIcon,
+  AccessTime as AccessTimeIcon,
+  PlayArrow as PlayArrowIcon,
+  WorkspacePremium as CertificateIcon,
+  Notifications as NotificationsIcon,
+  Event as EventIcon,
+  Assessment as AssessmentIcon,
+  BookmarkBorder as BookmarkIcon,
+  Star as StarIcon
+} from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -20,28 +35,13 @@ import {
   Stack,
   useTheme,
   alpha
-} from '@mui/material';
-import { Grid } from '@mui/material';
-import {
-  Dashboard as DashboardIcon,
-  School as SchoolIcon,
-  Assignment as AssignmentIcon,
-  Schedule as ScheduleIcon,
-  TrendingUp as TrendingUpIcon,
-  CheckCircle as CheckCircleIcon,
-  AccessTime as AccessTimeIcon,
-  PlayArrow as PlayArrowIcon,
-  WorkspacePremium as CertificateIcon,
-  Notifications as NotificationsIcon,
-  Event as EventIcon,
-  Assessment as AssessmentIcon,
-  BookmarkBorder as BookmarkIcon,
-  Star as StarIcon
-} from '@mui/icons-material';
+, Grid } from '@mui/material';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../contexts/AuthContext';
-import { formatDate } from '../utils/dateUtils';
 import api from '../services/api';
+import { formatDate } from '../utils/dateUtils';
 
 interface EmployeeStats {
   enrolled_courses: number;

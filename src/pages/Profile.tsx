@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { PhotoCamera, Edit, Save, Cancel, VpnKey } from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -16,13 +16,14 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { PhotoCamera, Edit, Save, Cancel, VpnKey } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+import UppercaseTextField from '../components/UppercaseTextField';
+import { getApiUrl } from '../config/env';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { UserProfile } from '../types';
-import { useNavigate } from 'react-router-dom';
-import UppercaseTextField from '../components/UppercaseTextField';
-import { getApiUrl } from '../config/env';
 
 interface ProfileFormData {
   first_name: string;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { VpnKeyOutlined } from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -11,10 +11,11 @@ import {
   Avatar,
   CssBaseline,
 } from '@mui/material';
-import { VpnKeyOutlined } from '@mui/icons-material';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiService } from '../services/api';
+
 import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/api';
 
 const ChangePassword: React.FC = () => {
   const navigate = useNavigate();

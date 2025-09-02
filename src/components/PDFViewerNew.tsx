@@ -1,4 +1,8 @@
-import React from 'react';
+import {
+  GetApp,
+  Fullscreen,
+  OpenInNew,
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -8,11 +12,7 @@ import {
   Toolbar,
   Paper,
 } from '@mui/material';
-import {
-  GetApp,
-  Fullscreen,
-  OpenInNew,
-} from '@mui/icons-material';
+import React from 'react';
 
 interface PDFViewerNewProps {
   url: string;

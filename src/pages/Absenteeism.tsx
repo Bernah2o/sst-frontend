@@ -1,4 +1,15 @@
-import React, { useState, useEffect } from "react";
+import {
+  Add,
+  Edit,
+  Delete,
+  Search,
+  Refresh,
+  Visibility,
+  Assessment,
+  FilterList,
+  Clear,
+  GetApp,
+} from "@mui/icons-material";
 import {
   Box,
   Paper,
@@ -31,25 +42,14 @@ import {
   Tooltip,
   Fab,
 } from "@mui/material";
-import {
-  Add,
-  Edit,
-  Delete,
-  Search,
-  Refresh,
-  Visibility,
-  Assessment,
-  FilterList,
-  Clear,
-  GetApp,
-} from "@mui/icons-material";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { es } from "date-fns/locale";
 import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import React, { useState, useEffect } from "react";
+
 import api from "../services/api";
-import { formatDate } from '../utils/dateUtils';
 import {
   AbsenteeismResponse,
   AbsenteeismCreate,
@@ -63,6 +63,7 @@ import {
   EVENT_TYPE_OPTIONS,
   WorkerBasicInfo,
 } from "../types/absenteeism";
+import { formatDate } from '../utils/dateUtils';
 
 interface AbsenteeismFormData {
   event_month: MonthEnum;

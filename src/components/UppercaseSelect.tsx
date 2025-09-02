@@ -1,5 +1,5 @@
-import React from 'react';
 import { FormControl, InputLabel, Select, MenuItem, SelectProps } from '@mui/material';
+import React from 'react';
 
 interface UppercaseSelectProps extends Omit<SelectProps, 'onChange'> {
   label: string;

@@ -1,4 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Dashboard as DashboardIcon,
+  People as PeopleIcon,
+  School as SchoolIcon,
+  Assignment as AssignmentIcon,
+  TrendingUp as TrendingUpIcon,
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon,
+  Assessment as AssessmentIcon,
+  Visibility as VisibilityIcon,
+  Schedule as ScheduleIcon,
+  Report as ReportIcon,
+  Notifications as NotificationsIcon,
+  Star as StarIcon,
+  Group as GroupIcon,
+  Timeline as TimelineIcon,
+  WorkspacePremium as CertificateIcon
+} from '@mui/icons-material';
 import {
   Box,
   Grid,
@@ -24,28 +41,12 @@ import {
   TableHead,
   TableRow
 } from '@mui/material';
-import {
-  Dashboard as DashboardIcon,
-  People as PeopleIcon,
-  School as SchoolIcon,
-  Assignment as AssignmentIcon,
-  TrendingUp as TrendingUpIcon,
-  CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
-  Assessment as AssessmentIcon,
-  Visibility as VisibilityIcon,
-  Schedule as ScheduleIcon,
-  Report as ReportIcon,
-  Notifications as NotificationsIcon,
-  Star as StarIcon,
-  Group as GroupIcon,
-  Timeline as TimelineIcon,
-  WorkspacePremium as CertificateIcon
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../contexts/AuthContext';
-import { formatDate } from '../utils/dateUtils';
 import api from '../services/api';
+import { formatDate } from '../utils/dateUtils';
 
 interface SupervisorStats {
   total_employees: number;

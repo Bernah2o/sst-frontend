@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Search as SearchIcon,
+  Person as PersonIcon,
+  Work as WorkIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -11,15 +17,10 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import {
-  Search as SearchIcon,
-  Person as PersonIcon,
-  Work as WorkIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon
-} from '@mui/icons-material';
-import UppercaseTextField from '../components/UppercaseTextField';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+import UppercaseTextField from '../components/UppercaseTextField';
 import api from '../services/api';
 import { Worker } from '../types';
 

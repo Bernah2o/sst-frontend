@@ -1,4 +1,11 @@
-import React, { useState } from 'react';
+import {
+  AccountCircle,
+  ExitToApp,
+  School,
+  Dashboard,
+  People,
+  Book,
+} from '@mui/icons-material';
 import {
   AppBar,
   Toolbar,
@@ -11,17 +18,11 @@ import {
   Box,
   Chip,
 } from '@mui/material';
-import {
-  AccountCircle,
-  ExitToApp,
-  School,
-  Dashboard,
-  People,
-  Book,
-} from '@mui/icons-material';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+
 import { getApiUrl } from '../config/env';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();

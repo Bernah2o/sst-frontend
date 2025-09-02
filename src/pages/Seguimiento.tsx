@@ -1,4 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Visibility as ViewIcon,
+  Assignment as TaskIcon,
+  Person as PersonIcon,
+  Schedule as ScheduleIcon,
+  CheckCircle as CompleteIcon,
+  Cancel as CancelIcon,
+  Pending as PendingIcon,
+  Search as SearchIcon,
+  Refresh as RefreshIcon,
+  Warning as WarningIcon,
+  Info as InfoIcon,
+  Error as ErrorIcon,
+  TrendingUp as TrendingUpIcon,
+  Assessment as AssessmentIcon,
+  ExpandMore as ExpandMoreIcon,
+  Flag as FlagIcon,
+  PlayArrow as StartIcon,
+  Stop as StopIcon
+} from '@mui/icons-material';
+import {
+  Timeline,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineConnector,
+  TimelineContent,
+  TimelineDot,
+  TimelineOppositeContent
+} from '@mui/lab';
 import {
   Box,
   Typography,
@@ -38,48 +69,18 @@ import {
   AccordionSummary,
   AccordionDetails
 } from '@mui/material';
-import {
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot,
-  TimelineOppositeContent
-} from '@mui/lab';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon,
-  Assignment as TaskIcon,
-  Person as PersonIcon,
-  Schedule as ScheduleIcon,
-  CheckCircle as CompleteIcon,
-  Cancel as CancelIcon,
-  Pending as PendingIcon,
-  Search as SearchIcon,
-  Refresh as RefreshIcon,
-  Warning as WarningIcon,
-  Info as InfoIcon,
-  Error as ErrorIcon,
-  TrendingUp as TrendingUpIcon,
-  Assessment as AssessmentIcon,
-  ExpandMore as ExpandMoreIcon,
-  Flag as FlagIcon,
-  PlayArrow as StartIcon,
-  Stop as StopIcon
-} from '@mui/icons-material';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import React, { useState, useEffect } from 'react';
+
 import { useAuth } from '../contexts/AuthContext';
-import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { adminConfigService, ProgramaOption } from '../services/adminConfigService';
 import api from '../services/api';
 import { workerService } from '../services/workerService';
-import { adminConfigService, ProgramaOption } from '../services/adminConfigService';
-import { WorkerList } from '../types/worker';
 import { User } from '../types';
+import { WorkerList } from '../types/worker';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 interface Seguimiento {
   id: number;

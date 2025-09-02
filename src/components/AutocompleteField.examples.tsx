@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
 import { Box, Typography, Paper, Divider } from '@mui/material';
-import AutocompleteField, { AutocompleteOption } from './AutocompleteField';
+import React, { useState } from 'react';
+
 import {
   useUserAutocomplete,
   useWorkerAutocomplete,
   useCourseAutocomplete,
   useCargoAutocomplete,
 } from '../hooks/useAutocomplete';
+
+import AutocompleteField, { AutocompleteOption } from './AutocompleteField';
+
 
 // Datos estáticos de ejemplo
 const staticCountries: AutocompleteOption[] = [

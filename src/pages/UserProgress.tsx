@@ -1,4 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Search as SearchIcon,
+  CheckCircle as CompleteIcon,
+  Cancel as CancelIcon,
+  PlayArrow as StartIcon,
+  Stop as StopIcon,
+  BookmarkBorder as BookmarkIcon,
+  School as CourseIcon,
+  Poll as SurveyIcon,
+  Quiz as EvaluationIcon,
+  WorkspacePremium as CertificateIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Notifications as NotificationIcon,
+  CheckCircleOutline as CheckIcon,
+  RadioButtonUnchecked as PendingIcon,
+  HourglassEmpty as WaitingIcon
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -34,27 +51,11 @@ import {
   Divider,
   CircularProgress
 } from '@mui/material';
-import {
-  Search as SearchIcon,
-  CheckCircle as CompleteIcon,
-  Cancel as CancelIcon,
-  PlayArrow as StartIcon,
-  Stop as StopIcon,
-  BookmarkBorder as BookmarkIcon,
-  School as CourseIcon,
-  Poll as SurveyIcon,
-  Quiz as EvaluationIcon,
-  WorkspacePremium as CertificateIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  Notifications as NotificationIcon,
-  CheckCircleOutline as CheckIcon,
-  RadioButtonUnchecked as PendingIcon,
-  HourglassEmpty as WaitingIcon
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+
 import { useAuth } from '../contexts/AuthContext';
-import { formatDate, formatDateTime } from '../utils/dateUtils';
 import api from '../services/api';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 interface UserProgress {
   id: number;

@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Table,
   TableContainer,
@@ -7,6 +6,7 @@ import {
   useMediaQuery,
   Box
 } from '@mui/material';
+import React from 'react';
 
 interface ResponsiveTableProps {
   children: React.ReactNode;

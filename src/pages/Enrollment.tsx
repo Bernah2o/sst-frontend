@@ -1,4 +1,15 @@
-import React, { useState, useEffect } from "react";
+import {
+  Add,
+  Edit,
+  Delete,
+  Search,
+  Refresh,
+  CheckCircle,
+  Cancel,
+  School,
+  Person,
+  Warning,
+} from "@mui/icons-material";
 import {
   Box,
   Paper,
@@ -29,21 +40,13 @@ import {
 
   Grid,
 } from "@mui/material";
-import {
-  Add,
-  Edit,
-  Delete,
-  Search,
-  Refresh,
-  CheckCircle,
-  Cancel,
-  School,
-  Person,
-  Warning,
-} from "@mui/icons-material";
-import { Inscripcion } from "./../types";
+import React, { useState, useEffect } from "react";
+
+
 import { formatDate, formatDateTime } from '../utils/dateUtils';
+
 import api from "./../services/api";
+import { Inscripcion } from "./../types";
 
 // Enums del backend
 enum EnrollmentStatus {

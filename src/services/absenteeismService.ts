@@ -1,4 +1,3 @@
-import { apiService } from './api';
 import {
   AbsenteeismCreate,
   AbsenteeismUpdate,
@@ -8,6 +7,8 @@ import {
   AbsenteeismFilters
 } from '../types/absenteeism';
 import { PaginatedResponse } from '../types/common';
+
+import { apiService } from './api';
 
 export const absenteeismService = {
   // Obtener lista de absenteeism con filtros y paginación

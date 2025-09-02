@@ -1,5 +1,6 @@
-import { apiService } from './api';
 import { Programas } from '../types';
+
+import { apiService } from './api';
 
 export interface ProgramaOption {
   value: string;

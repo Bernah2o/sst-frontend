@@ -1,4 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Visibility as ViewIcon,
+  Schedule as ScheduleIcon,
+  CheckCircle as CompleteIcon,
+  CheckCircle,
+  Cancel as CancelIcon,
+  Pending as PendingIcon,
+  Search as SearchIcon,
+  Refresh as RefreshIcon,
+  Assignment as AssignmentIcon
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -39,26 +51,15 @@ import {
   StepLabel,
   StepContent
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Visibility as ViewIcon,
-  Schedule as ScheduleIcon,
-  CheckCircle as CompleteIcon,
-  CheckCircle,
-  Cancel as CancelIcon,
-  Pending as PendingIcon,
-  Search as SearchIcon,
-  Refresh as RefreshIcon,
-  Assignment as AssignmentIcon
-} from '@mui/icons-material';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { es } from 'date-fns/locale';
+import React, { useState, useEffect } from 'react';
+
 import { useAuth } from '../contexts/AuthContext';
-import { formatDate } from '../utils/dateUtils';
 import api from '../services/api';
+import { formatDate } from '../utils/dateUtils';
 
 interface Reinduction {
   id: number;

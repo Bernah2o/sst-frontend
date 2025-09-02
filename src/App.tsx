@@ -1,3 +1,5 @@
+import { CssBaseline, Box } from "@mui/material";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 import React from "react";
 import {
   BrowserRouter as Router,
@@ -5,55 +7,54 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { CssBaseline, Box } from "@mui/material";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { usePermissions } from "./hooks/usePermissions";
-import { checkPagePermission } from "./utils/pagePermissions";
-import { UserRole } from "./types";
+
+import ChangePassword from "./components/ChangePassword";
+import ForgotPassword from "./components/ForgotPassword";
 import Layout from "./components/Layout";
 import Login from "./components/Login";
 import Register from "./components/Register";
-import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
-import ChangePassword from "./components/ChangePassword";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { usePermissions } from "./hooks/usePermissions";
 
 // General pages
-import User from "./pages/User";
-import Worker from "./pages/Worker";
-import WorkerDetail from "./pages/WorkerDetail";
-import WorkerSearch from "./pages/WorkerSearch";
+import Absenteeism from "./pages/Absenteeism";
+import AdminConfig from "./pages/AdminConfig";
+import AdminDashboard from "./pages/AdminDashboard";
+import Attendance from "./pages/Attendance";
 import Course from "./pages/Course";
 import CourseDetail from "./pages/CourseDetail";
 import Enrollment from "./pages/Enrollment";
 import Evaluation from "./pages/Evaluation";
 import EvaluationResults from "./pages/EvaluationResults";
-import Attendance from "./pages/Attendance";
 import Report from "./pages/Report";
 // import Session from './pages/Session'; // Componente eliminado - funcionalidad de sesiones removida
 
+import Survey from "./pages/Survey";
 import UserProgress from "./pages/UserProgress";
 import Certificate from "./pages/Certificate";
 import Notification from "./pages/Notification";
-import Survey from "./pages/Survey";
 import EmployeeCourseSurveys from "./pages/EmployeeCourseSurveys";
 import OccupationalExam from "./pages/OccupationalExam";
 import Seguimiento from "./pages/Seguimiento";
 import Reinduction from "./pages/Reinduction";
 
 // Absenteeism components
-import Absenteeism from "./pages/Absenteeism";
-import AdminConfig from "./pages/AdminConfig";
 import Audit from "./pages/Audit";
 import Files from "./pages/Files";
 import Profile from "./pages/Profile";
 import RoleManagement from "./pages/RoleManagement";
 
 // Dashboard pages
-import AdminDashboard from "./pages/AdminDashboard";
 import TrainerDashboard from "./pages/TrainerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import SupervisorDashboard from "./pages/SupervisorDashboard";
+import User from "./pages/User";
+import Worker from "./pages/Worker";
+import WorkerDetail from "./pages/WorkerDetail";
+import WorkerSearch from "./pages/WorkerSearch";
+import { UserRole } from "./types";
+import { checkPagePermission } from "./utils/pagePermissions";
 
 const theme = createTheme({
   breakpoints: {

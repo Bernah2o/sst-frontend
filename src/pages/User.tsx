@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { Add, Edit, Delete, Search, Refresh } from "@mui/icons-material";
 import {
   Box,
   Paper,
@@ -27,13 +27,15 @@ import {
   Alert,
   Snackbar,
 } from "@mui/material";
-import { Add, Edit, Delete, Search, Refresh } from "@mui/icons-material";
+import React, { useState, useEffect } from "react";
+
+import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
+import UppercaseTextField from '../components/UppercaseTextField';
+import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
+
+import api from "./../services/api";
 import { User, UserRole, DocumentType } from "./../types";
 import { formatDate } from "./../utils/dateUtils";
-import api from "./../services/api";
-import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
-import UppercaseTextField from '../components/UppercaseTextField';
-import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
 
 // Interfaces para el sistema de permisos
 interface CustomRole {

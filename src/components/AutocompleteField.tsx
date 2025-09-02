@@ -1,4 +1,9 @@
-import React, { useState, useRef, useMemo } from 'react';
+import {
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  KeyboardArrowDown as ArrowDownIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
 import {
   TextField,
   Autocomplete,
@@ -11,13 +16,9 @@ import {
   IconButton,
   Alert,
 } from '@mui/material';
-import {
-  Search as SearchIcon,
-  Clear as ClearIcon,
-  KeyboardArrowDown as ArrowDownIcon,
-  Refresh as RefreshIcon,
-} from '@mui/icons-material';
 import { SxProps, Theme } from '@mui/material/styles';
+import React, { useState, useRef, useMemo } from 'react';
+
 import { useAutocomplete, UseAutocompleteOptions } from '../hooks/useAutocomplete';
 
 export interface AutocompleteOption {

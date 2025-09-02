@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Menu as MenuIcon,
+  AccountCircle,
+  ExitToApp,
+  School,
+} from '@mui/icons-material';
 import {
   Box,
   AppBar,
@@ -12,17 +17,14 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import {
-  Menu as MenuIcon,
-  AccountCircle,
-  ExitToApp,
-  School,
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import Sidebar from './Sidebar';
-import PermissionRefreshNotification from './PermissionRefreshNotification';
+
 import { getApiUrl } from '../config/env';
+import { useAuth } from '../contexts/AuthContext';
+
+import PermissionRefreshNotification from './PermissionRefreshNotification';
+import Sidebar from './Sidebar';
 
 interface LayoutProps {
   children: React.ReactNode;

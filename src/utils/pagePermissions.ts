@@ -1,5 +1,5 @@
-import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { UserRole } from '../types';
 
 /**

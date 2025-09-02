@@ -1,4 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Visibility as ViewIcon,
+  FilterList as FilterIcon,
+  GetApp as ExportIcon
+} from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -28,18 +35,12 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon,
-  FilterList as FilterIcon,
-  GetApp as ExportIcon
-} from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
+import { usePermissions } from '../../hooks/usePermissions';
 import { absenteeismService } from '../../services/absenteeismService';
 import {
   AbsenteeismListResponse,
@@ -50,7 +51,6 @@ import {
   MONTH_OPTIONS
 } from '../../types/absenteeism';
 import { PaginatedResponse } from '../../types/common';
-import { usePermissions } from '../../hooks/usePermissions';
 
 const AbsenteeismList: React.FC = () => {
   const navigate = useNavigate();

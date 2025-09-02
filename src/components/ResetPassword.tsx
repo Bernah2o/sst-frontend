@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { LockResetOutlined } from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -11,8 +11,9 @@ import {
   Avatar,
   CssBaseline,
 } from '@mui/material';
-import { LockResetOutlined } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+
 import { apiService } from '../services/api';
 
 const ResetPassword: React.FC = () => {

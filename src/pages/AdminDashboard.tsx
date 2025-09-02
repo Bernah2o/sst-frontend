@@ -1,4 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import {
+  People as PeopleIcon,
+  School as SchoolIcon,
+  Assignment as AssignmentIcon,
+  TrendingUp as TrendingUpIcon,
+  Notifications as NotificationsIcon,
+  Settings as SettingsIcon,
+  Assessment as AssessmentIcon,
+  Event as EventIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  WorkspacePremium as CertificateIcon,
+  PersonAdd as PersonAddIcon,
+  Timeline as TimelineIcon
+} from '@mui/icons-material';
 import {
   Box,
   Grid,
@@ -16,22 +30,9 @@ import {
   Chip,
   Paper
 } from '@mui/material';
-import {
-  People as PeopleIcon,
-  School as SchoolIcon,
-  Assignment as AssignmentIcon,
-  TrendingUp as TrendingUpIcon,
-  Notifications as NotificationsIcon,
-  Settings as SettingsIcon,
-  Assessment as AssessmentIcon,
-  Event as EventIcon,
-  Warning as WarningIcon,
-  CheckCircle as CheckCircleIcon,
-  WorkspacePremium as CertificateIcon,
-  PersonAdd as PersonAddIcon,
-  Timeline as TimelineIcon
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 

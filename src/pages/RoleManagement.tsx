@@ -1,4 +1,15 @@
-import React, { useState, useEffect } from "react";
+import {
+  Add,
+  Edit,
+  Delete,
+  Search,
+  Refresh,
+  ExpandMore,
+  Security,
+  Group,
+  Assignment,
+  Notifications,
+} from "@mui/icons-material";
 import {
   Box,
   Paper,
@@ -36,23 +47,13 @@ import {
   FormGroup,
   Divider,
 } from "@mui/material";
-import {
-  Add,
-  Edit,
-  Delete,
-  Search,
-  Refresh,
-  ExpandMore,
-  Security,
-  Group,
-  Assignment,
-  Notifications,
-} from "@mui/icons-material";
-import api from "../services/api";
+import React, { useState, useEffect } from "react";
+
+import UppercaseTextField from "../components/UppercaseTextField";
 import { useAuth } from "../contexts/AuthContext";
+import api from "../services/api";
 import { formatDateTime } from "../utils/dateUtils";
 // Remove unused import
-import UppercaseTextField from "../components/UppercaseTextField";
 
 // Interfaces
 interface CustomRole {

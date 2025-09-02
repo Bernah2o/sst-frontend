@@ -1,4 +1,11 @@
-import React, { useState, useEffect } from "react";
+import {
+  Add,
+  Edit,
+  Delete,
+  Search,
+  Refresh,
+  Download,
+} from "@mui/icons-material";
 import {
   Box,
   Paper,
@@ -28,21 +35,16 @@ import {
   Card,
   CardContent,
 } from "@mui/material";
-import {
-  Add,
-  Edit,
-  Delete,
-  Search,
-  Refresh,
-  Download,
-} from "@mui/icons-material";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker as MUIDatePicker } from "@mui/x-date-pickers/DatePicker";
-import { formatDate } from "../utils/dateUtils";
-import api from "./../services/api";
-import { useAuth } from "../contexts/AuthContext";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import React, { useState, useEffect } from "react";
 
+
+import { useAuth } from "../contexts/AuthContext";
+import { formatDate } from "../utils/dateUtils";
+
+import api from "./../services/api";
 import { AttendanceStatus, AttendanceType, AttendanceStats } from "./../types";
 
 interface Attendance {

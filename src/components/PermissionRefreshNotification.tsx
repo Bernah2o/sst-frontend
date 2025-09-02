@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { Refresh, Close } from '@mui/icons-material';
 import {
   Alert,
   Button,
@@ -7,7 +7,8 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import { Refresh, Close } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+
 import { useAuth } from '../contexts/AuthContext';
 import usePermissions from '../hooks/usePermissions';
 

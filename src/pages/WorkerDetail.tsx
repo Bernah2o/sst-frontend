@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Assignment as AssignmentIcon,
+  Quiz as QuizIcon,
+  School as SchoolIcon,
+  Refresh as RefreshIcon,
+  ArrowBack as ArrowBackIcon
+} from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -27,14 +33,9 @@ import {
   Tab,
   Divider
 } from '@mui/material';
-import {
-  Assignment as AssignmentIcon,
-  Quiz as QuizIcon,
-  School as SchoolIcon,
-  Refresh as RefreshIcon,
-  ArrowBack as ArrowBackIcon
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 

@@ -1,5 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import {
+  ExpandMore,
+  PlayArrow,
+  CheckCircle,
+  Lock,
+  PictureAsPdf,
+  VideoLibrary,
+  Link as LinkIcon,
+  Quiz,
+  Description,
+  ArrowBack,
+  Close,
+} from "@mui/icons-material";
 import {
   Box,
   Typography,
@@ -31,19 +42,9 @@ import {
   StepContent,
   Paper,
 } from "@mui/material";
-import {
-  ExpandMore,
-  PlayArrow,
-  CheckCircle,
-  Lock,
-  PictureAsPdf,
-  VideoLibrary,
-  Link as LinkIcon,
-  Quiz,
-  Description,
-  ArrowBack,
-  Close,
-} from "@mui/icons-material";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 

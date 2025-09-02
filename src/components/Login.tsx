@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { LockOutlined } from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -11,9 +11,10 @@ import {
   Avatar,
   CssBaseline,
 } from '@mui/material';
-import { LockOutlined } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+
+import { useAuth } from '../contexts/AuthContext';
 import { LoginRequest } from '../types';
 
 const Login: React.FC = () => {
