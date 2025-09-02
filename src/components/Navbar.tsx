@@ -220,7 +220,7 @@ const Navbar: React.FC = () => {
                   src={user.profile_picture ? 
                     (user.profile_picture.startsWith('http') ? 
                       user.profile_picture : 
-                      `${process.env.REACT_APP_API_URL?.replace('/api/v1', '') || 'http://localhost:8000'}/uploads/${user.profile_picture}`
+                      `${process.env.REACT_APP_API_URL?.replace('/api/v1', '')}/uploads/${user.profile_picture}`
                     ) : undefined
                   }
                 >

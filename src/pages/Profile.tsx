@@ -207,7 +207,7 @@ const Profile: React.FC = () => {
       }
       // Otherwise, construct the full URL with /uploads/ prefix
       // Remove /api/v1 from base URL since uploads are served directly from root
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+      const apiUrl = process.env.REACT_APP_API_URL || '';
       const baseUrl = apiUrl.replace('/api/v1', '');
       return `${baseUrl}/uploads/${profile.profile_picture}`;
     }

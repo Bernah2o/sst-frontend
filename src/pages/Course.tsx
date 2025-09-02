@@ -254,6 +254,15 @@ const CoursesManagement: React.FC = () => {
     url: string;
   } | null>(null);
 
+  // Función helper para construir URLs de previsualización
+  const getPreviewUrl = (content: string): string => {
+    const apiUrl = process.env.REACT_APP_API_URL || '';
+    const baseUrl = apiUrl.replace('/api/v1', '');
+    return content.startsWith('http') 
+      ? content 
+      : `${baseUrl}/uploads/${content.replace(/^\/uploads\//, '')}`;
+  };
+
   // Función para manejar la subida de archivos
   const handleFileUpload = async (file: File) => {
     if (!file) return;
@@ -2788,25 +2797,13 @@ const CoursesManagement: React.FC = () => {
       >
         <DialogTitle>Previsualización: {previewContent.title}</DialogTitle>
         <DialogContent sx={{ p: 0, height: "100%" }}>
-          {(() => {
-            return null;
-          })()}
           {previewContent.type === "pdf" ? (
             <Box sx={{ width: "100%", height: "100%" }}>
-              {(() => {
-                // Construir URL completa del backend
-                const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
-                const baseUrl = apiUrl.replace('/api/v1', '');
-                const finalSrc = previewContent.content.startsWith('http') 
-                  ? previewContent.content 
-                  : `${baseUrl}/uploads/${previewContent.content.replace(/^\/uploads\//, '')}`;
-
-                return (
-                  <PDFViewer
-                    url={finalSrc}
-                    title={previewContent.title}
-                  />
-                );              })()}            </Box>
+              <PDFViewer
+                url={getPreviewUrl(previewContent.content)}
+                title={previewContent.title}
+              />
+            </Box>
           ) : previewContent.type === "video" ? (
             <Box
               sx={{

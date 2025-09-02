@@ -12,9 +12,8 @@
 
 // Configuración base de la API
 const getApiBaseUrl = (): string => {
-  // En desarrollo local, usar localhost por defecto
-  // En producción, la variable debe estar configurada en el servidor
-  return process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1";
+  // La variable de entorno debe estar configurada en todos los entornos
+  return process.env.REACT_APP_API_URL || '';
 };
 
 const getUploadsBaseUrl = (): string => {
