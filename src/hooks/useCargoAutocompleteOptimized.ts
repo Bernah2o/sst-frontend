@@ -38,7 +38,7 @@ const loadCargos = async (): Promise<AutocompleteOption[]> => {
     return cargoCache.data;
   }
 
-  console.log('🔄 Loading cargos from API...');
+  // Loading cargos from API...
   
   // Notificar que está cargando
   notifySubscribers({ options: cargoCache?.data || [], loading: true, error: null });
@@ -60,7 +60,7 @@ const loadCargos = async (): Promise<AutocompleteOption[]> => {
         loading: false,
       };
 
-      console.log(`✅ Cargos loaded successfully: ${data.length} items`);
+      // Cargos loaded successfully
       
       // Notificar éxito
       notifySubscribers({ options: data, loading: false, error: null });
