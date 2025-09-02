@@ -39,7 +39,7 @@ export const API_CONFIG = {
   // Banderas de características - configurables por entorno
   ENABLE_DEBUG: process.env.REACT_APP_ENABLE_DEBUG === "true",
   ENABLE_ANALYTICS: process.env.REACT_APP_ENABLE_ANALYTICS === "true",
-  ENABLE_LOGGING: process.env.REACT_APP_ENABLE_LOGGING !== "false", // habilitado por defecto
+  ENABLE_LOGGING: process.env.REACT_APP_ENABLE_LOGGING === "true", // deshabilitado por defecto
 };
 
 // Helper functions
