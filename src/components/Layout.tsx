@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import PermissionRefreshNotification from './PermissionRefreshNotification';
+import { getApiUrl } from '../config/env';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -220,7 +221,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       src={user.profile_picture ? 
                         (user.profile_picture.startsWith('http') ? 
                           user.profile_picture : 
-                          `${process.env.REACT_APP_API_URL?.replace('/api/v1', '')}/uploads/${user.profile_picture}`
+                          `${getApiUrl().replace('/api/v1', '')}/uploads/${user.profile_picture}`
                         ) : undefined
                       }
                     >

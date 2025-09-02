@@ -10,10 +10,12 @@
  * Para producción: configurar variables de entorno directamente en el servidor
  */
 
+import { getApiUrl as getBaseApiUrl } from './env';
+
 // Configuración base de la API
 const getApiBaseUrl = (): string => {
-  // La variable de entorno debe estar configurada en todos los entornos
-  return process.env.REACT_APP_API_URL || '';
+  // Usa la configuración de runtime que soporta tanto development como production
+  return getBaseApiUrl();
 };
 
 const getUploadsBaseUrl = (): string => {

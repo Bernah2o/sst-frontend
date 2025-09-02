@@ -1,12 +1,13 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { LoginRequest, LoginResponse, User, Curso, CursoCreate, Inscripcion, ApiResponse, PaginatedResponse } from '../types';
+import { getApiUrl } from '../config/env';
 
 class ApiService {
   private api: AxiosInstance;
 
   constructor() {
     const getBaseURL = () => {
-       return process.env.REACT_APP_API_URL || '';
+       return getApiUrl();
      };
 
     this.api = axios.create({

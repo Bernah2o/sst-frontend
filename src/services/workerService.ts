@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { PaginatedResponse } from '../types/common';
 import { Worker, WorkerList, WorkerFilters } from '../types/worker';
+import { getApiUrl } from '../config/env';
 
 
 
@@ -9,7 +10,7 @@ class WorkerService {
 
   constructor() {
     const getBaseURL = () => {
-       return process.env.REACT_APP_API_URL || '';
+       return getApiUrl();
      };
 
     this.api = axios.create({

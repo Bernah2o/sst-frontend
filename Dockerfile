@@ -37,8 +37,12 @@ WORKDIR /app
 # Copy built assets from build stage
 COPY --from=build /app/build ./build
 
-# Set proper permissions
-RUN chown -R nextjs:nodejs /app
+# Copy entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+
+# Make entrypoint executable and set proper permissions
+RUN chmod +x /app/entrypoint.sh && \
+    chown -R nextjs:nodejs /app
 
 # Switch to non-root user
 USER nextjs
@@ -55,5 +59,6 @@ LABEL maintainer="SST Platform Team" \
       version="1.0" \
       description="SST Platform Frontend - React Application"
 
-# Start serve with SPA support
+# Use entrypoint script to generate runtime config and start serve
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["serve", "-s", "build", "-l", "3000"]

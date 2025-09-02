@@ -78,6 +78,7 @@ import {
   CourseModuleUpdate,
   CourseModuleResponse,
 } from "./../types";
+import { getApiUrl } from "../config/env";
 import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../utils/dateUtils";
 import { usePermissions } from "../hooks/usePermissions";
@@ -256,7 +257,7 @@ const CoursesManagement: React.FC = () => {
 
   // Función helper para construir URLs de previsualización
   const getPreviewUrl = (content: string): string => {
-    const apiUrl = process.env.REACT_APP_API_URL || '';
+    const apiUrl = getApiUrl();
     const baseUrl = apiUrl.replace('/api/v1', '');
     return content.startsWith('http') 
       ? content 

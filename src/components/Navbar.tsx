@@ -21,6 +21,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiUrl } from '../config/env';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -220,7 +221,7 @@ const Navbar: React.FC = () => {
                   src={user.profile_picture ? 
                     (user.profile_picture.startsWith('http') ? 
                       user.profile_picture : 
-                      `${process.env.REACT_APP_API_URL?.replace('/api/v1', '')}/uploads/${user.profile_picture}`
+                      `${getApiUrl().replace('/api/v1', '')}/uploads/${user.profile_picture}`
                     ) : undefined
                   }
                 >

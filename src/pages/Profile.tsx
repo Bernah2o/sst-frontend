@@ -22,6 +22,7 @@ import api from '../services/api';
 import { UserProfile } from '../types';
 import { useNavigate } from 'react-router-dom';
 import UppercaseTextField from '../components/UppercaseTextField';
+import { getApiUrl } from '../config/env';
 
 interface ProfileFormData {
   first_name: string;
@@ -207,7 +208,7 @@ const Profile: React.FC = () => {
       }
       // Otherwise, construct the full URL with /uploads/ prefix
       // Remove /api/v1 from base URL since uploads are served directly from root
-      const apiUrl = process.env.REACT_APP_API_URL || '';
+      const apiUrl = getApiUrl();
       const baseUrl = apiUrl.replace('/api/v1', '');
       return `${baseUrl}/uploads/${profile.profile_picture}`;
     }
