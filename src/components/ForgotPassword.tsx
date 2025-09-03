@@ -59,18 +59,47 @@ const ForgotPassword: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          <Avatar sx={{ m: 1, bgcolor: 'success.main' }}>
+          <Avatar sx={{ 
+          m: { xs: 1, sm: 1.5, md: 2 }, 
+          bgcolor: 'success.main',
+          width: { xs: 40, sm: 48, md: 56 },
+          height: { xs: 40, sm: 48, md: 56 }
+        }}>
             <EmailOutlined />
           </Avatar>
-          <Typography component="h1" variant="h4" gutterBottom>
-            Plataforma SST
-          </Typography>
-          <Typography component="h2" variant="h6" color="textSecondary" gutterBottom>
-            Correo Enviado
-          </Typography>
+          <Typography 
+          component="h1" 
+          variant="h4" 
+          gutterBottom
+          sx={{
+            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' },
+            textAlign: 'center'
+          }}
+        >
+          Plataforma SST
+        </Typography>
+        <Typography 
+          component="h2" 
+          variant="h6" 
+          color="textSecondary" 
+          gutterBottom
+          sx={{
+            fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' },
+            textAlign: 'center'
+          }}
+        >
+          Correo Enviado
+        </Typography>
           
-          <Card sx={{ mt: 2, width: '100%' }}>
-            <CardContent>
+          <Card sx={{ 
+          mt: { xs: 2, sm: 3, md: 4 }, 
+          width: '100%',
+          boxShadow: { xs: 1, sm: 2, md: 3 }
+        }}>
+            <CardContent sx={{
+            p: { xs: 2, sm: 3, md: 4 },
+            '&:last-child': { pb: { xs: 2, sm: 3, md: 4 } }
+          }}>
               <Alert severity="success" sx={{ mb: 2 }}>
                 Se ha enviado un correo electrónico con las instrucciones para restablecer su contraseña.
               </Alert>
@@ -99,24 +128,54 @@ const ForgotPassword: React.FC = () => {
       <CssBaseline />
       <Box
         sx={{
-          marginTop: 8,
+          marginTop: { xs: 4, sm: 6, md: 8 },
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          px: { xs: 2, sm: 3, md: 0 },
         }}
       >
-        <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
+        <Avatar sx={{ 
+          m: { xs: 1, sm: 1.5, md: 2 }, 
+          bgcolor: 'primary.main',
+          width: { xs: 40, sm: 48, md: 56 },
+          height: { xs: 40, sm: 48, md: 56 }
+        }}>
           <EmailOutlined />
         </Avatar>
-        <Typography component="h1" variant="h4" gutterBottom>
+        <Typography 
+          component="h1" 
+          variant="h4" 
+          gutterBottom
+          sx={{
+            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' },
+            textAlign: 'center'
+          }}
+        >
           Plataforma SST
         </Typography>
-        <Typography component="h2" variant="h6" color="textSecondary" gutterBottom>
+        <Typography 
+          component="h2" 
+          variant="h6" 
+          color="textSecondary" 
+          gutterBottom
+          sx={{
+            fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' },
+            textAlign: 'center'
+          }}
+        >
           Recuperar Contraseña
         </Typography>
         
-        <Card sx={{ mt: 2, width: '100%' }}>
-          <CardContent>
+        <Card sx={{ 
+          mt: { xs: 2, sm: 3, md: 4 }, 
+          width: '100%',
+          boxShadow: { xs: 1, sm: 2, md: 3 }
+        }}>
+          <CardContent sx={{
+            p: { xs: 2, sm: 3, md: 4 },
+            '&:last-child': { pb: { xs: 2, sm: 3, md: 4 } }
+          }}>
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
               {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
@@ -141,22 +200,51 @@ const ForgotPassword: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                  }
+                }}
               />
               
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+                sx={{ 
+                  mt: { xs: 2, sm: 3 }, 
+                  mb: { xs: 1.5, sm: 2 },
+                  py: { xs: 1, sm: 1.5 },
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }}
                 disabled={loading}
               >
                 {loading ? 'Enviando...' : 'Enviar Correo de Recuperación'}
               </Button>
               
-              <Box sx={{ textAlign: 'center', mt: 2 }}>
-                <Typography variant="body2">
+              <Box sx={{ 
+                textAlign: 'center', 
+                mt: { xs: 1.5, sm: 2 },
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 0.5, sm: 1 }
+              }}>
+                <Typography 
+                  variant="body2"
+                  sx={{
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    display: { xs: 'block', sm: 'inline' }
+                  }}
+                >
                   ¿Recordó su contraseña?{' '}
-                  <Link to="/login" style={{ textDecoration: 'none', color: '#1976d2' }}>
+                  <Link 
+                    to="/login" 
+                    style={{ 
+                      textDecoration: 'none', 
+                      color: '#1976d2',
+                      fontSize: 'inherit'
+                    }}
+                  >
                     Iniciar Sesión
                   </Link>
                 </Typography>
@@ -165,7 +253,16 @@ const ForgotPassword: React.FC = () => {
           </CardContent>
         </Card>
         
-        <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 4 }}>
+        <Typography 
+          variant="body2" 
+          color="textSecondary" 
+          align="center" 
+          sx={{ 
+            mt: { xs: 3, sm: 4 },
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            px: { xs: 1, sm: 0 }
+          }}
+        >
           Plataforma de Capacitaciones en Seguridad y Salud en el Trabajo
         </Typography>
       </Box>

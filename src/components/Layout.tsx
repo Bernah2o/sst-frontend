@@ -35,19 +35,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  // Persistir estado del sidebar para desktop
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('sidebar-open');
-        return saved !== null ? JSON.parse(saved) : true; // Por defecto abierto
-      } catch (error) {
-        console.warn('Error loading sidebar state from localStorage:', error);
-        return true; // Por defecto abierto
-      }
-    }
-    return true; // Por defecto abierto
-  });
+  // Sidebar siempre abierto en desktop, cerrado en móvil
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showPermissionNotification, setShowPermissionNotification] = useState(false);
 
@@ -66,15 +55,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
 
   const handleSidebarToggle = () => {
-    const newState = !sidebarOpen;
-    setSidebarOpen(newState);
-    // Solo guardar en localStorage para desktop
-    if (!isMobile) {
-      try {
-        localStorage.setItem('sidebar-open', JSON.stringify(newState));
-      } catch (error) {
-        console.warn('Error saving sidebar state to localStorage:', error);
-      }
+    // Solo permitir toggle en móvil
+    if (isMobile) {
+      setSidebarOpen(!sidebarOpen);
     }
   };
 
@@ -125,17 +108,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Manejar cambios entre móvil y desktop
   useEffect(() => {
     if (isMobile) {
-      // En móvil, siempre cerrar el sidebar
+      // En móvil, cerrar el sidebar
       setSidebarOpen(false);
     } else {
-      // En desktop, usar la preferencia guardada o abrir por defecto
-      try {
-        const saved = localStorage.getItem('sidebar-open');
-        setSidebarOpen(saved !== null ? JSON.parse(saved) : true);
-      } catch (error) {
-        console.warn('Error loading sidebar state from localStorage:', error);
-        setSidebarOpen(true);
-      }
+      // En desktop, siempre abierto
+      setSidebarOpen(true);
     }
   }, [isMobile]);
 
@@ -172,15 +149,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           }}
         >
           <Toolbar>
-            <IconButton
-              color="inherit"
-              aria-label="toggle sidebar"
-              onClick={handleSidebarToggle}
-              edge="start"
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
+            {/* Solo mostrar botón de toggle en móvil */}
+            {isMobile && (
+              <IconButton
+                color="inherit"
+                aria-label="toggle sidebar"
+                onClick={handleSidebarToggle}
+                edge="start"
+                sx={{ mr: 2 }}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
             
             <School sx={{ mr: 2, color: theme.palette.primary.main }} />
             <Typography 

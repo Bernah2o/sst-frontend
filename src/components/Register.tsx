@@ -153,38 +153,81 @@ const Register: React.FC = () => {
   };
 
   return (
-    <Container component="main" maxWidth="md">
+    <Container component="main" maxWidth="md" sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
       <CssBaseline />
       <Box
         sx={{
-          marginTop: 4,
+          marginTop: { xs: 2, sm: 3, md: 4 },
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          px: { xs: 1, sm: 2, md: 0 },
         }}
       >
-        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+        <Avatar sx={{ 
+          m: { xs: 1, sm: 1.5, md: 2 }, 
+          bgcolor: 'secondary.main',
+          width: { xs: 40, sm: 48, md: 56 },
+          height: { xs: 40, sm: 48, md: 56 }
+        }}>
           <PersonAdd />
         </Avatar>
-        <Typography component="h1" variant="h4" gutterBottom>
+        <Typography 
+          component="h1" 
+          variant="h4" 
+          gutterBottom
+          sx={{
+            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' },
+            textAlign: 'center'
+          }}
+        >
           Plataforma SST
         </Typography>
-        <Typography component="h2" variant="h6" color="textSecondary" gutterBottom>
+        <Typography 
+          component="h2" 
+          variant="h6" 
+          color="textSecondary" 
+          gutterBottom
+          sx={{
+            fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' },
+            textAlign: 'center'
+          }}
+        >
           Completar Registro
         </Typography>
-        <Typography variant="body2" color="textSecondary" align="center" sx={{ mb: 2 }}>
+        <Typography 
+          variant="body2" 
+          color="textSecondary" 
+          align="center" 
+          sx={{ 
+            mb: { xs: 1.5, sm: 2 },
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            px: { xs: 1, sm: 0 }
+          }}
+        >
           Ingrese su cédula y correo electrónico para completar su registro
         </Typography>
         
-        <Alert severity="info" sx={{ mb: 2, width: '100%' }}>
+        <Alert severity="info" sx={{ 
+          mb: { xs: 1.5, sm: 2 }, 
+          width: '100%',
+          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+        }}>
           <Typography variant="body2">
             <strong>Importante:</strong> Solo los empleados previamente registrados por el administrador pueden crear una cuenta. 
             Si no puede completar el registro, contacte al administrador del sistema.
           </Typography>
         </Alert>
         
-        <Card sx={{ mt: 2, width: '100%' }}>
-          <CardContent>
+        <Card sx={{ 
+          mt: { xs: 1.5, sm: 2 }, 
+          width: '100%',
+          boxShadow: { xs: 1, sm: 2, md: 3 }
+        }}>
+          <CardContent sx={{
+            p: { xs: 2, sm: 3, md: 4 },
+            '&:last-child': { pb: { xs: 2, sm: 3, md: 4 } }
+          }}>
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
               {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
@@ -198,7 +241,12 @@ const Register: React.FC = () => {
                 </Alert>
               )}
               
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1, sm: 2 }, 
+                mb: { xs: 1, sm: 2 } 
+              }}>
                 <TextField
                   margin="normal"
                   required
@@ -210,6 +258,15 @@ const Register: React.FC = () => {
                   value={formData.first_name}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
                 />
                 <TextField
                   margin="normal"
@@ -222,10 +279,24 @@ const Register: React.FC = () => {
                   value={formData.last_name}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
                 />
               </Box>
               
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1, sm: 2 }, 
+                mb: { xs: 1, sm: 2 } 
+              }}>
                 <TextField
                   margin="normal"
                   required
@@ -238,11 +309,26 @@ const Register: React.FC = () => {
                   value={formData.email}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={{
+                    mt: { xs: 1, sm: 2 },
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
                 />
 
               </Box>
               
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1, sm: 2 }, 
+                mb: { xs: 1, sm: 2 } 
+              }}>
                 <TextField
                   margin="normal"
                   required
@@ -254,6 +340,15 @@ const Register: React.FC = () => {
                   value={formData.document_type}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
                 >
                   <MenuItem value="CC">Cédula de Ciudadanía</MenuItem>
                   <MenuItem value="CE">Cédula de Extranjería</MenuItem>
@@ -271,10 +366,24 @@ const Register: React.FC = () => {
                   onChange={handleChange}
                   disabled={loading}
                   helperText="Ingrese su número de documento sin puntos ni espacios"
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
                 />
               </Box>
               
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1, sm: 2 }, 
+                mb: { xs: 1, sm: 2 } 
+              }}>
                 <TextField
                   margin="normal"
                   fullWidth
@@ -286,8 +395,27 @@ const Register: React.FC = () => {
                   value={formData.phone}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
                 />
-                <FormControl fullWidth margin="normal">
+                <FormControl fullWidth margin="normal"
+                   sx={{
+                     '& .MuiInputLabel-root': {
+                       fontSize: { xs: '0.875rem', sm: '1rem' }
+                     },
+                     '& .MuiSelect-select': {
+                       fontSize: { xs: '0.875rem', sm: '1rem' },
+                       padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                     }
+                   }}
+                 >
                    <InputLabel>Departamento (Opcional)</InputLabel>
                    <Select
                      id="department"
@@ -318,7 +446,16 @@ const Register: React.FC = () => {
                 value={formData.position}
                 onChange={handleChange}
                 disabled={loading}
-                sx={{ mb: 2 }}
+                sx={{ 
+                  mb: 2,
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontSize: { xs: '0.875rem', sm: '1rem' }
+                  }
+                }}
               />
               
               <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -335,6 +472,15 @@ const Register: React.FC = () => {
                   onChange={handleChange}
                   disabled={loading}
                   helperText="Mínimo 8 caracteres, debe incluir al menos una letra y un número"
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
                 />
                 <TextField
                   margin="normal"
@@ -348,6 +494,15 @@ const Register: React.FC = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      padding: { xs: '12px 14px', sm: '16.5px 14px' }
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
                 />
               </Box>
               
@@ -355,25 +510,63 @@ const Register: React.FC = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+                sx={{ 
+                  mt: { xs: 2, sm: 3 }, 
+                  mb: { xs: 1.5, sm: 2 },
+                  py: { xs: 1, sm: 1.5 },
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }}
                 disabled={loading}
               >
                 {loading ? 'Completando registro...' : 'Completar Registro'}
               </Button>
               
-              <Box sx={{ textAlign: 'center', mt: 2 }}>
-                <Typography variant="body2">
-                  ¿Ya tienes una cuenta?{' '}
-                  <Link to="/login" style={{ textDecoration: 'none', color: '#1976d2' }}>
-                    Iniciar Sesión
-                  </Link>
+              <Box sx={{ 
+                textAlign: 'center', 
+                mt: { xs: 1.5, sm: 2 },
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: { xs: 0.5, sm: 1 }
+              }}>
+                <Typography 
+                  variant="body2"
+                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                >
+                  ¿Ya tienes una cuenta?
                 </Typography>
+                <Link 
+                  to="/login" 
+                  style={{ 
+                    textDecoration: 'none', 
+                    color: '#1976d2',
+                    fontSize: 'inherit'
+                  }}
+                >
+                  <Typography 
+                    variant="body2" 
+                    component="span"
+                    sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                  >
+                    Iniciar Sesión
+                  </Typography>
+                </Link>
               </Box>
             </Box>
           </CardContent>
         </Card>
         
-        <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 4 }}>
+        <Typography 
+          variant="body2" 
+          color="textSecondary" 
+          align="center" 
+          sx={{ 
+            mt: { xs: 3, sm: 4 },
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            px: { xs: 2, sm: 0 }
+          }}
+        >
           Plataforma de Capacitaciones en Seguridad y Salud en el Trabajo
         </Typography>
       </Box>
