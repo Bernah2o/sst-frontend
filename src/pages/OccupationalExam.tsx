@@ -1124,11 +1124,11 @@ const OccupationalExam: React.FC = () => {
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Trabajador</InputLabel>
+                <FormControl fullWidth required>
+                  <InputLabel>Trabajador *</InputLabel>
                   <Select
                     value={formData.worker_id}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const selectedWorker = workers.find(
                         (w) => w.id.toString() === e.target.value
                       );
@@ -1142,6 +1142,24 @@ const OccupationalExam: React.FC = () => {
                         worker_hire_date:
                           selectedWorker?.fecha_de_ingreso || "",
                       });
+                      
+                      // Calcular automáticamente la fecha del próximo examen si hay fecha de examen
+                      if (formData.exam_date && e.target.value) {
+                        try {
+                          const examDateStr = formData.exam_date.toISOString().split('T')[0];
+                          const response = await api.get(
+                            `/occupational-exams/calculate-next-exam-date/${e.target.value}?exam_date=${examDateStr}`
+                          );
+                          if (response.data.next_exam_date) {
+                            setFormData(prev => ({
+                              ...prev,
+                              next_exam_date: new Date(response.data.next_exam_date)
+                            }));
+                          }
+                        } catch (error) {
+                          console.error('Error calculando fecha del próximo examen:', error);
+                        }
+                      }
                     }}
                   >
                     {workers.map((worker) => (
@@ -1212,18 +1230,37 @@ const OccupationalExam: React.FC = () => {
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <DatePicker
-                  label="Fecha del Examen"
+                  label="Fecha del Examen *"
                   value={formData.exam_date}
-                  onChange={(date) =>
-                    setFormData({ ...formData, exam_date: date })
-                  }
-                  slotProps={{ textField: { fullWidth: true } }}
+                  onChange={async (date) => {
+                    setFormData({ ...formData, exam_date: date });
+                    
+                    // Calcular automáticamente la fecha del próximo examen si hay trabajador seleccionado
+                    if (date && formData.worker_id) {
+                      try {
+                        const examDateStr = date.toISOString().split('T')[0];
+                        const response = await api.get(
+                          `/occupational-exams/calculate-next-exam-date/${formData.worker_id}?exam_date=${examDateStr}`
+                        );
+                        if (response.data.next_exam_date) {
+                          setFormData(prev => ({
+                            ...prev,
+                            next_exam_date: new Date(response.data.next_exam_date)
+                          }));
+                        }
+                      } catch (error) {
+                        console.error('Error calculando fecha del próximo examen:', error);
+                      }
+                    }
+                  }}
+                  slotProps={{ textField: { fullWidth: true, required: true } }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
-                  label="Centro Médico"
+                  required
+                  label="Centro Médico *"
                   value={formData.medical_center}
                   onChange={(e) =>
                     setFormData({ ...formData, medical_center: e.target.value })
@@ -1409,7 +1446,12 @@ const OccupationalExam: React.FC = () => {
                   onChange={(date) =>
                     setFormData({ ...formData, next_exam_date: date })
                   }
-                  slotProps={{ textField: { fullWidth: true } }}
+                  slotProps={{ 
+                    textField: { 
+                      fullWidth: true,
+                      helperText: "Se calcula automáticamente basado en la periodicidad del cargo del trabajador"
+                    } 
+                  }}
                 />
               </Grid>
             </Grid>
