@@ -157,6 +157,15 @@ const AdminNotifications: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      // Resetear estados en caso de error
+      if (tabValue === 0) {
+        setWorkers([]);
+        setTotalWorkers(0);
+        setStatistics(null);
+      } else if (tabValue === 1) {
+        setAcknowledgments([]);
+        setTotalAcknowledgments(0);
+      }
       setSnackbar({
         open: true,
         message: 'Error al cargar los datos',
@@ -182,6 +191,8 @@ const AdminNotifications: React.FC = () => {
   };
 
   const handleSelectAll = () => {
+    if (!workers || workers.length === 0) return;
+    
     if (selectedWorkers.length === workers.length) {
       setSelectedWorkers([]);
     } else {
@@ -523,8 +534,8 @@ const AdminNotifications: React.FC = () => {
               <TableRow>
                 <TableCell padding="checkbox">
                   <Checkbox
-                    indeterminate={selectedWorkers.length > 0 && selectedWorkers.length < workers.length}
-                    checked={workers.length > 0 && selectedWorkers.length === workers.length}
+                    indeterminate={selectedWorkers.length > 0 && selectedWorkers.length < (workers?.length || 0)}
+                    checked={(workers?.length || 0) > 0 && selectedWorkers.length === (workers?.length || 0)}
                     onChange={handleSelectAll}
                   />
                 </TableCell>
@@ -546,7 +557,7 @@ const AdminNotifications: React.FC = () => {
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
-              ) : workers.length === 0 ? (
+              ) : !workers || workers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} align="center">
                     No se encontraron trabajadores
