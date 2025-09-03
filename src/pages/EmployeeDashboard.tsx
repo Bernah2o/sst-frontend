@@ -12,7 +12,8 @@ import {
   Event as EventIcon,
   Assessment as AssessmentIcon,
   BookmarkBorder as BookmarkIcon,
-  Star as StarIcon
+  Star as StarIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -50,6 +51,7 @@ interface EmployeeStats {
   pending_evaluations: number;
   certificates_earned: number;
   total_study_hours: number;
+  reinductions_completed: number;
 }
 
 interface MyCourse {
@@ -87,7 +89,8 @@ const EmployeeDashboard: React.FC = () => {
     in_progress_courses: 0,
     pending_evaluations: 0,
     certificates_earned: 0,
-    total_study_hours: 0
+    total_study_hours: 0,
+    reinductions_completed: 0
   });
   const [myCourses, setMyCourses] = useState<MyCourse[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
@@ -115,6 +118,19 @@ const EmployeeDashboard: React.FC = () => {
       const evaluationsResponse = await api.get('/evaluations/my-results');
       const evaluations = evaluationsResponse.data.data || [];
       
+      // Obtener historial de reinducciones del trabajador
+      let reinductionsCompleted = 0;
+      try {
+        if (user?.id) {
+          const reinductionsResponse = await api.get(`/workers/${user.id}/reinduction-history`);
+          const reinductions = reinductionsResponse.data || [];
+          reinductionsCompleted = reinductions.filter((r: any) => r.status === 'COMPLETED').length;
+        }
+      } catch (reinductionError) {
+        console.warn('Error fetching reinduction history:', reinductionError);
+        // No es crítico, continuar sin datos de reinducción
+      }
+      
       // Calcular estadísticas basadas en datos reales
       const completedCourses = userCourses.filter((course: any) => course.completed).length;
       const inProgressCourses = userCourses.filter((course: any) => !course.completed && course.progress > 0).length;
@@ -129,7 +145,8 @@ const EmployeeDashboard: React.FC = () => {
         total_study_hours: userCourses.reduce((total: number, course: any) => {
           // Estimar horas basado en progreso (asumiendo 10 horas por curso completo)
           return total + Math.round((course.progress || 0) * 10 / 100);
-        }, 0)
+        }, 0),
+        reinductions_completed: reinductionsCompleted
       });
       
       // Mapear cursos con datos reales
@@ -193,7 +210,8 @@ const EmployeeDashboard: React.FC = () => {
         in_progress_courses: 0,
         pending_evaluations: 0,
         certificates_earned: 0,
-        total_study_hours: 0
+        total_study_hours: 0,
+        reinductions_completed: 0
       });
       setMyCourses([]);
       setUpcomingEvents([]);
@@ -604,6 +622,58 @@ const EmployeeDashboard: React.FC = () => {
                       }}
                     >
                       {stats.total_study_hours}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+            <Card 
+              sx={{ 
+                height: '100%',
+                background: `linear-gradient(135deg, ${alpha('#4CAF50', 0.1)} 0%, ${alpha('#2E7D32', 0.05)} 100%)`,
+                border: `1px solid ${alpha('#4CAF50', 0.1)}`,
+                borderRadius: 3,
+                transition: 'all 0.3s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: `0 8px 25px ${alpha('#4CAF50', 0.15)}`
+                }
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Box 
+                    sx={{ 
+                      p: 1.5,
+                      borderRadius: 2,
+                      background: 'linear-gradient(135deg, #4CAF50, #2E7D32)',
+                      color: 'white'
+                    }}
+                  >
+                    <RefreshIcon sx={{ fontSize: 28 }} />
+                  </Box>
+                  <Box>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: theme.palette.text.secondary,
+                        fontWeight: 500,
+                        mb: 0.5
+                      }}
+                    >
+                      Reinducciones
+                    </Typography>
+                    <Typography 
+                      variant="h4" 
+                      sx={{ 
+                        fontWeight: 700,
+                        color: '#4CAF50'
+                      }}
+                    >
+                      {stats.reinductions_completed}
                     </Typography>
                   </Box>
                 </Stack>

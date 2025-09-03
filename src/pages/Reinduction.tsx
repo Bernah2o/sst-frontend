@@ -89,9 +89,15 @@ interface Reinduction {
 
 interface Worker {
   id: number;
+  // Campos nuevos
+  first_name: string;
+  last_name: string;
+  document_number: string;
+  // Campos legacy para compatibilidad
   nombre: string;
   apellido: string;
   documento: string;
+  cedula: string;
   cargo: string;
   area: string;
 }
@@ -122,6 +128,7 @@ const Reinduction: React.FC = () => {
     worker_id: '',
     year: new Date().getFullYear(),
     due_date: null as Date | null,
+    status: 'pending' as string,
     assigned_course_id: '',
     scheduled_date: null as Date | null,
     notes: '',
@@ -256,6 +263,7 @@ const Reinduction: React.FC = () => {
         worker_id: reinduction.worker_id.toString(),
         year: reinduction.year,
         due_date: new Date(reinduction.due_date),
+        status: reinduction.status,
         assigned_course_id: reinduction.assigned_course_id?.toString() || '',
         scheduled_date: reinduction.scheduled_date ? new Date(reinduction.scheduled_date) : null,
         notes: reinduction.notes || '',
@@ -267,6 +275,7 @@ const Reinduction: React.FC = () => {
         worker_id: '',
         year: new Date().getFullYear(),
         due_date: null,
+        status: 'pending',
         assigned_course_id: '',
         scheduled_date: null,
         notes: '',
@@ -585,7 +594,7 @@ const Reinduction: React.FC = () => {
                   >
                     {workers.map((worker) => (
                       <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.nombre} {worker.apellido} - {worker.documento}
+                        {worker.first_name || worker.nombre} {worker.last_name || worker.apellido} - {worker.document_number || worker.cedula}
                       </MenuItem>
                     ))}
                   </Select>
@@ -617,7 +626,24 @@ const Reinduction: React.FC = () => {
                   slotProps={{ textField: { fullWidth: true } }}
                 />
               </Grid>
-              <Grid size={12}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Estado</InputLabel>
+                  <Select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    label="Estado"
+                  >
+                    <MenuItem value="pending">Pendiente</MenuItem>
+                    <MenuItem value="scheduled">Programada</MenuItem>
+                    <MenuItem value="in_progress">En Progreso</MenuItem>
+                    <MenuItem value="completed">Completada</MenuItem>
+                    <MenuItem value="overdue">Vencida</MenuItem>
+                    <MenuItem value="exempted">Exenta</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="ID del Curso Asignado"
