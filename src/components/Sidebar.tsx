@@ -334,6 +334,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           roles: ['admin', 'supervisor']
         },
         {
+          id: 'admin-notifications',
+          label: 'Administrar Notificaciones',
+          icon: <Notifications />,
+          path: '/admin/notifications',
+          roles: ['admin']
+        },
+        {
           id: 'seguimientos',
           label: 'Seguimientos',
           icon: <Timeline />,
@@ -463,6 +470,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           // Health/Medical
           'health': () => canViewOccupationalExamPage() || canViewSeguimientoPage(),
           'occupational-exams': () => canViewOccupationalExamPage(),
+          'admin-notifications': () => user.role === 'admin',
           'seguimientos': () => canViewSeguimientoPage(),
           
           // Certificates - Solo para roles administrativos, no para employees
