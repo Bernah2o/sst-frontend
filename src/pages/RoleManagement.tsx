@@ -51,6 +51,7 @@ import React, { useState, useEffect } from "react";
 
 import UppercaseTextField from "../components/UppercaseTextField";
 import { useAuth } from "../contexts/AuthContext";
+import { usePermissions } from "../hooks/usePermissions";
 import api from "../services/api";
 import { formatDateTime } from "../utils/dateUtils";
 // Remove unused import
@@ -92,6 +93,13 @@ interface RoleFormData {
 
 const RoleManagement: React.FC = () => {
   const { user } = useAuth();
+  const {
+    canViewRolesPage,
+    canCreateRoles,
+    canUpdateRoles,
+    canDeleteRoles,
+    canCreateNotifications
+  } = usePermissions();
   const [roles, setRoles] = useState<CustomRole[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
@@ -473,7 +481,7 @@ const RoleManagement: React.FC = () => {
           variant="contained"
           startIcon={<Add />}
           onClick={() => handleOpenDialog()}
-          disabled={user?.role !== "admin"}
+          disabled={!canCreateRoles()}
         >
           Crear Rol
         </Button>
@@ -549,7 +557,7 @@ const RoleManagement: React.FC = () => {
           color="info"
           startIcon={<Notifications />} 
           onClick={handleNotifyUsers}
-          disabled={notifyingUsers || user?.role !== "admin"}
+          disabled={notifyingUsers || !canCreateNotifications()}
         >
           {notifyingUsers ? 'Notificando...' : 'Notificar Usuarios'}
         </Button>
@@ -615,7 +623,7 @@ const RoleManagement: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleOpenDialog(role)}
-                      disabled={user?.role !== "admin"}
+                      disabled={!canUpdateRoles()}
                     >
                       <Edit />
                     </IconButton>
@@ -625,7 +633,7 @@ const RoleManagement: React.FC = () => {
                         setRoleToDelete(role);
                         setDeleteDialogOpen(true);
                       }}
-                      disabled={user?.role !== "admin" || role.is_system_role}
+                      disabled={!canDeleteRoles() || role.is_system_role}
                     >
                       <Delete />
                     </IconButton>

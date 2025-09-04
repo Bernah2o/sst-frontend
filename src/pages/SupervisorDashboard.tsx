@@ -1,20 +1,13 @@
 import {
-  Dashboard as DashboardIcon,
   People as PeopleIcon,
   School as SchoolIcon,
-  Assignment as AssignmentIcon,
   TrendingUp as TrendingUpIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
+  Error as ErrorIcon,
+  Info as InfoIcon,
   Assessment as AssessmentIcon,
-  Visibility as VisibilityIcon,
-  Schedule as ScheduleIcon,
-  Report as ReportIcon,
-  Notifications as NotificationsIcon,
-  Star as StarIcon,
-  Group as GroupIcon,
-  Timeline as TimelineIcon,
-  WorkspacePremium as CertificateIcon
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -23,7 +16,6 @@ import {
   CardContent,
   Typography,
   Button,
-  Paper,
   List,
   ListItem,
   ListItemText,
@@ -33,7 +25,6 @@ import {
   Avatar,
   IconButton,
   Divider,
-  CardActions,
   Table,
   TableBody,
   TableCell,
@@ -46,61 +37,60 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import { formatDate } from '../utils/dateUtils';
 
 interface SupervisorStats {
   total_employees: number;
+  active_employees: number;
+  inactive_employees: number;
   employees_in_training: number;
   completed_trainings: number;
   pending_evaluations: number;
   compliance_rate: number;
-  overdue_trainings: number;
+  expired_trainings: number;
 }
 
 interface TeamMember {
   id: number;
   name: string;
-  email: string;
   position: string;
   active_courses: number;
   completed_courses: number;
-  compliance_status: string;
+  status: 'En Capacitación' | 'Completado' | 'Sin Asignar';
   last_activity: string;
 }
 
 interface TrainingAlert {
   id: number;
-  type: string;
-  message: string;
-  employee: string;
-  priority: string;
-  date: string;
+  employee_name: string;
+  training_name: string;
+  due_date: string;
+  priority: 'high' | 'medium' | 'low';
+  days_overdue: number;
 }
 
 interface ComplianceData {
+  course_id: number;
   course_name: string;
-  total_employees: number;
+  total_enrolled: number;
   completed: number;
   in_progress: number;
   overdue: number;
   compliance_percentage: number;
 }
 
+interface DashboardData {
+  stats: SupervisorStats;
+  team_members: TeamMember[];
+  training_alerts: TrainingAlert[];
+  compliance_data: ComplianceData[];
+}
+
 const SupervisorDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<SupervisorStats>({
-    total_employees: 0,
-    employees_in_training: 0,
-    completed_trainings: 0,
-    pending_evaluations: 0,
-    compliance_rate: 0,
-    overdue_trainings: 0
-  });
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [alerts, setAlerts] = useState<TrainingAlert[]>([]);
-  const [complianceData, setComplianceData] = useState<ComplianceData[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -109,138 +99,27 @@ const SupervisorDashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      // Simular datos del dashboard hasta que se implementen los endpoints
-      setTimeout(() => {
-        setStats({
-          total_employees: 25,
-          employees_in_training: 18,
-          completed_trainings: 45,
-          pending_evaluations: 8,
-          compliance_rate: 85,
-          overdue_trainings: 3
-        });
-        
-        setTeamMembers([
-          {
-            id: 1,
-            name: 'Juan Pérez',
-            email: 'juan.perez@empresa.com',
-            position: 'Operario',
-            active_courses: 2,
-            completed_courses: 3,
-            compliance_status: 'compliant',
-            last_activity: '2024-01-10'
-          },
-          {
-            id: 2,
-            name: 'María González',
-            email: 'maria.gonzalez@empresa.com',
-            position: 'Técnico',
-            active_courses: 1,
-            completed_courses: 5,
-            compliance_status: 'compliant',
-            last_activity: '2024-01-09'
-          },
-          {
-            id: 3,
-            name: 'Carlos Rodríguez',
-            email: 'carlos.rodriguez@empresa.com',
-            position: 'Operario',
-            active_courses: 0,
-            completed_courses: 2,
-            compliance_status: 'overdue',
-            last_activity: '2024-01-05'
-          },
-          {
-            id: 4,
-            name: 'Ana López',
-            email: 'ana.lopez@empresa.com',
-            position: 'Supervisor Jr.',
-            active_courses: 3,
-            completed_courses: 4,
-            compliance_status: 'in_progress',
-            last_activity: '2024-01-11'
-          }
-        ]);
-        
-        setAlerts([
-          {
-            id: 1,
-            type: 'overdue',
-            message: 'Capacitación vencida en Seguridad Industrial',
-            employee: 'Carlos Rodríguez',
-            priority: 'high',
-            date: '2024-01-12'
-          },
-          {
-            id: 2,
-            type: 'evaluation',
-            message: 'Evaluación pendiente de Primeros Auxilios',
-            employee: 'Juan Pérez',
-            priority: 'medium',
-            date: '2024-01-11'
-          },
-          {
-            id: 3,
-            type: 'deadline',
-            message: 'Fecha límite próxima para Manejo de Químicos',
-            employee: 'María González',
-            priority: 'low',
-            date: '2024-01-10'
-          }
-        ]);
-        
-        setComplianceData([
-          {
-            course_name: 'Seguridad Industrial Básica',
-            total_employees: 25,
-            completed: 20,
-            in_progress: 3,
-            overdue: 2,
-            compliance_percentage: 80
-          },
-          {
-            course_name: 'Primeros Auxilios',
-            total_employees: 25,
-            completed: 22,
-            in_progress: 2,
-            overdue: 1,
-            compliance_percentage: 88
-          },
-          {
-            course_name: 'Manejo de Químicos',
-            total_employees: 15,
-            completed: 12,
-            in_progress: 3,
-            overdue: 0,
-            compliance_percentage: 80
-          },
-          {
-            course_name: 'Uso de EPP',
-            total_employees: 25,
-            completed: 25,
-            in_progress: 0,
-            overdue: 0,
-            compliance_percentage: 100
-          }
-        ]);
-        
-        setLoading(false);
-      }, 1000);
+      setError(null);
+      
+      const response = await api.get('/supervisor/dashboard');
+      setDashboardData(response.data);
+      
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setError('Error al cargar los datos del dashboard');
+    } finally {
       setLoading(false);
     }
   };
 
-  const getComplianceColor = (status: string) => {
-    switch (status) {
-      case 'compliant':
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completado':
         return 'success';
-      case 'in_progress':
+      case 'en capacitación':
         return 'warning';
-      case 'overdue':
-        return 'error';
+      case 'pendiente':
+        return 'default';
       default:
         return 'default';
     }
@@ -259,16 +138,16 @@ const SupervisorDashboard: React.FC = () => {
     }
   };
 
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'overdue':
-        return <WarningIcon color="error" />;
-      case 'evaluation':
-        return <AssessmentIcon color="warning" />;
-      case 'deadline':
-        return <ScheduleIcon color="info" />;
+  const getAlertIcon = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return <ErrorIcon color="error" />;
+      case 'medium':
+        return <WarningIcon color="warning" />;
+      case 'low':
+        return <InfoIcon color="info" />;
       default:
-        return <NotificationsIcon />;
+        return <InfoIcon />;
     }
   };
 
@@ -282,6 +161,34 @@ const SupervisorDashboard: React.FC = () => {
       </Box>
     );
   }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="error" gutterBottom>
+          {error}
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => window.location.reload()}
+        >
+          Reintentar
+        </Button>
+      </Box>
+    );
+  }
+
+  if (!dashboardData) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="textSecondary">
+          No hay datos disponibles
+        </Typography>
+      </Box>
+    );
+  }
+
+  const { stats, team_members: teamMembers, training_alerts: alerts, compliance_data: complianceData } = dashboardData;
 
   return (
     <Box sx={{ p: 3 }}>
@@ -305,8 +212,44 @@ const SupervisorDashboard: React.FC = () => {
                     Total Empleados
                   </Typography>
                   <Typography variant="h5">
-                    {stats.total_employees}
+                     {stats.total_employees}
+                   </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CheckCircleIcon color="success" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography color="textSecondary" gutterBottom>
+                    Empleados Activos
                   </Typography>
+                  <Typography variant="h5">
+                     {stats.active_employees}
+                   </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <ErrorIcon color="disabled" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography color="textSecondary" gutterBottom>
+                    Empleados Inactivos
+                  </Typography>
+                  <Typography variant="h5">
+                     {stats.inactive_employees}
+                   </Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -323,8 +266,8 @@ const SupervisorDashboard: React.FC = () => {
                     En Capacitación
                   </Typography>
                   <Typography variant="h5">
-                    {stats.employees_in_training}
-                  </Typography>
+                     {stats.employees_in_training}
+                   </Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -341,8 +284,8 @@ const SupervisorDashboard: React.FC = () => {
                     Capacitaciones Completadas
                   </Typography>
                   <Typography variant="h5">
-                    {stats.completed_trainings}
-                  </Typography>
+                     {stats.completed_trainings}
+                   </Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -359,8 +302,8 @@ const SupervisorDashboard: React.FC = () => {
                     Evaluaciones Pendientes
                   </Typography>
                   <Typography variant="h5">
-                    {stats.pending_evaluations}
-                  </Typography>
+                     {stats.pending_evaluations}
+                   </Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -377,8 +320,8 @@ const SupervisorDashboard: React.FC = () => {
                     Tasa de Cumplimiento
                   </Typography>
                   <Typography variant="h5">
-                    {stats.compliance_rate}%
-                  </Typography>
+                     {stats.compliance_rate}%
+                   </Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -395,8 +338,8 @@ const SupervisorDashboard: React.FC = () => {
                     Capacitaciones Vencidas
                   </Typography>
                   <Typography variant="h5">
-                    {stats.overdue_trainings}
-                  </Typography>
+                     {stats.expired_trainings}
+                   </Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -433,14 +376,9 @@ const SupervisorDashboard: React.FC = () => {
                             <Avatar sx={{ mr: 2, width: 32, height: 32 }}>
                               {member.name.charAt(0)}
                             </Avatar>
-                            <Box>
-                              <Typography variant="body2" fontWeight="medium">
-                                {member.name}
-                              </Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                {member.email}
-                              </Typography>
-                            </Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {member.name}
+                            </Typography>
                           </Box>
                         </TableCell>
                         <TableCell>{member.position}</TableCell>
@@ -448,13 +386,13 @@ const SupervisorDashboard: React.FC = () => {
                         <TableCell align="center">{member.completed_courses}</TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={member.compliance_status.replace('_', ' ')}
-                            color={getComplianceColor(member.compliance_status) as any}
-                            size="small"
-                          />
+                             label={member.status}
+                             color={getStatusColor(member.status) as any}
+                             size="small"
+                           />
                         </TableCell>
                         <TableCell align="center">
-                          {formatDate(member.last_activity)}
+                          {member.last_activity}
                         </TableCell>
                         <TableCell align="center">
                           <IconButton
@@ -494,13 +432,13 @@ const SupervisorDashboard: React.FC = () => {
                   <React.Fragment key={alert.id}>
                     <ListItem>
                       <ListItemIcon>
-                        {getAlertIcon(alert.type)}
-                      </ListItemIcon>
+                         {getAlertIcon(alert.priority)}
+                       </ListItemIcon>
                       <ListItemText
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant="body2">
-                              {alert.message}
+                              {alert.employee_name} - {alert.training_name}
                             </Typography>
                             <Chip
                               label={alert.priority}
@@ -509,7 +447,7 @@ const SupervisorDashboard: React.FC = () => {
                             />
                           </Box>
                         }
-                        secondary={`${alert.employee} - ${formatDate(alert.date)}`}
+                        secondary={alert.due_date ? `Vence: ${alert.due_date}` : ''}
                       />
                     </ListItem>
                     {index < alerts.length - 1 && <Divider />}
@@ -527,56 +465,7 @@ const SupervisorDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Acciones rápidas */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Acciones Rápidas
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid size={12}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<ReportIcon />}
-                    onClick={() => navigate('/supervisor/reports')}
-                  >
-                    Generar Reporte
-                  </Button>
-                </Grid>
-                <Grid size={12}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<GroupIcon />}
-                    onClick={() => navigate('/supervisor/team')}
-                  >
-                    Gestionar Equipo
-                  </Button>
-                </Grid>
-                <Grid size={12}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<TimelineIcon />}
-                    onClick={() => navigate('/supervisor/progress')}
-                  >
-                    Ver Progreso
-                  </Button>
-                </Grid>
-                <Grid size={12}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<CertificateIcon />}
-                    onClick={() => navigate('/supervisor/compliance')}
-                  >
-                    Cumplimiento
-                  </Button>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+
         </Grid>
       </Grid>
 
@@ -605,11 +494,11 @@ const SupervisorDashboard: React.FC = () => {
                     {complianceData.map((course, index) => (
                       <TableRow key={index}>
                         <TableCell>{course.course_name}</TableCell>
-                        <TableCell align="center">{course.total_employees}</TableCell>
-                        <TableCell align="center">{course.completed}</TableCell>
-                        <TableCell align="center">{course.in_progress}</TableCell>
-                        <TableCell align="center">{course.overdue}</TableCell>
-                        <TableCell align="center">{course.compliance_percentage}%</TableCell>
+                         <TableCell align="center">{course.total_enrolled}</TableCell>
+                         <TableCell align="center">{course.completed}</TableCell>
+                         <TableCell align="center">{course.in_progress}</TableCell>
+                         <TableCell align="center">{course.overdue}</TableCell>
+                         <TableCell align="center">{course.compliance_percentage}%</TableCell>
                         <TableCell align="center">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <LinearProgress

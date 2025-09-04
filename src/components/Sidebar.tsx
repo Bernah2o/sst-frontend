@@ -86,7 +86,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     canViewOccupationalExamPage,
     canViewSeguimientoPage,
     canViewAdminConfigPage,
-    canViewReinductionPage
+    canViewReinductionPage,
+    canViewSuppliersPage
   } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
@@ -489,6 +490,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           // Notifications
           'notifications': canViewNotificationsPage,
           
+          // Suppliers
+          'suppliers': canViewSuppliersPage,
+          
           // Administration (always check individual permissions)
           'administration': () => true, // Will be filtered by children
           'audit': () => user.role === 'admin', // Solo admins pueden ver auditoría
@@ -583,7 +587,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
   // Memoizar los elementos filtrados para evitar duplicaciones en re-renders
   const filteredMenuItems = React.useMemo(() => {
     return filterMenuByRole(menuItems);
-  }, [user, canViewCoursesPage, canViewEvaluationsPage, canViewSurveysPage, canViewAttendancePage, canUpdateAttendance, canViewWorkersPage, canUpdateWorkers, canViewCertificatesPage, canUpdateCertificates, canViewReportsPage, canViewNotificationsPage, canViewOccupationalExamPage, canViewSeguimientoPage, canViewAdminConfigPage, canViewReinductionPage, canUpdateUsers]);
+  }, [user, canViewCoursesPage, canViewEvaluationsPage, canViewSurveysPage, canViewAttendancePage, canUpdateAttendance, canViewWorkersPage, canUpdateWorkers, canViewCertificatesPage, canUpdateCertificates, canViewReportsPage, canViewNotificationsPage, canViewOccupationalExamPage, canViewSeguimientoPage, canViewAdminConfigPage, canViewReinductionPage, canViewSuppliersPage, canUpdateUsers]);
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

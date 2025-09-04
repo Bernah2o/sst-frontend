@@ -250,9 +250,9 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     route: '/admin/roles',
     name: 'Gestión de Roles',
     description: 'Administración de roles personalizados',
-    requiredPermissions: ['canViewAdminConfigPage'],
-    allowedRoles: ['admin'],
-    customCheck: (permissions) => permissions.canViewAdminConfigPage(),
+    requiredPermissions: ['canViewRolesPage'],
+    allowedRoles: ['admin', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewRolesPage(),
   },
   {
     route: '/admin/audit',
