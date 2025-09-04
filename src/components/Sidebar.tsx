@@ -335,9 +335,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         },
         {
           id: 'admin-notifications',
-          label: 'Administrar Notificaciones',
+          label: 'Notificaciones',
           icon: <Notifications />,
-          path: '/admin/notifications',
+          path: '/admin/notification-acknowledgment',
           roles: ['admin']
         },
         {
@@ -373,7 +373,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     },
     {
       id: 'notifications',
-      label: 'Notificaciones',
+      label: 'Notificaciones Generales',
       icon: <Notifications />,
       path: '/admin/notifications',
       roles: ['admin', 'trainer', 'supervisor']

@@ -21,6 +21,7 @@ import { usePermissions } from "./hooks/usePermissions";
 import Absenteeism from "./pages/Absenteeism";
 import AdminConfig from "./pages/AdminConfig";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminNotifications from "./pages/AdminNotifications";
 import Attendance from "./pages/Attendance";
 import Course from "./pages/Course";
 import CourseDetail from "./pages/CourseDetail";
@@ -417,6 +418,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/notifications">
                         <Notification />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/notification-acknowledgment"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin"]}>
+                        <AdminNotifications />
                       </ProtectedRoute>
                     }
                   />
