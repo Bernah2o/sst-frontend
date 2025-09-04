@@ -410,6 +410,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           icon: <People />,
           path: '/admin/users',
           roles: ['admin', 'supervisor']
+        },
+        {
+          id: 'suppliers',
+          label: 'Proveedores',
+          icon: <MedicalServices />,
+          path: '/admin/suppliers',
+          roles: ['admin', 'supervisor']
         }
       ],
       roles: ['admin', 'supervisor']

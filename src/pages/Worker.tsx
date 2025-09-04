@@ -94,6 +94,7 @@ interface WorkerFormData {
   country: string;
   department?: string;
   city?: string;
+  direccion?: string;
   blood_type?: BloodType;
   observations?: string;
   is_active: boolean;
@@ -167,6 +168,7 @@ const WorkersManagement: React.FC = () => {
     country: "Colombia",
     department: "",
     city: "",
+    direccion: "",
     blood_type: BloodType.O_POSITIVE,
     observations: "",
     is_active: true,
@@ -363,6 +365,7 @@ const WorkersManagement: React.FC = () => {
       country: "Colombia",
       department: "",
       city: "",
+      direccion: "",
       blood_type: BloodType.O_POSITIVE,
       observations: "",
       is_active: true,
@@ -409,6 +412,7 @@ const WorkersManagement: React.FC = () => {
         country: fullWorker.country || "Colombia",
         department: fullWorker.department || "",
         city: fullWorker.city || "",
+        direccion: fullWorker.direccion || "",
         blood_type: fullWorker.blood_type,
         observations: fullWorker.observations || "",
         is_active: fullWorker.is_active ?? true,
@@ -460,6 +464,7 @@ const WorkersManagement: React.FC = () => {
         country: formData.country,
         department: formData.department || undefined,
         city: formData.city || undefined,
+        direccion: formData.direccion || undefined,
         blood_type: formData.blood_type,
         observations: formData.observations || undefined,
         is_active: formData.is_active,
@@ -1146,6 +1151,17 @@ const WorkersManagement: React.FC = () => {
                   ))}
                 </Select>
               </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Dirección"
+                value={formData.direccion || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, direccion: e.target.value })
+                }
+                fullWidth
+                placeholder="Ingrese la dirección completa"
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
