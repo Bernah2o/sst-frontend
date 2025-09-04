@@ -335,9 +335,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         },
         {
           id: 'admin-notifications',
-          label: 'Administrar Notificaciones',
+          label: 'Notificaciones',
           icon: <Notifications />,
-          path: '/admin/notifications',
+          path: '/admin/notification-acknowledgment',
           roles: ['admin']
         },
         {
@@ -373,7 +373,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     },
     {
       id: 'notifications',
-      label: 'Notificaciones',
+      label: 'Notificaciones Generales',
       icon: <Notifications />,
       path: '/admin/notifications',
       roles: ['admin', 'trainer', 'supervisor']
@@ -409,6 +409,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           label: 'Gestión de Usuarios',
           icon: <People />,
           path: '/admin/users',
+          roles: ['admin', 'supervisor']
+        },
+        {
+          id: 'suppliers',
+          label: 'Proveedores',
+          icon: <MedicalServices />,
+          path: '/admin/suppliers',
           roles: ['admin', 'supervisor']
         }
       ],

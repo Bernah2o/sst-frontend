@@ -39,6 +39,7 @@ import EmployeeCourseSurveys from "./pages/EmployeeCourseSurveys";
 import OccupationalExam from "./pages/OccupationalExam";
 import Seguimiento from "./pages/Seguimiento";
 import Reinduction from "./pages/Reinduction";
+import Suppliers from "./pages/Suppliers";
 
 // Absenteeism components
 import Audit from "./pages/Audit";
@@ -258,18 +259,18 @@ const AppContent: React.FC = () => {
                     }
                   />
                   <Route
-                    path="/admin/notifications"
-                    element={
-                      <ProtectedRoute allowedRoles={["admin"]}>
-                        <AdminNotifications />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
                     path="/admin/roles"
                     element={
                       <ProtectedRoute route="/admin/roles">
                         <RoleManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/suppliers"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <Suppliers />
                       </ProtectedRoute>
                     }
                   />
@@ -417,6 +418,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/notifications">
                         <Notification />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/notification-acknowledgment"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin"]}>
+                        <AdminNotifications />
                       </ProtectedRoute>
                     }
                   />

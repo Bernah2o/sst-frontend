@@ -4,25 +4,25 @@ export enum NotificationStatus {
   SENT = "sent",
   DELIVERED = "delivered",
   FAILED = "failed",
-  ACKNOWLEDGED = "acknowledged"
+  ACKNOWLEDGED = "acknowledged",
 }
 
 export enum ExamNotificationType {
   FIRST_NOTIFICATION = "first_notification",
   REMINDER = "reminder",
-  OVERDUE = "overdue"
+  OVERDUE = "overdue",
 }
 
 export enum ExamStatus {
   SIN_EXAMENES = "sin_examenes",
   VENCIDO = "vencido",
   PROXIMO_A_VENCER = "proximo_a_vencer",
-  AL_DIA = "al_dia"
+  AL_DIA = "al_dia",
 }
 
 export enum BulkAction {
   SEND = "send",
-  SUPPRESS = "suppress"
+  SUPPRESS = "suppress",
 }
 
 // Interfaces para notificaciones administrativas

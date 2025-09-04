@@ -67,6 +67,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { adminConfigService } from "../services/adminConfigService";
 import api from "../services/api";
 import { formatDate } from "../utils/dateUtils";
+import { suppliersService, Supplier, Doctor } from "../services/suppliersService";
+import AutocompleteField, { AutocompleteOption } from "../components/AutocompleteField";
 
 
 // Enums que coinciden con el backend
@@ -96,6 +98,13 @@ interface OccupationalExam {
   observations?: string;
   examining_doctor?: string;
   medical_center?: string;
+  
+  // Nuevos campos para suppliers
+  supplier_id?: number;
+  doctor_id?: number;
+  supplier?: Supplier;
+  doctor?: Doctor;
+  
   created_at: string;
   updated_at: string;
   next_exam_date?: string; // Fecha de próximo examen
@@ -142,6 +151,8 @@ const OccupationalExam: React.FC = () => {
   const [exams, setExams] = useState<OccupationalExam[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -179,6 +190,8 @@ const OccupationalExam: React.FC = () => {
     observations: "",
     examining_doctor: "",
     medical_center: "",
+    supplier_id: "",
+    doctor_id: "",
     status: "programado" as
       | "programado"
       | "realizado"
@@ -248,6 +261,7 @@ const OccupationalExam: React.FC = () => {
     const loadData = async () => {
       await fetchWorkers();
       await fetchProgramas();
+      await fetchSuppliers();
       await fetchExams();
     };
     loadData();
@@ -255,6 +269,7 @@ const OccupationalExam: React.FC = () => {
 
   useEffect(() => {
     fetchProgramas();
+    fetchSuppliers();
   }, []);
 
   // Los datos del trabajador ya vienen del backend, no necesitamos enriquecerlos
@@ -301,6 +316,50 @@ const OccupationalExam: React.FC = () => {
     } catch (error) {
       console.error("Error fetching workers:", error);
     }
+  };
+
+  const fetchSuppliers = async () => {
+    try {
+      const suppliers = await suppliersService.getActiveSuppliers();
+      setSuppliers(suppliers);
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+    }
+  };
+
+  const fetchDoctorsBySupplier = async (supplierId: number) => {
+    try {
+      const doctors = await suppliersService.getDoctorsBySupplier(supplierId);
+      setDoctors(doctors);
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+      setDoctors([]);
+    }
+  };
+
+  const handleSupplierChange = async (supplierId: string) => {
+    setFormData({ 
+      ...formData, 
+      supplier_id: supplierId,
+      doctor_id: "", // Reset doctor selection
+      medical_center: supplierId ? suppliers.find(s => s.id.toString() === supplierId)?.name || "" : "",
+      examining_doctor: "" // Reset examining doctor
+    });
+    
+    if (supplierId) {
+      await fetchDoctorsBySupplier(parseInt(supplierId));
+    } else {
+      setDoctors([]);
+    }
+  };
+
+  const handleDoctorChange = (doctorId: string) => {
+    const selectedDoctor = doctors.find(d => d.id.toString() === doctorId);
+    setFormData({ 
+      ...formData, 
+      doctor_id: doctorId,
+      examining_doctor: selectedDoctor ? suppliersService.formatDoctorName(selectedDoctor) : ""
+    });
   };
 
   const fetchProgramas = async () => {
@@ -463,7 +522,9 @@ const OccupationalExam: React.FC = () => {
         medical_aptitude_concept: exam.medical_aptitude_concept || "apto",
         observations: exam.observations || "",
         examining_doctor: exam.examining_doctor || "",
-        medical_center: exam.medical_center || "",
+      medical_center: exam.medical_center || "",
+      supplier_id: exam.supplier_id?.toString() || "",
+      doctor_id: exam.doctor_id?.toString() || "",
         status: exam.status || "programado",
         result: exam.result || "pendiente",
         restrictions: exam.restrictions || "",
@@ -473,6 +534,11 @@ const OccupationalExam: React.FC = () => {
       };
 
       setFormData(formDataToSet);
+      
+      // Si hay un supplier_id, cargar los médicos de ese proveedor
+      if (exam.supplier_id) {
+        fetchDoctorsBySupplier(exam.supplier_id);
+      }
     } else {
       setEditingExam(null);
       setFormData({
@@ -490,6 +556,8 @@ const OccupationalExam: React.FC = () => {
         observations: "",
         examining_doctor: "",
         medical_center: "",
+        supplier_id: "",
+        doctor_id: "",
         status: "programado",
         result: "pendiente",
         restrictions: "",
@@ -1124,31 +1192,32 @@ const OccupationalExam: React.FC = () => {
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth required>
-                  <InputLabel>Trabajador *</InputLabel>
-                  <Select
-                    value={formData.worker_id}
-                    onChange={async (e) => {
-                      const selectedWorker = workers.find(
-                        (w) => w.id.toString() === e.target.value
-                      );
+                <AutocompleteField
+                  label="Trabajador *"
+                  placeholder="Buscar trabajador por nombre o documento..."
+                  required
+                  value={formData.worker_id ? {
+                    id: formData.worker_id,
+                    label: formData.worker_name || '',
+                    value: workers.find(w => w.id.toString() === formData.worker_id)
+                  } : null}
+                  onChange={async (selectedOption: AutocompleteOption | AutocompleteOption[] | null) => {
+                    if (selectedOption && !Array.isArray(selectedOption)) {
+                      const selectedWorker = selectedOption.value;
                       setFormData({
                         ...formData,
-                        worker_id: e.target.value,
-                        worker_name: selectedWorker
-                          ? `${selectedWorker.first_name} ${selectedWorker.last_name}`
-                          : "",
-                        worker_position: selectedWorker?.position || "",
-                        worker_hire_date:
-                          selectedWorker?.fecha_de_ingreso || "",
+                        worker_id: selectedWorker.id.toString(),
+                        worker_name: `${selectedWorker.first_name} ${selectedWorker.last_name}`,
+                        worker_position: selectedWorker.position || "",
+                        worker_hire_date: selectedWorker.fecha_de_ingreso || "",
                       });
                       
                       // Calcular automáticamente la fecha del próximo examen si hay fecha de examen
-                      if (formData.exam_date && e.target.value) {
+                      if (formData.exam_date) {
                         try {
                           const examDateStr = formData.exam_date.toISOString().split('T')[0];
                           const response = await api.get(
-                            `/occupational-exams/calculate-next-exam-date/${e.target.value}?exam_date=${examDateStr}`
+                            `/occupational-exams/calculate-next-exam-date/${selectedWorker.id}?exam_date=${examDateStr}`
                           );
                           if (response.data.next_exam_date) {
                             setFormData(prev => ({
@@ -1160,16 +1229,28 @@ const OccupationalExam: React.FC = () => {
                           console.error('Error calculando fecha del próximo examen:', error);
                         }
                       }
-                    }}
-                  >
-                    {workers.map((worker) => (
-                      <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.first_name} {worker.last_name} -{" "}
-                        {worker.document_number}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    } else {
+                      setFormData({
+                        ...formData,
+                        worker_id: "",
+                        worker_name: "",
+                        worker_position: "",
+                        worker_hire_date: "",
+                      });
+                    }
+                  }}
+                  autocompleteOptions={{
+                    staticOptions: workers.map(worker => ({
+                      id: worker.id,
+                      label: `${worker.first_name} ${worker.last_name}`,
+                      value: worker,
+                      description: `${worker.document_number} - ${worker.position || 'Sin cargo'}`,
+                      category: worker.position || 'Sin cargo'
+                    })),
+                    minSearchLength: 0,
+                    searchDelay: 200
+                  }}
+                />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
@@ -1257,28 +1338,42 @@ const OccupationalExam: React.FC = () => {
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Centro Médico *"
-                  value={formData.medical_center}
-                  onChange={(e) =>
-                    setFormData({ ...formData, medical_center: e.target.value })
-                  }
-                />
+                <FormControl fullWidth required>
+                  <InputLabel>Centro Médico *</InputLabel>
+                  <Select
+                    value={formData.supplier_id}
+                    onChange={(e) => handleSupplierChange(e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>Seleccionar centro médico</em>
+                    </MenuItem>
+                    {suppliers.map((supplier) => (
+                      <MenuItem key={supplier.id} value={supplier.id.toString()}>
+                        {supplier.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Médico Examinador"
-                  value={formData.examining_doctor}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      examining_doctor: e.target.value,
-                    })
-                  }
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Médico Examinador</InputLabel>
+                  <Select
+                    value={formData.doctor_id}
+                    onChange={(e) => handleDoctorChange(e.target.value)}
+                    disabled={!formData.supplier_id}
+                  >
+                    <MenuItem value="">
+                      <em>Seleccionar médico</em>
+                    </MenuItem>
+                    {doctors.map((doctor) => (
+                      <MenuItem key={doctor.id} value={doctor.id.toString()}>
+                        {suppliersService.formatDoctorName(doctor)}
+                        {doctor.specialty && ` - ${doctor.specialty}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth>

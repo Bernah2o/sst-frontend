@@ -1,5 +1,5 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { getApiUrl } from '../config/env';
+import axios, { AxiosInstance, AxiosResponse } from "axios";
+import { getApiUrl } from "../config/env";
 import {
   WorkerNotification,
   SendNotificationRequest,
@@ -14,8 +14,8 @@ import {
   BulkActionResponse,
   PaginatedNotifications,
   PaginatedAcknowledgments,
-  ExamStatus
-} from '../types/adminNotifications';
+  ExamStatus,
+} from "../types/adminNotifications";
 
 class AdminNotificationsService {
   private api: AxiosInstance;
@@ -25,14 +25,14 @@ class AdminNotificationsService {
       baseURL: getApiUrl(),
       timeout: 30000,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     // Interceptor para agregar el token de autenticación
     this.api.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -51,9 +51,9 @@ class AdminNotificationsService {
       (error) => {
         if (error.response?.status === 401) {
           // Token expirado o inválido
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          window.location.href = "/login";
         }
         return Promise.reject(error);
       }
@@ -63,9 +63,11 @@ class AdminNotificationsService {
   /**
    * Obtiene la lista de trabajadores con el estado de sus notificaciones
    */
-  async getExamNotifications(filters?: NotificationFilters): Promise<PaginatedNotifications> {
+  async getExamNotifications(
+    filters?: NotificationFilters
+  ): Promise<PaginatedNotifications> {
     const params = new URLSearchParams();
-    
+
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -83,31 +85,36 @@ class AdminNotificationsService {
   /**
    * Envía notificaciones manuales a trabajadores específicos
    */
-  async sendNotifications(request: SendNotificationRequest): Promise<SendNotificationResponse> {
-    const response: AxiosResponse<SendNotificationResponse> = await this.api.post(
-      '/admin/notifications/send-notifications',
-      request
-    );
+  async sendNotifications(
+    request: SendNotificationRequest
+  ): Promise<SendNotificationResponse> {
+    const response: AxiosResponse<SendNotificationResponse> =
+      await this.api.post("/admin/notifications/send-notifications", request);
     return response.data;
   }
 
   /**
    * Suprime notificaciones para trabajadores específicos
    */
-  async suppressNotifications(request: SuppressNotificationRequest): Promise<SuppressNotificationResponse> {
-    const response: AxiosResponse<SuppressNotificationResponse> = await this.api.post(
-      '/admin/notifications/suppress-notifications',
-      request
-    );
+  async suppressNotifications(
+    request: SuppressNotificationRequest
+  ): Promise<SuppressNotificationResponse> {
+    const response: AxiosResponse<SuppressNotificationResponse> =
+      await this.api.post(
+        "/admin/notifications/suppress-notifications",
+        request
+      );
     return response.data;
   }
 
   /**
    * Obtiene la lista de confirmaciones de notificaciones
    */
-  async getAcknowledgments(filters?: AcknowledgmentFilters): Promise<PaginatedAcknowledgments> {
+  async getAcknowledgments(
+    filters?: AcknowledgmentFilters
+  ): Promise<PaginatedAcknowledgments> {
     const params = new URLSearchParams();
-    
+
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -116,9 +123,10 @@ class AdminNotificationsService {
       });
     }
 
-    const response: AxiosResponse<PaginatedAcknowledgments> = await this.api.get(
-      `/admin/notifications/acknowledgments?${params.toString()}`
-    );
+    const response: AxiosResponse<PaginatedAcknowledgments> =
+      await this.api.get(
+        `/admin/notifications/acknowledgments?${params.toString()}`
+      );
     return response.data;
   }
 
@@ -127,7 +135,7 @@ class AdminNotificationsService {
    */
   async getStatistics(): Promise<NotificationStatistics> {
     const response: AxiosResponse<NotificationStatistics> = await this.api.get(
-      '/admin/notifications/statistics'
+      "/admin/notifications/statistics"
     );
     return response.data;
   }
@@ -136,7 +144,9 @@ class AdminNotificationsService {
    * Elimina una confirmación específica
    */
   async deleteAcknowledgment(acknowledgmentId: number): Promise<void> {
-    await this.api.delete(`/admin/notifications/acknowledgments/${acknowledgmentId}`);
+    await this.api.delete(
+      `/admin/notifications/acknowledgments/${acknowledgmentId}`
+    );
   }
 
   /**
@@ -144,7 +154,7 @@ class AdminNotificationsService {
    */
   async bulkAction(request: BulkActionRequest): Promise<BulkActionResponse> {
     const response: AxiosResponse<BulkActionResponse> = await this.api.post(
-      '/admin/notifications/bulk-action',
+      "/admin/notifications/bulk-action",
       request
     );
     return response.data;
@@ -153,14 +163,16 @@ class AdminNotificationsService {
   /**
    * Obtiene trabajadores filtrados para selección
    */
-  async getWorkersForSelection(filters: {
-    exam_status?: string;
-    position?: string;
-    has_email?: boolean;
-    search?: string;
-  } = {}): Promise<WorkerNotification[]> {
+  async getWorkersForSelection(
+    filters: {
+      exam_status?: string;
+      position?: string;
+      has_email?: boolean;
+      search?: string;
+    } = {}
+  ): Promise<WorkerNotification[]> {
     const notificationFilters: NotificationFilters = {
-      limit: 1000
+      limit: 1000,
     };
 
     if (filters.exam_status) {
