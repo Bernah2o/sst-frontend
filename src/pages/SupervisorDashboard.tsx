@@ -33,6 +33,7 @@ import {
   TableRow
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -105,7 +106,7 @@ const SupervisorDashboard: React.FC = () => {
       setDashboardData(response.data);
       
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Error fetching dashboard data:', error);
       setError('Error al cargar los datos del dashboard');
     } finally {
       setLoading(false);

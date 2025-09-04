@@ -43,6 +43,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { formatDate } from '../utils/dateUtils';
+import { logger } from '../utils/logger';
 
 interface TrainerStats {
   my_courses: number;
@@ -161,7 +162,7 @@ const TrainerDashboard: React.FC = () => {
         setLoading(false);
       }, 1000);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Error fetching dashboard data:', error);
       setLoading(false);
     }
   };

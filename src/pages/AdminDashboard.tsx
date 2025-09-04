@@ -35,6 +35,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { logger } from '../utils/logger';
 
 interface DashboardStats {
   total_users: number;
@@ -114,7 +115,7 @@ const AdminDashboard: React.FC = () => {
       generateAlerts(dashboardResponse.data);
       
     } catch (error: any) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Error fetching dashboard data:', error);
       setError('No se pudieron cargar los datos del dashboard. Verifique su conexión e intente nuevamente.');
       
       // Datos de fallback en caso de error
