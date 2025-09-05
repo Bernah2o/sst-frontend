@@ -1,6 +1,5 @@
 import {
   Add as AddIcon,
-  Download as DownloadIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
   Print as PrintIcon,
@@ -212,27 +211,7 @@ const CertificatePage: React.FC = () => {
     }
   };
 
-  const handleDownloadCertificate = async (certificateId: number) => {
-    try {
-      const response = await api.get(
-        `/certificates/${certificateId}/download`,
-        {
-          responseType: "blob",
-        }
-      );
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `certificate_${certificateId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading certificate:", error);
-    }
-  };
 
   const handleRevokeCertificate = async (certificateId: number) => {
     setConfirmDialog({
@@ -522,17 +501,6 @@ const CertificatePage: React.FC = () => {
                                 color="primary"
                               >
                                 <PrintIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Descargar">
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  handleDownloadCertificate(certificate.id)
-                                }
-                                disabled={certificate.status === "revoked"}
-                              >
-                                <DownloadIcon />
                               </IconButton>
                             </Tooltip>
                             {certificate.status === "issued" &&
