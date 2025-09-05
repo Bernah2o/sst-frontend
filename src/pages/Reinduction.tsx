@@ -37,6 +37,7 @@ import {
   Select,
   MenuItem,
   Pagination,
+  TablePagination,
   Tooltip,
   Avatar,
   LinearProgress,
@@ -55,11 +56,12 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { es } from 'date-fns/locale';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { formatDate } from '../utils/dateUtils';
+import { logger } from '../utils/logger';
 
 interface Reinduction {
   id: number;
@@ -112,8 +114,9 @@ const Reinduction: React.FC = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingReinduction, setEditingReinduction] = useState<Reinduction | null>(null);
   const [viewingReinduction, setViewingReinduction] = useState<Reinduction | null>(null);
@@ -148,18 +151,13 @@ const Reinduction: React.FC = () => {
 
 
 
-  useEffect(() => {
-    fetchReinductions();
-    fetchWorkers();
-  }, [page, filters]);
-
-  const fetchReinductions = async () => {
+  const fetchReinductions = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      const skip = (page - 1) * 20;
+      const skip = page * rowsPerPage;
       params.append('skip', skip.toString());
-      params.append('limit', '20');
+      params.append('limit', rowsPerPage.toString());
       
       if (filters.status) params.append('status', filters.status);
       if (filters.worker) params.append('worker_id', filters.worker);
@@ -167,21 +165,58 @@ const Reinduction: React.FC = () => {
 
       const response = await api.get(`/reinduction/records?${params.toString()}`);
       setReinductions(response.data || []);
-      // Calculate total pages based on response length (simplified)
-      setTotalPages(Math.ceil(response.data.length / 20) || 1);
+      
+      // Get total count for pagination
+      if (page === 0 && !filters.status && !filters.worker && !filters.search) {
+        // For first page without filters, try to get a larger sample to estimate total
+        const countParams = new URLSearchParams();
+        countParams.append('skip', '0');
+        countParams.append('limit', '1000');
+        try {
+          const countResponse = await api.get(`/reinduction/records?${countParams.toString()}`);
+          setTotalCount(countResponse.data.length);
+        } catch {
+          // Fallback: estimate based on current page
+          setTotalCount(response.data.length < rowsPerPage ? response.data.length : (page + 1) * rowsPerPage + 1);
+        }
+      } else {
+        // Estimate total count based on current page results
+        setTotalCount(response.data.length < rowsPerPage ? page * rowsPerPage + response.data.length : (page + 1) * rowsPerPage + 1);
+      }
     } catch (error) {
-      console.error('Error fetching reinductions:', error);
+      logger.error('Error fetching reinductions:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, filters.status, filters.worker, filters.search]);
+
+  useEffect(() => {
+    fetchReinductions();
+    fetchWorkers();
+  }, [page, rowsPerPage]);
+
+  // Debounce effect for search filter
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchReinductions();
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [filters, fetchReinductions]);
+
+  // Effect for non-search filters (immediate)
+  useEffect(() => {
+    if (filters.status || filters.worker || filters.year) {
+      fetchReinductions();
+    }
+  }, [filters.status, filters.worker, filters.year, fetchReinductions]);
 
   const fetchWorkers = async () => {
     try {
       const response = await api.get('/workers/');
       setWorkers(response.data);
     } catch (error) {
-      console.error('Error fetching workers:', error);
+      logger.error('Error fetching workers:', error);
     }
   };
 
@@ -207,7 +242,7 @@ const Reinduction: React.FC = () => {
       fetchReinductions();
       handleCloseDialog();
     } catch (error) {
-      console.error('Error saving reinduction:', error);
+      logger.error('Error saving reinduction:', error);
     }
   };
 
@@ -221,7 +256,7 @@ const Reinduction: React.FC = () => {
         await api.post(`/reinduction/records/${enrollConfirmDialog.reinductionId}/enroll`);
         fetchReinductions();
       } catch (error) {
-        console.error('Error enrolling worker:', error);
+        logger.error('Error enrolling worker:', error);
       }
     }
     setEnrollConfirmDialog({ open: false, reinductionId: null });
@@ -241,7 +276,7 @@ const Reinduction: React.FC = () => {
         await api.post(`/reinduction/send-anniversary-notification/${notificationConfirmDialog.workerId}`);
         fetchReinductions();
       } catch (error) {
-        console.error('Error sending notification:', error);
+        logger.error('Error sending notification:', error);
       }
     }
     setNotificationConfirmDialog({ open: false, workerId: null });
@@ -253,7 +288,16 @@ const Reinduction: React.FC = () => {
 
   const handleFilterChange = (field: string, value: any) => {
     setFilters(prev => ({ ...prev, [field]: value }));
-    setPage(1);
+    setPage(0);
+  };
+
+  const handlePageChange = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
   const handleOpenDialog = (reinduction?: Reinduction) => {
@@ -343,13 +387,14 @@ const Reinduction: React.FC = () => {
               <Grid size={{ xs: 12, md: 3 }}>
                 <TextField
                   fullWidth
-                  label="Buscar"
+                  label="Buscar trabajador"
                   value={filters.search}
                   onChange={(e) => handleFilterChange('search', e.target.value)}
-                  placeholder="Nombre, documento..."
+                  placeholder="Nombre completo o número de documento"
                   InputProps={{
                     startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
                   }}
+                  helperText="Busca por nombre completo o documento"
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 2 }}>
@@ -565,16 +610,17 @@ const Reinduction: React.FC = () => {
             </TableContainer>
 
             {/* Paginación */}
-            {totalPages > 1 && (
-              <Box display="flex" justifyContent="center" mt={2}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, newPage) => setPage(newPage)}
-                  color="primary"
-                />
-              </Box>
-            )}
+            <TablePagination
+              component="div"
+              count={totalCount}
+              page={page}
+              onPageChange={handlePageChange}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleRowsPerPageChange}
+              rowsPerPageOptions={[10, 25, 50, 100]}
+              labelRowsPerPage="Filas por página:"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`}
+            />
           </CardContent>
         </Card>
 

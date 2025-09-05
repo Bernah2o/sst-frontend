@@ -831,9 +831,20 @@ const AttendanceManagement: React.FC = () => {
                   label="Hora de Entrada"
                   type="time"
                   value={formData.check_in_time}
-                  onChange={(e) =>
-                    setFormData({ ...formData, check_in_time: e.target.value })
-                  }
+                  onChange={(e) => {
+                    const newFormData = { ...formData, check_in_time: e.target.value };
+                    // Calcular duración automáticamente si ambas horas están presentes
+                    if (e.target.value && formData.check_out_time) {
+                      const checkIn = new Date(`2000-01-01T${e.target.value}:00`);
+                      const checkOut = new Date(`2000-01-01T${formData.check_out_time}:00`);
+                      const durationMs = checkOut.getTime() - checkIn.getTime();
+                      const durationMinutes = Math.max(0, Math.round(durationMs / (1000 * 60)));
+                      newFormData.duration_minutes = durationMinutes;
+                      newFormData.scheduled_duration_minutes = durationMinutes;
+                      newFormData.completion_percentage = 100;
+                    }
+                    setFormData(newFormData);
+                  }}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
@@ -843,9 +854,20 @@ const AttendanceManagement: React.FC = () => {
                   label="Hora de Salida"
                   type="time"
                   value={formData.check_out_time}
-                  onChange={(e) =>
-                    setFormData({ ...formData, check_out_time: e.target.value })
-                  }
+                  onChange={(e) => {
+                    const newFormData = { ...formData, check_out_time: e.target.value };
+                    // Calcular duración automáticamente si ambas horas están presentes
+                    if (formData.check_in_time && e.target.value) {
+                      const checkIn = new Date(`2000-01-01T${formData.check_in_time}:00`);
+                      const checkOut = new Date(`2000-01-01T${e.target.value}:00`);
+                      const durationMs = checkOut.getTime() - checkIn.getTime();
+                      const durationMinutes = Math.max(0, Math.round(durationMs / (1000 * 60)));
+                      newFormData.duration_minutes = durationMinutes;
+                      newFormData.scheduled_duration_minutes = durationMinutes;
+                      newFormData.completion_percentage = 100;
+                    }
+                    setFormData(newFormData);
+                  }}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
@@ -861,6 +883,10 @@ const AttendanceManagement: React.FC = () => {
                       duration_minutes: Number(e.target.value),
                     })
                   }
+                  InputProps={{
+                    readOnly: !!(formData.check_in_time && formData.check_out_time),
+                  }}
+                  helperText={formData.check_in_time && formData.check_out_time ? "Calculado automáticamente" : ""}
                 />
               </Grid>
               <Grid size={6}>
@@ -875,6 +901,10 @@ const AttendanceManagement: React.FC = () => {
                       scheduled_duration_minutes: Number(e.target.value),
                     })
                   }
+                  InputProps={{
+                    readOnly: !!(formData.check_in_time && formData.check_out_time),
+                  }}
+                  helperText={formData.check_in_time && formData.check_out_time ? "Calculado automáticamente" : ""}
                 />
               </Grid>
               <Grid size={6}>
@@ -890,6 +920,10 @@ const AttendanceManagement: React.FC = () => {
                       completion_percentage: Number(e.target.value),
                     })
                   }
+                  InputProps={{
+                    readOnly: !!(formData.check_in_time && formData.check_out_time),
+                  }}
+                  helperText={formData.check_in_time && formData.check_out_time ? "Calculado automáticamente" : ""}
                 />
               </Grid>
 
