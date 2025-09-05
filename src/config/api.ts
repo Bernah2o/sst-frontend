@@ -10,7 +10,7 @@
  * Para producción: configurar variables de entorno directamente en el servidor
  */
 
-import { getApiUrl as getBaseApiUrl } from './env';
+import { getApiUrl as getBaseApiUrl, env } from './env';
 
 // Configuración base de la API
 const getApiBaseUrl = (): string => {
@@ -39,9 +39,9 @@ export const API_CONFIG = {
   },
 
   // Banderas de características - configurables por entorno
-  ENABLE_DEBUG: process.env.REACT_APP_ENABLE_DEBUG === "true",
+  ENABLE_DEBUG: (env.REACT_APP_ENABLE_DEBUG || process.env.REACT_APP_ENABLE_DEBUG) === "true",
   ENABLE_ANALYTICS: process.env.REACT_APP_ENABLE_ANALYTICS === "true",
-  ENABLE_LOGGING: process.env.REACT_APP_ENABLE_LOGGING === "true", // deshabilitado por defecto
+  ENABLE_LOGGING: (env.REACT_APP_ENABLE_LOGGING || process.env.REACT_APP_ENABLE_LOGGING) === "true", // deshabilitado por defecto
 };
 
 // Helper functions

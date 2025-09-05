@@ -43,6 +43,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { formatDate } from '../utils/dateUtils';
+import { logger } from '../utils/logger';
 
 interface EmployeeStats {
   enrolled_courses: number;
@@ -127,7 +128,7 @@ const EmployeeDashboard: React.FC = () => {
           reinductionsCompleted = reinductions.filter((r: any) => r.status === 'COMPLETED').length;
         }
       } catch (reinductionError) {
-        console.warn('Error fetching reinduction history:', reinductionError);
+        logger.warn('Error fetching reinduction history:', reinductionError);
         // No es crítico, continuar sin datos de reinducción
       }
       
@@ -202,7 +203,7 @@ const EmployeeDashboard: React.FC = () => {
       
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Error fetching dashboard data:', error);
       // Fallback a datos básicos en caso de error
       setStats({
         enrolled_courses: 0,

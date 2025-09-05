@@ -45,6 +45,7 @@ export interface ResourcePermissions {
   canViewEnrollmentPage: boolean;
   canViewOccupationalExamPage: boolean;
   canViewProgressPage: boolean;
+  canViewSuppliersPage: boolean;
   
   // CRUD permissions for each resource
   // User permissions
@@ -175,6 +176,7 @@ export const usePermissions = () => {
     canViewEnrollmentPage: false,
     canViewOccupationalExamPage: false,
     canViewProgressPage: false,
+    canViewSuppliersPage: false,
     // User permissions
     canCreateUsers: false,
     canReadUsers: false,
@@ -303,6 +305,7 @@ export const usePermissions = () => {
           canViewEnrollmentPage: false,
           canViewOccupationalExamPage: false,
           canViewProgressPage: false,
+          canViewSuppliersPage: false,
           
           // User permissions
           canCreateUsers: false,
@@ -442,6 +445,7 @@ export const usePermissions = () => {
           canViewEnrollmentPage: false,
           canViewOccupationalExamPage: false,
           canViewProgressPage: false,
+          canViewSuppliersPage: false,
           // User permissions
           canCreateUsers: false,
           canReadUsers: false,
@@ -575,6 +579,7 @@ export const usePermissions = () => {
               { key: 'canViewEnrollmentPage', resource: 'enrollment', action: 'view' },
               { key: 'canViewOccupationalExamPage', resource: 'occupational_exam', action: 'view' },
               { key: 'canViewProgressPage', resource: 'progress', action: 'view' },
+              { key: 'canViewSuppliersPage', resource: 'suppliers', action: 'view' },
               // User permissions
               { key: 'canCreateUsers', resource: 'users', action: 'create' },
               { key: 'canReadUsers', resource: 'users', action: 'read' },
@@ -693,6 +698,76 @@ export const usePermissions = () => {
           } catch (error) {
             console.error('Error checking permissions:', error);
           }
+        } else {
+          // Para usuarios sin rol personalizado, aplicar permisos hardcodeados basados en el rol del sistema
+          if (userRole === UserRole.SUPERVISOR) {
+            // Permisos hardcodeados para supervisores
+            permissions.canViewUsersPage = true;
+            permissions.canViewWorkersPage = true;
+            permissions.canViewCoursesPage = true;
+            permissions.canViewAttendancePage = true;
+            permissions.canViewCertificatesPage = true;
+            permissions.canViewReportsPage = true;
+            permissions.canViewNotificationsPage = true;
+            permissions.canViewReinductionPage = true;
+            permissions.canViewAbsenteeismPage = true;
+            permissions.canViewOccupationalExamPage = true;
+            permissions.canViewSeguimientoPage = true;
+            permissions.canViewDashboardPage = true;
+            permissions.canViewProfilePage = true;
+            permissions.canViewEnrollmentPage = true;
+            permissions.canViewProgressPage = true;
+            
+            // Permisos CRUD básicos para supervisores
+            permissions.canReadUsers = true;
+            permissions.canUpdateUsers = true;
+            permissions.canReadWorkers = true;
+            permissions.canUpdateWorkers = true;
+            permissions.canReadCourses = true;
+            permissions.canReadAttendance = true;
+            permissions.canReadCertificates = true;
+            permissions.canReadReports = true;
+            permissions.canReadNotifications = true;
+            permissions.canReadReinduction = true;
+            permissions.canReadOccupationalExam = true;
+            permissions.canReadSeguimiento = true;
+            permissions.canReadEnrollment = true;
+            permissions.canReadProgress = true;
+          } else if (userRole === UserRole.TRAINER) {
+            // Permisos hardcodeados para entrenadores
+            permissions.canViewCoursesPage = true;
+            permissions.canViewEvaluationsPage = true;
+            permissions.canViewSurveysPage = true;
+            permissions.canViewAttendancePage = true;
+            permissions.canViewCertificatesPage = true;
+            permissions.canViewNotificationsPage = true;
+            permissions.canViewReinductionPage = true;
+            permissions.canViewDashboardPage = true;
+            permissions.canViewProfilePage = true;
+            
+            // Permisos CRUD para entrenadores
+            permissions.canCreateCourses = true;
+            permissions.canReadCourses = true;
+            permissions.canUpdateCourses = true;
+            permissions.canCreateEvaluations = true;
+            permissions.canReadEvaluations = true;
+            permissions.canUpdateEvaluations = true;
+            permissions.canCreateSurveys = true;
+            permissions.canReadSurveys = true;
+            permissions.canUpdateSurveys = true;
+            permissions.canReadAttendance = true;
+            permissions.canReadCertificates = true;
+            permissions.canReadNotifications = true;
+            permissions.canReadReinduction = true;
+          } else if (userRole === UserRole.EMPLOYEE) {
+            // Permisos hardcodeados para empleados
+            permissions.canViewDashboardPage = true;
+            permissions.canViewProfilePage = true;
+            
+            // Permisos básicos de lectura para empleados
+            permissions.canReadCourses = true;
+            permissions.canReadCertificates = true;
+          }
         }
 
         setUserPermissions(permissions);
@@ -722,6 +797,7 @@ export const usePermissions = () => {
           canViewAbsenteeismPage: false,
           canViewEnrollmentPage: false,
           canViewProgressPage: false,
+          canViewSuppliersPage: false,
           // User permissions
           canCreateUsers: false,
           canReadUsers: false,
@@ -940,6 +1016,10 @@ export const usePermissions = () => {
   const canViewProgressPage = useCallback((): boolean => {
     return userPermissions.canViewProgressPage;
   }, [userPermissions.canViewProgressPage]);
+
+  const canViewSuppliersPage = useCallback((): boolean => {
+    return userPermissions.canViewSuppliersPage;
+  }, [userPermissions.canViewSuppliersPage]);
 
   // User permissions
   const canCreateUsers = useCallback((): boolean => {
@@ -1421,7 +1501,8 @@ export const usePermissions = () => {
     canViewCertificatesPage,
     canCreateCertificates,
     canViewReportsPage,
-    canViewNotificationsPage
+    canViewNotificationsPage,
+    canViewSuppliersPage
   ]);
 
   return {
@@ -1452,6 +1533,7 @@ export const usePermissions = () => {
     canViewEnrollmentPage,
     canViewOccupationalExamPage,
     canViewProgressPage,
+    canViewSuppliersPage,
     // User permission functions
     canCreateUsers,
     canReadUsers,

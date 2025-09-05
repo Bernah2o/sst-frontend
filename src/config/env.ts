@@ -6,6 +6,8 @@ interface EnvConfig {
   REACT_APP_API_URL: string;
   REACT_APP_FRONTEND_URL: string;
   REACT_APP_ENVIRONMENT: string;
+  REACT_APP_ENABLE_DEBUG?: string;
+  REACT_APP_ENABLE_LOGGING?: string;
 }
 
 // Get configuration from window._env_ (production) or process.env (development)
@@ -19,7 +21,9 @@ function getEnvConfig(): EnvConfig {
   return {
     REACT_APP_API_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1',
     REACT_APP_FRONTEND_URL: process.env.REACT_APP_FRONTEND_URL || 'http://localhost:3000',
-    REACT_APP_ENVIRONMENT: process.env.REACT_APP_ENVIRONMENT || 'development'
+    REACT_APP_ENVIRONMENT: process.env.REACT_APP_ENVIRONMENT || 'development',
+    REACT_APP_ENABLE_DEBUG: process.env.REACT_APP_ENABLE_DEBUG,
+    REACT_APP_ENABLE_LOGGING: process.env.REACT_APP_ENABLE_LOGGING
   };
 }
 

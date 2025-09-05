@@ -66,6 +66,7 @@ import {
   UserRole
 } from "../types";
 import { formatDate } from '../utils/dateUtils';
+import { logger } from '../utils/logger';
 
 import api from "./../services/api";
 
@@ -240,7 +241,7 @@ const WorkersManagement: React.FC = () => {
       // Mantener compatibilidad con adminConfigs si se necesita
       setAdminConfigs([...eps, ...afp, ...arl]);
     } catch (error) {
-      console.error('Error fetching seguridad social configs:', error);
+      logger.error('Error fetching seguridad social configs:', error);
       // Fallback al endpoint anterior si falla
       try {
         const response = await api.get('/admin/config/');
@@ -255,7 +256,7 @@ const WorkersManagement: React.FC = () => {
         setAfpOptions(afpConfigs);
         setArlOptions(arlConfigs);
       } catch (fallbackError) {
-        console.error('Error fetching admin configs fallback:', fallbackError);
+        logger.error('Error fetching admin configs fallback:', fallbackError);
       }
     }
   };
@@ -266,7 +267,7 @@ const WorkersManagement: React.FC = () => {
       const cargos = response.data || [];
       setCargos(cargos.filter((cargo: Cargo) => cargo.activo));
     } catch (error) {
-      console.error('Error fetching cargos:', error);
+      logger.error('Error fetching cargos:', error);
     }
   };
 
@@ -298,7 +299,7 @@ const WorkersManagement: React.FC = () => {
       setUserDataFound(false);
       // No mostrar error si el usuario no existe, es normal
       if (error.response?.status !== 404) {
-        console.error('Error searching user by document:', error);
+        logger.error('Error searching user by document:', error);
       }
     } finally {
       setLoadingUserData(false);
@@ -308,18 +309,39 @@ const WorkersManagement: React.FC = () => {
   const fetchWorkers = async () => {
     try {
       setLoading(true);
+      
+      // Si estamos en la primera página y no hay búsqueda, obtener más registros para calcular el total
+      const isFirstPageNoSearch = page === 0 && !searchTerm;
+      const limitForTotal = isFirstPageNoSearch ? 1000 : rowsPerPage;
+      
       const response = await api.get("/workers", {
         params: {
           skip: page * rowsPerPage,
-          limit: rowsPerPage,
+          limit: limitForTotal,
           search: searchTerm || undefined,
         },
       });
-      // The API returns the workers array directly, not wrapped in an object
-      setWorkers(response.data || []);
-      setTotalWorkers(response.data?.length || 0);
+      
+      const allWorkers = response.data || [];
+      
+      if (isFirstPageNoSearch) {
+        // Si obtuvimos todos los registros, usar esa información
+        setWorkers(allWorkers.slice(0, rowsPerPage));
+        setTotalWorkers(allWorkers.length);
+      } else {
+        // Para otras páginas o con búsqueda, usar los datos tal como vienen
+        setWorkers(allWorkers);
+        // Estimar el total basado en si hay más registros
+        if (allWorkers.length === rowsPerPage) {
+          // Probablemente hay más registros
+          setTotalWorkers((page + 1) * rowsPerPage + 1);
+        } else {
+          // Esta es probablemente la última página
+          setTotalWorkers(page * rowsPerPage + allWorkers.length);
+        }
+      }
     } catch (error) {
-      console.error("Error fetching workers:", error);
+      logger.error("Error fetching workers:", error);
       showSnackbar("No se pudieron cargar los trabajadores. Verifique su conexión e intente nuevamente.", "error");
       // Reset to empty array on error
       setWorkers([]);
@@ -425,7 +447,7 @@ const WorkersManagement: React.FC = () => {
       }
       setOpenDialog(true);
     } catch (error) {
-      console.error('Error fetching worker details:', error);
+      logger.error('Error fetching worker details:', error);
       showSnackbar('No se pudieron cargar los detalles del trabajador. Verifique su conexión e intente nuevamente.', 'error');
     }
   };
@@ -488,7 +510,7 @@ const WorkersManagement: React.FC = () => {
       handleCloseDialog();
       fetchWorkers();
     } catch (error) {
-      console.error("Error saving worker:", error);
+      logger.error("Error saving worker:", error);
       showSnackbar("Error al guardar trabajador", "error");
     }
   };
@@ -523,7 +545,7 @@ const WorkersManagement: React.FC = () => {
       const response = await api.get(`/workers/${worker.id}`);
       setPreviewWorker(response.data);
     } catch (error) {
-      console.error('Error fetching worker preview:', error);
+      logger.error('Error fetching worker preview:', error);
       showSnackbar('No se pudo cargar la previsualización del trabajador. Verifique su conexión e intente nuevamente.', 'error');
       setPreviewDialog(false);
     } finally {
@@ -579,7 +601,7 @@ const WorkersManagement: React.FC = () => {
       const response = await api.get(`/workers/search-users?search=${searchTerm}`);
       setAvailableUsers(response.data);
     } catch (error: any) {
-      console.error("Error searching users:", error);
+      logger.error("Error searching users:", error);
       setAvailableUsers([]);
     }
   };
@@ -617,7 +639,7 @@ const WorkersManagement: React.FC = () => {
         showSnackbar("Trabajador eliminado exitosamente", "success");
         fetchWorkers();
       } catch (error) {
-        console.error("Error deleting worker:", error);
+        logger.error("Error deleting worker:", error);
         showSnackbar("Error al eliminar trabajador", "error");
       }
     }
