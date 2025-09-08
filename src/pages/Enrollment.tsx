@@ -460,9 +460,10 @@ const EnrollmentsManagement: React.FC = () => {
       setOpenDialog(false);
       fetchEnrollments();
       fetchStats();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving enrollment:", error);
-      showSnackbar("Error al crear inscripción", "error");
+      const errorMessage = error.response?.data?.detail || "Error al crear inscripción";
+      showSnackbar(errorMessage, "error");
     }
   };
 
@@ -504,9 +505,10 @@ const EnrollmentsManagement: React.FC = () => {
       setOpenBulkDialog(false);
       fetchEnrollments();
       fetchStats();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving bulk enrollment:", error);
-      showSnackbar("Error al crear inscripciones masivas", "error");
+      const errorMessage = error.response?.data?.detail || "Error al crear inscripciones masivas";
+      showSnackbar(errorMessage, "error");
     }
   };
 
@@ -523,9 +525,10 @@ const EnrollmentsManagement: React.FC = () => {
       showSnackbar("Inscripción eliminada exitosamente", "success");
       fetchEnrollments();
       fetchStats();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting enrollment:", error);
-      showSnackbar("Error al eliminar inscripción", "error");
+      const errorMessage = error.response?.data?.detail || "Error al eliminar inscripción";
+      showSnackbar(errorMessage, "error");
     } finally {
       setOpenDeleteDialog(false);
       setEnrollmentToDelete(null);
@@ -573,9 +576,10 @@ const EnrollmentsManagement: React.FC = () => {
       setEnrollmentToEdit(null);
       fetchEnrollments();
       fetchStats();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating enrollment:", error);
-      showSnackbar("Error al actualizar inscripción", "error");
+      const errorMessage = error.response?.data?.detail || "Error al actualizar inscripción";
+      showSnackbar(errorMessage, "error");
     }
   };
 
@@ -604,9 +608,10 @@ const EnrollmentsManagement: React.FC = () => {
       );
       fetchEnrollments();
       fetchStats();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating enrollment:", error);
-      showSnackbar("Error al actualizar inscripción", "error");
+      const errorMessage = error.response?.data?.detail || "Error al actualizar inscripción";
+      showSnackbar(errorMessage, "error");
     }
   };
 

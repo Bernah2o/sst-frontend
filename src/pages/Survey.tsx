@@ -227,6 +227,7 @@ const Survey: React.FC = () => {
   const [surveyToRespond, setSurveyToRespond] = useState<Survey | null>(null);
   const [employeeAnswers, setEmployeeAnswers] = useState<{[key: number]: any}>({});
   const [submittingResponse, setSubmittingResponse] = useState(false);
+  const [loadingSurvey, setLoadingSurvey] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -355,7 +356,7 @@ const Survey: React.FC = () => {
 
   const fetchSurveyForResponse = async (surveyId: number) => {
     try {
-      setLoading(true);
+      setLoadingSurvey(true);
       const response = await api.get(`/surveys/${surveyId}`);
       setSurveyToRespond(response.data);
       // Inicializar respuestas vacías para cada pregunta
@@ -373,7 +374,7 @@ const Survey: React.FC = () => {
       console.error('Error fetching survey for response:', error);
       setSurveyToRespond(null);
     } finally {
-      setLoading(false);
+      setLoadingSurvey(false);
     }
   };
 
@@ -441,7 +442,7 @@ const Survey: React.FC = () => {
       console.error('Error submitting survey response:', error);
       setSnackbar({
         open: true,
-        message: 'Error al enviar la encuesta',
+        message: 'Debe completar todo el material del curso antes de responder la encuesta',
         severity: 'error'
       });
     } finally {
@@ -1160,15 +1161,15 @@ const Survey: React.FC = () => {
                               <Button
                                 variant="contained"
                                 size="small"
-                                startIcon={<AssignmentIcon />}
+                                startIcon={loadingSurvey ? <CircularProgress size={16} color="inherit" /> : <AssignmentIcon />}
                                 onClick={() => {
                                   // Navegar al modo de respuesta de encuesta
                                   setIsEmployeeResponseMode(true);
                                   fetchSurveyForResponse(employeeSurvey.survey_id);
                                 }}
-                                disabled={employeeSurvey.status === 'expired'}
+                                disabled={employeeSurvey.status === 'expired' || loadingSurvey}
                               >
-                                Contestar
+                                {loadingSurvey ? 'Cargando...' : 'Contestar'}
                               </Button>
                             )}
                           </Box>

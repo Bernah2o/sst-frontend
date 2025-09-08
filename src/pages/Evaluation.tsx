@@ -241,6 +241,12 @@ const EvaluationsManagement: React.FC = () => {
   // Maximum attempts dialog states
   const [openMaxAttemptsDialog, setOpenMaxAttemptsDialog] = useState(false);
   const [maxAttemptsEvaluation, setMaxAttemptsEvaluation] = useState<Evaluation | null>(null);
+  
+  // Error state
+  const [error, setError] = useState<string | null>(null);
+  
+  // Loading state for evaluation buttons
+  const [loadingEvaluation, setLoadingEvaluation] = useState(false);
 
   useEffect(() => {
     // Detectar parámetro evaluation_id para modo de respuesta de empleado
@@ -342,6 +348,7 @@ const EvaluationsManagement: React.FC = () => {
       showSnackbar('No se pudieron cargar las evaluaciones. Verifique su conexión e intente nuevamente.', 'error');
     } finally {
       setLoading(false);
+      setLoadingEvaluation(false);
     }
   };
 
@@ -402,13 +409,25 @@ const EvaluationsManagement: React.FC = () => {
 
   const fetchEvaluationToRespond = async (evaluationId: number) => {
     try {
+      setLoadingEvaluation(true);
       setLoading(true);
       
-      // First, get the evaluation details
+      // First, check user status for this evaluation
+      const userStatusResponse = await api.get(`/evaluations/${evaluationId}/user-status`);
+      const userStatus = userStatusResponse.data;
+      
+      // If user is blocked, show error message
+      if (userStatus.status === 'BLOCKED') {
+        setError(userStatus.message || 'Has agotado todos los intentos disponibles para esta evaluación.');
+        setLoading(false);
+        return;
+      }
+      
+      // Get the evaluation details
       const evaluationResponse = await api.get(`/evaluations/${evaluationId}`);
       
       // Check if there's already an in-progress evaluation
-      const isInProgress = employeeResponses[evaluationId]?.status === 'in_progress';
+      const isInProgress = employeeResponses[evaluationId]?.status === 'in_progress' || userStatus.status === 'IN_PROGRESS';
       
       if (!isInProgress) {
         // Only start a new evaluation attempt if not already in progress
@@ -596,10 +615,16 @@ const EvaluationsManagement: React.FC = () => {
       const answers = Object.entries(employeeAnswers).map(([questionId, answer]) => {
         const question = evaluationToRespond.questions?.find(q => q.id === parseInt(questionId));
         
-        if (question?.question_type === 'multiple_choice' || question?.question_type === 'true_false') {
+        if (question?.question_type === 'multiple_choice') {
           return {
             question_id: parseInt(questionId),
             selected_option_id: parseInt(answer)
+          };
+        } else if (question?.question_type === 'true_false') {
+          // For true/false questions, send boolean_answer directly
+          return {
+            question_id: parseInt(questionId),
+            boolean_answer: answer === 'true'
           };
         } else if (question?.question_type === 'open_text') {
           return {
@@ -658,17 +683,15 @@ const EvaluationsManagement: React.FC = () => {
           await fetchEmployeeResponses();
         }
         
-        // Also refresh evaluations list if needed
-        if (user.role !== 'employee') {
-          fetchEvaluations();
-        }
+        // Always refresh evaluations list to show updated status
+        await fetchEvaluations();
       } else {
-        showSnackbar('Error al enviar la evaluación', 'error');
+        showSnackbar('Debe completar todo el material del curso y las encuestas antes de realizar la evaluación', 'error');
       }
     } catch (error: any) {
       console.error('Error submitting evaluation:', error);
       showSnackbar(
-        error.response?.data?.detail || 'Error al enviar la evaluación',
+        error.response?.data?.detail || 'Debe completar todo el material del curso y las encuestas antes de realizar la evaluación',
         'error'
       );
     } finally {
@@ -896,7 +919,7 @@ const EvaluationsManagement: React.FC = () => {
     } catch (error: any) {
       console.error('Error submitting evaluation response:', error);
       showSnackbar(
-        error.response?.data?.detail || 'Error al enviar la evaluación',
+        error.response?.data?.detail || 'Debe completar todo el material del curso y las encuestas antes de realizar la evaluación',
         'error'
       );
     } finally {
@@ -1163,10 +1186,11 @@ const EvaluationsManagement: React.FC = () => {
                         onClick={() => fetchEvaluationToRespond(evaluation.id)}
                         size="small"
                         title="Continuar evaluación en progreso"
+                        disabled={loadingEvaluation}
                       >
-                        <Quiz />
+                        {loadingEvaluation ? <CircularProgress size={20} color="inherit" /> : <Quiz />}
                       </IconButton>
-                    ) : user?.role === 'employee' && employeeResponses[evaluation.id]?.responded ? (
+                    ) : user?.role === 'employee' && employeeResponses[evaluation.id]?.responded && employeeResponses[evaluation.id]?.passed ? (
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                         <Chip
                           label="Evaluación Completada"
@@ -1174,10 +1198,27 @@ const EvaluationsManagement: React.FC = () => {
                           size="small"
                         />
                         <Chip
-                          label={employeeResponses[evaluation.id]?.passed ? "Aprobada" : "Reprobada"}
-                          color={employeeResponses[evaluation.id]?.passed ? "success" : "error"}
+                          label="Aprobada"
+                          color="success"
                           size="small"
                         />
+                      </Box>
+                    ) : user?.role === 'employee' && employeeResponses[evaluation.id]?.responded && !employeeResponses[evaluation.id]?.passed ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                        <Chip
+                          label="Reprobada"
+                          color="error"
+                          size="small"
+                        />
+                        <IconButton
+                          color="primary"
+                          onClick={() => fetchEvaluationToRespond(evaluation.id)}
+                          size="small"
+                          title={`Intentar nuevamente (${employeeResponses[evaluation.id]?.attempt_number || 1}/${evaluation.max_attempts})`}
+                          disabled={loadingEvaluation}
+                        >
+                          {loadingEvaluation ? <CircularProgress size={20} color="inherit" /> : <RestartAlt />}
+                        </IconButton>
                       </Box>
                     ) : user?.role === 'employee' && evaluation.status === 'published' ? (
                       <IconButton
@@ -1185,8 +1226,9 @@ const EvaluationsManagement: React.FC = () => {
                         onClick={() => fetchEvaluationToRespond(evaluation.id)}
                         size="small"
                         title="Responder evaluación"
+                        disabled={loadingEvaluation}
                       >
-                        <Quiz />
+                        {loadingEvaluation ? <CircularProgress size={20} color="inherit" /> : <Quiz />}
                       </IconButton>
                     ) : user?.role === 'employee' ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
