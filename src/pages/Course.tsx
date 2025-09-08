@@ -53,6 +53,7 @@ import {
   Switch,
   Grid,
   LinearProgress,
+  CircularProgress,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 
@@ -249,6 +250,7 @@ const CoursesManagement: React.FC = () => {
 
   // Estados para subida de archivos
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [savingMaterial, setSavingMaterial] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFileInfo, setUploadedFileInfo] = useState<{
     name: string;
@@ -392,7 +394,25 @@ const CoursesManagement: React.FC = () => {
           search: searchTerm || undefined,
         },
       });
-      setEnrolledCourses(response.data.items || []);
+      // Mapear los datos de inscripciones para asegurar que los campos del curso estén disponibles
+      const mappedEnrollments = (response.data.items || []).map((enrollment: any) => ({
+        ...enrollment,
+        course: enrollment.course ? {
+          ...enrollment.course,
+          // Asegurar que los campos title y description estén disponibles
+          title: enrollment.course.title || enrollment.course.titulo || "",
+          description: enrollment.course.description || enrollment.course.descripcion || "",
+          // Mapear otros campos importantes
+          duration_hours: enrollment.course.duration_hours || enrollment.course.duracion_horas || 0,
+          course_type: enrollment.course.course_type || "training",
+          status: enrollment.course.status || "draft",
+          // Campos legacy para compatibilidad
+          titulo: enrollment.course.title || enrollment.course.titulo || "",
+          descripcion: enrollment.course.description || enrollment.course.descripcion || "",
+          duracion_horas: enrollment.course.duration_hours || enrollment.course.duracion_horas || 0,
+        } : null
+      }));
+      setEnrolledCourses(mappedEnrollments);
       setTotalCourses(response.data.total || 0);
     } catch (error) {
       showErrorDialog(
@@ -1042,97 +1062,84 @@ const CoursesManagement: React.FC = () => {
   };
 
   const handleSaveMaterial = async () => {
-
+    setSavingMaterial(true);
     
-    // Validación mejorada: intentar recuperar selectedModule y selectedCourse si no están disponibles
-    if (!selectedModule || !selectedCourse) {
+    try {
+      // Validación mejorada: intentar recuperar selectedModule y selectedCourse si no están disponibles
+      if (!selectedModule || !selectedCourse) {
 
       
-      // Si estamos editando un material, intentar recuperar el contexto
-      if (editingMaterial) {
-  
-        
-        // Buscar el módulo que contiene este material
-         const foundModule = courseModules.find((module: CourseModuleResponse) => 
-           module.materials?.some((mat: CourseMaterialResponse) => mat.id === editingMaterial.id)
-         );
-        
-        if (foundModule) {
-          setSelectedModule(foundModule);
+        // Si estamos editando un material, intentar recuperar el contexto
+        if (editingMaterial) {
+          // Buscar el módulo que contiene este material
+          const foundModule = courseModules.find((module: CourseModuleResponse) => 
+            module.materials?.some((mat: CourseMaterialResponse) => mat.id === editingMaterial.id)
+          );
           
-          // Buscar el curso que contiene este módulo
-           if (!selectedCourse) {
-             const foundCourse = courses.find((course: Course) => 
-               course.modules?.some((mod: CourseModuleResponse) => mod.id === foundModule.id)
-             );
-            if (foundCourse) {
-              setSelectedCourse(foundCourse);
-              
-              // Reintentar el guardado después de establecer el contexto
+          if (foundModule) {
+            setSelectedModule(foundModule);
+            
+            // Buscar el curso que contiene este módulo
+            if (!selectedCourse) {
+              const foundCourse = courses.find((course: Course) => 
+                course.modules?.some((mod: CourseModuleResponse) => mod.id === foundModule.id)
+              );
+              if (foundCourse) {
+                setSelectedCourse(foundCourse);
+                
+                // Reintentar el guardado después de establecer el contexto
+                setTimeout(() => handleSaveMaterial(), 100);
+                return;
+              }
+            } else {
+              // Solo faltaba el módulo, reintentar
               setTimeout(() => handleSaveMaterial(), 100);
               return;
             }
-          } else {
-            // Solo faltaba el módulo, reintentar
-            setTimeout(() => handleSaveMaterial(), 100);
+          }
+        }
+        
+        showSnackbar("Error: Debe seleccionar un módulo y curso. Intente abrir los materiales del módulo primero.", "error");
+        setSavingMaterial(false);
+        return;
+      }
+
+      // Si estamos editando un material existente, permitir todas las operaciones
+      if (editingMaterial) {
+        // Validar que el título no esté vacío
+        if (!materialFormData.title.trim()) {
+          showSnackbar("Por favor, ingresa un título para el material", "error");
+          setSavingMaterial(false);
+          return;
+        }
+      } else {
+        // Validar que el título no esté vacío
+        if (!materialFormData.title.trim()) {
+          showSnackbar("Por favor, ingresa un título para el material", "error");
+          setSavingMaterial(false);
+          return;
+        }
+
+        // Validar según el tipo de material
+        if (materialFormData.material_type === MaterialType.LINK) {
+          // Para enlaces, validar que se haya ingresado una URL
+          if (!materialFormData.file_url) {
+            showSnackbar("Por favor, ingresa una URL para el enlace", "error");
+            setSavingMaterial(false);
+            return;
+          }
+        } else {
+          // Para archivos PDF y VIDEO, validar que se haya subido un archivo
+          if (!uploadedFileInfo || !selectedFile) {
+            showSnackbar("Por favor, sube un archivo antes de crear el material", "error");
+            setSavingMaterial(false);
             return;
           }
         }
       }
-      
-      showSnackbar("Error: Debe seleccionar un módulo y curso. Intente abrir los materiales del módulo primero.", "error");
-      return;
-    }
 
-    // Si estamos editando un material existente, permitir todas las operaciones
-    if (editingMaterial) {
-      // Validar que el título no esté vacío
-      if (!materialFormData.title.trim()) {
-        showSnackbar("Por favor, ingresa un título para el material", "error");
-        return;
-      }
-    } else {
-      // Validar que el título no esté vacío
-      if (!materialFormData.title.trim()) {
-        showSnackbar("Por favor, ingresa un título para el material", "error");
-        return;
-      }
-
-      // Validar según el tipo de material
-      if (materialFormData.material_type === MaterialType.LINK) {
-        // Para enlaces, validar que se haya ingresado una URL
-        if (!materialFormData.file_url) {
-          showSnackbar("Por favor, ingresa una URL para el enlace", "error");
-          return;
-        }
-      } else {
-        // Para archivos PDF y VIDEO, validar que se haya subido un archivo
-        if (!uploadedFileInfo || !selectedFile) {
-          showSnackbar("Por favor, sube un archivo antes de crear el material", "error");
-          return;
-        }
-      }
-    }
-
-    try {
-      if (editingMaterial) {
-        // Actualizar material existente
-        const materialData = {
-          title: materialFormData.title,
-          description: materialFormData.description,
-          material_type: materialFormData.material_type,
-          order_index: materialFormData.order_index,
-          is_downloadable: materialFormData.is_downloadable,
-          is_required: materialFormData.is_required,
-          file_url: materialFormData.material_type === MaterialType.LINK ? materialFormData.file_url : undefined,
-        };
-        
-        const updateResponse = await api.put(`/courses/materials/${editingMaterial.id}`, materialData);
-        showSnackbar("Material actualizado exitosamente", "success");
-      } else {
-        // Crear nuevo material
-        if (materialFormData.material_type === MaterialType.LINK) {
-          // Para enlaces, usar la API de materiales
+        if (editingMaterial && editingMaterial.id) {
+          // Actualizar material existente
           const materialData = {
             title: materialFormData.title,
             description: materialFormData.description,
@@ -1140,67 +1147,149 @@ const CoursesManagement: React.FC = () => {
             order_index: materialFormData.order_index,
             is_downloadable: materialFormData.is_downloadable,
             is_required: materialFormData.is_required,
-            module_id: selectedModule.id,
-            file_url: materialFormData.file_url,
+            file_url: materialFormData.material_type === MaterialType.LINK ? materialFormData.file_url : undefined,
           };
           
-          const linkResponse = await api.post(`/courses/modules/${selectedModule.id}/materials`, materialData);
+          const updateResponse = await api.put(`/courses/materials/${editingMaterial.id}`, materialData);
+          showSnackbar("Material actualizado exitosamente", "success");
         } else {
-          // Para archivos PDF y VIDEO, usar la API de subida de archivos
-          if (!selectedFile) {
-            showSnackbar("No hay archivo seleccionado", "error");
-            return;
-          }
-          
-          const formData = new FormData();
-          formData.append("file", selectedFile);
-          
-          const response = await api.post(`/files/course-material/${selectedModule.id}`, formData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          });
-          
-          // Actualizar el título y descripción si es necesario
-          if (materialFormData.title !== selectedFile.name.split('.')[0] || materialFormData.description) {
-            const materialId = response.data.material_id;
-            
-            const updateData = {
+          // Crear nuevo material
+          if (materialFormData.material_type === MaterialType.LINK) {
+            // Para enlaces, usar la API de materiales
+            const materialData = {
               title: materialFormData.title,
               description: materialFormData.description,
+              material_type: materialFormData.material_type,
               order_index: materialFormData.order_index,
               is_downloadable: materialFormData.is_downloadable,
               is_required: materialFormData.is_required,
+              module_id: selectedModule.id,
+              file_url: materialFormData.file_url,
             };
             
-            const updateResponse = await api.put(`/courses/materials/${materialId}`, updateData);
+            const linkResponse = await api.post(`/courses/modules/${selectedModule.id}/materials`, materialData);
+            
+            showSnackbar("Material creado exitosamente", "success");
+            
+            // Recargar materiales después de crear
+            const reloadResponse = await api.get(
+              `/courses/modules/${selectedModule.id}/materials`
+            );
+            setModuleMaterials(reloadResponse.data);
+
+            // Cerrar diálogo y limpiar formulario
+            setOpenMaterialEditDialog(false);
+            setEditingMaterial(null);
+            setMaterialFormData({
+              title: "",
+              description: "",
+              material_type: MaterialType.PDF,
+              file_url: "",
+              order_index: 0,
+              is_downloadable: true,
+              is_required: true,
+            });
+            setUploadedFileInfo(null);
+            setSelectedFile(null);
+            
+            setSavingMaterial(false);
+            return; // Salir aquí para evitar continuar con la lógica de edición
+          } else {
+            // Para archivos PDF y VIDEO, usar la API de subida de archivos
+            if (!selectedFile) {
+              showSnackbar("No hay archivo seleccionado", "error");
+              setSavingMaterial(false);
+              return;
+            }
+            
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+          
+            const response = await api.post(`/files/course-material/${selectedModule.id}`, formData, {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            });
+            
+            // Establecer editingMaterial con el material recién creado
+            const createdMaterial = {
+              id: response.data.id,
+              module_id: selectedModule.id,
+              title: response.data.title || materialFormData.title,
+              description: response.data.description || materialFormData.description,
+              material_type: response.data.material_type,
+              file_url: response.data.file_url,
+              order_index: response.data.order_index || materialFormData.order_index,
+              is_downloadable: response.data.is_downloadable !== undefined ? response.data.is_downloadable : materialFormData.is_downloadable,
+              is_required: response.data.is_required !== undefined ? response.data.is_required : materialFormData.is_required,
+              created_at: response.data.created_at,
+              updated_at: response.data.updated_at
+            };
+            setEditingMaterial(createdMaterial);
+            
+            // Actualizar el título y descripción si es necesario
+            if (materialFormData.title !== selectedFile.name.split('.')[0] || materialFormData.description) {
+              const materialId = response.data.id;
+              
+              const updateData = {
+                title: materialFormData.title,
+                description: materialFormData.description,
+                order_index: materialFormData.order_index,
+                is_downloadable: materialFormData.is_downloadable,
+                is_required: materialFormData.is_required,
+              };
+              
+              const updateResponse = await api.put(`/courses/materials/${materialId}`, updateData);
+            }
           }
+          
+          showSnackbar("Material creado exitosamente", "success");
+          
+          // Recargar materiales después de crear
+          const reloadResponse = await api.get(
+            `/courses/modules/${selectedModule.id}/materials`
+          );
+          setModuleMaterials(reloadResponse.data);
+
+          // Cerrar diálogo y limpiar formulario
+          setOpenMaterialEditDialog(false);
+          setEditingMaterial(null);
+          setMaterialFormData({
+            title: "",
+            description: "",
+            material_type: MaterialType.PDF,
+            file_url: "",
+            order_index: 0,
+            is_downloadable: true,
+            is_required: true,
+          });
+          setUploadedFileInfo(null);
+          setSelectedFile(null);
+          
+          setSavingMaterial(false);
+          return; // Salir aquí para evitar continuar con la lógica de edición
         }
-        
-        showSnackbar("Material creado exitosamente", "success");
-      }
 
-      // Recargar materiales
-      const response = await api.get(
-        `/courses/modules/${selectedModule.id}/materials`
-      );
-      setModuleMaterials(response.data);
+        // Recargar materiales
+        const response = await api.get(
+          `/courses/modules/${selectedModule.id}/materials`
+        );
+        setModuleMaterials(response.data);
 
-
-      // Cerrar diálogo y limpiar formulario
-      setOpenMaterialEditDialog(false);
-      setEditingMaterial(null);
-      setMaterialFormData({
-        title: "",
-        description: "",
-        material_type: MaterialType.PDF,
-        file_url: "",
-        order_index: 0,
-        is_downloadable: true,
-        is_required: true,
-      });
-      setUploadedFileInfo(null);
-      setSelectedFile(null);
+        // Cerrar diálogo y limpiar formulario
+        setOpenMaterialEditDialog(false);
+        setEditingMaterial(null);
+        setMaterialFormData({
+          title: "",
+          description: "",
+          material_type: MaterialType.PDF,
+          file_url: "",
+          order_index: 0,
+          is_downloadable: true,
+          is_required: true,
+        });
+        setUploadedFileInfo(null);
+        setSelectedFile(null);
       
     } catch (error: any) {
       
@@ -1209,6 +1298,8 @@ const CoursesManagement: React.FC = () => {
         "No se pudo guardar el material. Por favor, verifique los datos ingresados e intente nuevamente."
       );
       showSnackbar("Error al guardar material", "error");
+    } finally {
+      setSavingMaterial(false);
     }
   };
 
@@ -2778,10 +2869,15 @@ const CoursesManagement: React.FC = () => {
           >
             Cancelar
           </Button>
-          <Button onClick={() => {
-            handleSaveMaterial();
-          }} variant="contained">
-            {editingMaterial ? "Actualizar" : "Crear"}
+          <Button 
+            onClick={() => {
+              handleSaveMaterial();
+            }} 
+            variant="contained"
+            disabled={savingMaterial}
+            startIcon={savingMaterial ? <CircularProgress size={20} /> : null}
+          >
+            {savingMaterial ? "Guardando..." : (editingMaterial ? "Actualizar" : "Crear")}
           </Button>
         </DialogActions>
       </Dialog>

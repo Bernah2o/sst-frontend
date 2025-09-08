@@ -117,23 +117,74 @@ const CourseDetail: React.FC = () => {
     }
   }, [id]);
 
+  // Forzar actualización del progreso al montar el componente
+  useEffect(() => {
+    if (course && progressInfo) {
+      // Forzar re-evaluación del activeStep para cursos ya completados
+      const timer = setTimeout(() => {
+        if (progressInfo.overall_progress >= 95) {
+          fetchCourseDetail();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [course?.id]);
+
+  // Actualizar progreso cuando el usuario regresa a la página
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && id) {
+        fetchCourseDetail();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [id]);
+
   // Determinar el paso activo en el flujo de progresión
   useEffect(() => {
     if (course && progressInfo) {
-      // Paso 1: Curso en progreso
-      if (progressInfo.overall_progress < 100) {
+      // Paso 1: Curso en progreso (menos del 95%)
+      if (progressInfo.overall_progress < 95) {
         setActiveStep(0);
         return;
       }
       
-      // Paso 2: Curso completado, verificar encuestas
+      // Verificar si el curso está realmente completado
+      if (course.completed) {
+        // Curso completado, mostrar paso final
+        setActiveStep(4);
+        
+        // Verificar si el certificado está disponible
+        const checkCertificate = async () => {
+          try {
+            const certificateResponse = await api.get(`/certificates/course/${id}/check`);
+            if (certificateResponse.data && certificateResponse.data.available) {
+              setHasCertificate(true);
+            }
+          } catch (error) {
+            console.log('No certificate available yet');
+          }
+        };
+        
+        checkCertificate();
+        return;
+      }
+      
+      // Paso 2: Materiales completados pero curso no terminado, verificar encuestas
       setActiveStep(1);
       
-      // Verificar si hay encuestas disponibles
-      const checkSurveys = async () => {
+      // Verificar progreso completo de forma secuencial
+      const checkCompleteProgress = async () => {
         if (!id) return;
         
+        let currentStep = 1; // Materiales completados
+        
         try {
+          // Verificar encuestas
           const surveysResponse = await api.get(`/surveys/?course_id=${id}`);
           const availableSurveys = surveysResponse.data.items || [];
           setHasSurveys(availableSurveys.length > 0);
@@ -144,55 +195,40 @@ const CourseDetail: React.FC = () => {
             const userSurveys = userSurveysResponse.data.items || [];
             
             if (userSurveys.length >= availableSurveys.length) {
-              setActiveStep(2); // Encuestas completadas
+              currentStep = 2; // Encuestas completadas
             }
           } else {
-            setActiveStep(2); // No hay encuestas, pasar a evaluación
+            currentStep = 2; // No hay encuestas, pasar a evaluación
           }
-        } catch (error) {
-          console.error("Error verificando encuestas:", error);
-        }
-      };
-      
-      // Verificar si hay evaluación disponible
-      const checkEvaluation = async () => {
-        if (!id) return;
-        
-        try {
-          const evaluationResponse = await api.get(`/evaluations/?course_id=${id}`);
-          const availableEvaluations = evaluationResponse.data.items || [];
           
-          if (availableEvaluations.length > 0) {
-            setHasEvaluation(true);
-            setEvaluationId(availableEvaluations[0].id);
+          // Verificar evaluación solo si las encuestas están completadas
+          if (currentStep >= 2) {
+            const evaluationResponse = await api.get(`/evaluations/?course_id=${id}`);
+            const availableEvaluations = evaluationResponse.data.items || [];
             
-            // Verificar si el usuario ya completó la evaluación
-            const userEvalResponse = await api.get(`/evaluations/${availableEvaluations[0].id}/results`);
-            if (userEvalResponse.data && userEvalResponse.data.completed) {
-              setActiveStep(3); // Evaluación completada
+            if (availableEvaluations.length > 0) {
+              setHasEvaluation(true);
+              setEvaluationId(availableEvaluations[0].id);
               
-              // Verificar si hay certificado disponible
-              const certificateResponse = await api.get(`/certificates/course/${id}/check`);
-              if (certificateResponse.data && certificateResponse.data.available) {
-                setHasCertificate(true);
-                setActiveStep(4); // Certificado disponible
+              // Verificar si el usuario ya completó la evaluación
+              const userEvalResponse = await api.get(`/evaluations/${availableEvaluations[0].id}/results`);
+              if (userEvalResponse.data && userEvalResponse.data.completed) {
+                currentStep = 3; // Evaluación completada
               }
-            }
-          } else {
-            // No hay evaluación, verificar certificado directamente
-            const certificateResponse = await api.get(`/certificates/course/${id}/check`);
-            if (certificateResponse.data && certificateResponse.data.available) {
-              setHasCertificate(true);
-              setActiveStep(4); // Certificado disponible
+            } else {
+              // No hay evaluación, pasar al siguiente paso
+              currentStep = 3;
             }
           }
+          
+          setActiveStep(currentStep);
+          
         } catch (error) {
-          console.error("Error verificando evaluación:", error);
+          console.error("Error verificando progreso completo:", error);
         }
       };
       
-      checkSurveys();
-      checkEvaluation();
+      checkCompleteProgress();
     }
   }, [course, progressInfo, id]);
 
@@ -210,6 +246,14 @@ const CourseDetail: React.FC = () => {
       // Cargar estado de progreso/encuestas/evaluación
       const progressResp = await api.get(`/progress/course/${id}`);
       setProgressInfo(progressResp.data);
+      
+      // Forzar actualización del activeStep después de cargar los datos
+      setTimeout(() => {
+        if (progressResp.data.overall_progress >= 95) {
+          // Resetear estados para forzar re-evaluación
+          setActiveStep(0);
+        }
+      }, 50);
     } catch (error: any) {
       console.error("Error fetching course detail:", error);
       setError("No se pudo cargar el curso. Verifique su conexión e intente nuevamente.");
@@ -248,6 +292,16 @@ const CourseDetail: React.FC = () => {
     return 0;
   };
 
+  // Helper function to get module progress percentage
+  const getModuleProgress = (moduleId: number): number => {
+    if (!progressInfo || !progressInfo.modules) return 0;
+    
+    const moduleProgress = progressInfo.modules.find(
+      (m: any) => m.module_id === moduleId
+    );
+    return moduleProgress ? moduleProgress.progress_percentage || 0 : 0;
+  };
+
   const handleModuleAccordionChange = (moduleId: number) => {
     setExpandedModule(expandedModule === moduleId ? false : moduleId);
   };
@@ -266,7 +320,7 @@ const CourseDetail: React.FC = () => {
         const response = await api.get(
           `/files/course-material/${material.id}/view`
         );
-        setMaterialContent(response.data.url || response.data.content);
+        setMaterialContent(response.data.file_url);
       }
 
       setOpenMaterialDialog(true);
@@ -293,12 +347,31 @@ const CourseDetail: React.FC = () => {
       setError("ID del curso no válido");
       return;
     }
+    
+    // Validar que el curso esté completado al 100%
+    if (!progressInfo || progressInfo.overall_progress < 100) {
+      setError("Debe completar el curso al 100% antes de poder contestar las encuestas.");
+      return;
+    }
+    
     navigate(`/employee/courses/${id}/surveys`);
   };
 
   const goToEvaluation = async () => {
     if (!id) {
       setError("ID del curso no válido");
+      return;
+    }
+    
+    // Validar que el curso esté completado al 100%
+    if (!progressInfo || progressInfo.overall_progress < 100) {
+      setError("Debe completar el curso al 100% antes de poder realizar la evaluación.");
+      return;
+    }
+    
+    // Validar que las encuestas estén completadas (si existen)
+    if (hasSurveys && !progressInfo.surveys_completed) {
+      setError("Debe completar las encuestas de satisfacción antes de poder realizar la evaluación.");
       return;
     }
     
@@ -471,12 +544,12 @@ const CourseDetail: React.FC = () => {
 
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" gutterBottom>
-                Progreso del curso: {Math.round(course.progress)}%
+                Progreso del curso: {course?.completed ? 100 : Math.round(progressInfo?.overall_progress || 0)}%
               </Typography>
               <LinearProgress
                 variant="determinate"
-                value={course.progress}
-                color={getProgressColor(course.progress)}
+                value={course?.completed ? 100 : (progressInfo?.overall_progress || 0)}
+                color={getProgressColor(course?.completed ? 100 : (progressInfo?.overall_progress || 0))}
                 sx={{ height: 8, borderRadius: 4 }}
               />
             </Box>
@@ -493,8 +566,14 @@ const CourseDetail: React.FC = () => {
                 Progreso del Curso
               </Typography>
               <Stepper activeStep={activeStep} orientation="vertical">
-                <Step>
-                  <StepLabel>
+                <Step completed={activeStep > 0}>
+                  <StepLabel
+                    sx={{
+                      '& .MuiStepLabel-iconContainer .Mui-completed': {
+                        color: '#1976d2', // Azul para pasos completados
+                      },
+                    }}
+                  >
                     <Typography variant="subtitle1">Completar Materiales del Curso</Typography>
                   </StepLabel>
                   <StepContent>
@@ -510,8 +589,14 @@ const CourseDetail: React.FC = () => {
                   </StepContent>
                 </Step>
                 
-                <Step>
-                  <StepLabel>
+                <Step completed={activeStep > 1}>
+                  <StepLabel
+                    sx={{
+                      '& .MuiStepLabel-iconContainer .Mui-completed': {
+                        color: '#1976d2', // Azul para pasos completados
+                      },
+                    }}
+                  >
                     <Typography variant="subtitle1">Encuestas de Satisfacción</Typography>
                   </StepLabel>
                   <StepContent>
@@ -533,8 +618,14 @@ const CourseDetail: React.FC = () => {
                   </StepContent>
                 </Step>
                 
-                <Step>
-                  <StepLabel>
+                <Step completed={activeStep > 2}>
+                  <StepLabel
+                    sx={{
+                      '& .MuiStepLabel-iconContainer .Mui-completed': {
+                        color: '#1976d2', // Azul para pasos completados
+                      },
+                    }}
+                  >
                     <Typography variant="subtitle1">Evaluación Final</Typography>
                   </StepLabel>
                   <StepContent>
@@ -567,8 +658,14 @@ const CourseDetail: React.FC = () => {
                   </StepContent>
                 </Step>
                 
-                <Step>
-                  <StepLabel>
+                <Step completed={activeStep > 3}>
+                  <StepLabel
+                    sx={{
+                      '& .MuiStepLabel-iconContainer .Mui-completed': {
+                        color: '#1976d2', // Azul para pasos completados
+                      },
+                    }}
+                  >
                     <Typography variant="subtitle1">Certificado</Typography>
                   </StepLabel>
                   <StepContent>
@@ -647,12 +744,12 @@ const CourseDetail: React.FC = () => {
                   </Box>
                   <Box sx={{ ml: 2, minWidth: 100 }}>
                     <Typography variant="body2" gutterBottom>
-                      {Math.round(module.progress || 0)}%
+                      {Math.round(getModuleProgress(module.id))}%
                     </Typography>
                     <LinearProgress
                       variant="determinate"
-                      value={module.progress || 0}
-                      color={getProgressColor(module.progress || 0)}
+                      value={getModuleProgress(module.id)}
+                      color={getProgressColor(getModuleProgress(module.id))}
                     />
                   </Box>
                 </Box>
