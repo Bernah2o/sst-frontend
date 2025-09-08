@@ -113,6 +113,7 @@ const Suppliers: React.FC = () => {
     supplier_id: 0,
     first_name: '',
     last_name: '',
+    document_number: '',
     medical_license: '',
     specialty: '',
     phone: '',
@@ -277,6 +278,7 @@ const Suppliers: React.FC = () => {
       supplier_id: 0,
       first_name: '',
       last_name: '',
+      document_number: '',
       medical_license: '',
       specialty: '',
       phone: '',
@@ -307,6 +309,7 @@ const Suppliers: React.FC = () => {
       supplier_id: doctor.supplier_id,
       first_name: doctor.first_name,
       last_name: doctor.last_name,
+      document_number: doctor.document_number || '',
       medical_license: doctor.medical_license || '',
       specialty: doctor.specialty || '',
       phone: doctor.phone || '',
@@ -463,6 +466,7 @@ const Suppliers: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Nombre</TableCell>
+                  <TableCell>Documento</TableCell>
                   <TableCell>Especialidad</TableCell>
                   <TableCell>Licencia</TableCell>
                   <TableCell>Proveedor</TableCell>
@@ -475,6 +479,7 @@ const Suppliers: React.FC = () => {
                 {doctors.map((doctor) => (
                   <TableRow key={doctor.id}>
                     <TableCell>{`${doctor.first_name} ${doctor.last_name}`}</TableCell>
+                    <TableCell>{doctor.document_number || '-'}</TableCell>
                     <TableCell>{doctor.specialty || '-'}</TableCell>
                     <TableCell>{doctor.medical_license || '-'}</TableCell>
                     <TableCell>{doctor.supplier?.name || '-'}</TableCell>
@@ -647,6 +652,15 @@ const Suppliers: React.FC = () => {
                 value={doctorForm.last_name}
                 onChange={(e) => setDoctorForm({ ...doctorForm, last_name: e.target.value })}
                 required
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label="Número de Documento"
+                value={doctorForm.document_number}
+                onChange={(e) => setDoctorForm({ ...doctorForm, document_number: e.target.value })}
+                placeholder="Ej: 12345678"
               />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
