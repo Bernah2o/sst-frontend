@@ -179,8 +179,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {/* Role Chip */}
                 <Chip
-                  label={getRoleLabel(user.rol)}
-                  color={getRoleColor(user.rol) as any}
+                  label={getRoleLabel(user.role || user.rol)}
+                  color={getRoleColor(user.role || user.rol) as any}
                   size="small"
                   variant="outlined"
                 />

@@ -3,6 +3,8 @@ import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
   Print as PrintIcon,
+  Autorenew as RegenerateIcon,
+  Block as RevokeIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -220,11 +222,31 @@ const CertificatePage: React.FC = () => {
       message: '¿Está seguro de que desea revocar este certificado?',
       onConfirm: async () => {
         try {
-          await api.put(`/certificates/${certificateId}/revoke`);
+          await api.put(`/certificates/${certificateId}/revoke`, {
+            reason: "Revocado por administrador"
+          });
           fetchCertificates();
           setConfirmDialog({ ...confirmDialog, open: false });
         } catch (error) {
           console.error("Error revoking certificate:", error);
+          setConfirmDialog({ ...confirmDialog, open: false });
+        }
+      }
+    });
+  };
+
+  const handleRegenerateCertificate = async (certificateId: number) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar regeneración',
+      message: '¿Está seguro de que desea regenerar este certificado? Esto creará un nuevo archivo PDF.',
+      onConfirm: async () => {
+        try {
+          await api.post(`/certificates/${certificateId}/regenerate`);
+          fetchCertificates();
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error) {
+          console.error("Error regenerating certificate:", error);
           setConfirmDialog({ ...confirmDialog, open: false });
         }
       }
@@ -503,18 +525,36 @@ const CertificatePage: React.FC = () => {
                                 <PrintIcon />
                               </IconButton>
                             </Tooltip>
-                            {certificate.status === "issued" &&
-                              user?.role !== "employee" && (
-                                <Button
-                                  size="small"
-                                  color="error"
-                                  onClick={() =>
-                                    handleRevokeCertificate(certificate.id)
-                                  }
-                                >
-                                  Revocar
-                                </Button>
-                              )}
+                            {user?.role !== "employee" && (
+                              <>
+                                {(certificate.status === "issued" || certificate.status === "revoked") && (
+                                  <Tooltip title="Regenerar Certificado">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
+                                        handleRegenerateCertificate(certificate.id)
+                                      }
+                                      color="secondary"
+                                    >
+                                      <RegenerateIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
+                                {certificate.status === "issued" && (
+                                  <Tooltip title="Revocar Certificado">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
+                                        handleRevokeCertificate(certificate.id)
+                                      }
+                                      color="error"
+                                    >
+                                      <RevokeIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
+                              </>
+                            )}
                           </Box>
                         </TableCell>
                       </TableRow>

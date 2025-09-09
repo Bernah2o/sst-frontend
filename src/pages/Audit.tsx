@@ -3,6 +3,7 @@ import {
   Refresh as RefreshIcon,
   FilterList as FilterIcon,
   Info as InfoIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -26,6 +27,12 @@ import {
   Pagination,
   IconButton,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Divider,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -40,14 +47,22 @@ interface AuditLog {
   id: number;
   user_id: number;
   user_name: string;
+  user_email: string;
   action: string;
-  table_name: string;
-  record_id: number;
-  old_values?: any;
-  new_values?: any;
+  resource_type: string;
+  resource_id: number;
+  resource_name: string;
+  old_values?: string;
+  new_values?: string;
   ip_address: string;
   user_agent: string;
-  timestamp: string;
+  session_id?: string;
+  request_id?: string;
+  details?: string;
+  success: string;
+  error_message?: string;
+  duration_ms?: number;
+  created_at: string;
 }
 
 const Audit: React.FC = () => {
@@ -56,21 +71,35 @@ const Audit: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [availableActions, setAvailableActions] = useState<string[]>([]);
+  const [availableResourceTypes, setAvailableResourceTypes] = useState<string[]>([]);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [filters, setFilters] = useState({
     user_id: "",
     action: "",
-    table_name: "",
+    resource_type: "",
     start_date: null as Date | null,
     end_date: null as Date | null,
     search: "",
   });
 
   const actionTypes = [
-    { value: "CREATE", label: "Crear", color: "success" },
-    { value: "UPDATE", label: "Actualizar", color: "warning" },
-    { value: "DELETE", label: "Eliminar", color: "error" },
-    { value: "LOGIN", label: "Inicio de Sesión", color: "info" },
-    { value: "LOGOUT", label: "Cierre de Sesión", color: "default" },
+    { value: "create", label: "Crear", color: "success" },
+    { value: "read", label: "Leer", color: "info" },
+    { value: "update", label: "Actualizar", color: "warning" },
+    { value: "delete", label: "Eliminar", color: "error" },
+    { value: "login", label: "Inicio de Sesión", color: "info" },
+    { value: "logout", label: "Cierre de Sesión", color: "default" },
+    { value: "export", label: "Exportar", color: "primary" },
+    { value: "import", label: "Importar", color: "primary" },
+    { value: "download", label: "Descargar", color: "secondary" },
+    { value: "upload", label: "Subir", color: "secondary" },
+    { value: "approve", label: "Aprobar", color: "success" },
+    { value: "reject", label: "Rechazar", color: "error" },
+    { value: "submit", label: "Enviar", color: "info" },
+    { value: "complete", label: "Completar", color: "success" },
+    { value: "cancel", label: "Cancelar", color: "warning" },
   ];
 
   const fetchAuditLogs = React.useCallback(async () => {
@@ -82,11 +111,11 @@ const Audit: React.FC = () => {
 
       if (filters.user_id) params.append("user_id", filters.user_id);
       if (filters.action) params.append("action", filters.action);
-      if (filters.table_name) params.append("table_name", filters.table_name);
+      if (filters.resource_type) params.append("resource_type", filters.resource_type);
       if (filters.start_date)
-        params.append("start_date", filters.start_date.toISOString());
+        params.append("start_date", filters.start_date.toISOString().split('T')[0]);
       if (filters.end_date)
-        params.append("end_date", filters.end_date.toISOString());
+        params.append("end_date", filters.end_date.toISOString().split('T')[0]);
       if (filters.search) params.append("search", filters.search);
 
       const response = await api.get(`/audit/?${params.toString()}`);
@@ -104,7 +133,21 @@ const Audit: React.FC = () => {
 
   useEffect(() => {
     fetchAuditLogs();
+    fetchAvailableFilters();
   }, [page, filters, fetchAuditLogs]);
+
+  const fetchAvailableFilters = async () => {
+    try {
+      const [actionsResponse, resourceTypesResponse] = await Promise.all([
+        api.get('/audit/actions/list'),
+        api.get('/audit/resources/list')
+      ]);
+      setAvailableActions(actionsResponse.data.actions || []);
+      setAvailableResourceTypes(resourceTypesResponse.data.resource_types || []);
+    } catch (error) {
+      console.error('Error fetching filter options:', error);
+    }
+  };
 
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
@@ -115,7 +158,7 @@ const Audit: React.FC = () => {
     setFilters({
       user_id: "",
       action: "",
-      table_name: "",
+      resource_type: "",
       start_date: null,
       end_date: null,
       search: "",
@@ -127,11 +170,30 @@ const Audit: React.FC = () => {
     const actionType = actionTypes.find((type) => type.value === action);
     return (
       <Chip
-        label={actionType?.label || action}
+        label={actionType?.label || action || 'Sin acción'}
         color={(actionType?.color as any) || "default"}
         size="small"
       />
     );
+  };
+
+  const handleShowDetails = (log: AuditLog) => {
+    setSelectedLog(log);
+    setDetailsModalOpen(true);
+  };
+
+  const handleCloseDetails = () => {
+    setDetailsModalOpen(false);
+    setSelectedLog(null);
+  };
+
+  const parseJsonSafely = (jsonString: string | undefined) => {
+    if (!jsonString) return null;
+    try {
+      return JSON.parse(jsonString);
+    } catch {
+      return jsonString;
+    }
   };
 
   return (
@@ -175,24 +237,34 @@ const Audit: React.FC = () => {
                     }
                   >
                     <MenuItem value="">Todas</MenuItem>
-                    {actionTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
-                      </MenuItem>
-                    ))}
+                    {availableActions.map((action) => {
+                      const actionType = actionTypes.find(type => type.value === action);
+                      return (
+                        <MenuItem key={action} value={action}>
+                          {actionType?.label || action}
+                        </MenuItem>
+                      );
+                    })}
                   </Select>
                 </FormControl>
               </Grid>
               <Grid size={{ xs: 12, md: 2 }}>
-                <TextField
-                  fullWidth
-                  label="Tabla"
-                  value={filters.table_name}
-                  onChange={(e) =>
-                    handleFilterChange("table_name", e.target.value)
-                  }
-                  placeholder="Nombre de tabla"
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Tipo de Recurso</InputLabel>
+                  <Select
+                    value={filters.resource_type}
+                    onChange={(e) =>
+                      handleFilterChange("resource_type", e.target.value)
+                    }
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    {availableResourceTypes.map((resourceType) => (
+                      <MenuItem key={resourceType} value={resourceType}>
+                        {resourceType}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid size={{ xs: 12, md: 2 }}>
                 <DatePicker
@@ -238,8 +310,9 @@ const Audit: React.FC = () => {
                     <TableCell>Fecha/Hora</TableCell>
                     <TableCell>Usuario</TableCell>
                     <TableCell>Acción</TableCell>
-                    <TableCell>Tabla</TableCell>
-                    <TableCell>Registro ID</TableCell>
+                    <TableCell>Recurso</TableCell>
+                    <TableCell>Nombre</TableCell>
+                    <TableCell>Estado</TableCell>
                     <TableCell>IP</TableCell>
                     <TableCell>Detalles</TableCell>
                   </TableRow>
@@ -262,15 +335,15 @@ const Audit: React.FC = () => {
                       <TableRow key={log.id}>
                         <TableCell>
                           <Typography variant="body2">
-                            {formatDateTime(log.timestamp)}
+                            {formatDateTime(log.created_at)}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {log.user_name}
+                            {log.user_name || 'Sistema'}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            ID: {log.user_id}
+                            {log.user_email || `ID: ${log.user_id}`}
                           </Typography>
                         </TableCell>
                         <TableCell>{getActionChip(log.action)}</TableCell>
@@ -279,13 +352,28 @@ const Audit: React.FC = () => {
                             variant="body2"
                             sx={{ fontFamily: "monospace" }}
                           >
-                            {log.table_name}
+                            {log.resource_type}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            ID: {log.resource_id}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {log.record_id}
+                            {log.resource_name || '-'}
                           </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={log.success === 'true' ? 'Éxito' : log.success === 'false' ? 'Error' : 'Parcial'}
+                            color={log.success === 'true' ? 'success' : log.success === 'false' ? 'error' : 'warning'}
+                            size="small"
+                          />
+                          {log.duration_ms && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {log.duration_ms}ms
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Typography
@@ -299,14 +387,7 @@ const Audit: React.FC = () => {
                           <Tooltip title="Ver detalles">
                             <IconButton
                               size="small"
-                              onClick={() => {
-                                const details = {
-                                  user_agent: log.user_agent,
-                                  old_values: log.old_values,
-                                  new_values: log.new_values,
-                                };
-                                alert(JSON.stringify(details, null, 2));
-                              }}
+                              onClick={() => handleShowDetails(log)}
                             >
                               <InfoIcon />
                             </IconButton>
@@ -332,6 +413,245 @@ const Audit: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal de Detalles */}
+        <Dialog
+          open={detailsModalOpen}
+          onClose={handleCloseDetails}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6">
+                Detalles de Auditoría - ID: {selectedLog?.id}
+              </Typography>
+              <IconButton onClick={handleCloseDetails}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            {selectedLog && (
+              <Box>
+                {/* Información General */}
+                <Typography variant="h6" gutterBottom>
+                  Información General
+                </Typography>
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Usuario:
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedLog.user_name || 'Sistema'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {selectedLog.user_email || `ID: ${selectedLog.user_id}`}
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Fecha y Hora:
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatDateTime(selectedLog.created_at)}
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Acción:
+                    </Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      {getActionChip(selectedLog.action)}
+                    </Box>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Estado:
+                    </Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={selectedLog.success === 'true' ? 'Éxito' : selectedLog.success === 'false' ? 'Error' : 'Parcial'}
+                        color={selectedLog.success === 'true' ? 'success' : selectedLog.success === 'false' ? 'error' : 'warning'}
+                        size="small"
+                      />
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Información del Recurso */}
+                <Typography variant="h6" gutterBottom>
+                  Recurso Afectado
+                </Typography>
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Tipo:
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>
+                      {selectedLog.resource_type}
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      ID:
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedLog.resource_id}
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Nombre:
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedLog.resource_name || '-'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Información Técnica */}
+                <Typography variant="h6" gutterBottom>
+                  Información Técnica
+                </Typography>
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      IP:
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>
+                      {selectedLog.ip_address}
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Duración:
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedLog.duration_ms ? `${selectedLog.duration_ms}ms` : '-'}
+                    </Typography>
+                  </Grid>
+                  {selectedLog.session_id && (
+                    <Grid size={{ xs: 6 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Session ID:
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                        {selectedLog.session_id}
+                      </Typography>
+                    </Grid>
+                  )}
+                  {selectedLog.request_id && (
+                    <Grid size={{ xs: 6 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Request ID:
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                        {selectedLog.request_id}
+                      </Typography>
+                    </Grid>
+                  )}
+                  <Grid size={{ xs: 12 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      User Agent:
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontSize: '0.875rem', wordBreak: 'break-all' }}>
+                      {selectedLog.user_agent}
+                    </Typography>
+                  </Grid>
+                </Grid>
+
+                {/* Detalles Adicionales */}
+                {selectedLog.details && (
+                  <>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      Detalles
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      {selectedLog.details}
+                    </Typography>
+                  </>
+                )}
+
+                {/* Error Message */}
+                {selectedLog.error_message && (
+                  <>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h6" gutterBottom color="error">
+                      Mensaje de Error
+                    </Typography>
+                    <Typography variant="body1" color="error" sx={{ mb: 2 }}>
+                      {selectedLog.error_message}
+                    </Typography>
+                  </>
+                )}
+
+                {/* Valores Anteriores y Nuevos */}
+                {(selectedLog.old_values || selectedLog.new_values) && (
+                  <>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      Cambios de Datos
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {selectedLog.old_values && (
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Valores Anteriores:
+                          </Typography>
+                          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                            <Typography
+                              variant="body2"
+                              component="pre"
+                              sx={{
+                                fontFamily: 'monospace',
+                                fontSize: '0.75rem',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word'
+                              }}
+                            >
+                              {JSON.stringify(parseJsonSafely(selectedLog.old_values), null, 2)}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      )}
+                      {selectedLog.new_values && (
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Valores Nuevos:
+                          </Typography>
+                          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                            <Typography
+                              variant="body2"
+                              component="pre"
+                              sx={{
+                                fontFamily: 'monospace',
+                                fontSize: '0.75rem',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word'
+                              }}
+                            >
+                              {JSON.stringify(parseJsonSafely(selectedLog.new_values), null, 2)}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDetails}>Cerrar</Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </LocalizationProvider>
   );
