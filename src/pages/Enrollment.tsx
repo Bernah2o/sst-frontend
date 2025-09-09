@@ -1196,11 +1196,26 @@ const EnrollmentsManagement: React.FC = () => {
             ¿Estás seguro de que deseas eliminar esta inscripción? Esta acción no se puede deshacer.
             {enrollmentToDelete && (
               <Box mt={2}>
-                <strong>Usuario:</strong> {enrollmentToDelete.user?.full_name || enrollmentToDelete.usuario?.nombre || 'N/A'}<br />
-                <strong>Curso:</strong> {enrollmentToDelete.course?.title || enrollmentToDelete.curso?.titulo || 'N/A'}
+                <strong>Usuario:</strong> {enrollmentToDelete.worker?.full_name || enrollmentToDelete.user?.full_name || enrollmentToDelete.usuario?.nombre || 'N/A'}<br />
+                <strong>Curso:</strong> {enrollmentToDelete.course?.title || enrollmentToDelete.curso?.titulo || 'N/A'}<br />
+                <strong>Estado:</strong> {getStatusLabel(enrollmentToDelete.status)}<br />
+                <strong>Progreso:</strong> {enrollmentToDelete.progress || 0}%
               </Box>
             )}
           </Typography>
+          
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+              Al eliminar esta inscripción también se eliminarán:
+            </Typography>
+            <Typography variant="body2" component="ul" sx={{ pl: 2, mb: 0 }}>
+              <li>Todos los registros de asistencia asociados</li>
+              <li>El progreso del curso del usuario</li>
+              <li>Las respuestas de evaluaciones realizadas</li>
+              <li>Las respuestas de encuestas completadas</li>
+              <li>Los certificados generados (si los hay)</li>
+            </Typography>
+          </Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={cancelDeleteEnrollment} color="primary">
