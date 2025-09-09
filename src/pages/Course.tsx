@@ -2912,28 +2912,78 @@ const CoursesManagement: React.FC = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 p: 2,
+                backgroundColor: "#000",
               }}
             >
               <video
                 controls
+                controlsList="nodownload"
+                preload="metadata"
+                poster={`${getPreviewUrl(previewContent.content)}.jpg`}
                 width="100%"
                 height="auto"
-                style={{ maxHeight: "100%", maxWidth: "100%" }}
+                style={{ 
+                  maxHeight: "100%", 
+                  maxWidth: "100%",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
+                }}
                 title={previewContent.title}
+                onError={(e) => {
+                  console.error('Error loading video:', e);
+                  // Fallback: remove poster if it fails
+                  e.currentTarget.removeAttribute('poster');
+                }}
+                onLoadStart={() => {
+                  console.log('Video loading started');
+                }}
+                onCanPlay={() => {
+                  console.log('Video can start playing');
+                }}
               >
                 <source
-                  src={previewContent.content.startsWith('/uploads/') ? previewContent.content : `/uploads/${previewContent.content}`}
+                  src={getPreviewUrl(previewContent.content)}
                   type="video/mp4"
                 />
                 <source
-                  src={previewContent.content.startsWith('/uploads/') ? previewContent.content : `/uploads/${previewContent.content}`}
+                  src={getPreviewUrl(previewContent.content)}
                   type="video/webm"
                 />
                 <source
-                  src={previewContent.content.startsWith('/uploads/') ? previewContent.content : `/uploads/${previewContent.content}`}
+                  src={getPreviewUrl(previewContent.content)}
                   type="video/ogg"
                 />
-                Tu navegador no soporta el elemento de video.
+                <track
+                  kind="captions"
+                  srcLang="es"
+                  label="Español"
+                  default
+                />
+                <Box
+                  sx={{
+                    p: 3,
+                    textAlign: "center",
+                    color: "white",
+                    backgroundColor: "rgba(0,0,0,0.8)",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <Typography variant="h6" gutterBottom>
+                    Tu navegador no soporta la reproducción de video
+                  </Typography>
+                  <Typography variant="body2">
+                    Por favor, actualiza tu navegador o descarga el archivo para verlo.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    sx={{ mt: 2 }}
+                    href={getPreviewUrl(previewContent.content)}
+                    download
+                  >
+                    Descargar Video
+                  </Button>
+                </Box>
               </video>
             </Box>
           ) : previewContent.type === "youtube" ? (

@@ -371,7 +371,7 @@ const CourseDetail: React.FC = () => {
     
     // Validar que las encuestas estén completadas (si existen)
     if (hasSurveys && !progressInfo.surveys_completed) {
-      setError("Debe completar las encuestas de satisfacción antes de poder realizar la evaluación.");
+      setError("Debe completar las encuestas antes de poder realizar la evaluación.");
       return;
     }
     
@@ -597,12 +597,12 @@ const CourseDetail: React.FC = () => {
                       },
                     }}
                   >
-                    <Typography variant="subtitle1">Encuestas de Satisfacción</Typography>
+                    <Typography variant="subtitle1">Encuestas</Typography>
                   </StepLabel>
                   <StepContent>
                     <Typography>
                       {hasSurveys 
-                        ? "Completa las encuestas de satisfacción para evaluar el curso." 
+                        ? "Completa las encuestas para evaluar el curso." 
                         : "No hay encuestas disponibles para este curso."}
                     </Typography>
                     {hasSurveys && (
@@ -873,14 +873,78 @@ const CourseDetail: React.FC = () => {
               )}
 
               {selectedMaterial.material_type === "video" && (
-                <video
-                  controls
-                  width="100%"
-                  height="400px"
-                  src={materialContent}
+                <Box
+                  sx={{
+                    width: "100%",
+                    backgroundColor: "#000",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                  }}
                 >
-                  Tu navegador no soporta el elemento de video.
-                </video>
+                  <video
+                    controls
+                    controlsList="nodownload"
+                    preload="metadata"
+                    poster={`${materialContent}.jpg`}
+                    width="100%"
+                    height="400px"
+                    style={{
+                      display: "block",
+                      backgroundColor: "#000",
+                    }}
+                    onError={(e) => {
+                      console.error('Error loading video:', e);
+                      // Fallback: remove poster if it fails
+                      e.currentTarget.removeAttribute('poster');
+                    }}
+                    onLoadStart={() => {
+                      console.log('Video loading started');
+                    }}
+                    onCanPlay={() => {
+                      console.log('Video can start playing');
+                    }}
+                  >
+                    <source src={materialContent} type="video/mp4" />
+                    <source src={materialContent} type="video/webm" />
+                    <source src={materialContent} type="video/ogg" />
+                    <track
+                      kind="captions"
+                      srcLang="es"
+                      label="Español"
+                      default
+                    />
+                    <Box
+                      sx={{
+                        p: 3,
+                        textAlign: "center",
+                        color: "white",
+                        backgroundColor: "rgba(0,0,0,0.8)",
+                        height: "400px",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Typography variant="h6" gutterBottom>
+                        Tu navegador no soporta la reproducción de video
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 2 }}>
+                        Por favor, actualiza tu navegador o descarga el archivo para verlo.
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        href={materialContent}
+                        download
+                        startIcon={<VideoLibrary />}
+                      >
+                        Descargar Video
+                      </Button>
+                    </Box>
+                  </video>
+                </Box>
               )}
 
               {selectedMaterial.material_type === "link" &&
