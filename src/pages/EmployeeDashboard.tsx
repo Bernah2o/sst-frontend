@@ -122,10 +122,13 @@ const EmployeeDashboard: React.FC = () => {
       // Obtener historial de reinducciones del trabajador
       let reinductionsCompleted = 0;
       try {
-        if (user?.id) {
-          const reinductionsResponse = await api.get(`/workers/${user.id}/reinduction-history`);
+        // Usar worker_id en lugar de user.id
+        if (user?.worker_id) {
+          const reinductionsResponse = await api.get(`/workers/${user.worker_id}/reinduction-history`);
           const reinductions = reinductionsResponse.data || [];
           reinductionsCompleted = reinductions.filter((r: any) => r.status === 'COMPLETED').length;
+        } else {
+          logger.warn('Usuario no tiene worker_id asociado');
         }
       } catch (reinductionError) {
         logger.warn('Error fetching reinduction history:', reinductionError);
