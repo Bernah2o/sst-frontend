@@ -311,6 +311,7 @@ export interface User extends UserResponse {
   email_verification_token?: string;
   email_verification_expires?: string;
   full_name: string;
+  worker_id?: number; // ID del trabajador asociado
   // Campos legacy para compatibilidad
   nombre: string;
   apellido: string;

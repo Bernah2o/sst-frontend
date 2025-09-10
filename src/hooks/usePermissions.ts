@@ -547,16 +547,20 @@ export const usePermissions = () => {
           canViewMaterialsPage: false
         };
 
-        // Si es admin (rol básico), tiene todos los permisos independientemente de si tiene rol personalizado
-        const userRole = user.role || user.rol; // Compatibilidad con ambos nombres de campo
-        if (userRole === UserRole.ADMIN) {
-          Object.keys(permissions).forEach(key => {
-            (permissions as any)[key] = true;
-          });
-        } else if (user.custom_role_id) {
-          // Para usuarios con rol personalizado, verificar permisos específicos
-          try {
-            const permissionChecks = [
+        // Usar el nuevo endpoint optimizado para obtener todos los permisos del usuario
+        try {
+          const response = await api.get('/auth/me/permissions');
+          const userPermissionsData = response.data;
+          
+          // Si es admin (rol básico), tiene todos los permisos
+          const userRole = user.role || user.rol; // Compatibilidad con ambos nombres de campo
+          if (userRole === UserRole.ADMIN) {
+            Object.keys(permissions).forEach(key => {
+              (permissions as any)[key] = true;
+            });
+          } else {
+            // Mapear los permisos del backend a las propiedades del frontend
+            const permissionMapping = [
               // Page access permissions
               { key: 'canViewUsersPage', resource: 'users', action: 'view' },
               { key: 'canViewCoursesPage', resource: 'courses', action: 'view' },
@@ -679,27 +683,53 @@ export const usePermissions = () => {
               { key: 'canDeleteMaterials', resource: 'materials', action: 'delete' }
             ];
 
-            // Usar el endpoint batch para optimizar las llamadas a la API
-            const permissionRequests = permissionChecks.map(check => ({
-              resource_type: check.resource,
-              action: check.action
-            }));
-
-            const response = await api.post('/permissions/check-batch', permissionRequests);
-            const permissionResults = response.data.permissions;
-
-            // Mapear los resultados a los permisos correspondientes
-            permissionChecks.forEach((check, index) => {
-              const result = permissionResults.find(
-                (p: any) => p.resource_type === check.resource && p.action === check.action
+            // Mapear los permisos del backend a las propiedades del frontend
+            permissionMapping.forEach(mapping => {
+              const hasPermission = userPermissionsData.some((perm: any) => 
+                perm.resource_type === mapping.resource && perm.action === mapping.action
               );
-              (permissions as any)[check.key] = result ? result.has_permission : false;
+              (permissions as any)[mapping.key] = hasPermission;
             });
-          } catch (error) {
-            console.error('Error checking permissions:', error);
           }
-        } else {
-          // Para usuarios sin rol personalizado, aplicar permisos hardcodeados basados en el rol del sistema
+        } catch (error) {
+          console.error('Error loading permissions from /auth/me/permissions:', error);
+          
+          // Fallback: usar el método anterior si el nuevo endpoint falla
+          const userRole = user.role || user.rol;
+          if (userRole === UserRole.ADMIN) {
+            Object.keys(permissions).forEach(key => {
+              (permissions as any)[key] = true;
+            });
+          } else if (user.custom_role_id) {
+            // Fallback al método batch anterior
+            try {
+              const permissionChecks = [
+                { key: 'canViewRolesPage', resource: 'roles', action: 'view' },
+                { key: 'canCreateRoles', resource: 'roles', action: 'create' },
+                { key: 'canUpdateRoles', resource: 'roles', action: 'update' },
+                { key: 'canDeleteRoles', resource: 'roles', action: 'delete' }
+              ];
+              
+              const permissionRequests = permissionChecks.map(check => ({
+                resource_type: check.resource,
+                action: check.action
+              }));
+
+              const response = await api.post('/permissions/check-batch', permissionRequests);
+              const permissionResults = response.data.permissions;
+
+              permissionChecks.forEach((check) => {
+                const result = permissionResults.find(
+                  (p: any) => p.resource_type === check.resource && p.action === check.action
+                );
+                (permissions as any)[check.key] = result ? result.has_permission : false;
+              });
+            } catch (fallbackError) {
+              console.error('Error with fallback permission check:', fallbackError);
+            }
+          } else {
+            // Para usuarios sin rol personalizado, aplicar permisos hardcodeados basados en el rol del sistema
+            const userRole = user.role || user.rol;
           if (userRole === UserRole.SUPERVISOR) {
             // Permisos hardcodeados para supervisores
             permissions.canViewUsersPage = true;
@@ -767,6 +797,7 @@ export const usePermissions = () => {
             // Permisos básicos de lectura para empleados
             permissions.canReadCourses = true;
             permissions.canReadCertificates = true;
+          }
           }
         }
 
