@@ -33,6 +33,7 @@ import {
   MenuItem,
   Pagination,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -112,6 +113,7 @@ const CertificatePage: React.FC = () => {
     message: '',
     onConfirm: () => {}
   });
+  const [regeneratingCertificate, setRegeneratingCertificate] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     user_id: "",
     course_id: "",
@@ -242,12 +244,14 @@ const CertificatePage: React.FC = () => {
       message: '¿Está seguro de que desea regenerar este certificado? Esto creará un nuevo archivo PDF.',
       onConfirm: async () => {
         try {
+          setRegeneratingCertificate(certificateId);
+          setConfirmDialog({ ...confirmDialog, open: false });
           await api.post(`/certificates/${certificateId}/regenerate`);
           fetchCertificates();
-          setConfirmDialog({ ...confirmDialog, open: false });
         } catch (error) {
           console.error("Error regenerating certificate:", error);
-          setConfirmDialog({ ...confirmDialog, open: false });
+        } finally {
+          setRegeneratingCertificate(null);
         }
       }
     });
@@ -535,8 +539,13 @@ const CertificatePage: React.FC = () => {
                                         handleRegenerateCertificate(certificate.id)
                                       }
                                       color="secondary"
+                                      disabled={regeneratingCertificate === certificate.id}
                                     >
-                                      <RegenerateIcon />
+                                      {regeneratingCertificate === certificate.id ? (
+                                        <CircularProgress size={20} />
+                                      ) : (
+                                        <RegenerateIcon />
+                                      )}
                                     </IconButton>
                                   </Tooltip>
                                 )}
