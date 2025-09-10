@@ -190,11 +190,8 @@ const CourseDetail: React.FC = () => {
           setHasSurveys(availableSurveys.length > 0);
           
           if (availableSurveys.length > 0) {
-            // Verificar si el usuario ya completó todas las encuestas
-            const userSurveysResponse = await api.get(`/surveys/user-responses?course_id=${id}`);
-            const userSurveys = userSurveysResponse.data.items || [];
-            
-            if (userSurveys.length >= availableSurveys.length) {
+            // Usar el estado de encuestas del endpoint de progreso
+            if (progressInfo.survey_status === 'completed') {
               currentStep = 2; // Encuestas completadas
             }
           } else {
@@ -210,9 +207,8 @@ const CourseDetail: React.FC = () => {
               setHasEvaluation(true);
               setEvaluationId(availableEvaluations[0].id);
               
-              // Verificar si el usuario ya completó la evaluación
-              const userEvalResponse = await api.get(`/evaluations/${availableEvaluations[0].id}/results`);
-              if (userEvalResponse.data && userEvalResponse.data.completed) {
+              // Usar el estado de evaluación del endpoint de progreso
+              if (progressInfo.evaluation_status === 'completed' || progressInfo.evaluation_completed) {
                 currentStep = 3; // Evaluación completada
               }
             } else {
@@ -370,7 +366,7 @@ const CourseDetail: React.FC = () => {
     }
     
     // Validar que las encuestas estén completadas (si existen)
-    if (hasSurveys && !progressInfo.surveys_completed) {
+    if (hasSurveys && progressInfo.survey_status !== 'completed') {
       setError("Debe completar las encuestas antes de poder realizar la evaluación.");
       return;
     }
@@ -649,7 +645,7 @@ const CourseDetail: React.FC = () => {
                         La evaluación está bloqueada. Has agotado todos los intentos disponibles sin superar la puntuación mínima requerida.
                       </Alert>
                     )}
-                    {progressInfo?.evaluation_status === "completed" && !progressInfo?.evaluation_completed && (
+                    {progressInfo?.evaluation_status === "failed" && (
                       <Alert severity="warning" sx={{ mt: 2 }}>
                         Has completado la evaluación pero no alcanzaste la puntuación mínima requerida ({progressInfo.passing_score}%).
                         Tu puntuación fue {progressInfo.evaluation_score}%.
