@@ -3,7 +3,13 @@ import {
   Quiz as QuizIcon,
   School as SchoolIcon,
   Refresh as RefreshIcon,
-  ArrowBack as ArrowBackIcon
+  ArrowBack as ArrowBackIcon,
+  Description as DocumentIcon,
+  CloudUpload as UploadIcon,
+  Visibility as ViewIcon,
+  Download as DownloadIcon,
+  Delete as DeleteIcon,
+  EventNote as NovedadesIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -38,6 +44,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import WorkerNovedades from './WorkerNovedades';
 
 interface WorkerInfo {
   id: number;
@@ -79,11 +86,28 @@ interface Evaluation {
   status: string;
 }
 
+interface WorkerDocument {
+  id: number;
+  title: string;
+  description?: string;
+  category: string;
+  file_name: string;
+  file_url: string;
+  file_size?: number;
+  file_type?: string;
+  uploaded_by: number;
+  uploader_name?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 interface WorkerDetailData {
   worker: WorkerInfo;
   courses: Course[];
   surveys: Survey[];
   evaluations: Evaluation[];
+  documents: WorkerDocument[];
 }
 
 interface TabPanelProps {
@@ -125,6 +149,13 @@ const WorkerDetail: React.FC = () => {
   const [availableItems, setAvailableItems] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [reassigning, setReassigning] = useState(false);
+  const [documents, setDocuments] = useState<WorkerDocument[]>([]);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [openUploadDialog, setOpenUploadDialog] = useState(false);
+  const [documentTitle, setDocumentTitle] = useState('');
+  const [documentDescription, setDocumentDescription] = useState('');
+  const [documentCategory, setDocumentCategory] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (workerId) {
@@ -138,11 +169,26 @@ const WorkerDetail: React.FC = () => {
       setError(null);
       const response = await api.get(`/workers/${workerId}/detailed-info`);
       setWorkerData(response.data);
+      
+      // Fetch documents separately
+      if (workerId) {
+        await fetchDocuments();
+      }
     } catch (error: any) {
       console.error('Error fetching worker data:', error);
       setError(error.response?.data?.detail || 'No se pudieron cargar los datos del trabajador. Verifique su conexión e intente nuevamente.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    try {
+      const response = await api.get(`/workers/${workerId}/documents`);
+      setDocuments(response.data);
+    } catch (error: any) {
+      console.error('Error fetching documents:', error);
+      // Don't set error state for documents, just log it
     }
   };
 
@@ -215,6 +261,82 @@ const WorkerDetail: React.FC = () => {
     } finally {
       setReassigning(false);
     }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!selectedFile || !documentTitle || !documentCategory || !workerId) return;
+    
+    try {
+      setUploadingDocument(true);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('title', documentTitle);
+      formData.append('category', documentCategory);
+      if (documentDescription) {
+        formData.append('description', documentDescription);
+      }
+      
+      await api.post(`/workers/${workerId}/documents`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      setOpenUploadDialog(false);
+      setDocumentTitle('');
+      setDocumentDescription('');
+      setDocumentCategory('');
+      setSelectedFile(null);
+      await fetchDocuments();
+    } catch (error: any) {
+      console.error('Error uploading document:', error);
+      setError(error.response?.data?.detail || 'Error al subir el documento');
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  const handleDownloadDocument = async (doc: WorkerDocument) => {
+    try {
+      const response = await api.get(`/workers/${workerId}/documents/${doc.id}/download`, {
+        responseType: 'blob',
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.file_name);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Error downloading document:', error);
+      setError(error.response?.data?.detail || 'Error al descargar el documento');
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: number) => {
+    if (!window.confirm('¿Está seguro de que desea eliminar este documento?')) return;
+    
+    try {
+      await api.delete(`/workers/${workerId}/documents/${documentId}`);
+      await fetchDocuments();
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      setError(error.response?.data?.detail || 'Error al eliminar el documento');
+    }
+  };
+
+  const handlePreviewDocument = (doc: WorkerDocument) => {
+    window.open(doc.file_url, '_blank');
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'N/A';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
@@ -352,6 +474,16 @@ const WorkerDetail: React.FC = () => {
             <Tab
               label={`Evaluaciones (${workerData.evaluations.length})`}
               icon={<AssignmentIcon />}
+              iconPosition="start"
+            />
+            <Tab
+              label={`Documentos (${documents.length})`}
+              icon={<DocumentIcon />}
+              iconPosition="start"
+            />
+            <Tab
+              label="Novedades"
+              icon={<NovedadesIcon />}
               iconPosition="start"
             />
           </Tabs>
@@ -523,6 +655,101 @@ const WorkerDetail: React.FC = () => {
             </Table>
           </TableContainer>
         </TabPanel>
+
+        {/* Documents Tab */}
+        <TabPanel value={tabValue} index={3}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">Documentos del Trabajador</Typography>
+            <Button
+              variant="contained"
+              startIcon={<UploadIcon />}
+              onClick={() => setOpenUploadDialog(true)}
+            >
+              Subir Documento
+            </Button>
+          </Box>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Título</TableCell>
+                  <TableCell>Categoría</TableCell>
+                  <TableCell>Archivo</TableCell>
+                  <TableCell>Tamaño</TableCell>
+                  <TableCell>Subido por</TableCell>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {documents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      No hay documentos subidos
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  documents.map((doc) => (
+                    <TableRow key={doc.id}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {doc.title}
+                        </Typography>
+                        {doc.description && (
+                          <Typography variant="caption" color="text.secondary">
+                            {doc.description}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={doc.category}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>{doc.file_name}</TableCell>
+                      <TableCell>{formatFileSize(doc.file_size)}</TableCell>
+                      <TableCell>{doc.uploader_name || 'N/A'}</TableCell>
+                      <TableCell>{formatDate(doc.created_at)}</TableCell>
+                      <TableCell>
+                        <Box display="flex" gap={1}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handlePreviewDocument(doc)}
+                            title="Previsualizar"
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDownloadDocument(doc)}
+                            title="Descargar"
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            title="Eliminar"
+                            color="error"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </TabPanel>
+
+        {/* Novedades Tab */}
+        <TabPanel value={tabValue} index={4}>
+          <WorkerNovedades workerId={workerId!} />
+        </TabPanel>
       </Card>
 
       {/* Reassign Dialog */}
@@ -554,6 +781,93 @@ const WorkerDetail: React.FC = () => {
             disabled={!selectedItem || reassigning}
           >
             {reassigning ? <CircularProgress size={20} /> : 'Asignar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upload Document Dialog */}
+      <Dialog open={openUploadDialog} onClose={() => setOpenUploadDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Subir Documento</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Título del documento"
+            value={documentTitle}
+            onChange={(e) => setDocumentTitle(e.target.value)}
+            fullWidth
+            margin="normal"
+            required
+          />
+          <TextField
+            label="Descripción (opcional)"
+            value={documentDescription}
+            onChange={(e) => setDocumentDescription(e.target.value)}
+            fullWidth
+            margin="normal"
+            multiline
+            rows={2}
+          />
+          <Autocomplete
+            options={[
+              'Identificación',
+              'Contrato',
+              'Certificados',
+              'Exámenes Médicos',
+              'Capacitaciones',
+              'Otros'
+            ]}
+            value={documentCategory}
+            onChange={(event, newValue) => setDocumentCategory(newValue || '')}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Categoría"
+                fullWidth
+                margin="normal"
+                required
+              />
+            )}
+          />
+          <Box mt={2}>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              style={{ display: 'none' }}
+              id="file-upload"
+            />
+            <label htmlFor="file-upload">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<UploadIcon />}
+                fullWidth
+              >
+                {selectedFile ? selectedFile.name : 'Seleccionar archivo'}
+              </Button>
+            </label>
+          </Box>
+          {selectedFile && (
+            <Typography variant="caption" color="text.secondary" mt={1}>
+              Tamaño: {formatFileSize(selectedFile.size)}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setOpenUploadDialog(false);
+            setDocumentTitle('');
+            setDocumentDescription('');
+            setDocumentCategory('');
+            setSelectedFile(null);
+          }}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleUploadDocument}
+            variant="contained"
+            disabled={!selectedFile || !documentTitle || !documentCategory || uploadingDocument}
+          >
+            {uploadingDocument ? <CircularProgress size={20} /> : 'Subir'}
           </Button>
         </DialogActions>
       </Dialog>
