@@ -40,7 +40,6 @@ import { DatePicker as MUIDatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import React, { useState, useEffect } from "react";
 
-
 import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../utils/dateUtils";
 
@@ -50,7 +49,7 @@ import { AttendanceStatus, AttendanceType, AttendanceStats } from "./../types";
 interface Attendance {
   id: number;
   user_id: number;
-  course_id: number;
+  course_name: string;
   session_date: string;
   status: AttendanceStatus;
   attendance_type: AttendanceType;
@@ -81,7 +80,7 @@ interface Attendance {
 
 interface AttendanceFormData {
   user_id: number;
-  course_id: number;
+  course_name: string;
   session_date: string;
   status: AttendanceStatus;
   attendance_type: AttendanceType;
@@ -104,20 +103,11 @@ interface User {
   full_name: string;
 }
 
-interface Course {
-  id: number;
-  title: string;
-  description?: string;
-  duration_hours?: number;
-  course_type?: string;
-  status?: string;
-}
-
 const AttendanceManagement: React.FC = () => {
   const { user } = useAuth();
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  // const [courses, setCourses] = useState<Course[]>([]);
   // const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -132,7 +122,7 @@ const AttendanceManagement: React.FC = () => {
   );
   const [formData, setFormData] = useState<AttendanceFormData>({
     user_id: 0,
-    course_id: 0,
+    course_name: "",
     session_date: "",
     status: AttendanceStatus.PRESENT,
     attendance_type: AttendanceType.IN_PERSON,
@@ -166,7 +156,6 @@ const AttendanceManagement: React.FC = () => {
   useEffect(() => {
     fetchAttendances();
     fetchStats();
-    fetchCourses();
     fetchUsers();
     // fetchSessions();
     // eslint-disable-next-line
@@ -199,12 +188,15 @@ const AttendanceManagement: React.FC = () => {
         }
       }
 
-      const response = await api.get("/attendance", { params });
+      const response = await api.get("/attendance/", { params });
       setAttendances(response.data.items || []);
       setTotalAttendances(response.data.total || 0);
     } catch (error) {
       console.error("Error fetching attendances:", error);
-      showSnackbar("No se pudieron cargar los registros de asistencia. Verifique su conexión e intente nuevamente.", "error");
+      showSnackbar(
+        "No se pudieron cargar los registros de asistencia. Verifique su conexión e intente nuevamente.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -229,18 +221,18 @@ const AttendanceManagement: React.FC = () => {
     }
   };
 
-  const fetchCourses = async () => {
-    try {
-      const response = await api.get("/courses", {
-        params: {
-          status: "published",
-        },
-      });
-      setCourses(response.data.items || []);
-    } catch (error) {
-      console.error("Error fetching courses:", error);
-    }
-  };
+  // const fetchCourses = async () => {
+  //   try {
+  //     const response = await api.get("/courses", {
+  //       params: {
+  //         status: "published",
+  //       },
+  //     });
+  //     setCourses(response.data.items || []);
+  //   } catch (error) {
+  //     console.error("Error fetching courses:", error);
+  //   }
+  // };
 
   // const fetchSessions = async () => {
   //   try {
@@ -257,7 +249,7 @@ const AttendanceManagement: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get("/attendance/stats");
+      const response = await api.get("/attendance/stats"); // stats endpoint no requiere cambio
       setStats(response.data);
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -268,7 +260,7 @@ const AttendanceManagement: React.FC = () => {
     setEditingAttendance(null);
     setFormData({
       user_id: 0,
-      course_id: 0,
+      course_name: "",
       session_date: "",
       status: AttendanceStatus.PRESENT,
       attendance_type: AttendanceType.IN_PERSON,
@@ -286,14 +278,22 @@ const AttendanceManagement: React.FC = () => {
 
   const handleEditAttendance = (attendance: Attendance) => {
     setEditingAttendance(attendance);
+    // Extraer solo la fecha (YYYY-MM-DD) de session_date
+    const sessionDateOnly = attendance.session_date
+      ? attendance.session_date.split("T")[0]
+      : "";
     setFormData({
       user_id: attendance.user_id,
-      course_id: attendance.course_id,
-      session_date: attendance.session_date,
+      course_name: attendance.course?.title || attendance.course_name || "",
+      session_date: sessionDateOnly,
       status: attendance.status,
       attendance_type: attendance.attendance_type,
-      check_in_time: attendance.check_in_time || "",
-      check_out_time: attendance.check_out_time || "",
+      check_in_time: attendance.check_in_time
+        ? attendance.check_in_time.split("T")[1]?.slice(0, 5)
+        : "",
+      check_out_time: attendance.check_out_time
+        ? attendance.check_out_time.split("T")[1]?.slice(0, 5)
+        : "",
       duration_minutes: attendance.duration_minutes || 0,
       scheduled_duration_minutes: attendance.scheduled_duration_minutes || 0,
       completion_percentage: attendance.completion_percentage,
@@ -332,10 +332,10 @@ const AttendanceManagement: React.FC = () => {
       };
 
       if (editingAttendance) {
-        await api.put(`/attendance/${editingAttendance.id}`, dataToSend);
+        await api.put(`/attendance/${editingAttendance.id}/`, dataToSend);
         showSnackbar("Asistencia actualizada exitosamente", "success");
       } else {
-        await api.post("/attendance", dataToSend);
+        await api.post("/attendance/", dataToSend);
         showSnackbar("Asistencia registrada exitosamente", "success");
       }
 
@@ -356,7 +356,7 @@ const AttendanceManagement: React.FC = () => {
   const confirmDeleteAttendance = async () => {
     if (deletingAttendance) {
       try {
-        await api.delete(`/attendance/${deletingAttendance.id}`);
+        await api.delete(`/attendance/${deletingAttendance.id}/`);
         showSnackbar(
           "Registro de asistencia eliminado exitosamente",
           "success"
@@ -374,7 +374,7 @@ const AttendanceManagement: React.FC = () => {
 
   const handleExportAttendance = async () => {
     try {
-      const response = await api.get("/attendance/export", {
+      const response = await api.get("/attendance/export/", {
         responseType: "blob",
         params: {
           session_date: dateFilter
@@ -479,7 +479,10 @@ const AttendanceManagement: React.FC = () => {
                   Tasa de Asistencia
                 </Typography>
                 <Typography variant="h4" color="primary.main">
-                  {stats.attendance_rate ? stats.attendance_rate.toFixed(1) : '0.0'}%
+                  {stats.attendance_rate
+                    ? stats.attendance_rate.toFixed(1)
+                    : "0.0"}
+                  %
                 </Typography>
               </CardContent>
             </Card>
@@ -611,9 +614,9 @@ const AttendanceManagement: React.FC = () => {
                       </TableCell>
                     )}
                     <TableCell>
-                      {attendance.course
-                        ? attendance.course.title
-                        : `Curso ${attendance.course_id}`}
+                      {attendance.course?.title ||
+                        attendance.course_name ||
+                        "N/A"}
                     </TableCell>
                     <TableCell>{formatDate(attendance.session_date)}</TableCell>
                     <TableCell>
@@ -741,31 +744,16 @@ const AttendanceManagement: React.FC = () => {
                 </FormControl>
               </Grid>
               <Grid size={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Curso</InputLabel>
-                  <Select
-                    value={formData.course_id}
-                    onChange={(e) => {
-                      const courseId = e.target.value as number;
-                      const selectedCourse = courses.find(
-                        (course) => course.id === courseId
-                      );
-                      setFormData({
-                        ...formData,
-                        course_id: courseId,
-                        duration_hours: selectedCourse?.duration_hours || 0,
-                      });
-                    }}
-                    label="Curso"
-                    disabled={!!editingAttendance}
-                  >
-                    {courses.map((course) => (
-                      <MenuItem key={course.id} value={course.id}>
-                        {course.title}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <TextField
+                  fullWidth
+                  label="Nombre del Curso"
+                  value={formData.course_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, course_name: e.target.value })
+                  }
+                  required
+                  disabled={!!editingAttendance}
+                />
               </Grid>
               <Grid size={6}>
                 <TextField
@@ -832,13 +820,23 @@ const AttendanceManagement: React.FC = () => {
                   type="time"
                   value={formData.check_in_time}
                   onChange={(e) => {
-                    const newFormData = { ...formData, check_in_time: e.target.value };
+                    const newFormData = {
+                      ...formData,
+                      check_in_time: e.target.value,
+                    };
                     // Calcular duración automáticamente si ambas horas están presentes
                     if (e.target.value && formData.check_out_time) {
-                      const checkIn = new Date(`2000-01-01T${e.target.value}:00`);
-                      const checkOut = new Date(`2000-01-01T${formData.check_out_time}:00`);
+                      const checkIn = new Date(
+                        `2000-01-01T${e.target.value}:00`
+                      );
+                      const checkOut = new Date(
+                        `2000-01-01T${formData.check_out_time}:00`
+                      );
                       const durationMs = checkOut.getTime() - checkIn.getTime();
-                      const durationMinutes = Math.max(0, Math.round(durationMs / (1000 * 60)));
+                      const durationMinutes = Math.max(
+                        0,
+                        Math.round(durationMs / (1000 * 60))
+                      );
                       newFormData.duration_minutes = durationMinutes;
                       newFormData.scheduled_duration_minutes = durationMinutes;
                       newFormData.completion_percentage = 100;
@@ -855,13 +853,23 @@ const AttendanceManagement: React.FC = () => {
                   type="time"
                   value={formData.check_out_time}
                   onChange={(e) => {
-                    const newFormData = { ...formData, check_out_time: e.target.value };
+                    const newFormData = {
+                      ...formData,
+                      check_out_time: e.target.value,
+                    };
                     // Calcular duración automáticamente si ambas horas están presentes
                     if (formData.check_in_time && e.target.value) {
-                      const checkIn = new Date(`2000-01-01T${formData.check_in_time}:00`);
-                      const checkOut = new Date(`2000-01-01T${e.target.value}:00`);
+                      const checkIn = new Date(
+                        `2000-01-01T${formData.check_in_time}:00`
+                      );
+                      const checkOut = new Date(
+                        `2000-01-01T${e.target.value}:00`
+                      );
                       const durationMs = checkOut.getTime() - checkIn.getTime();
-                      const durationMinutes = Math.max(0, Math.round(durationMs / (1000 * 60)));
+                      const durationMinutes = Math.max(
+                        0,
+                        Math.round(durationMs / (1000 * 60))
+                      );
                       newFormData.duration_minutes = durationMinutes;
                       newFormData.scheduled_duration_minutes = durationMinutes;
                       newFormData.completion_percentage = 100;
@@ -884,9 +892,15 @@ const AttendanceManagement: React.FC = () => {
                     })
                   }
                   InputProps={{
-                    readOnly: !!(formData.check_in_time && formData.check_out_time),
+                    readOnly: !!(
+                      formData.check_in_time && formData.check_out_time
+                    ),
                   }}
-                  helperText={formData.check_in_time && formData.check_out_time ? "Calculado automáticamente" : ""}
+                  helperText={
+                    formData.check_in_time && formData.check_out_time
+                      ? "Calculado automáticamente"
+                      : ""
+                  }
                 />
               </Grid>
               <Grid size={6}>
@@ -902,9 +916,15 @@ const AttendanceManagement: React.FC = () => {
                     })
                   }
                   InputProps={{
-                    readOnly: !!(formData.check_in_time && formData.check_out_time),
+                    readOnly: !!(
+                      formData.check_in_time && formData.check_out_time
+                    ),
                   }}
-                  helperText={formData.check_in_time && formData.check_out_time ? "Calculado automáticamente" : ""}
+                  helperText={
+                    formData.check_in_time && formData.check_out_time
+                      ? "Calculado automáticamente"
+                      : ""
+                  }
                 />
               </Grid>
               <Grid size={6}>
@@ -921,9 +941,15 @@ const AttendanceManagement: React.FC = () => {
                     })
                   }
                   InputProps={{
-                    readOnly: !!(formData.check_in_time && formData.check_out_time),
+                    readOnly: !!(
+                      formData.check_in_time && formData.check_out_time
+                    ),
                   }}
-                  helperText={formData.check_in_time && formData.check_out_time ? "Calculado automáticamente" : ""}
+                  helperText={
+                    formData.check_in_time && formData.check_out_time
+                      ? "Calculado automáticamente"
+                      : ""
+                  }
                 />
               </Grid>
 

@@ -24,7 +24,6 @@ import {
   Lock,
   Visibility,
   VisibilityOff,
-  LoginOutlined,
 } from '@mui/icons-material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -111,19 +110,27 @@ const Login: React.FC = () => {
               px: { xs: 2, sm: 4, md: 6 },
             }}>
               <Box sx={{ textAlign: 'center', mb: 4 }}>
-                <Avatar
+                <Box
                   sx={{
                     m: 'auto',
                     mb: { xs: 2, sm: 3 },
-                    bgcolor: 'primary.main',
                     width: { xs: 60, sm: 70, md: 80 },
                     height: { xs: 60, sm: 70, md: 80 },
-                    background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.dark} 90%)`,
-                    boxShadow: '0 8px 25px rgba(25, 118, 210, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  <LoginOutlined sx={{ fontSize: { xs: 30, sm: 35, md: 40 } }} />
-                </Avatar>
+                  <img
+                    src="/logo512.png"
+                    alt="Logo SST"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                    }}
+                  />
+                </Box>
                 <Typography
                   variant="h4"
                   fontWeight="600"
