@@ -1,4 +1,3 @@
-import { VpnKeyOutlined } from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -100,9 +99,24 @@ const ChangePassword: React.FC = () => {
           alignItems: 'center',
         }}
       >
-        <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
-          <VpnKeyOutlined />
-        </Avatar>
+        <Box sx={{ 
+          m: 1, 
+          width: 56,
+          height: 56,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <img
+            src="/logo.png"
+            alt="Logo SST"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+            }}
+          />
+        </Box>
         <Typography component="h1" variant="h4" gutterBottom>
           Plataforma SST
         </Typography>

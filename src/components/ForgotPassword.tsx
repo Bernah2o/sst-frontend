@@ -1,4 +1,3 @@
-import { EmailOutlined } from '@mui/icons-material';
 import {
   Box,
   Card,
@@ -59,14 +58,24 @@ const ForgotPassword: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          <Avatar sx={{ 
+          <Box sx={{ 
           m: { xs: 1, sm: 1.5, md: 2 }, 
-          bgcolor: 'success.main',
           width: { xs: 40, sm: 48, md: 56 },
-          height: { xs: 40, sm: 48, md: 56 }
+          height: { xs: 40, sm: 48, md: 56 },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}>
-            <EmailOutlined />
-          </Avatar>
+            <img
+              src="/logo.png"
+              alt="Logo SST"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              }}
+            />
+          </Box>
           <Typography 
           component="h1" 
           variant="h4" 
@@ -135,14 +144,24 @@ const ForgotPassword: React.FC = () => {
           px: { xs: 2, sm: 3, md: 0 },
         }}
       >
-        <Avatar sx={{ 
+        <Box sx={{ 
           m: { xs: 1, sm: 1.5, md: 2 }, 
-          bgcolor: 'primary.main',
           width: { xs: 40, sm: 48, md: 56 },
-          height: { xs: 40, sm: 48, md: 56 }
+          height: { xs: 40, sm: 48, md: 56 },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}>
-          <EmailOutlined />
-        </Avatar>
+          <img
+            src="/logo512.png"
+            alt="Logo SST"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+            }}
+          />
+        </Box>
         <Typography 
           component="h1" 
           variant="h4" 

@@ -3,7 +3,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as ViewIcon,
-  Assignment as TaskIcon,
+  Assignment as AssignmentIcon,
   Person as PersonIcon,
   Schedule as ScheduleIcon,
   CheckCircle as CompleteIcon,
@@ -19,7 +19,16 @@ import {
   ExpandMore as ExpandMoreIcon,
   Flag as FlagIcon,
   PlayArrow as StartIcon,
-  Stop as StopIcon
+  Stop as StopIcon,
+  FilterList as FilterListIcon,
+  Clear as ClearIcon,
+  Pause as PauseIcon,
+  HealthAndSafety as HealthAndSafetyIcon,
+  Psychology as PsychologyIcon,
+  MedicalServices as MedicalServicesIcon,
+  MonitorHeart as MonitorHeartIcon,
+  Accessibility as AccessibilityIcon,
+  LocalHospital as LocalHospitalIcon
 } from '@mui/icons-material';
 import {
   Timeline,
@@ -69,10 +78,11 @@ import {
   AccordionSummary,
   AccordionDetails
 } from '@mui/material';
+import React, { useState, useEffect } from 'react';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import React, { useState, useEffect } from 'react';
+import SeguimientoActividadesModal from '../components/SeguimientoActividadesModal';
 
 import { useAuth } from '../contexts/AuthContext';
 import { adminConfigService, ProgramaOption } from '../services/adminConfigService';
@@ -131,6 +141,8 @@ const Seguimiento: React.FC = () => {
   const [openViewDialog, setOpenViewDialog] = useState(false);
   // const [openActionDialog, setOpenActionDialog] = useState(false); // Comentado - funcionalidad de acciones no incluida
   const [confirmDialog, setConfirmDialog] = useState({ open: false, seguimientoId: null as number | null });
+  const [actividadesModalOpen, setActividadesModalOpen] = useState(false);
+  const [selectedSeguimientoId, setSelectedSeguimientoId] = useState<number | null>(null);
   const [filters, setFilters] = useState({
     programa: '',
     estado: '',
@@ -394,6 +406,16 @@ const Seguimiento: React.FC = () => {
     }
   };
 
+  const handleOpenActividades = (seguimientoId: number) => {
+    setSelectedSeguimientoId(seguimientoId);
+    setActividadesModalOpen(true);
+  };
+
+  const handleCloseActividades = () => {
+    setActividadesModalOpen(false);
+    setSelectedSeguimientoId(null);
+  };
+
 
 
   const getProgressColor = (estado: string) => {
@@ -650,6 +672,15 @@ const Seguimiento: React.FC = () => {
                                 onClick={() => handleViewSeguimiento(seguimiento)}
                               >
                                 <ViewIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Gestionar actividades">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenActividades(seguimiento.id)}
+                                color="primary"
+                              >
+                                <AssignmentIcon />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="Editar">
@@ -1127,6 +1158,15 @@ const Seguimiento: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Modal de Actividades */}
+        {selectedSeguimientoId && (
+          <SeguimientoActividadesModal
+            open={actividadesModalOpen}
+            onClose={handleCloseActividades}
+            seguimientoId={selectedSeguimientoId}
+          />
+        )}
       </Box>
     </LocalizationProvider>
   );

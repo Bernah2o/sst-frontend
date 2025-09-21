@@ -32,6 +32,7 @@ import Report from "./pages/Report";
 // import Session from './pages/Session'; // Componente eliminado - funcionalidad de sesiones removida
 
 import Survey from "./pages/Survey";
+import SurveyTabulation from "./pages/SurveyTabulation";
 import UserProgress from "./pages/UserProgress";
 import Certificate from "./pages/Certificate";
 import Notification from "./pages/Notification";
@@ -330,6 +331,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/surveys">
                         <Survey />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/survey-tabulation"
+                    element={
+                      <ProtectedRoute route="/admin/survey-tabulation">
+                        <SurveyTabulation />
                       </ProtectedRoute>
                     }
                   />

@@ -1410,99 +1410,107 @@ export const usePermissions = () => {
 
   // Verificar acceso a una página específica
   const canAccessPage = useCallback((pageRoute: string): boolean => {
-    // Si no tiene rol personalizado, usar lógica tradicional
-    if (!user?.custom_role_id) {
-      return checkTraditionalPageAccess(pageRoute, user?.role);
+    // El usuario tiene acceso si su rol de sistema (tradicional) se lo permite
+    if (checkTraditionalPageAccess(pageRoute, user?.role)) {
+      return true;
     }
 
-    // Mapeo de rutas a permisos específicos para usuarios con rol personalizado
-    const routePermissionMap: Record<string, () => boolean> = {
-      // User management routes
-      '/admin/users': canUpdateUsers,
-      '/users': canViewUsersPage,
-      
-      // Course management routes
-      '/courses': canViewCoursesPage,
-      '/courses/list': canViewCoursesPage,
-      '/courses/create': canCreateCourses,
-      '/courses/edit': canUpdateCourses,
-      
-      // Enrollment management routes
-      '/enrollments': canViewEnrollmentPage,
-      '/enrollments/list': canViewEnrollmentPage,
-      '/enrollments/create': canCreateEnrollment,
-      '/enrollments/edit': canUpdateEnrollment,
-      '/admin/enrollments': canUpdateEnrollment,
-      '/reinduction': canViewReinductionPage,
-      
-      // Evaluation routes
-      '/evaluations': canViewEvaluationsPage,
-      '/evaluations/list': canViewEvaluationsPage,
-      '/evaluations/create': canCreateEvaluations,
-      '/evaluations/edit': canUpdateEvaluations,
-      '/evaluation-results': canViewEvaluationsPage,
-      
-      // Survey routes
-      '/surveys': canViewSurveysPage,
-      '/surveys/create': canCreateSurveys,
-      '/surveys/edit': canUpdateSurveys,
-      
-      // Attendance routes
-      '/attendance': canViewAttendancePage,
-      '/attendance/list': canViewAttendancePage,
-      '/admin/attendance': canUpdateAttendance,
-      
-      // Worker/Health routes
-      '/workers': canViewWorkersPage,
-      '/workers/list': canViewWorkersPage,
-      '/workers/create': canCreateWorkers,
-      '/workers/edit': canUpdateWorkers,
-      '/admin/workers': canViewWorkersPage,
-      '/occupational-exams': canViewOccupationalExamPage,
-      '/admin/occupational-exams': canViewOccupationalExamPage,
-      '/seguimientos': canViewSeguimientoPage,
-      
-      // Certificate routes
-      '/certificates': canViewCertificatesPage,
-      '/certificates/create': canCreateCertificates,
-      
-      // Report routes
-      '/reports': canViewReportsPage,
-      '/reports/export': canViewReportsPage,
+    // Si tiene un rol personalizado, verificar también esos permisos
+    if (user?.custom_role_id) {
+      // Mapeo de rutas a permisos específicos para usuarios con rol personalizado
+      const routePermissionMap: Record<string, () => boolean> = {
+        // User management routes
+        '/admin/users': canUpdateUsers,
+        '/users': canViewUsersPage,
+        
+        // Course management routes
+        '/courses': canViewCoursesPage,
+        '/courses/list': canViewCoursesPage,
+        '/courses/create': canCreateCourses,
+        '/courses/edit': canUpdateCourses,
+        
+        // Enrollment management routes
+        '/enrollments': canViewEnrollmentPage,
+        '/enrollments/list': canViewEnrollmentPage,
+        '/enrollments/create': canCreateEnrollment,
+        '/enrollments/edit': canUpdateEnrollment,
+        '/admin/enrollments': canUpdateEnrollment,
+        '/reinduction': canViewReinductionPage,
+        
+        // Evaluation routes
+        '/evaluations': canViewEvaluationsPage,
+        '/evaluations/list': canViewEvaluationsPage,
+        '/evaluations/create': canCreateEvaluations,
+        '/evaluations/edit': canUpdateEvaluations,
+        '/evaluation-results': canViewEvaluationsPage,
+        
+        // Survey routes
+        '/surveys': canViewSurveysPage,
+        '/surveys/create': canCreateSurveys,
+        '/surveys/edit': canUpdateSurveys,
+        
+        // Attendance routes
+        '/attendance': canViewAttendancePage,
+        '/attendance/list': canViewAttendancePage,
+        '/admin/attendance': canUpdateAttendance,
+        
+        // Worker/Health routes
+        '/workers': canViewWorkersPage,
+        '/workers/list': canViewWorkersPage,
+        '/workers/create': canCreateWorkers,
+        '/workers/edit': canUpdateWorkers,
+        '/admin/workers': canViewWorkersPage,
+        '/occupational-exams': canViewOccupationalExamPage,
+        '/admin/occupational-exams': canViewOccupationalExamPage,
+        '/seguimientos': canViewSeguimientoPage,
+        
+        // Certificate routes
+        '/certificates': canViewCertificatesPage,
+        '/certificates/create': canCreateCertificates,
+        
+        // Report routes
+        '/reports': canViewReportsPage,
+        '/reports/export': canViewReportsPage,
 
-      // Notification routes
-      '/notifications': canViewNotificationsPage,
-      
-      // Admin routes (only for system admins)
-      '/admin/audit': () => {
-        const userRole = user?.role || user?.rol;
-        return userRole === UserRole.ADMIN;
-      },
-      '/admin/config': () => {
-        const userRole = user?.role || user?.rol;
-        return userRole === UserRole.ADMIN;
-      },
-      '/admin/roles': () => {
-        const userRole = user?.role || user?.rol;
-        return userRole === UserRole.ADMIN;
-      },
-      
-      // General routes (accessible to all authenticated users)
-      '/dashboard': () => true,
-      '/profile': () => true
-    };
+        // Notification routes
+        '/notifications': canViewNotificationsPage,
+        
+        // Admin routes (only for system admins)
+        '/admin/audit': () => {
+          const userRole = user?.role || user?.rol;
+          return userRole === UserRole.ADMIN;
+        },
+        '/admin/config': () => {
+          const userRole = user?.role || user?.rol;
+          return userRole === UserRole.ADMIN;
+        },
+        '/admin/roles': () => {
+          const userRole = user?.role || user?.rol;
+          return userRole === UserRole.ADMIN;
+        },
+        
+        // General routes (accessible to all authenticated users)
+        '/dashboard': () => true,
+        '/profile': () => true
+      };
 
-    // Verificar si hay un mapeo específico para la ruta
-    const permissionCheck = routePermissionMap[pageRoute];
-    if (permissionCheck) {
-      return permissionCheck();
+      // Verificar si hay un mapeo específico para la ruta
+      const permissionCheck = routePermissionMap[pageRoute];
+      if (permissionCheck) {
+        if (permissionCheck()) {
+          return true;
+        }
+      }
+
+      // Si no hay un mapeo específico, verificar en pageAccesses
+      const pageAccess = pageAccesses.find(access => access.page_route === pageRoute);
+      if (pageAccess && pageAccess.can_access) {
+        return true;
+      }
     }
 
-    // Si tiene rol personalizado pero no hay mapeo específico, verificar en pageAccesses
-    const pageAccess = pageAccesses.find(access => access.page_route === pageRoute);
-    
-    // Si no hay configuración específica para la página, denegar acceso por defecto para mayor seguridad
-    return pageAccess ? pageAccess.can_access : false;
+    // Si ninguna de las condiciones anteriores se cumple, no tiene acceso
+    return false;
   }, [
     user, 
     pageAccesses, 
