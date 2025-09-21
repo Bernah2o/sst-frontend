@@ -301,6 +301,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           path: "/admin/surveys",
           roles: ["admin", "trainer"],
         },
+        {
+          id: "survey-tabulation",
+          label: "Tabulación de Encuestas",
+          icon: <TrendingUp />,
+          path: "/admin/survey-tabulation",
+          roles: ["admin", "trainer", "supervisor"],
+        },
       ],
       roles: ["admin", "trainer"],
     },
@@ -482,6 +489,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             "evaluations-list": canViewEvaluationsPage,
             "evaluation-results": canViewEvaluationsPage,
             surveys: canViewSurveysPage,
+            "survey-tabulation": canViewSurveysPage,
 
             // Attendance
             attendance: canViewAttendancePage,

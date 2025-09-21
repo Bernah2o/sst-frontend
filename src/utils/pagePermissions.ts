@@ -146,6 +146,14 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     customCheck: (permissions) => permissions.canViewSurveysPage(),
   },
   {
+    route: '/admin/survey-tabulation',
+    name: 'Tabulación de Encuestas',
+    description: 'Análisis y tabulación de resultados de encuestas',
+    requiredPermissions: ['canViewSurveysPage'],
+    allowedRoles: ['admin', 'trainer', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewSurveysPage,
+  },
+  {
     route: '/employee/courses/:id/surveys',
     name: 'Encuestas del Curso',
     description: 'Encuestas asociadas a un curso específico',

@@ -528,13 +528,14 @@ export interface AttendanceNotificationData {
 }
 
 export interface AttendanceStats {
-  total: number;
+  total?: number; // Mantener para compatibilidad
+  total_attendance?: number; // Campo que devuelve el backend
   present: number;
   absent: number;
   late: number;
   excused: number;
   partial: number;
-  attendance_rate: number;
+  attendance_rate?: number;
 }
 
 // Tipos para notificaciones (alineados con schemas del backend)

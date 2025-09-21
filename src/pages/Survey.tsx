@@ -175,11 +175,12 @@ interface SurveyStatistics {
 
 interface Worker {
   id: number;
-  nombre: string;
-  apellido: string;
-  documento: string;
-  cargo: string;
-  area: string;
+  first_name: string;
+  last_name: string;
+  document_number: string;
+  position?: string;
+  department?: string;
+  is_active: boolean;
 }
 
 // Interface for employee survey view
@@ -236,7 +237,8 @@ const Survey: React.FC = () => {
   const [filters, setFilters] = useState({
     status: '',
     course_id: '',
-    search: ''
+    search: '',
+    survey_type: '' // 'general' for general surveys, 'course' for course surveys, '' for all
   });
   const [formData, setFormData] = useState({
     title: '',
@@ -248,7 +250,8 @@ const Survey: React.FC = () => {
     expires_at: null as Date | null,
     status: 'draft' as SurveyStatus,
     course_id: undefined as number | undefined,
-    required_for_completion: false
+    required_for_completion: false,
+    survey_type: 'course' as 'general' | 'course' // Nuevo campo para tipo de encuesta
   });
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [newQuestion, setNewQuestion] = useState({
@@ -261,6 +264,23 @@ const Survey: React.FC = () => {
     placeholder_text: ''
   });
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
+  
+  // Estados para asignación de encuestas generales
+  const [openAssignDialog, setOpenAssignDialog] = useState(false);
+  const [assigningSurvey, setAssigningSurvey] = useState<Survey | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
+  
+  // Estados para búsqueda y filtrado de usuarios
+  const [userSearch, setUserSearch] = useState('');
+  const [userAreaFilter, setUserAreaFilter] = useState('');
+  const [userCargoFilter, setUserCargoFilter] = useState('');
+  
+  // Estados para selección de usuarios en formulario de creación
+  const [formSelectedUsers, setFormSelectedUsers] = useState<number[]>([]);
+  const [formUserSearch, setFormUserSearch] = useState('');
+  const [formUserAreaFilter, setFormUserAreaFilter] = useState('');
+  const [formUserCargoFilter, setFormUserCargoFilter] = useState('');
 
   const statusConfig = {
     draft: { label: 'Borrador', color: 'default', icon: <EditIcon /> },
@@ -304,18 +324,29 @@ const Survey: React.FC = () => {
         const response = await api.get('/surveys/my-surveys');
         setEmployeeSurveys(response.data.items || []);
       } else {
-        // For admin/capacitador, get all surveys with pagination
+        // For admin/capacitador, get surveys with pagination
         const params = new URLSearchParams();
-        params.append('page', page.toString());
+        params.append('skip', ((page - 1) * 20).toString());
         params.append('limit', '20');
         
         if (filters.status) params.append('status', filters.status);
-        if (filters.course_id) params.append('course_id', filters.course_id.toString());
         if (filters.search) params.append('search', filters.search);
 
-        const response = await api.get(`/surveys/?${params.toString()}`);
+        let endpoint = '/surveys/';
+        
+        // Use different endpoints based on survey type filter
+        if (filters.survey_type === 'general') {
+          endpoint = '/surveys/general';
+        } else if (filters.survey_type === 'course') {
+          endpoint = '/surveys/';
+          if (filters.course_id) params.append('course_id', filters.course_id.toString());
+        } else {
+          // For 'all' surveys, we need to combine both endpoints
+          if (filters.course_id) params.append('course_id', filters.course_id.toString());
+        }
+
+        const response = await api.get(`${endpoint}?${params.toString()}`);
         setSurveys(response.data.items || []);
-        // Use the 'pages' field directly from API response instead of calculating
         setTotalPages(response.data.pages || Math.ceil((response.data.total || 0) / 20));
       }
     } catch (error) {
@@ -327,8 +358,13 @@ const Survey: React.FC = () => {
 
   const fetchWorkers = async () => {
     try {
-      const response = await api.get('/workers/');
-      setWorkers(response.data);
+      const response = await api.get('/workers/basic', {
+        params: {
+          is_active: true,
+          limit: 1000
+        }
+      });
+      setWorkers(response.data || []);
     } catch (error) {
       console.error('Error fetching workers:', error);
     }
@@ -459,11 +495,21 @@ const Survey: React.FC = () => {
         expires_at: formData.expires_at?.toISOString()
       };
 
+      let surveyResponse;
       if (editingSurvey) {
-        await api.put(`/surveys/${editingSurvey.id}`, payload);
+        surveyResponse = await api.put(`/surveys/${editingSurvey.id}`, payload);
       } else {
-        await api.post('/surveys/', payload);
+        surveyResponse = await api.post('/surveys/', payload);
       }
+
+      // Si es una encuesta general y hay usuarios seleccionados, asignarlos
+      if (formData.survey_type === 'general' && formSelectedUsers.length > 0) {
+        const surveyId = editingSurvey ? editingSurvey.id : surveyResponse.data.id;
+        await api.post(`/surveys/${surveyId}/assign-users`, {
+          user_ids: formSelectedUsers
+        });
+      }
+
       fetchSurveys();
       handleCloseDialog();
     } catch (error) {
@@ -526,6 +572,99 @@ const Survey: React.FC = () => {
     } catch (error) {
       console.error('Error duplicating survey:', error);
     }
+  };
+
+  const handleAssignSurvey = (survey: Survey) => {
+    setAssigningSurvey(survey);
+    setSelectedUsers([]);
+    setOpenAssignDialog(true);
+  };
+
+  const handleAssignSurveyToUsers = async () => {
+    if (!assigningSurvey || selectedUsers.length === 0) return;
+    
+    try {
+      setAssignmentLoading(true);
+      await api.post('/surveys/assign', {
+        survey_id: assigningSurvey.id,
+        user_ids: selectedUsers
+      });
+      
+      setSnackbar({
+        open: true,
+        message: `Encuesta asignada exitosamente a ${selectedUsers.length} usuarios`,
+        severity: 'success'
+      });
+      
+      setOpenAssignDialog(false);
+      setAssigningSurvey(null);
+      setSelectedUsers([]);
+      // Limpiar filtros
+      setUserSearch('');
+      setUserAreaFilter('');
+      setUserCargoFilter('');
+    } catch (error) {
+      console.error('Error assigning survey:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al asignar la encuesta',
+        severity: 'error'
+      });
+    } finally {
+      setAssignmentLoading(false);
+    }
+  };
+
+  // Función para filtrar usuarios
+  const getFilteredUsers = () => {
+    return workers.filter(worker => {
+      const matchesSearch = userSearch === '' || 
+        `${worker.first_name} ${worker.last_name}`.toLowerCase().includes(userSearch.toLowerCase()) ||
+        worker.document_number?.toLowerCase().includes(userSearch.toLowerCase());
+      
+      const matchesArea = userAreaFilter === '' || (worker.department || '') === userAreaFilter;
+      const matchesCargo = userCargoFilter === '' || (worker.position || '') === userCargoFilter;
+      
+      return matchesSearch && matchesArea && matchesCargo;
+    });
+  };
+
+  // Función para seleccionar todos los usuarios filtrados
+  const handleSelectAllFiltered = () => {
+    const filteredUsers = getFilteredUsers();
+    const filteredUserIds = filteredUsers.map(worker => worker.id);
+    setSelectedUsers(filteredUserIds);
+  };
+
+  // Función para filtrar usuarios en el formulario de creación
+  const getFormFilteredUsers = () => {
+    return workers.filter(worker => {
+      const matchesSearch = formUserSearch === '' || 
+        `${worker.first_name} ${worker.last_name}`.toLowerCase().includes(formUserSearch.toLowerCase()) ||
+        worker.document_number?.toLowerCase().includes(formUserSearch.toLowerCase());
+      
+      const matchesArea = formUserAreaFilter === '' || (worker.department || '') === formUserAreaFilter;
+      const matchesCargo = formUserCargoFilter === '' || (worker.position || '') === formUserCargoFilter;
+      
+      return matchesSearch && matchesArea && matchesCargo;
+    });
+  };
+
+  // Función para deseleccionar todos los usuarios
+  const handleDeselectAll = () => {
+    setSelectedUsers([]);
+  };
+
+  // Obtener áreas únicas
+  const getUniqueAreas = () => {
+    const areas = workers.map(worker => worker.department).filter(Boolean);
+    return Array.from(new Set(areas)).sort();
+  };
+
+  // Obtener cargos únicos
+  const getUniqueCargos = () => {
+    const cargos = workers.map(worker => worker.position).filter(Boolean);
+    return Array.from(new Set(cargos)).sort();
   };
 
   const handleAddQuestion = () => {
@@ -659,7 +798,8 @@ const Survey: React.FC = () => {
           expires_at: surveyData.expires_at ? new Date(surveyData.expires_at) : null,
           status: surveyData.status,
           course_id: surveyData.course_id,
-          required_for_completion: surveyData.required_for_completion
+          required_for_completion: surveyData.required_for_completion,
+          survey_type: surveyData.course_id ? 'course' : 'general'
         });
         
         setQuestions(surveyData.questions || []);
@@ -676,7 +816,8 @@ const Survey: React.FC = () => {
           expires_at: survey.expires_at ? new Date(survey.expires_at) : null,
           status: survey.status,
           course_id: survey.course_id,
-          required_for_completion: survey.required_for_completion
+          required_for_completion: survey.required_for_completion,
+          survey_type: survey.course_id ? 'course' : 'general'
         });
         setQuestions([]);
       }
@@ -692,7 +833,8 @@ const Survey: React.FC = () => {
         expires_at: null,
         status: 'draft',
         course_id: undefined,
-        required_for_completion: false
+        required_for_completion: false,
+        survey_type: 'course'
       });
       setQuestions([]);
     }
@@ -712,6 +854,11 @@ const Survey: React.FC = () => {
       max_value: undefined as number | undefined,
       placeholder_text: ''
     });
+    // Limpiar estados de selección de usuarios del formulario
+    setFormSelectedUsers([]);
+    setFormUserSearch('');
+    setFormUserAreaFilter('');
+    setFormUserCargoFilter('');
   };
 
   const handleViewSurvey = async (survey: Survey) => {
@@ -1057,8 +1204,21 @@ const Survey: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
+              <Grid size={{ xs: 12, md: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Tipo</InputLabel>
+                  <Select
+                    value={filters.survey_type}
+                    onChange={(e) => handleFilterChange('survey_type', e.target.value)}
+                  >
+                    <MenuItem value="">Todas</MenuItem>
+                    <MenuItem value="general">Encuestas Generales</MenuItem>
+                    <MenuItem value="course">Encuestas de Curso</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
 
-              <Grid size={{ xs: 12, md: 3 }}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <Box display="flex" gap={1}>
                   <Tooltip title="Actualizar">
                     <IconButton onClick={fetchSurveys}>
@@ -1259,6 +1419,17 @@ const Survey: React.FC = () => {
                                   <CopyIcon />
                                 </IconButton>
                               </Tooltip>
+                              {/* Botón de asignación solo para encuestas generales */}
+                              {!survey.course_id && survey.status === 'published' && (
+                                <Tooltip title="Asignar a usuarios">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleAssignSurvey(survey)}
+                                  >
+                                    <AssignmentIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                               {canCreateSurveys() && (
                                 <Tooltip title="Editar">
                                   <IconButton
@@ -1327,6 +1498,25 @@ const Survey: React.FC = () => {
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth>
+                  <InputLabel>Tipo de Encuesta</InputLabel>
+                  <Select
+                    value={formData.survey_type}
+                    onChange={(e) => {
+                      const newType = e.target.value as 'general' | 'course';
+                      setFormData({ 
+                        ...formData, 
+                        survey_type: newType,
+                        course_id: newType === 'general' ? undefined : formData.course_id
+                      });
+                    }}
+                  >
+                    <MenuItem value="course">Encuesta de Curso</MenuItem>
+                    <MenuItem value="general">Encuesta General</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth>
                   <InputLabel>Estado</InputLabel>
                   <Select
                     value={formData.status}
@@ -1361,28 +1551,32 @@ const Survey: React.FC = () => {
                 />
               </Grid>
               
-              {/* Configuración de Curso */}
-              <Grid size={12}>
-                <Typography variant="h6" gutterBottom>
-                  Configuración de Curso
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Curso (Opcional)</InputLabel>
-                  <Select
-                    value={formData.course_id || ''}
-                    onChange={(e) => setFormData({ ...formData, course_id: e.target.value ? Number(e.target.value) : undefined })}
-                  >
-                    <MenuItem value="">Sin curso</MenuItem>
-                    {courses.map((course) => (
-                      <MenuItem key={course.id} value={course.id}>
-                        {course.title}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+              {/* Configuración de Curso - Solo para encuestas de curso */}
+              {formData.survey_type === 'course' && (
+                <>
+                  <Grid size={12}>
+                    <Typography variant="h6" gutterBottom>
+                      Configuración de Curso
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Curso {formData.survey_type === 'course' ? '(Requerido)' : '(Opcional)'}</InputLabel>
+                      <Select
+                        value={formData.course_id || ''}
+                        onChange={(e) => setFormData({ ...formData, course_id: e.target.value ? Number(e.target.value) : undefined })}
+                        required={formData.survey_type === 'course'}
+                      >
+                        {courses.map((course) => (
+                          <MenuItem key={course.id} value={course.id}>
+                            {course.title}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </>
+              )}
               
               {/* Configuración de Fechas */}
               <Grid size={12}>
@@ -1446,6 +1640,130 @@ const Survey: React.FC = () => {
                   label="Requerida para completar curso"
                 />
               </Grid>
+              
+              {/* Selección de Usuarios - Solo para encuestas generales */}
+              {formData.survey_type === 'general' && (
+                <>
+                  <Grid size={12}>
+                    <Typography variant="h6" gutterBottom>
+                      Selección de Usuarios
+                    </Typography>
+                  </Grid>
+                  
+                  {/* Filtros de búsqueda */}
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <TextField
+                      fullWidth
+                      label="Buscar usuarios"
+                      value={formUserSearch}
+                      onChange={(e) => setFormUserSearch(e.target.value)}
+                      InputProps={{
+                        startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                      }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Filtrar por Área</InputLabel>
+                      <Select
+                        value={formUserAreaFilter}
+                        onChange={(e) => setFormUserAreaFilter(e.target.value)}
+                      >
+                        <MenuItem value="">Todas las áreas</MenuItem>
+                        {getUniqueAreas().map((area) => (
+                          <MenuItem key={area} value={area}>
+                            {area}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Filtrar por Cargo</InputLabel>
+                      <Select
+                        value={formUserCargoFilter}
+                        onChange={(e) => setFormUserCargoFilter(e.target.value)}
+                      >
+                        <MenuItem value="">Todos los cargos</MenuItem>
+                        {getUniqueCargos().map((cargo) => (
+                          <MenuItem key={cargo} value={cargo}>
+                            {cargo}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  
+                  {/* Lista de usuarios */}
+                  <Grid size={12}>
+                    <Card variant="outlined" sx={{ maxHeight: 400, overflow: 'auto' }}>
+                      <CardContent>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                           <Typography variant="subtitle1">
+                             Usuarios Disponibles ({getFormFilteredUsers().length})
+                           </Typography>
+                           <Box display="flex" gap={1}>
+                             <Button
+                               size="small"
+                               onClick={() => {
+                                 const filteredUsers = getFormFilteredUsers();
+                                 setFormSelectedUsers(filteredUsers.map(u => u.id));
+                               }}
+                             >
+                               Seleccionar Todos
+                             </Button>
+                             <Button
+                               size="small"
+                               onClick={() => setFormSelectedUsers([])}
+                             >
+                               Deseleccionar Todos
+                             </Button>
+                           </Box>
+                         </Box>
+                         
+                         <List dense>
+                           {getFormFilteredUsers().map((worker) => (
+                            <ListItem key={worker.id} disablePadding>
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={formSelectedUsers.includes(worker.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setFormSelectedUsers(prev => [...prev, worker.id]);
+                                      } else {
+                                        setFormSelectedUsers(prev => prev.filter(id => id !== worker.id));
+                                      }
+                                    }}
+                                  />
+                                }
+                                label={
+                                  <Box>
+                                    <Typography variant="body2">
+                                      {worker.first_name} {worker.last_name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {worker.position || 'Sin cargo'} - {worker.department || 'Sin área'}
+                                    </Typography>
+                                  </Box>
+                                }
+                                sx={{ width: '100%' }}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                        
+                        {formSelectedUsers.length > 0 && (
+                          <Alert severity="info" sx={{ mt: 2 }}>
+                            {formSelectedUsers.length} usuario(s) seleccionado(s)
+                          </Alert>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </>
+              )}
               
               {/* Preguntas */}
               <Grid size={12}>
@@ -1964,6 +2282,199 @@ const Survey: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenDetailedResponseDialog(false)}>Cerrar</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Assignment Dialog */}
+        <Dialog
+          open={openAssignDialog}
+          onClose={() => setOpenAssignDialog(false)}
+          maxWidth="lg"
+          fullWidth
+          PaperProps={{
+            sx: { height: '80vh' }
+          }}
+        >
+          <DialogTitle>
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6">
+                Asignar Encuesta: {assigningSurvey?.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedUsers.length} de {getFilteredUsers().length} usuarios seleccionados
+              </Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Selecciona los usuarios a los que deseas asignar esta encuesta general.
+            </Typography>
+            
+            {/* Filtros y búsqueda */}
+            <Box sx={{ mt: 2, mb: 3 }}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Buscar usuario"
+                    placeholder="Nombre, apellido o documento"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    InputProps={{
+                      startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                    }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Área</InputLabel>
+                    <Select
+                      value={userAreaFilter}
+                      label="Área"
+                      onChange={(e) => setUserAreaFilter(e.target.value)}
+                    >
+                      <MenuItem value="">Todas las áreas</MenuItem>
+                      {getUniqueAreas().map((area) => (
+                        <MenuItem key={area} value={area}>
+                          {area}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Cargo</InputLabel>
+                    <Select
+                      value={userCargoFilter}
+                      label="Cargo"
+                      onChange={(e) => setUserCargoFilter(e.target.value)}
+                    >
+                      <MenuItem value="">Todos los cargos</MenuItem>
+                      {getUniqueCargos().map((cargo) => (
+                        <MenuItem key={cargo} value={cargo}>
+                          {cargo}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 2 }}>
+                  <Box display="flex" gap={1}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleSelectAllFiltered}
+                      disabled={getFilteredUsers().length === 0}
+                    >
+                      Todos
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleDeselectAll}
+                      disabled={selectedUsers.length === 0}
+                    >
+                      Ninguno
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+
+            {/* Lista de usuarios */}
+            <Box sx={{ 
+              maxHeight: '400px', 
+              overflow: 'auto',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1,
+              p: 1
+            }}>
+              {getFilteredUsers().length > 0 ? (
+                <FormGroup>
+                  {getFilteredUsers().map((worker) => (
+                    <FormControlLabel
+                      key={worker.id}
+                      sx={{ 
+                        mb: 1,
+                        p: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        '&:hover': {
+                          bgcolor: 'action.hover'
+                        }
+                      }}
+                      control={
+                        <Checkbox
+                          checked={selectedUsers.includes(worker.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedUsers([...selectedUsers, worker.id]);
+                            } else {
+                              setSelectedUsers(selectedUsers.filter(id => id !== worker.id));
+                            }
+                          }}
+                        />
+                      }
+                      label={
+                        <Box sx={{ ml: 1 }}>
+                          <Typography variant="body2" fontWeight="medium">
+                            {worker.first_name} {worker.last_name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {worker.position || 'Sin cargo'} - {worker.department || 'Sin área'}
+                          </Typography>
+                          {worker.document_number && (
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                              Doc: {worker.document_number}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                    />
+                  ))}
+                </FormGroup>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No se encontraron usuarios con los filtros aplicados
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+            
+            {selectedUsers.length > 0 && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>{selectedUsers.length}</strong> usuario(s) seleccionado(s) para asignar la encuesta
+                </Typography>
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button 
+              onClick={() => {
+                setOpenAssignDialog(false);
+                setUserSearch('');
+                setUserAreaFilter('');
+                setUserCargoFilter('');
+                setSelectedUsers([]);
+              }}
+              disabled={assignmentLoading}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleAssignSurveyToUsers}
+              variant="contained"
+              disabled={selectedUsers.length === 0 || assignmentLoading}
+              startIcon={assignmentLoading ? <CircularProgress size={20} /> : <AssignmentIcon />}
+            >
+              {assignmentLoading ? 'Asignando...' : `Asignar a ${selectedUsers.length} usuario(s)`}
+            </Button>
           </DialogActions>
         </Dialog>
 

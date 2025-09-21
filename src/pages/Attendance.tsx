@@ -5,6 +5,8 @@ import {
   Search,
   Refresh,
   Download,
+  GroupAdd,
+  PictureAsPdf,
 } from "@mui/icons-material";
 import {
   Box,
@@ -42,6 +44,7 @@ import React, { useState, useEffect } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../utils/dateUtils";
+import BulkAttendanceDialog from "../components/BulkAttendanceDialog";
 
 import api from "./../services/api";
 import { AttendanceStatus, AttendanceType, AttendanceStats } from "./../types";
@@ -66,10 +69,13 @@ interface Attendance {
   // Información del usuario y curso (del backend)
   user?: {
     id: number;
-    first_name: string;
-    last_name: string;
+    first_name?: string;
+    last_name?: string;
     email: string;
-    full_name: string;
+    full_name?: string;
+    // Campos legacy para compatibilidad
+    nombre?: string;
+    apellido?: string;
   };
   course?: {
     id: number;
@@ -97,10 +103,13 @@ interface AttendanceFormData {
 
 interface User {
   id: number;
-  first_name: string;
-  last_name: string;
+  first_name?: string;
+  last_name?: string;
   email: string;
-  full_name: string;
+  full_name?: string;
+  // Campos legacy para compatibilidad
+  nombre?: string;
+  apellido?: string;
 }
 
 const AttendanceManagement: React.FC = () => {
@@ -140,6 +149,7 @@ const AttendanceManagement: React.FC = () => {
   });
   const [stats, setStats] = useState<AttendanceStats>({
     total: 0,
+    total_attendance: 0,
     present: 0,
     absent: 0,
     late: 0,
@@ -150,16 +160,28 @@ const AttendanceManagement: React.FC = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deletingAttendance, setDeletingAttendance] =
     useState<Attendance | null>(null);
+  const [openBulkDialog, setOpenBulkDialog] = useState(false);
 
   // (Move this useEffect below the function declarations)
 
+  // useEffect para cargar datos iniciales
   useEffect(() => {
-    fetchAttendances();
-    fetchStats();
     fetchUsers();
     // fetchSessions();
     // eslint-disable-next-line
+  }, []);
+
+  // useEffect para actualizar asistencias cuando cambien filtros o paginación
+  useEffect(() => {
+    fetchAttendances();
+    // eslint-disable-next-line
   }, [page, rowsPerPage, statusFilter, dateFilter]);
+
+  // useEffect para actualizar estadísticas cuando cambien solo los filtros relevantes
+  useEffect(() => {
+    fetchStats();
+    // eslint-disable-next-line
+  }, [statusFilter, dateFilter]);
 
   const fetchAttendances = async () => {
     try {
@@ -167,12 +189,8 @@ const AttendanceManagement: React.FC = () => {
       const params: any = {
         skip: page * rowsPerPage,
         limit: rowsPerPage,
-        presente:
-          statusFilter === "present"
-            ? true
-            : statusFilter === "absent"
-            ? false
-            : undefined,
+        include_user: true,
+        status: statusFilter !== "all" ? statusFilter : undefined,
         session_date: dateFilter
           ? dateFilter.toISOString().split("T")[0]
           : undefined,
@@ -249,7 +267,22 @@ const AttendanceManagement: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get("/attendance/stats"); // stats endpoint no requiere cambio
+      const params = new URLSearchParams();
+      
+      // Agregar filtros si están activos
+      if (statusFilter && statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
+      
+      if (dateFilter) {
+        const formattedDate = dateFilter.toISOString().split('T')[0];
+        params.append("date", formattedDate);
+      }
+      
+      const queryString = params.toString();
+      const url = queryString ? `/attendance/stats?${queryString}` : "/attendance/stats";
+      
+      const response = await api.get(url);
       setStats(response.data);
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -401,8 +434,184 @@ const AttendanceManagement: React.FC = () => {
     }
   };
 
+  const handleGenerateCertificate = async (attendance: Attendance) => {
+    try {
+      const response = await api.get(`/attendance/${attendance.id}/certificate`, {
+        responseType: "blob",
+        timeout: 180000, // 3 minutos para certificados individuales
+        params: {
+          download: true,
+        },
+      });
+
+      // Validar que la respuesta sea un blob válido
+      if (!response.data || response.data.size === 0) {
+        showSnackbar("Error: El archivo PDF está vacío", "error");
+        return;
+      }
+
+      // Crear nombre de archivo seguro
+      const userName = getUserDisplayName(attendance).replace(/[^a-zA-Z0-9]/g, '_');
+      const courseName = (attendance.course_name || 'curso').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+      const fileName = `certificado_asistencia_${userName}_${courseName}.pdf`;
+
+      // Crear blob con tipo MIME específico para PDF
+      const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+
+      // Crear enlace de descarga
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      link.style.display = "none";
+      document.body.appendChild(link);
+      
+      // Forzar la descarga
+      link.click();
+      
+      // Limpiar después de un breve delay
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+
+      showSnackbar("Certificado de asistencia generado exitosamente", "success");
+    } catch (error: any) {
+      console.error("Error generating attendance certificate:", error);
+      if (error.response?.status === 500) {
+        showSnackbar("Error interno del servidor al generar el certificado", "error");
+      } else {
+        showSnackbar("Error al generar certificado de asistencia", "error");
+      }
+    }
+  };
+
+  const handleGenerateAttendanceList = async () => {
+    if (!dateFilter) {
+      showSnackbar("Por favor selecciona una fecha para generar la lista", "error");
+      return;
+    }
+
+    // Obtener el curso más común en la fecha seleccionada
+    const filteredAttendances = attendances.filter(attendance => {
+      const attendanceDate = new Date(attendance.session_date);
+      return attendanceDate.toDateString() === dateFilter.toDateString();
+    });
+
+    if (filteredAttendances.length === 0) {
+      showSnackbar("No hay registros de asistencia para la fecha seleccionada", "error");
+      return;
+    }
+
+    // Obtener el curso más frecuente
+    const courseCount: { [key: string]: number } = {};
+    filteredAttendances.forEach(attendance => {
+      const courseName = attendance.course_name || attendance.course?.title || "";
+      courseCount[courseName] = (courseCount[courseName] || 0) + 1;
+    });
+
+    const mostFrequentCourse = Object.keys(courseCount).reduce((a, b) => 
+      courseCount[a] > courseCount[b] ? a : b
+    );
+
+    try {
+      const sessionDate = dateFilter.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      const response = await api.get("/attendance/attendance-list", {
+        responseType: "blob",
+        timeout: 300000, // 5 minutos para PDFs grandes
+        params: {
+          course_name: mostFrequentCourse,
+          session_date: sessionDate,
+          download: true,
+        },
+      });
+
+      // Validar que la respuesta sea un blob válido
+      if (!response.data || response.data.size === 0) {
+        showSnackbar("Error: El archivo PDF está vacío", "error");
+        return;
+      }
+
+      // Crear nombre de archivo seguro
+      const safeCourse = mostFrequentCourse.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+      const fileName = `lista_asistencia_${safeCourse}_${sessionDate}.pdf`;
+
+      // Crear blob con tipo MIME específico para PDF
+      const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+      
+      // Crear enlace de descarga
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      link.style.display = "none";
+      document.body.appendChild(link);
+      
+      // Forzar la descarga
+      link.click();
+      
+      // Limpiar después de un breve delay
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+
+      showSnackbar("Lista de asistencia generada exitosamente", "success");
+    } catch (error: any) {
+      console.error("Error generating attendance list:", error);
+      if (error.response?.status === 404) {
+        showSnackbar("No se encontraron registros para generar la lista", "error");
+      } else if (error.response?.status === 500) {
+        showSnackbar("Error interno del servidor al generar la lista", "error");
+      } else {
+        showSnackbar("Error al generar lista de asistencia", "error");
+      }
+    }
+  };
+
   const showSnackbar = (message: string, severity: "success" | "error") => {
     setSnackbar({ open: true, message, severity });
+  };
+
+  const getUserDisplayName = (attendance: Attendance) => {
+    // Si el backend devuelve la información del usuario, usarla
+    if (attendance.user) {
+      // Intentar diferentes formatos de nombre
+      if (attendance.user.full_name) {
+        return attendance.user.full_name;
+      }
+      if (attendance.user.first_name && attendance.user.last_name) {
+        return `${attendance.user.first_name} ${attendance.user.last_name}`;
+      }
+      // Campos legacy
+      if ((attendance.user as any).nombre && (attendance.user as any).apellido) {
+        return `${(attendance.user as any).nombre} ${(attendance.user as any).apellido}`;
+      }
+      if (attendance.user.email) {
+        return attendance.user.email;
+      }
+    }
+    
+    // Si no, buscar en la lista de usuarios cargados
+    const user = users.find(u => u.id === attendance.user_id);
+    if (user) {
+      if (user.full_name) {
+        return user.full_name;
+      }
+      if (user.first_name && user.last_name) {
+        return `${user.first_name} ${user.last_name}`;
+      }
+      // Campos legacy
+      if ((user as any).nombre && (user as any).apellido) {
+        return `${(user as any).nombre} ${(user as any).apellido}`;
+      }
+      if (user.email) {
+        return user.email;
+      }
+    }
+    
+    return `Usuario ID: ${attendance.user_id}`;
   };
 
   return (
@@ -420,7 +629,7 @@ const AttendanceManagement: React.FC = () => {
                 <Typography color="text.secondary" gutterBottom>
                   Total Registros
                 </Typography>
-                <Typography variant="h4">{stats.total}</Typography>
+                <Typography variant="h4">{stats.total_attendance || stats.total || 0}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -522,6 +731,9 @@ const AttendanceManagement: React.FC = () => {
               <MenuItem value="all">Todos</MenuItem>
               <MenuItem value="present">Presentes</MenuItem>
               <MenuItem value="absent">Ausentes</MenuItem>
+              <MenuItem value="late">Tardío</MenuItem>
+              <MenuItem value="excused">Excusado</MenuItem>
+              <MenuItem value="partial">Parcial</MenuItem>
             </Select>
           </FormControl>
           <MUIDatePicker
@@ -545,11 +757,28 @@ const AttendanceManagement: React.FC = () => {
                 Registrar Asistencia
               </Button>
               <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<GroupAdd />}
+                onClick={() => setOpenBulkDialog(true)}
+              >
+                Registro Masivo
+              </Button>
+              <Button
                 variant="outlined"
                 startIcon={<Download />}
                 onClick={handleExportAttendance}
               >
                 Exportar
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<Download />}
+                onClick={handleGenerateAttendanceList}
+                disabled={!dateFilter}
+              >
+                Lista de Asistencia
               </Button>
             </>
           )}
@@ -608,9 +837,7 @@ const AttendanceManagement: React.FC = () => {
                     <TableCell>{attendance.id}</TableCell>
                     {user?.role !== "employee" && (
                       <TableCell>
-                        {attendance.user
-                          ? attendance.user.full_name
-                          : "Usuario no encontrado"}
+                        {getUserDisplayName(attendance)}
                       </TableCell>
                     )}
                     <TableCell>
@@ -628,13 +855,21 @@ const AttendanceManagement: React.FC = () => {
                             ? "Ausente"
                             : attendance.status === AttendanceStatus.LATE
                             ? "Tardío"
-                            : "Excusado"
+                            : attendance.status === AttendanceStatus.EXCUSED
+                            ? "Excusado"
+                            : attendance.status === AttendanceStatus.PARTIAL
+                            ? "Parcial"
+                            : "Desconocido"
                         }
                         color={
                           attendance.status === AttendanceStatus.PRESENT
                             ? "success"
                             : attendance.status === AttendanceStatus.LATE
                             ? "warning"
+                            : attendance.status === AttendanceStatus.PARTIAL
+                            ? "info"
+                            : attendance.status === AttendanceStatus.EXCUSED
+                            ? "default"
                             : "error"
                         }
                         size="small"
@@ -675,6 +910,14 @@ const AttendanceManagement: React.FC = () => {
                           title="Editar"
                         >
                           <Edit />
+                        </IconButton>
+                        <IconButton
+                          color="secondary"
+                          onClick={() => handleGenerateCertificate(attendance)}
+                          size="small"
+                          title="Generar Certificado PDF"
+                        >
+                          <PictureAsPdf />
                         </IconButton>
                         <IconButton
                           color="error"
@@ -789,6 +1032,9 @@ const AttendanceManagement: React.FC = () => {
                     <MenuItem value={AttendanceStatus.LATE}>Tardío</MenuItem>
                     <MenuItem value={AttendanceStatus.EXCUSED}>
                       Excusado
+                    </MenuItem>
+                    <MenuItem value={AttendanceStatus.PARTIAL}>
+                      Parcial
                     </MenuItem>
                   </Select>
                 </FormControl>
@@ -1006,6 +1252,28 @@ const AttendanceManagement: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Diálogo de registro masivo */}
+        <BulkAttendanceDialog
+          open={openBulkDialog}
+          onClose={() => setOpenBulkDialog(false)}
+          onSuccess={(message) => {
+            setSnackbar({
+              open: true,
+              message,
+              severity: "success",
+            });
+            fetchAttendances();
+            fetchStats();
+          }}
+          onError={(message) => {
+            setSnackbar({
+              open: true,
+              message,
+              severity: "error",
+            });
+          }}
+        />
 
         {/* Snackbar para notificaciones */}
         <Snackbar
