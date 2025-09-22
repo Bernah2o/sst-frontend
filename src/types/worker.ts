@@ -60,3 +60,63 @@ export interface WorkerCreate {
 export interface WorkerUpdate extends Partial<WorkerCreate> {
   id: number;
 }
+
+// Vacation types
+export interface WorkerVacation {
+  id: number;
+  worker_id: number;
+  start_date: string;
+  end_date: string;
+  days_requested: number;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  admin_comments?: string;
+  created_at: string;
+  updated_at: string;
+  approved_by?: number;
+  approved_at?: string;
+}
+
+export interface VacationRequest {
+  start_date: string;
+  end_date: string;
+  reason?: string;
+}
+
+export interface VacationUpdate {
+  start_date?: string;
+  end_date?: string;
+  reason?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+}
+
+export interface VacationApproval {
+  status: 'approved' | 'rejected';
+  admin_comments?: string;
+}
+
+export interface VacationBalance {
+  worker_id: number;
+  total_days: number;
+  used_days: number;
+  available_days: number;
+  year: number;
+}
+
+export interface VacationAvailability {
+  available: boolean;
+  conflicts: Array<{
+    id: number;
+    start_date: string;
+    end_date: string;
+    worker_name: string;
+  }>;
+}
+
+export interface VacationStats {
+  total_requests: number;
+  pending_requests: number;
+  approved_requests: number;
+  rejected_requests: number;
+  total_days_used: number;
+}

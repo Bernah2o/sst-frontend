@@ -9,7 +9,8 @@ import {
   Pending as PendingIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
-  Assignment as AssignmentIcon
+  Assignment as AssignmentIcon,
+  MoreVert as MoreVertIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -48,6 +49,7 @@ import {
   ListItemIcon,
   Divider,
   Stepper,
+  Menu,
   Step,
   StepLabel,
   StepContent
@@ -139,6 +141,8 @@ const Reinduction: React.FC = () => {
   });
   const [enrollConfirmDialog, setEnrollConfirmDialog] = useState({ open: false, reinductionId: null as number | null });
   const [notificationConfirmDialog, setNotificationConfirmDialog] = useState({ open: false, workerId: null as number | null });
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedReinduction, setSelectedReinduction] = useState<Reinduction | null>(null);
 
   const statusConfig = {
     pending: { label: 'Pendiente', color: 'default', icon: <PendingIcon /> },
@@ -210,6 +214,16 @@ const Reinduction: React.FC = () => {
       fetchReinductions();
     }
   }, [filters.status, filters.worker, filters.year, fetchReinductions]);
+
+  // Auto-refresh when window gains focus (user returns to tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchReinductions();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchReinductions]);
 
   const fetchWorkers = async () => {
     try {
@@ -339,9 +353,37 @@ const Reinduction: React.FC = () => {
     setOpenViewDialog(true);
   };
 
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, reinduction: Reinduction) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedReinduction(reinduction);
+  };
 
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedReinduction(null);
+  };
 
-  const getDaysUntilDueColor = (days: number) => {
+  const handleMenuAction = (action: string) => {
+    if (!selectedReinduction) return;
+    
+    switch (action) {
+      case 'view':
+        handleViewReinduction(selectedReinduction);
+        break;
+      case 'edit':
+        handleOpenDialog(selectedReinduction);
+        break;
+      case 'enroll':
+        handleEnrollWorker(selectedReinduction.id);
+        break;
+      case 'notify':
+        handleSendNotification(selectedReinduction.worker_id);
+        break;
+    }
+    handleMenuClose();
+  };
+
+  const getDaysUntilDueColor = (days: number): 'default' | 'warning' | 'error' | 'success' => {
     if (days < 0) return 'error'; // Vencida
     if (days <= 30) return 'warning'; // Próxima a vencer
     return 'success'; // A tiempo
@@ -367,6 +409,50 @@ const Reinduction: React.FC = () => {
             </Typography>
           </Alert>
         )}
+
+        {/* Resumen Estadístico */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Card sx={{ p: 2, textAlign: 'center', bgcolor: 'success.light', color: 'success.contrastText' }}>
+              <Typography variant="h4" fontWeight="bold">
+                {reinductions.filter(r => r.status === 'completed').length}
+              </Typography>
+              <Typography variant="body2">
+                Completadas
+              </Typography>
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Card sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.light', color: 'warning.contrastText' }}>
+              <Typography variant="h4" fontWeight="bold">
+                {reinductions.filter(r => r.status === 'pending').length}
+              </Typography>
+              <Typography variant="body2">
+                Pendientes
+              </Typography>
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Card sx={{ p: 2, textAlign: 'center', bgcolor: 'error.light', color: 'error.contrastText' }}>
+              <Typography variant="h4" fontWeight="bold">
+                {reinductions.filter(r => r.is_overdue).length}
+              </Typography>
+              <Typography variant="body2">
+                Vencidas
+              </Typography>
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Card sx={{ p: 2, textAlign: 'center', bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+              <Typography variant="h4" fontWeight="bold">
+                {reinductions.length}
+              </Typography>
+              <Typography variant="body2">
+                Total
+              </Typography>
+            </Card>
+          </Grid>
+        </Grid>
         
         {/* Alertas de Notificaciones Pendientes */}
         {reinductions.some(r => r.needs_notification) && (
@@ -429,18 +515,38 @@ const Reinduction: React.FC = () => {
               </Grid>
 
               <Grid size={{ xs: 12, md: 3 }}>
-                <Box display="flex" gap={1}>
+                <Box display="flex" gap={0.5} flexWrap="wrap" alignItems="center">
                   <Tooltip title="Actualizar">
-                    <IconButton onClick={fetchReinductions}>
+                    <IconButton size="small" onClick={fetchReinductions}>
                       <RefreshIcon />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="Completados">
+                    <IconButton
+                      size="small"
+                      color={filters.status === 'completed' ? 'success' : 'default'}
+                      onClick={() => handleFilterChange('status', filters.status === 'completed' ? '' : 'completed')}
+                    >
+                      <CompleteIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Pendientes">
+                    <IconButton
+                      size="small"
+                      color={filters.status === 'pending' ? 'warning' : 'default'}
+                      onClick={() => handleFilterChange('status', filters.status === 'pending' ? '' : 'pending')}
+                    >
+                      <PendingIcon />
+                    </IconButton>
+                  </Tooltip>
                   <Button
+                    size="small"
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={() => handleOpenDialog()}
+                    sx={{ ml: 1 }}
                   >
-                    Nueva Reinducción
+                    Nueva
                   </Button>
                 </Box>
               </Grid>
@@ -483,14 +589,46 @@ const Reinduction: React.FC = () => {
                       <TableRow 
                         key={reinduction.id}
                         sx={{
-                          backgroundColor: reinduction.is_overdue ? 'error.light' : 'inherit'
+                          backgroundColor: reinduction.status === 'completed' 
+                            ? 'success.light' 
+                            : reinduction.is_overdue 
+                            ? 'error.light' 
+                            : 'inherit',
+                          '&:hover': {
+                            backgroundColor: reinduction.status === 'completed' 
+                              ? 'success.main' 
+                              : reinduction.is_overdue 
+                              ? 'error.main' 
+                              : 'action.hover',
+                          },
+                          opacity: reinduction.status === 'completed' ? 0.9 : 1
                         }}
                       >
                         <TableCell>
                           <Box display="flex" alignItems="center" gap={1}>
-                            <Avatar sx={{ width: 32, height: 32 }}>
-                              {reinduction.worker_name.charAt(0)}
-                            </Avatar>
+                            <Box position="relative">
+                              <Avatar sx={{ width: 32, height: 32 }}>
+                                {reinduction.worker_name.charAt(0)}
+                              </Avatar>
+                              {reinduction.status === 'completed' && (
+                                <Box
+                                  sx={{
+                                    position: 'absolute',
+                                    top: -2,
+                                    right: -2,
+                                    backgroundColor: 'success.main',
+                                    borderRadius: '50%',
+                                    width: 16,
+                                    height: 16,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  <CompleteIcon sx={{ fontSize: 10, color: 'white' }} />
+                                </Box>
+                              )}
+                            </Box>
                             <Box>
                               <Typography variant="body2" fontWeight="medium">
                                 {reinduction.worker_name}
@@ -563,7 +701,7 @@ const Reinduction: React.FC = () => {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Box display="flex" gap={1}>
+                          <Box display="flex" gap={1} alignItems="center">
                             <Tooltip title="Ver detalles">
                               <IconButton
                                 size="small"
@@ -572,32 +710,12 @@ const Reinduction: React.FC = () => {
                                 <ViewIcon />
                               </IconButton>
                             </Tooltip>
-                            {reinduction.status === 'pending' && (
-                              <Tooltip title="Inscribir trabajador">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleEnrollWorker(reinduction.id)}
-                                >
-                                  <AssignmentIcon />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {reinduction.needs_notification && (
-                              <Tooltip title="Enviar notificación">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleSendNotification(reinduction.worker_id)}
-                                >
-                                  <RefreshIcon />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            <Tooltip title="Editar">
+                            <Tooltip title="Más acciones">
                               <IconButton
                                 size="small"
-                                onClick={() => handleOpenDialog(reinduction)}
+                                onClick={(e) => handleMenuOpen(e, reinduction)}
                               >
-                                <EditIcon />
+                                <MoreVertIcon />
                               </IconButton>
                             </Tooltip>
                           </Box>
@@ -623,6 +741,42 @@ const Reinduction: React.FC = () => {
             />
           </CardContent>
         </Card>
+
+        {/* Menú de acciones */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <MenuItem onClick={() => handleMenuAction('view')}>
+            <ViewIcon sx={{ mr: 1 }} />
+            Ver detalles
+          </MenuItem>
+          <MenuItem onClick={() => handleMenuAction('edit')}>
+            <EditIcon sx={{ mr: 1 }} />
+            Editar
+          </MenuItem>
+          {selectedReinduction?.status === 'pending' && (
+            <MenuItem onClick={() => handleMenuAction('enroll')}>
+              <AssignmentIcon sx={{ mr: 1 }} />
+              Inscribir trabajador
+            </MenuItem>
+          )}
+          {selectedReinduction?.needs_notification && (
+            <MenuItem onClick={() => handleMenuAction('notify')}>
+              <RefreshIcon sx={{ mr: 1 }} />
+              Enviar notificación
+            </MenuItem>
+          )}
+        </Menu>
 
         {/* Dialog para Crear/Editar Reinducción */}
         <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
@@ -753,7 +907,12 @@ const Reinduction: React.FC = () => {
                               secondary={viewingReinduction.worker_name} 
                             />
                           </ListItem>
-
+                          <ListItem>
+                            <ListItemText 
+                              primary="ID del Trabajador" 
+                              secondary={viewingReinduction.worker_id} 
+                            />
+                          </ListItem>
                         </List>
                       </CardContent>
                     </Card>
@@ -765,8 +924,50 @@ const Reinduction: React.FC = () => {
                           Información de la Reinducción
                         </Typography>
                         <List dense>
-
-
+                          <ListItem>
+                            <ListItemText 
+                              primary="Año" 
+                              secondary={viewingReinduction.year} 
+                            />
+                          </ListItem>
+                          <ListItem>
+                            <ListItemText 
+                              primary="Fecha de Vencimiento" 
+                              secondary={formatDate(viewingReinduction.due_date)} 
+                            />
+                          </ListItem>
+                          {viewingReinduction.scheduled_date && (
+                            <ListItem>
+                              <ListItemText 
+                                primary="Fecha Programada" 
+                                secondary={formatDate(viewingReinduction.scheduled_date)} 
+                              />
+                            </ListItem>
+                          )}
+                          {viewingReinduction.completed_date && (
+                            <ListItem>
+                              <ListItemText 
+                                primary="Fecha de Finalización" 
+                                secondary={formatDate(viewingReinduction.completed_date)} 
+                              />
+                            </ListItem>
+                          )}
+                          {viewingReinduction.course_title && (
+                            <ListItem>
+                              <ListItemText 
+                                primary="Curso Asignado" 
+                                secondary={viewingReinduction.course_title} 
+                              />
+                            </ListItem>
+                          )}
+                          {viewingReinduction.enrollment_status && (
+                            <ListItem>
+                              <ListItemText 
+                                primary="Estado del Enrollment" 
+                                secondary={viewingReinduction.enrollment_status} 
+                              />
+                            </ListItem>
+                          )}
                         </List>
                       </CardContent>
                     </Card>
@@ -783,7 +984,47 @@ const Reinduction: React.FC = () => {
                             color={statusConfig[viewingReinduction.status as keyof typeof statusConfig]?.color as any}
                             icon={statusConfig[viewingReinduction.status as keyof typeof statusConfig]?.icon}
                           />
+                          {viewingReinduction.is_overdue && (
+                            <Chip
+                              label="Vencida"
+                              color="error"
+                              size="small"
+                            />
+                          )}
                         </Box>
+                        
+                        <List dense>
+                          <ListItem>
+                            <ListItemText 
+                              primary="Días hasta vencimiento" 
+                              secondary={viewingReinduction.days_until_due > 0 ? 
+                                `${viewingReinduction.days_until_due} días` : 
+                                viewingReinduction.days_until_due === 0 ? 'Vence hoy' : 
+                                `Vencida hace ${Math.abs(viewingReinduction.days_until_due)} días`
+                              } 
+                            />
+                          </ListItem>
+                          {viewingReinduction.needs_notification && (
+                            <ListItem>
+                              <ListItemText 
+                                primary="Notificación" 
+                                secondary="Requiere notificación" 
+                              />
+                            </ListItem>
+                          )}
+                          <ListItem>
+                            <ListItemText 
+                              primary="Creado" 
+                              secondary={formatDate(viewingReinduction.created_at)} 
+                            />
+                          </ListItem>
+                          <ListItem>
+                            <ListItemText 
+                              primary="Última actualización" 
+                              secondary={formatDate(viewingReinduction.updated_at)} 
+                            />
+                          </ListItem>
+                        </List>
 
                       </CardContent>
                     </Card>

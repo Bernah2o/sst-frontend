@@ -157,9 +157,20 @@ const SurveyTabulation: React.FC = () => {
       
       // Calculate real statistics from actual responses
       const questionStatistics = detailedResults.questions.map((question: any) => {
+        // Get all responses for this question, including those with valid data
         const questionResponses = detailedResults.employee_responses
           .map((emp: any) => emp.answers.find((ans: any) => ans.question_id === question.id))
-          .filter((ans: any) => ans && ans.is_answered);
+          .filter((ans: any) => {
+            if (!ans) return false;
+            
+            // Include response if it has any valid data
+            return (
+              ans.answer_text || 
+              ans.answer_value !== null || 
+              ans.selected_options ||
+              ans.is_answered
+            );
+          });
         
         const totalResponses = questionResponses.length;
         const responseRate = detailedResults.total_responses > 0 
@@ -246,35 +257,47 @@ const SurveyTabulation: React.FC = () => {
         });
         
         // Count responses
-        responses.forEach((response: any) => {
+        responses.forEach((response: any, index: number) => {
+          // Handle different response formats
+          let selectedOptions: string[] = [];
+          
           if (response.selected_options) {
             try {
-              const selectedOptions = JSON.parse(response.selected_options);
-              if (Array.isArray(selectedOptions)) {
-                selectedOptions.forEach((option: string) => {
-                  if (optionCounts.hasOwnProperty(option)) {
-                    optionCounts[option]++;
-                  }
-                });
+              const parsed = JSON.parse(response.selected_options);
+              if (Array.isArray(parsed)) {
+                selectedOptions = parsed;
+              } else {
+                selectedOptions = [parsed];
               }
             } catch (e) {
-              // Handle single option case
-              if (optionCounts.hasOwnProperty(response.selected_options)) {
-                optionCounts[response.selected_options]++;
-              }
+              selectedOptions = [response.selected_options];
             }
+          } else if (response.answer_text) {
+            // Handle case where response comes in answer_text instead of selected_options
+            selectedOptions = [response.answer_text];
+          } else if (response.display_value) {
+            // Fallback to display_value
+            selectedOptions = [response.display_value];
           }
+          
+          // Count the selected options
+          selectedOptions.forEach((option: string) => {
+            if (optionCounts.hasOwnProperty(option)) {
+              optionCounts[option]++;
+            }
+          });
         });
         
         const totalResponses = responses.length;
-        return {
+        
+        const result = {
           options: options.map((option: string) => ({
             option,
             count: optionCounts[option] || 0,
             percentage: totalResponses > 0 ? ((optionCounts[option] || 0) / totalResponses) * 100 : 0
           }))
         };
-        
+        return result;
       case 'rating':
       case 'scale':
         const numericResponses = responses

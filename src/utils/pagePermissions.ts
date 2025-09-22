@@ -82,7 +82,15 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     name: 'Detalle de Trabajador',
     description: 'Vista detallada de un trabajador específico',
     requiredPermissions: ['canViewWorkersPage'],
-    allowedRoles: ['admin'],
+    allowedRoles: ['admin', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewWorkersPage(),
+  },
+  {
+    route: '/admin/workers/:workerId/vacations',
+    name: 'Gestión de Vacaciones',
+    description: 'Gestión de vacaciones de trabajadores',
+    requiredPermissions: ['canViewWorkersPage'],
+    allowedRoles: ['admin', 'supervisor'],
     customCheck: (permissions) => permissions.canViewWorkersPage(),
   },
 
@@ -114,6 +122,48 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     route: '/employee/courses/:id',
     name: 'Detalle del Curso',
     description: 'Vista detallada de un curso',
+    requiredPermissions: [],
+    allowedRoles: ['employee'],
+  },
+  {
+    route: '/employee/courses/:id/evaluation',
+    name: 'Evaluación del Curso',
+    description: 'Evaluación de un curso específico',
+    requiredPermissions: [],
+    allowedRoles: ['employee'],
+  },
+  {
+    route: '/employee/evaluations',
+    name: 'Mis Evaluaciones',
+    description: 'Evaluaciones del empleado',
+    requiredPermissions: [],
+    allowedRoles: ['employee'],
+  },
+  {
+    route: '/employee/surveys',
+    name: 'Mis Encuestas',
+    description: 'Encuestas del empleado',
+    requiredPermissions: [],
+    allowedRoles: ['employee'],
+  },
+  {
+    route: '/employee/certificates',
+    name: 'Mis Certificados',
+    description: 'Certificados del empleado',
+    requiredPermissions: [],
+    allowedRoles: ['employee'],
+  },
+  {
+    route: '/employee/attendance',
+    name: 'Mi Asistencia',
+    description: 'Registro de asistencia del empleado',
+    requiredPermissions: [],
+    allowedRoles: ['employee'],
+  },
+  {
+    route: '/employee/vacations',
+    name: 'Mis Vacaciones',
+    description: 'Solicitudes de vacaciones del empleado',
     requiredPermissions: [],
     allowedRoles: ['employee'],
   },
@@ -274,9 +324,25 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     route: '/admin/files',
     name: 'Gestión de Archivos',
     description: 'Administración de archivos del sistema',
-    requiredPermissions: ['canViewCoursesPage'],
+    requiredPermissions: ['canViewFilesPage'],
     allowedRoles: ['admin', 'trainer'],
-    customCheck: (permissions) => permissions.canViewCoursesPage(),
+    customCheck: (permissions) => permissions.canViewFilesPage,
+  },
+  {
+    route: '/admin/notification-acknowledgment',
+    name: 'Confirmación de Notificaciones',
+    description: 'Gestión de confirmaciones de notificaciones',
+    requiredPermissions: ['canViewNotificationsPage'],
+    allowedRoles: ['admin'],
+    customCheck: (permissions) => permissions.canViewNotificationsPage,
+  },
+  {
+    route: '/admin/evaluation-results',
+    name: 'Resultados de Evaluaciones',
+    description: 'Visualización de resultados de evaluaciones',
+    requiredPermissions: ['canViewEvaluationsPage'],
+    allowedRoles: ['admin', 'trainer'],
+    customCheck: (permissions) => permissions.canViewEvaluationsPage,
   },
 
   // Absenteeism
@@ -289,13 +355,56 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     customCheck: (permissions) => permissions.canViewWorkersPage(),
   },
 
+  // Suppliers
+  {
+    route: '/admin/suppliers',
+    name: 'Gestión de Proveedores',
+    description: 'Administración de proveedores',
+    requiredPermissions: ['canViewWorkersPage'],
+    allowedRoles: ['admin', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewWorkersPage(),
+  },
+
   // Profile (accessible to all authenticated users)
   {
     route: '/profile',
     name: 'Perfil de Usuario',
-    description: 'Perfil personal del usuario',
+    description: 'Perfil del usuario',
     requiredPermissions: [],
     allowedRoles: ['admin', 'trainer', 'supervisor', 'employee'],
+  },
+  
+  // Dashboards específicos
+  {
+    route: '/trainer/dashboard',
+    name: 'Dashboard del Instructor',
+    description: 'Panel de control para instructores',
+    requiredPermissions: [],
+    allowedRoles: ['trainer'],
+  },
+  {
+    route: '/employee/dashboard',
+    name: 'Dashboard del Empleado',
+    description: 'Panel de control para empleados',
+    requiredPermissions: [],
+    allowedRoles: ['employee'],
+  },
+  {
+    route: '/supervisor/dashboard',
+    name: 'Dashboard del Supervisor',
+    description: 'Panel de control para supervisores',
+    requiredPermissions: [],
+    allowedRoles: ['supervisor'],
+  },
+  
+  // Rutas adicionales
+  {
+    route: '/admin/user-progress',
+    name: 'Progreso de Usuarios',
+    description: 'Seguimiento del progreso de usuarios',
+    requiredPermissions: ['canViewProgressPage'],
+    allowedRoles: ['admin', 'trainer', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewProgressPage,
   },
 ];
 

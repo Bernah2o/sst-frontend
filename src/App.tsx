@@ -51,11 +51,14 @@ import RoleManagement from "./pages/RoleManagement";
 // Dashboard pages
 import TrainerDashboard from "./pages/TrainerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
+import EmployeeVacations from "./pages/EmployeeVacations";
 import SupervisorDashboard from "./pages/SupervisorDashboard";
 import User from "./pages/User";
 import Worker from "./pages/Worker";
 import WorkerDetail from "./pages/WorkerDetail";
 import WorkerSearch from "./pages/WorkerSearch";
+import WorkerVacations from "./pages/WorkerVacations";
+import VacationsManagement from "./pages/VacationsManagement";
 import { UserRole } from "./types";
 import { checkPagePermission } from "./utils/pagePermissions";
 
@@ -244,10 +247,26 @@ const AppContent: React.FC = () => {
                     }
                   />
                   <Route
+                    path="/admin/workers/vacations"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <VacationsManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/admin/workers/:workerId"
                     element={
-                      <ProtectedRoute allowedRoles={["admin"]}>
+                      <ProtectedRoute route="/admin/workers/:workerId">
                         <WorkerDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/workers/:workerId/vacations"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <WorkerVacations />
                       </ProtectedRoute>
                     }
                   />
@@ -557,6 +576,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["employee"]}>
                         <Certificate />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/employee/vacations"
+                    element={
+                      <ProtectedRoute allowedRoles={["employee"]}>
+                        <EmployeeVacations />
                       </ProtectedRoute>
                     }
                   />
