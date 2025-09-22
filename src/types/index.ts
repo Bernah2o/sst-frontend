@@ -1204,6 +1204,7 @@ export interface OccupationalExam {
   observations?: string;
   examining_doctor?: string;
   medical_center?: string;
+  pdf_file_path?: string;
   created_at: string;
   updated_at: string;
 }

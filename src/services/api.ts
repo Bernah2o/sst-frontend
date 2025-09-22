@@ -210,6 +210,19 @@ class ApiService {
     });
     return response.data;
   }
+
+  // Métodos para exámenes ocupacionales
+  async uploadOccupationalExamPdf(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await this.api.post('/occupational-exams/upload-pdf', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();

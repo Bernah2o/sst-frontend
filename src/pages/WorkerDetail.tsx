@@ -575,8 +575,8 @@ const WorkerDetail: React.FC = () => {
                       <TableCell>{survey.survey_title}</TableCell>
                       <TableCell>
                         <Chip
-                          label={survey.status === 'COMPLETED' ? 'Completada' : 'Pendiente'}
-                          color={survey.status === 'COMPLETED' ? 'success' : 'warning'}
+                          label={survey.status === 'completed' ? 'Completada' : 'Pendiente'}
+                          color={survey.status === 'completed' ? 'success' : 'warning'}
                           size="small"
                         />
                       </TableCell>
@@ -625,8 +625,8 @@ const WorkerDetail: React.FC = () => {
                       <TableCell>{evaluation.evaluation_title}</TableCell>
                       <TableCell>
                         <Chip
-                          label={evaluation.status === 'COMPLETED' ? 'Completada' : 'Pendiente'}
-                          color={evaluation.status === 'COMPLETED' ? 'success' : 'warning'}
+                          label={evaluation.status === 'completed' ? 'Completada' : 'Pendiente'}
+                          color={evaluation.status === 'completed' ? 'success' : 'warning'}
                           size="small"
                         />
                       </TableCell>

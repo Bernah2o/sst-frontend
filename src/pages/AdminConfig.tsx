@@ -31,6 +31,7 @@ import {
   MenuItem,
   Switch,
   FormControlLabel,
+  TablePagination,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 
@@ -196,6 +197,14 @@ const AdminConfigPage: React.FC = () => {
     periodicidad_emo: null,
     activo: true,
   });
+
+  // Estados de paginación
+  const [seguridadSocialPage, setSeguridadSocialPage] = useState(0);
+  const [seguridadSocialRowsPerPage, setSeguridadSocialRowsPerPage] = useState(5);
+  const [programasPage, setProgramasPage] = useState(0);
+  const [programasRowsPerPage, setProgramasRowsPerPage] = useState(5);
+  const [cargosPage, setCargosPage] = useState(0);
+  const [cargosRowsPerPage, setCargosRowsPerPage] = useState(5);
 
   useEffect(() => {
     if (user) {
@@ -587,54 +596,85 @@ const AdminConfigPage: React.FC = () => {
 
   // Filtrar configuraciones por categoría (ya no incluye seguridad social)
 
-  const renderSeguridadSocialTable = () => (
-    <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-      <Table>
-        <TableHead>
-          <TableRow sx={{ backgroundColor: "grey.50" }}>
-            <TableCell sx={{ fontWeight: "bold" }}>Tipo</TableCell>
-            <TableCell sx={{ fontWeight: "bold" }}>Nombre</TableCell>
-            <TableCell sx={{ fontWeight: "bold" }}>Estado</TableCell>
-            <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {seguridadSocial.map((entity) => (
-            <TableRow key={entity.id} hover>
-              <TableCell sx={{ fontWeight: "medium" }}>
-                {entity.tipo.toUpperCase()}
-              </TableCell>
-              <TableCell>{entity.nombre}</TableCell>
-              <TableCell>
-                <Chip
-                  label={entity.is_active ? "Activo" : "Inactivo"}
-                  color={entity.is_active ? "success" : "default"}
-                  size="small"
-                  sx={{ fontWeight: "bold" }}
-                />
-              </TableCell>
-              <TableCell>
-                <IconButton
-                  size="small"
-                  onClick={() => handleOpenSeguridadSocialDialog(entity)}
-                  sx={{ mr: 1, color: "primary.main" }}
-                >
-                  <EditIcon />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  onClick={() => handleDeleteSeguridadSocial(entity)}
-                  sx={{ color: "error.main" }}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
+  const renderSeguridadSocialTable = () => {
+    // Calcular datos paginados
+    const startIndex = seguridadSocialPage * seguridadSocialRowsPerPage;
+    const endIndex = startIndex + seguridadSocialRowsPerPage;
+    const paginatedSeguridadSocial = seguridadSocial.slice(startIndex, endIndex);
+
+    const handleChangePage = (event: unknown, newPage: number) => {
+      setSeguridadSocialPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+      setSeguridadSocialRowsPerPage(parseInt(event.target.value, 10));
+      setSeguridadSocialPage(0);
+    };
+
+    return (
+      <Paper sx={{ borderRadius: 2 }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "grey.50" }}>
+                <TableCell sx={{ fontWeight: "bold" }}>Tipo</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Nombre</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Estado</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {paginatedSeguridadSocial.map((entity) => (
+                <TableRow key={entity.id} hover>
+                  <TableCell sx={{ fontWeight: "medium" }}>
+                    {entity.tipo.toUpperCase()}
+                  </TableCell>
+                  <TableCell>{entity.nombre}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={entity.is_active ? "Activo" : "Inactivo"}
+                      color={entity.is_active ? "success" : "default"}
+                      size="small"
+                      sx={{ fontWeight: "bold" }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpenSeguridadSocialDialog(entity)}
+                      sx={{ mr: 1, color: "primary.main" }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteSeguridadSocial(entity)}
+                      sx={{ color: "error.main" }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={seguridadSocial.length}
+          rowsPerPage={seguridadSocialRowsPerPage}
+          page={seguridadSocialPage}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Filas por página:"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+          }
+        />
+      </Paper>
+    );
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -676,58 +716,83 @@ const AdminConfigPage: React.FC = () => {
             </Button>
           </Box>
 
-          <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: "grey.50" }}>
-                  <TableCell sx={{ fontWeight: "bold" }}>
-                    Nombre del Cargo
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold" }}>
-                    Periodicidad EMO
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold" }}>Estado</TableCell>
-                  <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {cargos.map((cargo) => (
-                  <TableRow key={cargo.id} hover>
-                    <TableCell sx={{ fontWeight: "medium" }}>
-                      {cargo.nombre_cargo}
+          <Paper sx={{ borderRadius: 2 }}>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "grey.50" }}>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Nombre del Cargo
                     </TableCell>
-                    <TableCell>
-                      {cargo.periodicidad_emo || "No especificada"}
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Periodicidad EMO
                     </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={cargo.activo ? "Activo" : "Inactivo"}
-                        color={cargo.activo ? "success" : "default"}
-                        size="small"
-                        sx={{ fontWeight: "bold" }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenCargoDialog(cargo)}
-                        sx={{ mr: 1, color: "primary.main" }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteCargo(cargo)}
-                        sx={{ color: "error.main" }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Estado</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {cargos
+                    .slice(
+                      cargosPage * cargosRowsPerPage,
+                      cargosPage * cargosRowsPerPage + cargosRowsPerPage
+                    )
+                    .map((cargo) => (
+                      <TableRow key={cargo.id} hover>
+                        <TableCell sx={{ fontWeight: "medium" }}>
+                          {cargo.nombre_cargo}
+                        </TableCell>
+                        <TableCell>
+                          {cargo.periodicidad_emo || "No especificada"}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={cargo.activo ? "Activo" : "Inactivo"}
+                            color={cargo.activo ? "success" : "default"}
+                            size="small"
+                            sx={{ fontWeight: "bold" }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenCargoDialog(cargo)}
+                            sx={{ mr: 1, color: "primary.main" }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteCargo(cargo)}
+                            sx={{ color: "error.main" }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={cargos.length}
+              rowsPerPage={cargosRowsPerPage}
+              page={cargosPage}
+              onPageChange={(event: unknown, newPage: number) => {
+                setCargosPage(newPage);
+              }}
+              onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                setCargosRowsPerPage(parseInt(event.target.value, 10));
+                setCargosPage(0);
+              }}
+              labelRowsPerPage="Filas por página:"
+              labelDisplayedRows={({ from, to, count }) =>
+                `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+              }
+            />
+          </Paper>
         </CardContent>
       </Card>
 
@@ -765,52 +830,77 @@ const AdminConfigPage: React.FC = () => {
             </Button>
           </Box>
 
-          <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: "grey.50" }}>
-                  <TableCell sx={{ fontWeight: "bold" }}>
-                    Nombre del Programa
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold" }}>Estado</TableCell>
-                  <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {programas.map((programa) => (
-                  <TableRow key={programa.id} hover>
-                    <TableCell sx={{ fontWeight: "medium" }}>
-                      {programa.nombre_programa}
+          <Paper sx={{ borderRadius: 2 }}>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "grey.50" }}>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Nombre del Programa
                     </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={programa.activo ? "Activo" : "Inactivo"}
-                        color={programa.activo ? "success" : "default"}
-                        size="small"
-                        sx={{ fontWeight: "bold" }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenProgramDialog(programa)}
-                        sx={{ mr: 1, color: "primary.main" }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteProgram(programa)}
-                        sx={{ color: "error.main" }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Estado</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {programas
+                    .slice(
+                      programasPage * programasRowsPerPage,
+                      programasPage * programasRowsPerPage + programasRowsPerPage
+                    )
+                    .map((programa) => (
+                      <TableRow key={programa.id} hover>
+                        <TableCell sx={{ fontWeight: "medium" }}>
+                          {programa.nombre_programa}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={programa.activo ? "Activo" : "Inactivo"}
+                            color={programa.activo ? "success" : "default"}
+                            size="small"
+                            sx={{ fontWeight: "bold" }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenProgramDialog(programa)}
+                            sx={{ mr: 1, color: "primary.main" }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteProgram(programa)}
+                            sx={{ color: "error.main" }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={programas.length}
+              rowsPerPage={programasRowsPerPage}
+              page={programasPage}
+              onPageChange={(event: unknown, newPage: number) => {
+                setProgramasPage(newPage);
+              }}
+              onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                setProgramasRowsPerPage(parseInt(event.target.value, 10));
+                setProgramasPage(0);
+              }}
+              labelRowsPerPage="Filas por página:"
+              labelDisplayedRows={({ from, to, count }) =>
+                `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+              }
+            />
+          </Paper>
         </CardContent>
       </Card>
 
