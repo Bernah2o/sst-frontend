@@ -17,6 +17,9 @@ import {
   Assessment as AssessmentIcon,
   Email as EmailIcon,
   PictureAsPdf as PdfIcon,
+  CloudUpload as UploadIcon,
+  AttachFile as AttachFileIcon,
+  Clear as ClearIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -65,10 +68,11 @@ import React, { useState, useEffect } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
 import { adminConfigService } from "../services/adminConfigService";
-import api from "../services/api";
+import api, { apiService } from "../services/api";
 import { formatDate } from "../utils/dateUtils";
 import { suppliersService, Supplier, Doctor } from "../services/suppliersService";
 import AutocompleteField, { AutocompleteOption } from "../components/AutocompleteField";
+import { getApiUrl } from "../config/env";
 
 
 // Enums que coinciden con el backend
@@ -98,6 +102,7 @@ interface OccupationalExam {
   observations?: string;
   examining_doctor?: string;
   medical_center?: string;
+  pdf_file_path?: string;
   
   // Nuevos campos para suppliers
   supplier_id?: number;
@@ -175,6 +180,8 @@ const OccupationalExam: React.FC = () => {
   const [generatingIndividualReport, setGeneratingIndividualReport] =
     useState(false);
   const [sendingEmail, setSendingEmail] = useState<number | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   const [formData, setFormData] = useState({
     worker_id: "",
     worker_name: "",
@@ -205,6 +212,7 @@ const OccupationalExam: React.FC = () => {
       | "pendiente",
     restrictions: "",
     next_exam_date: null as Date | null,
+    pdf_file_path: null as string | null,
   });
 
   const examTypes = [
@@ -372,20 +380,208 @@ const OccupationalExam: React.FC = () => {
     }
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validar que sea un archivo PDF
+      if (file.type !== 'application/pdf') {
+        alert('Por favor seleccione un archivo PDF válido');
+        return;
+      }
+      
+      // Validar tamaño del archivo (máximo 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('El archivo es demasiado grande. El tamaño máximo permitido es 10MB');
+        return;
+      }
+      
+      setSelectedFile(file);
+    }
+  };
+
+  const uploadPdfFile = async (examId: number): Promise<string | null> => {
+    if (!selectedFile) return null;
+
+    try {
+      setUploadingPdf(true);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await api.post(
+        `/occupational-exams/${examId}/upload-pdf`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      return response.data.pdf_file_path;
+    } catch (error) {
+      console.error('Error uploading PDF:', error);
+      throw error;
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
+
+  // Función para previsualizar PDF con autenticación
+  const handlePreviewPdf = async (examId: number) => {
+    try {
+      const response = await api.get(`/occupational-exams/${examId}/pdf`, {
+        responseType: 'blob',
+      });
+      
+      // Verificar si la respuesta es válida
+      if (!response.data || response.data.size === 0) {
+        throw new Error('El archivo PDF está vacío o no existe');
+      }
+      
+      // Crear URL temporal para el blob
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Abrir en nueva ventana
+      window.open(url, '_blank');
+      
+      // Limpiar URL después de un tiempo
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (error: any) {
+      console.error('Error previewing PDF:', error);
+      
+      let errorMessage = 'Error al previsualizar el PDF.';
+      if (error.response) {
+        console.error('Error response:', error.response);
+        if (error.response.status === 404) {
+          errorMessage = 'El archivo PDF no fue encontrado.';
+        } else if (error.response.status === 403) {
+          errorMessage = 'No tiene permisos para acceder a este archivo.';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Error interno del servidor al obtener el PDF.';
+        } else {
+          errorMessage = `Error del servidor: ${error.response.status}`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
+    }
+  };
+
+  // Función para descargar PDF con autenticación
+  const handleDownloadPdf = async (examId: number, workerName?: string) => {
+    try {
+      const response = await api.get(`/occupational-exams/${examId}/pdf?download=true`, {
+        responseType: 'blob',
+      });
+      
+      // Verificar si la respuesta es válida
+      if (!response.data || response.data.size === 0) {
+        throw new Error('El archivo PDF está vacío o no existe');
+      }
+      
+      // Crear URL temporal para el blob
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Crear elemento de descarga
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Examen_Ocupacional_${workerName?.replace(/\s+/g, '_') || examId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Limpiar URL
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Error downloading PDF:', error);
+      
+      let errorMessage = 'Error al descargar el PDF.';
+      if (error.response) {
+        console.error('Error response:', error.response);
+        if (error.response.status === 404) {
+          errorMessage = 'El archivo PDF no fue encontrado.';
+        } else if (error.response.status === 403) {
+          errorMessage = 'No tiene permisos para acceder a este archivo.';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Error interno del servidor al obtener el PDF.';
+        } else {
+          errorMessage = `Error del servidor: ${error.response.status}`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      worker_id: "",
+      worker_name: "",
+      worker_position: "",
+      worker_hire_date: "",
+      exam_type: "examen_periodico",
+      exam_date: null,
+      programa: "",
+      occupational_conclusions: "",
+      preventive_occupational_behaviors: "",
+      general_recommendations: "",
+      medical_aptitude_concept: "apto",
+      observations: "",
+      examining_doctor: "",
+      medical_center: "",
+      supplier_id: "",
+      doctor_id: "",
+      status: "programado",
+      result: "pendiente",
+      restrictions: "",
+      next_exam_date: null,
+      pdf_file_path: null,
+    });
+    setSelectedFile(null);
+  };
+
   const handleSaveExam = async () => {
     try {
+      let pdfFilePath = null;
+
+      // Si hay un archivo PDF seleccionado, subirlo primero
+      if (selectedFile) {
+        setUploadingPdf(true);
+        try {
+          const uploadResponse = await apiService.uploadOccupationalExamPdf(selectedFile);
+          pdfFilePath = uploadResponse.file_path;
+        } catch (error) {
+          console.error("Error uploading PDF:", error);
+          throw error;
+        } finally {
+          setUploadingPdf(false);
+        }
+      }
+
       const payload = {
         ...formData,
         worker_id: parseInt(formData.worker_id),
         exam_date: formData.exam_date?.toISOString().split("T")[0],
         next_exam_date: formData.next_exam_date?.toISOString().split("T")[0],
+        pdf_file_path: pdfFilePath || formData.pdf_file_path, // Usar el nuevo archivo o mantener el existente
       };
 
+      let examResponse;
       if (editingExam) {
-        await api.put(`/occupational-exams/${editingExam.id}`, payload);
+        examResponse = await api.put(`/occupational-exams/${editingExam.id}`, payload);
+        examResponse.data = { ...editingExam, ...payload };
       } else {
-        await api.post("/occupational-exams/", payload);
+        examResponse = await api.post("/occupational-exams/", payload);
       }
+
       fetchExams();
       handleCloseDialog();
     } catch (error) {
@@ -531,6 +727,7 @@ const OccupationalExam: React.FC = () => {
         next_exam_date: exam.next_exam_date
           ? new Date(exam.next_exam_date)
           : null,
+        pdf_file_path: exam.pdf_file_path ? exam.pdf_file_path.trim().replace(/`/g, '') : null,
       };
 
       setFormData(formDataToSet);
@@ -562,14 +759,19 @@ const OccupationalExam: React.FC = () => {
         result: "pendiente",
         restrictions: "",
         next_exam_date: null,
+        pdf_file_path: null,
       });
     }
+    
+    // Limpiar archivo seleccionado al abrir el diálogo
+    setSelectedFile(null);
     setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingExam(null);
+    resetForm();
   };
 
   const handleViewExam = (exam: OccupationalExam) => {
@@ -1126,6 +1328,26 @@ const OccupationalExam: React.FC = () => {
                                 </IconButton>
                               </Tooltip>
                             )}
+                            {exam.pdf_file_path && exam.pdf_file_path.trim() && (
+                              <>
+                                <Tooltip title="Previsualizar PDF">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handlePreviewPdf(exam.id)}
+                                  >
+                                    <ViewIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Descargar PDF">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDownloadPdf(exam.id, exam.worker_name)}
+                                  >
+                                    <DownloadIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </>
+                            )}
                             <Tooltip
                               title={
                                 sendingEmail === exam.id
@@ -1534,6 +1756,107 @@ const OccupationalExam: React.FC = () => {
                   }
                 />
               </Grid>
+              
+              {/* Componente de carga de archivos PDF */}
+              <Grid size={12}>
+                <Box sx={{ border: '1px dashed #ccc', borderRadius: 1, p: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Archivo PDF del Examen
+                  </Typography>
+                  
+                  {/* Mostrar PDF existente si hay uno */}
+                  {formData.pdf_file_path && formData.pdf_file_path.trim() && !selectedFile && (
+                    <Box sx={{ mb: 2 }}>
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        <Typography variant="body2">
+                          Este examen ya tiene un archivo PDF asociado.
+                        </Typography>
+                      </Alert>
+                      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<ViewIcon />}
+                          onClick={() => {
+                            if (editingExam) {
+                              handlePreviewPdf(editingExam.id);
+                            }
+                          }}
+                          size="small"
+                        >
+                          Previsualizar PDF
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          startIcon={<DownloadIcon />}
+                          onClick={() => {
+                            if (editingExam) {
+                              handleDownloadPdf(editingExam.id, editingExam.worker_name);
+                            }
+                          }}
+                          size="small"
+                        >
+                          Descargar PDF
+                        </Button>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Puede seleccionar un nuevo archivo para reemplazar el existente.
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {!selectedFile ? (
+                    <Box sx={{ textAlign: 'center' }}>
+                      <input
+                        accept="application/pdf"
+                        style={{ display: 'none' }}
+                        id="pdf-upload-button"
+                        type="file"
+                        onChange={handleFileSelect}
+                      />
+                      <label htmlFor="pdf-upload-button">
+                        <Button
+                          variant="outlined"
+                          component="span"
+                          startIcon={<UploadIcon />}
+                          sx={{ mb: 1 }}
+                        >
+                          {formData.pdf_file_path ? 'Reemplazar archivo PDF' : 'Seleccionar archivo PDF'}
+                        </Button>
+                      </label>
+                      <Typography variant="body2" color="text.secondary">
+                        Tamaño máximo: 10MB. Solo archivos PDF.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <PdfIcon color="error" />
+                      <Typography variant="body2" sx={{ flex: 1 }}>
+                        {selectedFile.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => setSelectedFile(null)}
+                        color="error"
+                      >
+                        <ClearIcon />
+                      </IconButton>
+                    </Box>
+                  )}
+                  
+                  {uploadingPdf && (
+                    <Box sx={{ mt: 1 }}>
+                      <LinearProgress />
+                      <Typography variant="caption" color="text.secondary">
+                        Subiendo archivo...
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+
               <Grid size={12}>
                 <DatePicker
                   label="Próximo Examen"
