@@ -550,7 +550,7 @@ export const usePermissions = () => {
         // Usar el nuevo endpoint optimizado para obtener todos los permisos del usuario
         try {
           const response = await api.get('/auth/me/permissions');
-          const userPermissionsData = response.data;
+          const userPermissionsData = response.data.pages || [];
           
           // Si es admin (rol básico), tiene todos los permisos
           const userRole = user.role || user.rol; // Compatibilidad con ambos nombres de campo
@@ -752,7 +752,9 @@ export const usePermissions = () => {
             permissions.canReadUsers = true;
             permissions.canUpdateUsers = true;
             permissions.canReadWorkers = true;
+            permissions.canCreateWorkers = true;  // ✅ AGREGADO: Crear trabajadores
             permissions.canUpdateWorkers = true;
+            permissions.canDeleteWorkers = true;  // ✅ AGREGADO: Eliminar trabajadores
             permissions.canReadCourses = true;
             permissions.canReadAttendance = true;
             permissions.canReadCertificates = true;

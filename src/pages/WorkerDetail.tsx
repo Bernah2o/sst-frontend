@@ -9,7 +9,8 @@ import {
   Visibility as ViewIcon,
   Download as DownloadIcon,
   Delete as DeleteIcon,
-  EventNote as NovedadesIcon
+  EventNote as NovedadesIcon,
+  BeachAccess as VacationsIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -45,6 +46,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import WorkerNovedades from './WorkerNovedades';
+import WorkerVacations from './WorkerVacations';
 
 interface WorkerInfo {
   id: number;
@@ -486,6 +488,11 @@ const WorkerDetail: React.FC = () => {
               icon={<NovedadesIcon />}
               iconPosition="start"
             />
+            <Tab
+              label="Vacaciones"
+              icon={<VacationsIcon />}
+              iconPosition="start"
+            />
           </Tabs>
         </Box>
 
@@ -749,6 +756,11 @@ const WorkerDetail: React.FC = () => {
         {/* Novedades Tab */}
         <TabPanel value={tabValue} index={4}>
           <WorkerNovedades workerId={workerId!} />
+        </TabPanel>
+
+        {/* Vacaciones Tab */}
+        <TabPanel value={tabValue} index={5}>
+          <WorkerVacations workerId={workerId!} isAdmin={user?.role === 'admin'} />
         </TabPanel>
       </Card>
 

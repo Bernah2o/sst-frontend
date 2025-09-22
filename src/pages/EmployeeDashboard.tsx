@@ -13,7 +13,10 @@ import {
   Assessment as AssessmentIcon,
   BookmarkBorder as BookmarkIcon,
   Star as StarIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+
+  Add as AddIcon,
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -35,8 +38,11 @@ import {
   Container,
   Stack,
   useTheme,
-  alpha
-, Grid } from '@mui/material';
+  alpha,
+  Grid,
+  Snackbar,
+  Alert
+} from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -44,6 +50,11 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { formatDate } from '../utils/dateUtils';
 import { logger } from '../utils/logger';
+
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { es } from 'date-fns/locale';
+import { format } from 'date-fns';
 
 interface EmployeeStats {
   enrolled_courses: number;
@@ -99,9 +110,22 @@ const EmployeeDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
 
+
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'warning';
+    message: string;
+  } | null>(null);
+  const [dateError, setDateError] = useState('');
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+
 
   const fetchDashboardData = async () => {
     try {
@@ -224,6 +248,10 @@ const EmployeeDashboard: React.FC = () => {
     }
   };
 
+  const showSnackbar = (message: string, type: 'success' | 'error' | 'warning') => {
+    setNotification({ message, type });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -275,13 +303,14 @@ const EmployeeDashboard: React.FC = () => {
   }
 
   return (
-    <Box 
-      sx={{ 
-        minHeight: '100vh',
-        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-        py: 4
-      }}
-    >
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+      <Box 
+        sx={{ 
+          minHeight: '100vh',
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+          py: 4
+        }}
+      >
       <Container maxWidth="xl">
         {/* Header Section */}
         <Box sx={{ mb: 4 }}>
@@ -685,6 +714,8 @@ const EmployeeDashboard: React.FC = () => {
             </Card>
           </Grid>
         </Grid>
+
+
 
         {/* Resumen de Progreso General */}
         <Card 
@@ -1529,8 +1560,29 @@ const EmployeeDashboard: React.FC = () => {
           </Grid>
         </Grid>
       </Container>
-    </Box>
-  );
-};
+
+
+
+      {/* Snackbar para notificaciones */}
+      {notification && (
+        <Snackbar
+          open={true}
+          autoHideDuration={6000}
+          onClose={() => setNotification(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={() => setNotification(null)} 
+            severity={notification.type}
+            sx={{ width: '100%' }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
+      )}
+       </Box>
+     </LocalizationProvider>
+   );
+ };
 
 export default EmployeeDashboard;

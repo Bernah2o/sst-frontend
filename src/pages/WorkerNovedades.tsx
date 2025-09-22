@@ -9,6 +9,8 @@ import {
   AttachFile,
   Download,
   Close as CloseIcon,
+  GetApp as ExportIcon,
+  FilterList as FilterIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -42,6 +44,11 @@ import {
   Stack,
   Grid,
 } from "@mui/material";
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
@@ -186,6 +193,11 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
   });
   
   const [submitting, setSubmitting] = useState(false);
+  
+  // Filter states
+  const [startDateFilter, setStartDateFilter] = useState<Date | null>(null);
+  const [endDateFilter, setEndDateFilter] = useState<Date | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (workerId && workerId !== 'undefined' && workerId.trim() !== '') {
@@ -397,6 +409,61 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
     setSelectedNovedad(null);
   };
 
+  const handleExportToExcel = async () => {
+    try {
+      setExporting(true);
+      
+      // Construir parámetros de filtro
+      const params: any = {};
+      if (startDateFilter) {
+        params.start_date = format(startDateFilter, 'yyyy-MM-dd');
+      }
+      if (endDateFilter) {
+        params.end_date = format(endDateFilter, 'yyyy-MM-dd');
+      }
+      
+      const response = await api.get(`/workers/${workerId}/novedades/export`, {
+        params,
+        responseType: 'blob',
+      });
+      
+      // Crear un blob con el archivo Excel
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      
+      // Crear un enlace temporal para descargar el archivo
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Obtener el nombre del archivo desde los headers o usar uno por defecto
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'novedades_trabajador.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpiar
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setSuccess('Archivo Excel exportado exitosamente');
+    } catch (error: any) {
+      console.error('Error exporting to Excel:', error);
+      setError(error.response?.data?.detail || 'Error al exportar a Excel');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const openCreateForm = () => {
     resetForm();
     setOpenCreateDialog(true);
@@ -525,18 +592,89 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
         </Grid>
       )}
 
+      {/* Filtros y Exportación */}
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          Filtros y Exportación
+        </Typography>
+        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <DatePicker
+                label="Fecha de inicio"
+                value={startDateFilter}
+                onChange={setStartDateFilter}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    size: 'small'
+                  }
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <DatePicker
+                label="Fecha de fin"
+                value={endDateFilter}
+                onChange={setEndDateFilter}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    size: 'small'
+                  }
+                }}
+              />
+            </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Button
+              variant="outlined"
+              startIcon={<FilterIcon />}
+              onClick={() => {
+                setStartDateFilter(null);
+                setEndDateFilter(null);
+              }}
+              fullWidth
+            >
+              Limpiar Filtros
+            </Button>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Button
+              variant="contained"
+              startIcon={<ExportIcon />}
+              onClick={handleExportToExcel}
+              disabled={exporting || !novedades.length}
+              fullWidth
+            >
+              {exporting ? <CircularProgress size={16} color="inherit" /> : 'Excel'}
+            </Button>
+          </Grid>
+          </Grid>
+        </LocalizationProvider>
+      </Paper>
+
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6">Novedades del Trabajador</Typography>
-        {(user?.role === 'admin' || user?.role === 'supervisor') && (
+        <Box display="flex" gap={1}>
           <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={openCreateForm}
+            variant="outlined"
+            startIcon={<ExportIcon />}
+            onClick={handleExportToExcel}
+            disabled={exporting || !novedades.length}
           >
-            Nueva Novedad
+            Exportar a Excel
           </Button>
-        )}
+          {(user?.role === 'admin' || user?.role === 'supervisor') && (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={openCreateForm}
+            >
+              Nueva Novedad
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* Table */}

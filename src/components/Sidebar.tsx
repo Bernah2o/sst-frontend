@@ -32,6 +32,7 @@ import {
   TrendingUp,
   ManageAccounts,
   PersonSearch,
+  BeachAccess,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -224,6 +225,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
       roles: ["employee"],
     },
     {
+      id: "employee-vacations",
+      label: "Mis Vacaciones",
+      icon: <BeachAccess />,
+      path: "/employee/vacations",
+      roles: ["employee"],
+    },
+    {
       id: "worker-management",
       label: "Gestión de Trabajadores",
       icon: <ManageAccounts />,
@@ -240,6 +248,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           label: "Consulta Individual",
           icon: <PersonSearch />,
           path: "/admin/workers/detail",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "worker-vacations",
+          label: "Gestión de Vacaciones",
+          icon: <BeachAccess />,
+          path: "/admin/workers/vacations",
           roles: ["admin", "supervisor"],
         },
       ],
@@ -468,6 +483,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
               user.role === "employee" && canViewAttendancePage(),
             "employee-certificates": () =>
               user.role === "employee" && canViewCertificatesPage(),
+            "employee-vacations": () =>
+              user.role === "employee",
 
             // Worker management
             "worker-management": () =>
