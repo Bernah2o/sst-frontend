@@ -510,18 +510,6 @@ const VacationsManagement: React.FC = () => {
                                 </Tooltip>
                               </>
                             )}
-                            {/* Botón de eliminar solo para administradores */}
-                            {user?.role === 'admin' && (
-                              <Tooltip title="Eliminar solicitud">
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => handleDeleteRequest(request)}
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </Tooltip>
-                            )}
                             <Tooltip title="Más opciones">
                               <IconButton
                                 size="small"
