@@ -27,7 +27,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Menu
 } from '@mui/material';
 import {
   CalendarToday as Calendar,
@@ -39,7 +40,10 @@ import {
   Info as InfoIcon,
   DateRange as DateRangeIcon,
   Person as PersonIcon,
-  Schedule as ScheduleIcon
+  Schedule as ScheduleIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  MoreVert as MoreVertIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -56,7 +60,8 @@ import {
   VacationApproval,
   VacationBalance,
   VacationStats,
-  VacationAvailability
+  VacationAvailability,
+  VacationUpdate
 } from '../types/worker';
 
 // Interfaces
@@ -93,6 +98,21 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  
+  // Estados para edición
+  const [editingRequest, setEditingRequest] = useState<WorkerVacation | null>(null);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [editStartDate, setEditStartDate] = useState<Date | null>(null);
+  const [editEndDate, setEditEndDate] = useState<Date | null>(null);
+  const [editReason, setEditReason] = useState('');
+  
+  // Estados para confirmación de eliminación
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<WorkerVacation | null>(null);
+  
+  // Estados para el menú de acciones
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedRequestForMenu, setSelectedRequestForMenu] = useState<WorkerVacation | null>(null);
   
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'warning' });
@@ -202,7 +222,14 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
     const workingDays = days - weekendDays;
     
     if (vacationBalance && workingDays > vacationBalance.available_days) {
-      showSnackbar('No tienes suficientes días de vacaciones disponibles', 'error');
+      showSnackbar(
+        `❌ Solicitud excede días disponibles\n\n` +
+        `📅 Días solicitados: ${workingDays} días hábiles\n` +
+        `✅ Días disponibles: ${vacationBalance.available_days} días\n` +
+        `⚠️ Exceso: ${workingDays - vacationBalance.available_days} días\n\n` +
+        `Por favor, ajuste las fechas o espere a que se aprueben solicitudes pendientes.`, 
+        'error'
+      );
       return;
     }
     
@@ -229,9 +256,37 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       
       showSnackbar('Solicitud de vacaciones enviada correctamente', 'success');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating vacation request:', error);
-      showSnackbar('Error al enviar la solicitud', 'error');
+      
+      // Mejorar el mensaje de error basado en el tipo de error
+      let errorMessage = 'Error al enviar la solicitud de vacaciones';
+      
+      if (error?.response?.status === 400) {
+        const detail = error.response.data?.detail || '';
+        
+        if (detail.includes('días disponibles')) {
+          errorMessage = '❌ Solicitud rechazada: No tiene suficientes días de vacaciones disponibles. Por favor, verifique su balance y ajuste las fechas solicitadas.';
+        } else if (detail.includes('día laboral')) {
+          errorMessage = '📅 Solicitud inválida: Debe incluir al menos un día laboral en el período seleccionado.';
+        } else if (detail.includes('conflicto') || detail.includes('ocupad') || detail.includes('asignad')) {
+          errorMessage = '⚠️ Fechas no disponibles: Las fechas seleccionadas ya están asignadas a otro trabajador. Por favor, seleccione fechas diferentes.';
+        } else {
+          errorMessage = `❌ Solicitud rechazada: ${detail}`;
+        }
+      } else if (error?.response?.status === 403) {
+        errorMessage = '🔒 Sin permisos: No tiene autorización para crear solicitudes de vacaciones.';
+      } else if (error?.response?.status === 404) {
+        errorMessage = '👤 Error de usuario: No se pudo encontrar la información del trabajador.';
+      } else if (error?.response?.status >= 500) {
+        errorMessage = '🔧 Error del servidor: Ocurrió un problema técnico. Por favor, intente nuevamente en unos minutos o contacte al administrador.';
+      } else if (error?.code === 'NETWORK_ERROR' || !error?.response) {
+        errorMessage = '🌐 Error de conexión: No se pudo conectar con el servidor. Verifique su conexión a internet e intente nuevamente.';
+      } else {
+        errorMessage = '❌ Error inesperado: Ocurrió un problema al procesar su solicitud. Por favor, intente nuevamente o contacte al administrador.';
+      }
+      
+      showSnackbar(errorMessage, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -295,6 +350,109 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       console.error('Error rejecting vacation request:', error);
       showSnackbar('Error al rechazar la solicitud', 'error');
     }
+  };
+
+  // Nuevas funciones para edición y eliminación
+  const handleEditRequest = (request: WorkerVacation) => {
+    setEditingRequest(request);
+    setEditStartDate(new Date(request.start_date));
+    setEditEndDate(new Date(request.end_date));
+    setEditReason(request.reason || '');
+    setOpenEditDialog(true);
+    handleCloseMenu();
+  };
+
+  const handleUpdateRequest = async () => {
+    if (!editingRequest || !editStartDate || !editEndDate || !editReason.trim() || !workerId) {
+      showSnackbar('Por favor completa todos los campos', 'warning');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      const updateData: VacationUpdate = {
+        start_date: format(editStartDate, 'yyyy-MM-dd'),
+        end_date: format(editEndDate, 'yyyy-MM-dd'),
+        reason: editReason.trim()
+      };
+      
+      const updatedRequest = await vacationService.updateVacationRequest(
+        parseInt(workerId), 
+        editingRequest.id, 
+        updateData
+      );
+      
+      // Actualizar la lista local
+      setVacationRequests(prev => 
+        prev.map(req => 
+          req.id === editingRequest.id ? updatedRequest : req
+        )
+      );
+      
+      setOpenEditDialog(false);
+      setEditingRequest(null);
+      setEditStartDate(null);
+      setEditEndDate(null);
+      setEditReason('');
+      
+      // Actualizar balance después de la edición
+      await fetchVacationData();
+      
+      showSnackbar('Solicitud actualizada correctamente', 'success');
+      
+    } catch (error) {
+      console.error('Error updating vacation request:', error);
+      showSnackbar('Error al actualizar la solicitud', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteRequest = (request: WorkerVacation) => {
+    setRequestToDelete(request);
+    setDeleteConfirmOpen(true);
+    handleCloseMenu();
+  };
+
+  const confirmDeleteRequest = async () => {
+    if (!requestToDelete || !workerId) return;
+    
+    try {
+      await vacationService.cancelVacationRequest(parseInt(workerId), requestToDelete.id);
+      
+      setDeleteConfirmOpen(false);
+      setRequestToDelete(null);
+      
+      // Actualizar datos después de la cancelación
+      await fetchVacationData();
+      
+      showSnackbar('Solicitud cancelada correctamente', 'success');
+      
+    } catch (error: any) {
+      console.error('Error canceling vacation request:', error);
+      
+      let errorMessage = 'Error al cancelar la solicitud';
+      
+      // Extraer mensaje específico del backend si está disponible
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showSnackbar(errorMessage, 'error');
+    }
+  };
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, request: WorkerVacation) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedRequestForMenu(request);
+  };
+
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+    setSelectedRequestForMenu(null);
   };
 
   const showSnackbar = (message: string, severity: 'success' | 'error' | 'warning') => {
@@ -491,12 +649,22 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
                               <Typography variant="body2" fontWeight="bold">
                                 {format(new Date(request.start_date), 'dd/MM')} - {format(new Date(request.end_date), 'dd/MM')}
                               </Typography>
-                              <Chip
-                                size="small"
-                                label={request.status}
-                                color={getStatusColor(request.status) as any}
-                                variant="outlined"
-                              />
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Chip
+                                  size="small"
+                                  label={request.status}
+                                  color={getStatusColor(request.status) as any}
+                                  variant="outlined"
+                                />
+                                {isAdmin && (
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleMenuClick(e, request)}
+                                  >
+                                    <MoreVertIcon />
+                                  </IconButton>
+                                )}
+                              </Box>
                             </Box>
                           }
                           secondary={
@@ -545,16 +713,52 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
           </Box>
         </Box>
 
-        {/* Diálogo para nueva solicitud */}
+        {/* Menú de acciones para administradores */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleCloseMenu}
+        >
+          <MenuItem onClick={() => selectedRequestForMenu && handleEditRequest(selectedRequestForMenu)}>
+            <EditIcon sx={{ mr: 1 }} />
+            Editar
+          </MenuItem>
+          <MenuItem 
+            onClick={() => selectedRequestForMenu && handleDeleteRequest(selectedRequestForMenu)}
+            disabled={!selectedRequestForMenu || !['pending', 'approved'].includes(selectedRequestForMenu.status)}
+            sx={{ 
+              color: selectedRequestForMenu && ['pending', 'approved'].includes(selectedRequestForMenu.status) 
+                ? 'error.main' 
+                : 'text.disabled' 
+            }}
+          >
+            <DeleteIcon 
+              sx={{ 
+                mr: 1,
+                color: selectedRequestForMenu && ['pending', 'approved'].includes(selectedRequestForMenu.status) 
+                  ? 'error.main' 
+                  : 'text.disabled'
+              }} 
+            />
+            {selectedRequestForMenu && ['pending', 'approved'].includes(selectedRequestForMenu.status)
+              ? 'Cancelar'
+              : 'No se puede cancelar'
+            }
+          </MenuItem>
+        </Menu>
+
+        {/* Diálogo de nueva solicitud */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
           <DialogTitle>
-            <DateRangeIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Nueva Solicitud de Vacaciones
+            <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center' }}>
+              <AddIcon sx={{ mr: 1 }} />
+              Nueva Solicitud de Vacaciones
+            </Typography>
           </DialogTitle>
           <DialogContent>
             <Box sx={{ pt: 2 }}>
-              <Box display="flex" flexDirection="column" gap={2}>
-                <Box display="flex" gap={2}>
+              <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                <Box flex={1}>
                   <DatePicker
                     label="Fecha de inicio"
                     value={startDate}
@@ -566,6 +770,8 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
                       }
                     }}
                   />
+                </Box>
+                <Box flex={1}>
                   <DatePicker
                     label="Fecha de fin"
                     value={endDate}
@@ -578,25 +784,25 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
                     }}
                   />
                 </Box>
-                <TextField
-                  fullWidth
-                  label="Motivo de la solicitud"
-                  multiline
-                  rows={3}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Describe el motivo de tu solicitud de vacaciones..."
-                />
-                {startDate && endDate && (
-                  <Alert severity="info">
-                    <Typography variant="body2">
-                      Días solicitados: {differenceInDays(endDate, startDate) + 1} 
-                      (excluyendo fines de semana: {differenceInDays(endDate, startDate) + 1 - 
-                      eachDayOfInterval({ start: startDate, end: endDate }).filter(date => isWeekend(date)).length})
-                    </Typography>
-                  </Alert>
-                )}
               </Box>
+              <TextField
+                fullWidth
+                label="Motivo de la solicitud"
+                multiline
+                rows={3}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Describe el motivo de tu solicitud de vacaciones..."
+              />
+              {startDate && endDate && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    Días solicitados: {differenceInDays(endDate, startDate) + 1} 
+                    (excluyendo fines de semana: {differenceInDays(endDate, startDate) + 1 - 
+                    eachDayOfInterval({ start: startDate, end: endDate }).filter(date => isWeekend(date)).length})
+                  </Typography>
+                </Alert>
+              )}
             </Box>
           </DialogContent>
           <DialogActions>
@@ -611,14 +817,135 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
           </DialogActions>
         </Dialog>
 
+        {/* Diálogo de edición */}
+        <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>
+            <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center' }}>
+              <EditIcon sx={{ mr: 1 }} />
+              Editar Solicitud de Vacaciones
+            </Typography>
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                <Box flex={1}>
+                  <DatePicker
+                    label="Fecha de inicio"
+                    value={editStartDate}
+                    onChange={setEditStartDate}
+                    minDate={new Date()}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true
+                      }
+                    }}
+                  />
+                </Box>
+                <Box flex={1}>
+                  <DatePicker
+                    label="Fecha de fin"
+                    value={editEndDate}
+                    onChange={setEditEndDate}
+                    minDate={editStartDate || new Date()}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true
+                      }
+                    }}
+                  />
+                </Box>
+              </Box>
+              <TextField
+                fullWidth
+                label="Motivo de la solicitud"
+                multiline
+                rows={3}
+                value={editReason}
+                onChange={(e) => setEditReason(e.target.value)}
+                placeholder="Describe el motivo de tu solicitud de vacaciones..."
+              />
+              {editStartDate && editEndDate && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    Días solicitados: {differenceInDays(editEndDate, editStartDate) + 1} 
+                    (excluyendo fines de semana: {differenceInDays(editEndDate, editStartDate) + 1 - 
+                    eachDayOfInterval({ start: editStartDate, end: editEndDate }).filter(date => isWeekend(date)).length})
+                  </Typography>
+                </Alert>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenEditDialog(false)}>Cancelar</Button>
+            <Button
+              onClick={handleUpdateRequest}
+              variant="contained"
+              disabled={submitting || !editStartDate || !editEndDate || !editReason.trim()}
+            >
+              {submitting ? <CircularProgress size={20} /> : 'Actualizar Solicitud'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Diálogo de confirmación de cancelación */}
+        <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+          <DialogTitle>
+            <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center' }}>
+              <DeleteIcon sx={{ mr: 1, color: 'error.main' }} />
+              Confirmar Cancelación
+            </Typography>
+          </DialogTitle>
+          <DialogContent>
+            <Typography>
+              ¿Estás seguro de que deseas cancelar esta solicitud de vacaciones?
+            </Typography>
+            {requestToDelete && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="body2" fontWeight="bold">
+                  Fechas: {format(new Date(requestToDelete.start_date), 'dd/MM/yyyy')} - {format(new Date(requestToDelete.end_date), 'dd/MM/yyyy')}
+                </Typography>
+                <Typography variant="body2">
+                  Motivo: {requestToDelete.reason}
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                  Estado: {requestToDelete.status === 'pending' ? 'Pendiente' : 
+                           requestToDelete.status === 'approved' ? 'Aprobada' : 
+                           requestToDelete.status === 'rejected' ? 'Rechazada' : 'Cancelada'}
+                </Typography>
+              </Box>
+            )}
+            
+            {/* Información sobre qué solicitudes se pueden cancelar */}
+            <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Nota:</strong> Solo se pueden cancelar solicitudes que estén en estado "Pendiente" o "Aprobada".
+              </Typography>
+            </Alert>
+            
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              La solicitud será marcada como cancelada y no se podrá revertir.
+            </Alert>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteConfirmOpen(false)}>No cancelar</Button>
+            <Button
+              onClick={confirmDeleteRequest}
+              variant="contained"
+              color="error"
+            >
+              Cancelar solicitud
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* Snackbar para notificaciones */}
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
         >
           <Alert
-            onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
             severity={snackbar.severity}
             sx={{ width: '100%' }}
           >

@@ -12,7 +12,7 @@ export interface VacationUpdate {
   start_date?: string;
   end_date?: string;
   reason?: string;
-  status?: 'pending' | 'approved' | 'rejected';
+  status?: 'pending' | 'approved' | 'rejected' | 'cancelled';
 }
 
 export interface VacationApproval {
@@ -27,12 +27,13 @@ export interface WorkerVacation {
   end_date: string;
   days_requested: number;
   reason?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   admin_comments?: string;
   created_at: string;
   updated_at: string;
   approved_by?: number;
   approved_at?: string;
+  is_active?: boolean;
 }
 
 export interface VacationRequestWithWorker extends WorkerVacation {
@@ -43,18 +44,23 @@ export interface VacationBalance {
   worker_id: number;
   total_days: number;
   used_days: number;
+  pending_days: number;
   available_days: number;
   year: number;
 }
 
 export interface VacationAvailability {
-  available: boolean;
+  start_date: string;
+  end_date: string;
+  is_available: boolean;
   conflicts: Array<{
-    id: number;
+    worker_name: string;
     start_date: string;
     end_date: string;
-    worker_name: string;
+    overlapping_days: number;
   }>;
+  requested_days: number;
+  available_days: number;
 }
 
 export interface VacationStats {
@@ -63,6 +69,22 @@ export interface VacationStats {
   approved_requests: number;
   rejected_requests: number;
   total_days_used: number;
+}
+
+export interface OccupiedDate {
+  date: string;
+  vacation_id: number;
+  start_date: string;
+  end_date: string;
+}
+
+export interface OccupiedDatesResponse {
+  occupied_dates: OccupiedDate[];
+  total_occupied_days: number;
+  query_range: {
+    start_date: string;
+    end_date: string;
+  };
 }
 
 export interface Worker {
@@ -147,6 +169,12 @@ class VacationService {
     await this.api.delete(`/workers/${workerId}/vacations/${vacationId}`);
   }
 
+  // Cancelar solicitud de vacaciones (alternativa a eliminación)
+  async cancelVacationRequest(workerId: number, vacationId: number): Promise<WorkerVacation> {
+    const response = await this.api.put(`/workers/vacations/${vacationId}/cancel`);
+    return response.data;
+  }
+
   // Verificar disponibilidad de fechas
   async checkAvailability(workerId: number, startDate: string, endDate: string): Promise<VacationAvailability> {
     const response = await this.api.get(`/workers/${workerId}/vacations/availability`, {
@@ -225,6 +253,29 @@ class VacationService {
     const response = await this.api.get('/workers/vacations/export/excel', {
       params,
       responseType: 'blob'
+    });
+    return response.data;
+  }
+
+  // Obtener fechas ocupadas en un rango
+  async getOccupiedDates(startDate: string, endDate: string): Promise<OccupiedDatesResponse> {
+    const response = await this.api.get('/workers/vacations/occupied-dates', {
+      params: {
+        start_date: startDate,
+        end_date: endDate
+      }
+    });
+    return response.data;
+  }
+
+  // Obtener fechas ocupadas filtradas (solo APPROVED y PENDING activas)
+  async getFilteredOccupiedDates(startDate: string, endDate: string): Promise<OccupiedDatesResponse> {
+    // El backend ya filtra correctamente por is_active=True y estados APPROVED/PENDING
+    const response = await this.api.get('/workers/vacations/occupied-dates', {
+      params: {
+        start_date: startDate,
+        end_date: endDate
+      }
     });
     return response.data;
   }

@@ -69,12 +69,13 @@ export interface WorkerVacation {
   end_date: string;
   days_requested: number;
   reason?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   admin_comments?: string;
   created_at: string;
   updated_at: string;
   approved_by?: number;
   approved_at?: string;
+  is_active?: boolean;
 }
 
 export interface VacationRequest {
@@ -87,7 +88,7 @@ export interface VacationUpdate {
   start_date?: string;
   end_date?: string;
   reason?: string;
-  status?: 'pending' | 'approved' | 'rejected';
+  status?: 'pending' | 'approved' | 'rejected' | 'cancelled';
 }
 
 export interface VacationApproval {
