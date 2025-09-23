@@ -115,7 +115,7 @@ interface SurveyAnalysis {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
 const SurveyTabulation: React.FC = () => {
-  const { canReadSurveys } = usePermissions();
+  const { canReadSurveys, loading: permissionsLoading } = usePermissions();
 
   // State
   const [surveys, setSurveys] = useState<Survey[]>([]);
@@ -124,7 +124,7 @@ const SurveyTabulation: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SurveyStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<SurveyStatus | 'all'>('published');
   const [pdfExporting, setPdfExporting] = useState(false);
 
   // Effects
@@ -139,7 +139,41 @@ const SurveyTabulation: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/surveys/');
-      setSurveys(response.data.items || []);
+      // Filtrar solo encuestas publicadas
+      const publishedSurveys = (response.data.items || []).filter((survey: Survey) => survey.status === 'published');
+      
+      // Calcular el número real de respuestas para cada encuesta
+      const surveysWithRealCounts = await Promise.all(
+        publishedSurveys.map(async (survey: Survey) => {
+          try {
+            // Obtener las respuestas detalladas para calcular el número real
+            const detailedResponse = await api.get(`/surveys/${survey.id}/detailed-results`);
+            const detailedResults = detailedResponse.data;
+            
+            // Calcular el número real de empleados que respondieron
+            const employeesWithResponses = detailedResults.employee_responses.filter((emp: any) => 
+              emp.answers && emp.answers.length > 0 && 
+              emp.answers.some((ans: any) => 
+                ans.answer_text || 
+                ans.answer_value !== null || 
+                ans.selected_options ||
+                ans.is_answered
+              )
+            );
+            
+            return {
+              ...survey,
+              total_responses: employeesWithResponses.length
+            };
+          } catch (error) {
+            console.error(`Error fetching responses for survey ${survey.id}:`, error);
+            // En caso de error, mantener el valor original
+            return survey;
+          }
+        })
+      );
+      
+      setSurveys(surveysWithRealCounts);
     } catch (error) {
       console.error('Error fetching surveys:', error);
     } finally {
@@ -155,6 +189,19 @@ const SurveyTabulation: React.FC = () => {
       const response = await api.get(`/surveys/${surveyId}/detailed-results`);
       const detailedResults = response.data;
       
+      // Calculate the actual number of employees who responded (have at least one answer)
+      const employeesWithResponses = detailedResults.employee_responses.filter((emp: any) => 
+        emp.answers && emp.answers.length > 0 && 
+        emp.answers.some((ans: any) => 
+          ans.answer_text || 
+          ans.answer_value !== null || 
+          ans.selected_options ||
+          ans.is_answered
+        )
+      );
+      
+      const actualTotalResponses = employeesWithResponses.length;
+      
       // Calculate real statistics from actual responses
       const questionStatistics = detailedResults.questions.map((question: any) => {
         // Get all responses for this question, including those with valid data
@@ -163,18 +210,20 @@ const SurveyTabulation: React.FC = () => {
           .filter((ans: any) => {
             if (!ans) return false;
             
-            // Include response if it has any valid data
+            // Include response if it has any valid data - more permissive filter
             return (
               ans.answer_text || 
               ans.answer_value !== null || 
               ans.selected_options ||
-              ans.is_answered
+              ans.is_answered ||
+              // Also include if the answer exists but might be empty (still counts as a response)
+              ans.question_id === question.id
             );
           });
         
         const totalResponses = questionResponses.length;
-        const responseRate = detailedResults.total_responses > 0 
-          ? (totalResponses / detailedResults.total_responses) * 100 
+        const responseRate = actualTotalResponses > 0 
+          ? (totalResponses / actualTotalResponses) * 100 
           : 0;
         
         return {
@@ -194,6 +243,11 @@ const SurveyTabulation: React.FC = () => {
         ? completedResponses.reduce((sum: number, emp: any) => sum + emp.response_time_minutes, 0) / completedResponses.length
         : 0;
       
+      // Calculate completion rate based on actual responses vs total invited
+      const actualCompletionRate = detailedResults.total_invited > 0 
+        ? (actualTotalResponses / detailedResults.total_invited) * 100 
+        : actualTotalResponses > 0 ? 100 : 0;
+      
       const analysis: SurveyAnalysis = {
         survey: {
           id: detailedResults.survey_id,
@@ -201,14 +255,14 @@ const SurveyTabulation: React.FC = () => {
           description: detailedResults.survey_description,
           status: 'published' as SurveyStatus,
           created_at: '',
-          total_responses: detailedResults.total_responses,
-          completion_rate: detailedResults.completion_rate,
+          total_responses: actualTotalResponses, // Use actual count
+          completion_rate: actualCompletionRate,
           questions: detailedResults.questions,
           course: detailedResults.course_title ? { id: 0, title: detailedResults.course_title } : null
         },
-        total_invited: detailedResults.total_responses, // Assuming all responses are from invited users
-        total_responses: detailedResults.completed_responses,
-        completion_rate: detailedResults.completion_rate,
+        total_invited: detailedResults.total_invited || actualTotalResponses, // Fallback to actual responses if no invited count
+        total_responses: actualTotalResponses, // Use actual count instead of completed_responses
+        completion_rate: actualCompletionRate,
         average_completion_time: averageCompletionTime,
         question_statistics: questionStatistics,
         response_trends: generateTrendsFromResponses(detailedResults.employee_responses)
@@ -244,7 +298,8 @@ const SurveyTabulation: React.FC = () => {
   };
 
   // Helper Functions for Real Statistics
-  const calculateRealStatistics = (question: any, responses: any[]) => {
+  const calculateRealStatistics = (question: SurveyQuestion, responses: any[]) => {
+
     switch (question.question_type) {
       case 'multiple_choice':
       case 'single_choice':
@@ -298,6 +353,7 @@ const SurveyTabulation: React.FC = () => {
           }))
         };
         return result;
+        
       case 'rating':
       case 'scale':
         const numericResponses = responses
@@ -308,12 +364,13 @@ const SurveyTabulation: React.FC = () => {
           ? numericResponses.reduce((sum: number, val: number) => sum + val, 0) / numericResponses.length
           : 0;
         
-        return {
+        const scaleResult = {
           average: average,
           min: numericResponses.length > 0 ? Math.min(...numericResponses) : 0,
           max: numericResponses.length > 0 ? Math.max(...numericResponses) : 0,
           count: numericResponses.length
         };
+        return scaleResult;
         
       case 'yes_no':
         let yesCount = 0;
@@ -329,12 +386,13 @@ const SurveyTabulation: React.FC = () => {
         });
         
         const total = yesCount + noCount;
-        return {
+        const yesNoResult = {
           yes_count: yesCount,
           no_count: noCount,
           yes_percentage: total > 0 ? (yesCount / total) * 100 : 0,
           no_percentage: total > 0 ? (noCount / total) * 100 : 0
         };
+        return yesNoResult;
         
       case 'text':
       case 'textarea':
@@ -342,15 +400,17 @@ const SurveyTabulation: React.FC = () => {
           .map((r: any) => r.answer_text || r.display_value)
           .filter((text: any) => text && text.trim().length > 0);
         
-        return {
+        const textResult = {
           text_responses: textResponses,
           response_count: textResponses.length
         };
+        return textResult;
         
       default:
-        return {
+        const defaultResult = {
           total_responses: responses.length
         };
+        return defaultResult;
     }
   };
 
@@ -615,14 +675,18 @@ const SurveyTabulation: React.FC = () => {
                     Resumen de Respuestas
                   </Typography>
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <Box sx={{ width: 16, height: 16, bgcolor: '#4CAF50', borderRadius: '50%', mr: 1 }} />
-                      <strong>Sí:</strong> {statistics.yes_count} respuestas ({yesPercentage.toFixed(1)}%)
-                    </Typography>
-                    <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Typography variant="body1" component="span">
+                        <strong>Sí:</strong> {statistics.yes_count} respuestas ({yesPercentage.toFixed(1)}%)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <Box sx={{ width: 16, height: 16, bgcolor: '#F44336', borderRadius: '50%', mr: 1 }} />
-                      <strong>No:</strong> {statistics.no_count} respuestas ({noPercentage.toFixed(1)}%)
-                    </Typography>
+                      <Typography variant="body1" component="span">
+                        <strong>No:</strong> {statistics.no_count} respuestas ({noPercentage.toFixed(1)}%)
+                      </Typography>
+                    </Box>
                     <Typography variant="body2" color="text.secondary">
                       <strong>Total:</strong> {total} respuestas
                     </Typography>
@@ -700,6 +764,16 @@ const SurveyTabulation: React.FC = () => {
     return <Typography variant="body2" color="text.secondary">No hay datos disponibles</Typography>;
   };
 
+  // Mostrar loading mientras se cargan los permisos
+  if (permissionsLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Solo verificar permisos después de que se hayan cargado
   if (!canReadSurveys()) {
     return (
       <Alert severity="error">
