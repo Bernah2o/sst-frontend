@@ -62,7 +62,6 @@ interface EmployeeStats {
   in_progress_courses: number;
   pending_evaluations: number;
   certificates_earned: number;
-  total_study_hours: number;
   reinductions_completed: number;
 }
 
@@ -101,7 +100,6 @@ const EmployeeDashboard: React.FC = () => {
     in_progress_courses: 0,
     pending_evaluations: 0,
     certificates_earned: 0,
-    total_study_hours: 0,
     reinductions_completed: 0
   });
   const [myCourses, setMyCourses] = useState<MyCourse[]>([]);
@@ -170,10 +168,6 @@ const EmployeeDashboard: React.FC = () => {
         in_progress_courses: inProgressCourses,
         pending_evaluations: pendingEvaluations,
         certificates_earned: certificates.length,
-        total_study_hours: userCourses.reduce((total: number, course: any) => {
-          // Estimar horas basado en progreso (asumiendo 10 horas por curso completo)
-          return total + Math.round((course.progress || 0) * 10 / 100);
-        }, 0),
         reinductions_completed: reinductionsCompleted
       });
       
@@ -238,7 +232,6 @@ const EmployeeDashboard: React.FC = () => {
         in_progress_courses: 0,
         pending_evaluations: 0,
         certificates_earned: 0,
-        total_study_hours: 0,
         reinductions_completed: 0
       });
       setMyCourses([]);
@@ -610,57 +603,7 @@ const EmployeeDashboard: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-            <Card 
-              sx={{ 
-                height: '100%',
-                background: `linear-gradient(135deg, ${alpha('#9C27B0', 0.1)} 0%, ${alpha('#673AB7', 0.05)} 100%)`,
-                border: `1px solid ${alpha('#9C27B0', 0.1)}`,
-                borderRadius: 3,
-                transition: 'all 0.3s ease-in-out',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: `0 8px 25px ${alpha('#9C27B0', 0.15)}`
-                }
-              }}
-            >
-              <CardContent sx={{ p: 3 }}>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <Box 
-                    sx={{ 
-                      p: 1.5,
-                      borderRadius: 2,
-                      background: 'linear-gradient(135deg, #9C27B0, #673AB7)',
-                      color: 'white'
-                    }}
-                  >
-                    <AccessTimeIcon sx={{ fontSize: 28 }} />
-                  </Box>
-                  <Box>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: theme.palette.text.secondary,
-                        fontWeight: 500,
-                        mb: 0.5
-                      }}
-                    >
-                      Horas de Estudio
-                    </Typography>
-                    <Typography 
-                      variant="h4" 
-                      sx={{ 
-                        fontWeight: 700,
-                        color: '#9C27B0'
-                      }}
-                    >
-                      {stats.total_study_hours}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
+
           
           <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <Card 
@@ -815,69 +758,7 @@ const EmployeeDashboard: React.FC = () => {
                 </Box>
               </Grid>
               
-              {/* Horas de Estudio */}
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Box 
-                    sx={{ 
-                      position: 'relative',
-                      display: 'inline-flex',
-                      mb: 2
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 140,
-                        height: 140,
-                        borderRadius: '50%',
-                        background: `conic-gradient(${theme.palette.info.main} ${Math.min((stats.total_study_hours / 100) * 360, 360)}deg, ${alpha(theme.palette.info.main, 0.1)} 0deg)`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative',
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          width: 110,
-                          height: 110,
-                          borderRadius: '50%',
-                          backgroundColor: 'white'
-                        }
-                      }}
-                    >
-                      <Typography 
-                        variant="h3" 
-                        sx={{ 
-                          fontWeight: 700,
-                          color: theme.palette.info.main,
-                          position: 'relative',
-                          zIndex: 1
-                        }}
-                      >
-                        {stats.total_study_hours}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 600,
-                      color: theme.palette.text.primary,
-                      mb: 1
-                    }}
-                  >
-                    Horas de Estudio
-                  </Typography>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      color: theme.palette.text.secondary
-                    }}
-                  >
-                    Tiempo total invertido
-                  </Typography>
-                </Box>
-              </Grid>
+
               
               {/* Certificados */}
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>

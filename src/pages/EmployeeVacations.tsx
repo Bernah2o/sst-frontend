@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -34,30 +34,21 @@ import {
   Cancel,
   Event,
   Warning,
-  Person,
   DateRange,
+  Refresh,
+  Download,
+  Edit,
+  Delete,
+  Visibility,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { es } from 'date-fns/locale';
-import { format, differenceInDays, isWeekend, eachDayOfInterval } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { format, isWeekend, eachDayOfInterval } from 'date-fns';
 
-import { useAuth } from '../contexts/AuthContext';
 import vacationService from '../services/vacationService';
-import type { WorkerVacation, VacationBalance, VacationAvailability } from '../services/vacationService';
-
-interface VacationRequest extends WorkerVacation {
-  // Using the WorkerVacation interface from the service
-}
-
-interface VacationBalanceDisplay {
-  total_days: number;
-  used_days: number;
-  remaining_days: number;
-  year: number;
-}
+import type { WorkerVacation, VacationBalance, VacationAvailability, OccupiedDatesResponse } from '../services/vacationService';
 
 interface Notification {
   open: boolean;
@@ -66,8 +57,6 @@ interface Notification {
 }
 
 const EmployeeVacations: React.FC = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -102,14 +91,16 @@ const EmployeeVacations: React.FC = () => {
     };
   } | null>(null);
 
-  // Cargar datos al montar el componente
-  useEffect(() => {
-    fetchVacationData();
-  }, []);
+  // Estados para el calendario de disponibilidad
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [occupiedDates, setOccupiedDates] = useState<OccupiedDatesResponse | null>(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
 
-  const fetchVacationData = async () => {
+  // Cargar datos al montar el componente
+  const fetchVacationData = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
+      
       const [requests, balance] = await Promise.all([
         vacationService.getEmployeeVacationRequests(),
         vacationService.getEmployeeVacationBalance()
@@ -122,11 +113,36 @@ const EmployeeVacations: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchVacationData();
+  }, [fetchVacationData]);
+
+  const calculateBusinessDays = (start: Date | null, end: Date | null): number => {
+    if (!start || !end) return 0;
+    try {
+      const days = eachDayOfInterval({ start, end });
+      return days.filter(day => !isWeekend(day)).length;
+    } catch (error) {
+      return 0;
+    }
   };
 
-  const calculateBusinessDays = (start: Date, end: Date): number => {
-    const days = eachDayOfInterval({ start, end });
-    return days.filter(day => !isWeekend(day)).length;
+  const loadOccupiedDates = async (startDate: Date, endDate: Date) => {
+    try {
+      setCalendarLoading(true);
+      const response = await vacationService.getFilteredOccupiedDates(
+        format(startDate, 'yyyy-MM-dd'),
+        format(endDate, 'yyyy-MM-dd')
+      );
+      setOccupiedDates(response);
+    } catch (error) {
+      console.error('Error loading occupied dates:', error);
+      showNotification('Error al cargar fechas ocupadas', 'error');
+    } finally {
+      setCalendarLoading(false);
+    }
   };
 
   const handleOpenDialog = () => {
@@ -134,6 +150,8 @@ const EmployeeVacations: React.FC = () => {
     setStartDate(null);
     setEndDate(null);
     setReason('');
+    setShowCalendar(false);
+    setOccupiedDates(null);
   };
 
   const handleCloseDialog = () => {
@@ -141,6 +159,16 @@ const EmployeeVacations: React.FC = () => {
     setStartDate(null);
     setEndDate(null);
     setReason('');
+    setShowCalendar(false);
+    setOccupiedDates(null);
+  };
+
+  const handleShowCalendar = async () => {
+    const today = new Date();
+    const nextYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
+    
+    setShowCalendar(true);
+    await loadOccupiedDates(today, nextYear);
   };
 
   const handleSubmitRequest = async () => {
@@ -157,7 +185,14 @@ const EmployeeVacations: React.FC = () => {
     const workingDays = calculateBusinessDays(startDate, endDate);
     
     if (vacationBalance && workingDays > vacationBalance.available_days) {
-      showNotification(`No tiene suficientes días disponibles. Días solicitados: ${workingDays}, Días disponibles: ${vacationBalance.available_days}`, 'warning');
+      showNotification(
+        `❌ Solicitud excede días disponibles\n\n` +
+        `📅 Días solicitados: ${workingDays} días hábiles\n` +
+        `✅ Días disponibles: ${vacationBalance.available_days} días\n` +
+        `⚠️ Exceso: ${workingDays - vacationBalance.available_days} días\n\n` +
+        `Por favor, ajuste las fechas o espere a que se aprueben solicitudes pendientes.`, 
+        'error'
+      );
       return;
     }
 
@@ -172,7 +207,7 @@ const EmployeeVacations: React.FC = () => {
         format(endDate, 'yyyy-MM-dd')
       );
 
-      if (!availability.available) {
+      if (!availability.is_available) {
         // Configurar datos del conflicto para el diálogo
         setConflictData({
           conflicts: availability.conflicts,
@@ -196,10 +231,38 @@ const EmployeeVacations: React.FC = () => {
 
       showNotification('Solicitud de vacaciones enviada exitosamente', 'success');
       handleCloseDialog();
-      fetchVacationData(); // Recargar datos
-    } catch (error) {
+      fetchVacationData(true); // Recargar datos forzando actualización
+    } catch (error: any) {
       console.error('Error creating vacation request:', error);
-      showNotification('Error al enviar la solicitud de vacaciones', 'error');
+      
+      // Mejorar el mensaje de error basado en el tipo de error
+      let errorMessage = 'Error al enviar la solicitud de vacaciones';
+      
+      if (error?.response?.status === 400) {
+        const detail = error.response.data?.detail || '';
+        
+        if (detail.includes('días disponibles')) {
+          errorMessage = '❌ Solicitud rechazada: No tiene suficientes días de vacaciones disponibles. Por favor, verifique su balance y ajuste las fechas solicitadas.';
+        } else if (detail.includes('día laboral')) {
+          errorMessage = '📅 Solicitud inválida: Debe incluir al menos un día laboral en el período seleccionado.';
+        } else if (detail.includes('conflicto') || detail.includes('ocupad') || detail.includes('asignad')) {
+          errorMessage = '⚠️ Fechas no disponibles: Las fechas seleccionadas ya están asignadas a otro trabajador. Por favor, seleccione fechas diferentes.';
+        } else {
+          errorMessage = `❌ Solicitud rechazada: ${detail}`;
+        }
+      } else if (error?.response?.status === 403) {
+        errorMessage = '🔒 Sin permisos: No tiene autorización para crear solicitudes de vacaciones.';
+      } else if (error?.response?.status === 404) {
+        errorMessage = '👤 Error de usuario: No se pudo encontrar la información del trabajador.';
+      } else if (error?.response?.status >= 500) {
+        errorMessage = '🔧 Error del servidor: Ocurrió un problema técnico. Por favor, intente nuevamente en unos minutos o contacte al administrador.';
+      } else if (error?.code === 'NETWORK_ERROR' || !error?.response) {
+        errorMessage = '🌐 Error de conexión: No se pudo conectar con el servidor. Verifique su conexión a internet e intente nuevamente.';
+      } else {
+        errorMessage = '❌ Error inesperado: Ocurrió un problema al procesar su solicitud. Por favor, intente nuevamente o contacte al administrador.';
+      }
+      
+      showNotification(errorMessage, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -267,8 +330,8 @@ const EmployeeVacations: React.FC = () => {
                 <CalendarToday />
                 Balance de Vacaciones {vacationBalance.year}
               </Typography>
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h3" sx={{ color: 'white', fontWeight: 'bold' }}>
                       {vacationBalance.total_days}
@@ -278,7 +341,7 @@ const EmployeeVacations: React.FC = () => {
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h3" sx={{ color: 'white', fontWeight: 'bold' }}>
                       {vacationBalance.used_days}
@@ -288,7 +351,17 @@ const EmployeeVacations: React.FC = () => {
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid size={{ xs: 6, sm: 3 }}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h3" sx={{ color: 'white', fontWeight: 'bold' }}>
+                      {vacationBalance.pending_days || 0}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                      Días Pendientes
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h3" sx={{ color: 'white', fontWeight: 'bold' }}>
                       {vacationBalance.available_days}
@@ -303,8 +376,16 @@ const EmployeeVacations: React.FC = () => {
           </Card>
         )}
 
-        {/* Botón Nueva Solicitud */}
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+        {/* Botones de Acción */}
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<Refresh />}
+            onClick={() => fetchVacationData(true)}
+            disabled={loading}
+          >
+            Actualizar
+          </Button>
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -387,6 +468,95 @@ const EmployeeVacations: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Box sx={{ pt: 2 }}>
+              {/* Botón para mostrar calendario */}
+              <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<CalendarToday />}
+                  onClick={handleShowCalendar}
+                  disabled={calendarLoading}
+                  sx={{ mb: 2 }}
+                >
+                  {calendarLoading ? <CircularProgress size={20} /> : 'Ver Fechas Disponibles'}
+                </Button>
+              </Box>
+
+              {/* Calendario de disponibilidad */}
+              {showCalendar && occupiedDates && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CalendarToday color="primary" />
+                    Calendario de Disponibilidad
+                  </Typography>
+                  
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Información:</strong> Se muestran únicamente las fechas ocupadas por solicitudes de vacaciones aprobadas y pendientes. 
+                      Las solicitudes rechazadas o canceladas no bloquean fechas. Las fechas no mostradas están disponibles para solicitar.
+                    </Typography>
+                  </Alert>
+
+                  <Paper sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
+                    <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                      Fechas Ocupadas ({occupiedDates.total_occupied_days} días):
+                    </Typography>
+                    
+                    {occupiedDates.occupied_dates.length === 0 ? (
+                      <Alert severity="success">
+                        ¡Excelente! No hay fechas ocupadas en el año. Todas las fechas están disponibles.
+                      </Alert>
+                    ) : (
+                      <Box>
+                        {/* Agrupar fechas por períodos sin mostrar información personal */}
+                        {Object.entries(
+                          occupiedDates.occupied_dates.reduce((acc, date) => {
+                            const key = `${date.start_date}-${date.end_date}`;
+                            if (!acc[key]) {
+                              acc[key] = {
+                                start_date: date.start_date,
+                                end_date: date.end_date,
+                                dates: []
+                              };
+                            }
+                            acc[key].dates.push(date.date);
+                            return acc;
+                          }, {} as any)
+                        ).map(([key, period]: [string, any]) => (
+                          <Paper 
+                            key={key}
+                            sx={{ 
+                              p: 2, 
+                              mb: 1, 
+                              backgroundColor: 'warning.lighter',
+                              border: '1px solid',
+                              borderColor: 'warning.light'
+                            }}
+                          >
+                            <Typography variant="body2" sx={{ fontWeight: 'medium', color: 'warning.dark' }}>
+                              <CalendarToday sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
+                              Período Ocupado
+                            </Typography>
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                              <strong>Fechas:</strong> {format(new Date(period.start_date), 'dd/MM/yyyy')} - {format(new Date(period.end_date), 'dd/MM/yyyy')}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Días no disponibles:</strong> {period.dates.length}
+                            </Typography>
+                          </Paper>
+                        ))}
+                        
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                          <Typography variant="body2">
+                            <strong>Nota:</strong> Por políticas de privacidad, no se muestra información personal de otros empleados.
+                            Solo se indican las fechas que ya están ocupadas.
+                          </Typography>
+                        </Alert>
+                      </Box>
+                    )}
+                  </Paper>
+                </Box>
+              )}
+              
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <DatePicker
@@ -430,13 +600,54 @@ const EmployeeVacations: React.FC = () => {
                 </Grid>
                 {startDate && endDate && (
                   <Grid size={{ xs: 12 }}>
-                    <Alert severity="info">
-                      Días hábiles solicitados: {calculateBusinessDays(startDate, endDate)}
-                      {vacationBalance && (
-                        <br />
-                      )}
-                      Días disponibles: {vacationBalance?.available_days || 0}
-                    </Alert>
+                    {(() => {
+                      const requestedDays = calculateBusinessDays(startDate, endDate);
+                      const availableDays = vacationBalance?.available_days || 0;
+                      const isExceeding = requestedDays > availableDays;
+                      const excess = requestedDays - availableDays;
+                      
+                      return (
+                        <Alert 
+                          severity={isExceeding ? "error" : "info"}
+                          sx={{ 
+                            '& .MuiAlert-message': { 
+                              width: '100%' 
+                            } 
+                          }}
+                        >
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 'medium', mb: 1 }}>
+                              📊 Resumen de Solicitud
+                            </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <span>📅 Días hábiles solicitados:</span>
+                              <strong>{requestedDays} días</strong>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <span>✅ Días disponibles:</span>
+                              <strong>{availableDays} días</strong>
+                            </Box>
+                            {isExceeding && (
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                <span>⚠️ Exceso:</span>
+                                <strong style={{ color: 'error.main' }}>{excess} días</strong>
+                              </Box>
+                            )}
+                            <Box sx={{ mt: 2, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                              {isExceeding ? (
+                                <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'medium' }}>
+                                  ❌ No se puede enviar esta solicitud. Reduce los días o espera a que se aprueben solicitudes pendientes.
+                                </Typography>
+                              ) : (
+                                <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'medium' }}>
+                                  ✅ Solicitud válida. Puedes enviarla.
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        </Alert>
+                      );
+                    })()}
                   </Grid>
                 )}
               </Grid>
@@ -449,7 +660,14 @@ const EmployeeVacations: React.FC = () => {
             <Button 
               onClick={handleSubmitRequest}
               variant="contained"
-              disabled={submitting || !startDate || !endDate || !reason.trim()}
+              disabled={
+                submitting || 
+                !startDate || 
+                !endDate || 
+                !reason.trim() ||
+                Boolean(startDate && endDate && vacationBalance && 
+                 (calculateBusinessDays(startDate, endDate) || 0) > vacationBalance.available_days)
+              }
             >
               {submitting ? <CircularProgress size={20} /> : 'Enviar Solicitud'}
             </Button>
@@ -479,7 +697,10 @@ const EmployeeVacations: React.FC = () => {
               <Box>
                 <Alert severity="warning" sx={{ mb: 3 }}>
                   <Typography variant="body1" sx={{ fontWeight: 'medium', mb: 1 }}>
-                    Las fechas que has seleccionado no están disponibles debido a conflictos con otras solicitudes de vacaciones ya aprobadas o pendientes.
+                    Las fechas que has seleccionado no están disponibles debido a conflictos con otras solicitudes de vacaciones activas (aprobadas o pendientes).
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                    Nota: Las solicitudes canceladas o rechazadas no bloquean las fechas.
                   </Typography>
                 </Alert>
 
@@ -499,8 +720,8 @@ const EmployeeVacations: React.FC = () => {
 
                 <Box>
                   <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Person color="error" />
-                    Conflictos Detectados
+                    <Warning color="error" />
+                    Fechas No Disponibles
                   </Typography>
                   {conflictData.conflicts.map((conflict, index) => (
                     <Paper 
@@ -513,21 +734,21 @@ const EmployeeVacations: React.FC = () => {
                         backgroundColor: 'error.lighter'
                       }}
                     >
-                      <Grid container spacing={2} alignItems="center">
-                        <Grid size={{ xs: 12, sm: 4 }}>
-                          <Typography variant="subtitle2" color="error.main">
-                            <Person sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
-                            {conflict.worker_name}
-                          </Typography>
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 8 }}>
-                          <Typography variant="body2">
-                            <strong>Período:</strong> {format(new Date(conflict.start_date), 'dd/MM/yyyy')} - {format(new Date(conflict.end_date), 'dd/MM/yyyy')}
-                          </Typography>
-                        </Grid>
-                      </Grid>
+                      <Typography variant="body2" color="error.main" sx={{ fontWeight: 'medium', mb: 1 }}>
+                        <CalendarToday sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
+                        Período Ocupado #{index + 1}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Fechas:</strong> {format(new Date(conflict.start_date), 'dd/MM/yyyy')} - {format(new Date(conflict.end_date), 'dd/MM/yyyy')}
+                      </Typography>
                     </Paper>
                   ))}
+                  
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Privacidad:</strong> Por políticas de confidencialidad, no se muestra información personal de otros empleados.
+                    </Typography>
+                  </Alert>
                 </Box>
 
                 <Alert severity="info" sx={{ mt: 3 }}>
