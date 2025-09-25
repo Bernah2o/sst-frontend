@@ -163,12 +163,34 @@ interface CommitteeTypeUpdate {
   is_active?: boolean;
 }
 
+// Interfaces para Áreas
+interface AreaBase {
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+}
+
+interface Area extends AreaBase {
+  id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AreaCreate extends AreaBase {}
+
+interface AreaUpdate {
+  name?: string;
+  description?: string | null;
+  is_active?: boolean;
+}
+
 const AdminConfigPage: React.FC = () => {
   const { user } = useAuth();
   // const [configs, setConfigs] = useState<AdminConfig[]>([]);
   const [seguridadSocial, setSeguridadSocial] = useState<SeguridadSocial[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [committeeTypes, setCommitteeTypes] = useState<CommitteeType[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
 
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,6 +199,7 @@ const AdminConfigPage: React.FC = () => {
     useState(false);
   const [openProgramDialog, setOpenProgramDialog] = useState(false);
   const [openCommitteeTypeDialog, setOpenCommitteeTypeDialog] = useState(false);
+  const [openAreaDialog, setOpenAreaDialog] = useState(false);
 
   const [openCargoDialog, setOpenCargoDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -184,6 +207,7 @@ const AdminConfigPage: React.FC = () => {
     useState(false);
   const [openDeleteProgramDialog, setOpenDeleteProgramDialog] = useState(false);
   const [openDeleteCommitteeTypeDialog, setOpenDeleteCommitteeTypeDialog] = useState(false);
+  const [openDeleteAreaDialog, setOpenDeleteAreaDialog] = useState(false);
 
   const [openDeleteCargoDialog, setOpenDeleteCargoDialog] = useState(false);
   const [editingConfig, setEditingConfig] = useState<AdminConfig | null>(null);
@@ -191,6 +215,7 @@ const AdminConfigPage: React.FC = () => {
     useState<SeguridadSocial | null>(null);
   const [editingProgram, setEditingProgram] = useState<Programa | null>(null);
   const [editingCommitteeType, setEditingCommitteeType] = useState<CommitteeType | null>(null);
+  const [editingArea, setEditingArea] = useState<Area | null>(null);
 
   const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
   const [deletingConfig, setDeletingConfig] = useState<AdminConfig | null>(
@@ -200,6 +225,7 @@ const AdminConfigPage: React.FC = () => {
     useState<SeguridadSocial | null>(null);
   const [deletingProgram, setDeletingProgram] = useState<Programa | null>(null);
   const [deletingCommitteeType, setDeletingCommitteeType] = useState<CommitteeType | null>(null);
+  const [deletingArea, setDeletingArea] = useState<Area | null>(null);
 
   const [deletingCargo, setDeletingCargo] = useState<Cargo | null>(null);
   const [formData, setFormData] = useState<AdminConfigCreate>({
@@ -223,6 +249,11 @@ const AdminConfigPage: React.FC = () => {
     description: "",
     is_active: true,
   });
+  const [areaFormData, setAreaFormData] = useState<AreaCreate>({
+    name: "",
+    description: "",
+    is_active: true,
+  });
   const [cargoFormData, setCargoFormData] = useState<CargoCreate>({
     nombre_cargo: "",
     periodicidad_emo: null,
@@ -236,6 +267,8 @@ const AdminConfigPage: React.FC = () => {
   const [programasRowsPerPage, setProgramasRowsPerPage] = useState(5);
   const [committeeTypesPage, setCommitteeTypesPage] = useState(0);
   const [committeeTypesRowsPerPage, setCommitteeTypesRowsPerPage] = useState(5);
+  const [areasPage, setAreasPage] = useState(0);
+  const [areasRowsPerPage, setAreasRowsPerPage] = useState(5);
   const [cargosPage, setCargosPage] = useState(0);
   const [cargosRowsPerPage, setCargosRowsPerPage] = useState(5);
 
@@ -254,6 +287,7 @@ const AdminConfigPage: React.FC = () => {
         fetchProgramas(),
         fetchCargos(),
         fetchCommitteeTypes(),
+        fetchAreas(),
       ]);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -593,6 +627,18 @@ const AdminConfigPage: React.FC = () => {
     }
   };
 
+  // Funciones para Áreas
+  const fetchAreas = async () => {
+    try {
+      const response = await api.get("/areas?limit=100");
+      const data = response.data.items || [];
+      setAreas(data);
+    } catch (error) {
+      console.error("Error fetching areas:", error);
+      setAreas([]);
+    }
+  };
+
   const handleOpenCommitteeTypeDialog = (committeeType?: CommitteeType) => {
     if (committeeType) {
       setEditingCommitteeType(committeeType);
@@ -660,6 +706,83 @@ const AdminConfigPage: React.FC = () => {
         setDeletingCommitteeType(null);
       } catch (error) {
         console.error("Error deleting committee type:", error);
+      }
+    }
+  };
+
+  const handleOpenAreaDialog = (area?: Area) => {
+    if (area) {
+      setEditingArea(area);
+      setAreaFormData({
+        name: area.name,
+        description: area.description || "",
+        is_active: area.is_active,
+      });
+    } else {
+      setEditingArea(null);
+      setAreaFormData({
+        name: "",
+        description: "",
+        is_active: true,
+      });
+    }
+    setOpenAreaDialog(true);
+  };
+
+  const handleCloseAreaDialog = () => {
+    setOpenAreaDialog(false);
+    setEditingArea(null);
+    setAreaFormData({
+      name: "",
+      description: "",
+      is_active: true,
+    });
+  };
+
+  const handleSaveArea = async () => {
+    try {
+      const dataToSend = {
+        name: areaFormData.name,
+        description: areaFormData.description || null,
+        is_active: areaFormData.is_active,
+      };
+
+      if (editingArea) {
+        const updateData: AreaUpdate = {};
+        if (dataToSend.name !== editingArea.name) {
+          updateData.name = dataToSend.name;
+        }
+        if (dataToSend.description !== editingArea.description) {
+          updateData.description = dataToSend.description;
+        }
+        if (dataToSend.is_active !== editingArea.is_active) {
+          updateData.is_active = dataToSend.is_active;
+        }
+        await api.put(`/areas/${editingArea.id}`, updateData);
+      } else {
+        await api.post("/areas", dataToSend);
+      }
+      fetchAreas();
+      handleCloseAreaDialog();
+    } catch (error) {
+      console.error("Error saving area:", error);
+    }
+  };
+
+  const handleDeleteArea = (area: Area) => {
+    setDeletingArea(area);
+    setOpenDeleteAreaDialog(true);
+  };
+
+  const confirmDeleteArea = async () => {
+    if (deletingArea) {
+      try {
+        await api.delete(`/areas/${deletingArea.id}`);
+        fetchAreas();
+        setOpenDeleteAreaDialog(false);
+        setDeletingArea(null);
+      } catch (error) {
+        console.error("Error deleting area:", error);
       }
     }
   };
@@ -1123,6 +1246,108 @@ const AdminConfigPage: React.FC = () => {
               onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                 setCommitteeTypesRowsPerPage(parseInt(event.target.value, 10));
                 setCommitteeTypesPage(0);
+              }}
+              labelRowsPerPage="Filas por página:"
+              labelDisplayedRows={({ from, to, count }) =>
+                `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+              }
+            />
+          </Paper>
+        </CardContent>
+      </Card>
+
+      {/* Áreas */}
+      <Card sx={{ mb: 3, boxShadow: 3 }}>
+        <CardContent>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+          >
+            <Typography
+              variant="h6"
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            >
+              <SettingsIcon color="primary" />
+              Áreas
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenAreaDialog()}
+              sx={{ borderRadius: 2 }}
+            >
+              Nueva Área
+            </Button>
+          </Box>
+
+          <Paper sx={{ borderRadius: 2 }}>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "grey.50" }}>
+                    <TableCell sx={{ fontWeight: "bold" }}>Nombre</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Descripción</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Estado</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {areas
+                    .slice(
+                      areasPage * areasRowsPerPage,
+                      areasPage * areasRowsPerPage + areasRowsPerPage
+                    )
+                    .map((area) => (
+                      <TableRow key={area.id} hover>
+                        <TableCell sx={{ fontWeight: "medium" }}>
+                          {area.name}
+                        </TableCell>
+                        <TableCell>
+                          {area.description || "Sin descripción"}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={area.is_active ? "Activo" : "Inactivo"}
+                            color={area.is_active ? "success" : "default"}
+                            size="small"
+                            sx={{ fontWeight: "bold" }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenAreaDialog(area)}
+                            sx={{ mr: 1, color: "primary.main" }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteArea(area)}
+                            sx={{ color: "error.main" }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={areas.length}
+              rowsPerPage={areasRowsPerPage}
+              page={areasPage}
+              onPageChange={(event: unknown, newPage: number) => {
+                setAreasPage(newPage);
+              }}
+              onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                setAreasRowsPerPage(parseInt(event.target.value, 10));
+                setAreasPage(0);
               }}
               labelRowsPerPage="Filas por página:"
               labelDisplayedRows={({ from, to, count }) =>
@@ -1600,6 +1825,103 @@ const AdminConfigPage: React.FC = () => {
           </Button>
           <Button
             onClick={confirmDeleteCommitteeType}
+            variant="contained"
+            color="error"
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog para Áreas */}
+      <Dialog
+        open={openAreaDialog}
+        onClose={handleCloseAreaDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingArea ? "Editar Área" : "Nueva Área"}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid size={12}>
+              <UppercaseTextField
+                fullWidth
+                label="Nombre"
+                value={areaFormData.name}
+                onChange={(e) =>
+                  setAreaFormData({
+                    ...areaFormData,
+                    name: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Descripción"
+                multiline
+                rows={3}
+                value={areaFormData.description}
+                onChange={(e) =>
+                  setAreaFormData({
+                    ...areaFormData,
+                    description: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+            <Grid size={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={areaFormData.is_active}
+                    onChange={(e) =>
+                      setAreaFormData({
+                        ...areaFormData,
+                        is_active: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Activo"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseAreaDialog}>Cancelar</Button>
+          <Button onClick={handleSaveArea} variant="contained">
+            {editingArea ? "Actualizar" : "Crear"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de confirmación para eliminar área */}
+      <Dialog
+        open={openDeleteAreaDialog}
+        onClose={() => setOpenDeleteAreaDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Confirmar Eliminación</DialogTitle>
+        <DialogContent>
+          <Typography>
+            ¿Está seguro de que desea eliminar el área "
+            {deletingArea?.name}"?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Esta acción no se puede deshacer y puede afectar a los trabajadores asignados a esta área.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDeleteAreaDialog(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDeleteArea}
             variant="contained"
             color="error"
           >

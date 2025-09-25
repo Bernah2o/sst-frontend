@@ -92,6 +92,7 @@ interface WorkerFormData {
   eps_id?: number;
   afp_id?: number;
   arl_id?: number;
+  area_id?: number;
   country: string;
   department?: string;
   city?: string;
@@ -123,6 +124,16 @@ interface Cargo {
   updated_at: string;
 }
 
+// Interface para áreas
+interface Area {
+  id: number;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 const WorkersManagement: React.FC = () => {
   // Debug: Contar renders del componente principal
 
@@ -143,6 +154,7 @@ const WorkersManagement: React.FC = () => {
   const [afpOptions, setAfpOptions] = useState<AdminConfig[]>([]);
   const [arlOptions, setArlOptions] = useState<AdminConfig[]>([]);
   const [cargoOptions, setCargos] = useState<Cargo[]>([]);
+  const [areaOptions, setAreaOptions] = useState<Area[]>([]);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [formData, setFormData] = useState<WorkerFormData>({
     photo: "",
@@ -166,6 +178,7 @@ const WorkersManagement: React.FC = () => {
     eps_id: undefined,
     afp_id: undefined,
     arl_id: undefined,
+    area_id: undefined,
     country: "Colombia",
     department: "",
     city: "",
@@ -201,6 +214,7 @@ const WorkersManagement: React.FC = () => {
     fetchWorkers();
     fetchAdminConfigs();
     fetchCargos();
+    fetchAreas();
   }, [page, rowsPerPage, searchTerm]);
 
   const fetchAdminConfigs = async () => {
@@ -268,6 +282,16 @@ const WorkersManagement: React.FC = () => {
       setCargos(cargos.filter((cargo: Cargo) => cargo.activo));
     } catch (error) {
       logger.error('Error fetching cargos:', error);
+    }
+  };
+
+  const fetchAreas = async () => {
+    try {
+      const response = await api.get('/areas?limit=100&is_active=true');
+      const areas = response.data.items || [];
+      setAreaOptions(areas);
+    } catch (error) {
+      logger.error('Error fetching areas:', error);
     }
   };
 
@@ -361,6 +385,7 @@ const WorkersManagement: React.FC = () => {
     // Asegurar que las configuraciones administrativas estén cargadas
     await fetchAdminConfigs();
     await fetchCargos();
+    await fetchAreas();
     
     setFormData({
       photo: "",
@@ -384,6 +409,7 @@ const WorkersManagement: React.FC = () => {
       eps_id: undefined,
       afp_id: undefined,
       arl_id: undefined,
+      area_id: undefined,
       country: "Colombia",
       department: "",
       city: "",
@@ -408,6 +434,7 @@ const WorkersManagement: React.FC = () => {
       // Asegurar que las configuraciones administrativas estén cargadas
       await fetchAdminConfigs();
       await fetchCargos();
+      await fetchAreas();
     
       setFormData({
         photo: fullWorker.photo || "",
@@ -431,6 +458,7 @@ const WorkersManagement: React.FC = () => {
         eps_id: fullWorker.eps ? epsOptions.find(eps => eps.display_name === fullWorker.eps)?.id : undefined,
         afp_id: fullWorker.afp ? afpOptions.find(afp => afp.display_name === fullWorker.afp)?.id : undefined,
         arl_id: fullWorker.arl ? arlOptions.find(arl => arl.display_name === fullWorker.arl)?.id : undefined,
+        area_id: fullWorker.area_id || undefined,
         country: fullWorker.country || "Colombia",
         department: fullWorker.department || "",
         city: fullWorker.city || "",
@@ -483,6 +511,7 @@ const WorkersManagement: React.FC = () => {
         eps: formData.eps_id ? epsOptions.find(eps => eps.id === formData.eps_id)?.display_name : undefined,
         afp: formData.afp_id ? afpOptions.find(afp => afp.id === formData.afp_id)?.display_name : undefined,
         arl: formData.arl_id ? arlOptions.find(arl => arl.id === formData.arl_id)?.display_name : undefined,
+        area_id: formData.area_id || undefined,
         country: formData.country,
         department: formData.department || undefined,
         city: formData.city || undefined,
@@ -1260,6 +1289,26 @@ const WorkersManagement: React.FC = () => {
                   {arlOptions.map((arl) => (
                     <MenuItem key={arl.id} value={arl.id}>
                       {arl.display_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>Área</InputLabel>
+                <Select
+                  value={formData.area_id || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, area_id: e.target.value ? Number(e.target.value) : undefined })
+                  }
+                >
+                  <MenuItem value="">
+                    <em>Seleccionar Área</em>
+                  </MenuItem>
+                  {areaOptions.map((area) => (
+                    <MenuItem key={area.id} value={area.id}>
+                      {area.name}
                     </MenuItem>
                   ))}
                 </Select>

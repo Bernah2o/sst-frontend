@@ -44,6 +44,7 @@ import React, { useState, useEffect } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../utils/dateUtils";
+import { logger } from "../utils/logger";
 import BulkAttendanceDialog from "../components/BulkAttendanceDialog";
 
 import api from "./../services/api";
@@ -210,9 +211,9 @@ const AttendanceManagement: React.FC = () => {
       setAttendances(response.data.items || []);
       setTotalAttendances(response.data.total || 0);
     } catch (error) {
-      console.error("Error fetching attendances:", error);
+      logger.error("Error fetching attendances:", error);
       showSnackbar(
-        "No se pudieron cargar los registros de asistencia. Verifique su conexión e intente nuevamente.",
+        "📊 No se pudo cargar la información de asistencia. Puede intentar actualizar la página o contactar al administrador si el problema persiste.",
         "error"
       );
     } finally {
@@ -235,7 +236,8 @@ const AttendanceManagement: React.FC = () => {
       });
       setUsers(response.data.items || []);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      logger.error("Error fetching users:", error);
+      showSnackbar("👥 No se pudo cargar la lista de usuarios. Intente actualizar la página.", "error");
     }
   };
 
@@ -285,7 +287,7 @@ const AttendanceManagement: React.FC = () => {
       const response = await api.get(url);
       setStats(response.data);
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      logger.error("Error fetching stats:", error);
     }
   };
 
@@ -376,8 +378,8 @@ const AttendanceManagement: React.FC = () => {
       fetchAttendances();
       fetchStats();
     } catch (error) {
-      console.error("Error saving attendance:", error);
-      showSnackbar("Error al guardar asistencia", "error");
+      logger.error("Error saving attendance:", error);
+      showSnackbar("💾 No se pudo guardar el registro de asistencia. Verifique los datos ingresados e intente nuevamente.", "error");
     }
   };
 
@@ -399,8 +401,8 @@ const AttendanceManagement: React.FC = () => {
         setOpenDeleteDialog(false);
         setDeletingAttendance(null);
       } catch (error) {
-        console.error("Error deleting attendance:", error);
-        showSnackbar("Error al eliminar registro de asistencia", "error");
+      logger.error("Error deleting attendance:", error);
+      showSnackbar("🗑️ No se pudo eliminar el registro de asistencia. Puede que no tenga permisos o que el registro esté siendo utilizado.", "error");
       }
     }
   };
@@ -429,8 +431,8 @@ const AttendanceManagement: React.FC = () => {
 
       showSnackbar("Reporte de asistencia exportado exitosamente", "success");
     } catch (error) {
-      console.error("Error exporting attendance:", error);
-      showSnackbar("Error al exportar reporte de asistencia", "error");
+      logger.error("Error exporting attendance:", error);
+      showSnackbar("📊 No se pudo exportar el reporte de asistencia. Verifique que haya datos disponibles e intente nuevamente.", "error");
     }
   };
 
@@ -446,7 +448,7 @@ const AttendanceManagement: React.FC = () => {
 
       // Validar que la respuesta sea un blob válido
       if (!response.data || response.data.size === 0) {
-        showSnackbar("Error: El archivo PDF está vacío", "error");
+        showSnackbar("📄 El certificado no pudo generarse correctamente. Intente nuevamente o contacte al administrador.", "error");
         return;
       }
 
@@ -477,18 +479,18 @@ const AttendanceManagement: React.FC = () => {
 
       showSnackbar("Certificado de asistencia generado exitosamente", "success");
     } catch (error: any) {
-      console.error("Error generating attendance certificate:", error);
+      logger.error("Error generating attendance certificate:", error);
       if (error.response?.status === 500) {
-        showSnackbar("Error interno del servidor al generar el certificado", "error");
+        showSnackbar("🔧 Error del servidor al generar el certificado. Contacte al administrador del sistema.", "error");
       } else {
-        showSnackbar("Error al generar certificado de asistencia", "error");
+        showSnackbar("📜 No se pudo generar el certificado de asistencia. Verifique que el registro esté completo e intente nuevamente.", "error");
       }
     }
   };
 
   const handleGenerateAttendanceList = async () => {
     if (!dateFilter) {
-      showSnackbar("Por favor selecciona una fecha para generar la lista", "error");
+      showSnackbar("📅 Por favor seleccione una fecha específica para generar la lista de asistencia.", "error");
       return;
     }
 
@@ -499,7 +501,7 @@ const AttendanceManagement: React.FC = () => {
     });
 
     if (filteredAttendances.length === 0) {
-      showSnackbar("No hay registros de asistencia para la fecha seleccionada", "error");
+      showSnackbar("📋 No hay registros de asistencia para la fecha seleccionada. Intente con otra fecha o verifique que existan datos.", "error");
       return;
     }
 
@@ -529,7 +531,7 @@ const AttendanceManagement: React.FC = () => {
 
       // Validar que la respuesta sea un blob válido
       if (!response.data || response.data.size === 0) {
-        showSnackbar("Error: El archivo PDF está vacío", "error");
+        showSnackbar("📄 La lista de asistencia no pudo generarse correctamente. Intente nuevamente o contacte al administrador.", "error");
         return;
       }
 
@@ -559,13 +561,13 @@ const AttendanceManagement: React.FC = () => {
 
       showSnackbar("Lista de asistencia generada exitosamente", "success");
     } catch (error: any) {
-      console.error("Error generating attendance list:", error);
+      logger.error("Error generating attendance list:", error);
       if (error.response?.status === 404) {
-        showSnackbar("No se encontraron registros para generar la lista", "error");
+        showSnackbar("🔍 No se encontraron registros suficientes para generar la lista. Verifique que existan datos de asistencia para la fecha seleccionada.", "error");
       } else if (error.response?.status === 500) {
-        showSnackbar("Error interno del servidor al generar la lista", "error");
+        showSnackbar("🔧 Error del servidor al generar la lista. Contacte al administrador del sistema.", "error");
       } else {
-        showSnackbar("Error al generar lista de asistencia", "error");
+        showSnackbar("📋 No se pudo generar la lista de asistencia. Verifique los datos e intente nuevamente.", "error");
       }
     }
   };
