@@ -630,7 +630,7 @@ const AdminConfigPage: React.FC = () => {
   // Funciones para Áreas
   const fetchAreas = async () => {
     try {
-      const response = await api.get("/areas?limit=100");
+      const response = await api.get("/areas/?limit=100");
       const data = response.data.items || [];
       setAreas(data);
     } catch (error) {
@@ -760,7 +760,7 @@ const AdminConfigPage: React.FC = () => {
         }
         await api.put(`/areas/${editingArea.id}`, updateData);
       } else {
-        await api.post("/areas", dataToSend);
+        await api.post("/areas/", dataToSend);
       }
       fetchAreas();
       handleCloseAreaDialog();

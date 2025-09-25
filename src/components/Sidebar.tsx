@@ -461,13 +461,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
               roles: ["admin", "supervisor"],
             },
             {
-              id: "committee-convivencia",
-              label: "Comité de Convivencia",
-              icon: <Group />,
-              path: "/admin/committees/convivencia",
-              roles: ["admin", "supervisor"],
-            },
-            {
               id: "candidate-voting",
               label: "Votaciones de Candidatos",
               icon: <HowToVote />,
@@ -476,13 +469,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             },
           ],
           roles: ["admin", "trainer"],
-        },
-        {
-          id: "committee-copasst",
-          label: "COPASST",
-          icon: <MedicalServices />,
-          path: "/admin/committees/copasst",
-          roles: ["admin", "supervisor"],
         },
       ],
       roles: ["admin", "supervisor"],
@@ -566,6 +552,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             "employee-certificates": () =>
               user.role === "employee" && canViewCertificatesPage(),
             "employee-vacations": () =>
+              user.role === "employee",
+            "employee-votings": () =>
               user.role === "employee",
 
             // Worker management
