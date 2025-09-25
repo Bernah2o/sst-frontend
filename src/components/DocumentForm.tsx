@@ -251,6 +251,14 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
                   onBlur={formik.handleBlur}
                   error={formik.touched.document_type && Boolean(formik.errors.document_type)}
                   label="Tipo de Documento"
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 300,
+                        overflow: 'auto',
+                      },
+                    },
+                  }}
                 >
                   {Object.values(CommitteeDocumentType).map((type) => (
                     <MenuItem key={type} value={type}>
@@ -271,6 +279,14 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
                   onBlur={formik.handleBlur}
                   error={formik.touched.committee_id && Boolean(formik.errors.committee_id)}
                   label="Comité"
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 300,
+                        overflow: 'auto',
+                      },
+                    },
+                  }}
                 >
                   {committees.map((committee) => (
                     <MenuItem key={committee.id} value={committee.id}>

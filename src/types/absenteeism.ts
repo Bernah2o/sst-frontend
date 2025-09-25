@@ -1,23 +1,24 @@
 export enum MonthEnum {
-  ENERO = 'enero',
-  FEBRERO = 'febrero',
-  MARZO = 'marzo',
-  ABRIL = 'abril',
-  MAYO = 'mayo',
-  JUNIO = 'junio',
-  JULIO = 'julio',
-  AGOSTO = 'agosto',
-  SEPTIEMBRE = 'septiembre',
-  OCTUBRE = 'octubre',
-  NOVIEMBRE = 'noviembre',
-  DICIEMBRE = 'diciembre'
+  ENERO = 'ENERO',
+  FEBRERO = 'FEBRERO',
+  MARZO = 'MARZO',
+  ABRIL = 'ABRIL',
+  MAYO = 'MAYO',
+  JUNIO = 'JUNIO',
+  JULIO = 'JULIO',
+  AGOSTO = 'AGOSTO',
+  SEPTIEMBRE = 'SEPTIEMBRE',
+  OCTUBRE = 'OCTUBRE',
+  NOVIEMBRE = 'NOVIEMBRE',
+  DICIEMBRE = 'DICIEMBRE'
 }
 
 export enum EventTypeEnum {
-  ACCIDENTE_TRABAJO = 'ACCIDENTE DE TRABAJO',
-  ENFERMEDAD_LABORAL = 'ENFERMEDAD LABORAL',
-  ACCIDENTE_COMUN = 'ACCIDENTE COMÚN',
-  ENFERMEDAD_GENERAL = 'ENFERMEDAD GENERAL'
+  ACCIDENTE_TRABAJO = 'ACCIDENTE_TRABAJO',
+  ENFERMEDAD_LABORAL = 'ENFERMEDAD_LABORAL',
+  ACCIDENTE_COMUN = 'ACCIDENTE_COMUN',
+  ENFERMEDAD_GENERAL = 'ENFERMEDAD_GENERAL',
+  ENFERMEDAD_LEVE = 'ENFERMEDAD LEVE'
 }
 
 export interface WorkerBasicInfo {
@@ -148,5 +149,6 @@ export const EVENT_TYPE_OPTIONS = [
   { value: EventTypeEnum.ACCIDENTE_TRABAJO, label: 'Accidente de Trabajo' },
   { value: EventTypeEnum.ENFERMEDAD_LABORAL, label: 'Enfermedad Laboral' },
   { value: EventTypeEnum.ACCIDENTE_COMUN, label: 'Accidente Común' },
-  { value: EventTypeEnum.ENFERMEDAD_GENERAL, label: 'Enfermedad General' }
+  { value: EventTypeEnum.ENFERMEDAD_GENERAL, label: 'Enfermedad General' },
+  { value: EventTypeEnum.ENFERMEDAD_LEVE, label: 'Enfermedad Leve' }
 ];

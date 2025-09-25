@@ -185,6 +185,14 @@ const AbsenteeismManagement: React.FC = () => {
         return;
       }
 
+      // Validación condicional para campos médicos según el tipo de evento
+      if (formData.event_type !== EventTypeEnum.ENFERMEDAD_LEVE) {
+        if (!formData.diagnostic_code.trim() || !formData.health_condition_description.trim()) {
+          showSnackbar("Para este tipo de evento, el código de diagnóstico y la descripción de condición de salud son obligatorios", "error");
+          return;
+        }
+      }
+
       const submitData = {
         event_month: formData.event_month,
         worker_id: formData.worker_id,
@@ -296,6 +304,41 @@ const AbsenteeismManagement: React.FC = () => {
 
   const showSnackbar = (message: string, severity: "success" | "error") => {
     setSnackbar({ open: true, message, severity });
+  };
+
+  // Función para calcular días entre fechas
+  const calculateDaysBetweenDates = (startDate: Date | null, endDate: Date | null): number => {
+    if (!startDate || !endDate) return 0;
+    
+    const timeDifference = endDate.getTime() - startDate.getTime();
+    const daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
+    
+    // Asegurar que el resultado sea positivo y al menos 1 día si las fechas son válidas
+    return daysDifference >= 0 ? daysDifference + 1 : 0;
+  };
+
+  // Manejador para cambio de fecha de inicio
+  const handleStartDateChange = (date: Date | null) => {
+    const newFormData = { ...formData, start_date: date };
+    
+    // Calcular días automáticamente si ambas fechas están disponibles
+    if (date && formData.end_date) {
+      newFormData.disability_days = calculateDaysBetweenDates(date, formData.end_date);
+    }
+    
+    setFormData(newFormData);
+  };
+
+  // Manejador para cambio de fecha de fin
+  const handleEndDateChange = (date: Date | null) => {
+    const newFormData = { ...formData, end_date: date };
+    
+    // Calcular días automáticamente si ambas fechas están disponibles
+    if (formData.start_date && date) {
+      newFormData.disability_days = calculateDaysBetweenDates(formData.start_date, date);
+    }
+    
+    setFormData(newFormData);
   };
 
   const getEventTypeColor = (eventType: EventTypeEnum) => {
@@ -666,7 +709,7 @@ const AbsenteeismManagement: React.FC = () => {
                 <DatePicker
                   label="Fecha de Inicio *"
                   value={formData.start_date}
-                  onChange={(date) => setFormData({ ...formData, start_date: date })}
+                  onChange={handleStartDateChange}
                   slotProps={{ textField: { fullWidth: true } }}
                 />
               </Grid>
@@ -675,7 +718,7 @@ const AbsenteeismManagement: React.FC = () => {
                 <DatePicker
                   label="Fecha de Fin *"
                   value={formData.end_date}
-                  onChange={(date) => setFormData({ ...formData, end_date: date })}
+                  onChange={handleEndDateChange}
                   slotProps={{ textField: { fullWidth: true } }}
                 />
               </Grid>
@@ -719,19 +762,21 @@ const AbsenteeismManagement: React.FC = () => {
               
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  label="Código Diagnóstico *"
+                  label={formData.event_type === EventTypeEnum.ENFERMEDAD_LEVE ? "Código Diagnóstico" : "Código Diagnóstico *"}
                   fullWidth
                   value={formData.diagnostic_code}
                   onChange={(e) => setFormData({ ...formData, diagnostic_code: e.target.value })}
+                  helperText={formData.event_type === EventTypeEnum.ENFERMEDAD_LEVE ? "Opcional para enfermedad leve" : ""}
                 />
               </Grid>
               
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  label="Descripción Condición de Salud *"
+                  label={formData.event_type === EventTypeEnum.ENFERMEDAD_LEVE ? "Descripción Condición de Salud" : "Descripción Condición de Salud *"}
                   fullWidth
                   value={formData.health_condition_description}
                   onChange={(e) => setFormData({ ...formData, health_condition_description: e.target.value })}
+                  helperText={formData.event_type === EventTypeEnum.ENFERMEDAD_LEVE ? "Opcional para enfermedad leve" : ""}
                 />
               </Grid>
               
