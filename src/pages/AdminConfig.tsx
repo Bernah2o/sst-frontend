@@ -142,11 +142,33 @@ interface ProgramasUpdate {
   activo?: boolean;
 }
 
+// Interfaces para Tipos de Comité
+interface CommitteeTypeBase {
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+}
+
+interface CommitteeType extends CommitteeTypeBase {
+  id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CommitteeTypeCreate extends CommitteeTypeBase {}
+
+interface CommitteeTypeUpdate {
+  name?: string;
+  description?: string | null;
+  is_active?: boolean;
+}
+
 const AdminConfigPage: React.FC = () => {
   const { user } = useAuth();
   // const [configs, setConfigs] = useState<AdminConfig[]>([]);
   const [seguridadSocial, setSeguridadSocial] = useState<SeguridadSocial[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
+  const [committeeTypes, setCommitteeTypes] = useState<CommitteeType[]>([]);
 
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -154,18 +176,21 @@ const AdminConfigPage: React.FC = () => {
   const [openSeguridadSocialDialog, setOpenSeguridadSocialDialog] =
     useState(false);
   const [openProgramDialog, setOpenProgramDialog] = useState(false);
+  const [openCommitteeTypeDialog, setOpenCommitteeTypeDialog] = useState(false);
 
   const [openCargoDialog, setOpenCargoDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openDeleteSeguridadSocialDialog, setOpenDeleteSeguridadSocialDialog] =
     useState(false);
   const [openDeleteProgramDialog, setOpenDeleteProgramDialog] = useState(false);
+  const [openDeleteCommitteeTypeDialog, setOpenDeleteCommitteeTypeDialog] = useState(false);
 
   const [openDeleteCargoDialog, setOpenDeleteCargoDialog] = useState(false);
   const [editingConfig, setEditingConfig] = useState<AdminConfig | null>(null);
   const [editingSeguridadSocial, setEditingSeguridadSocial] =
     useState<SeguridadSocial | null>(null);
   const [editingProgram, setEditingProgram] = useState<Programa | null>(null);
+  const [editingCommitteeType, setEditingCommitteeType] = useState<CommitteeType | null>(null);
 
   const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
   const [deletingConfig, setDeletingConfig] = useState<AdminConfig | null>(
@@ -174,6 +199,7 @@ const AdminConfigPage: React.FC = () => {
   const [deletingSeguridadSocial, setDeletingSeguridadSocial] =
     useState<SeguridadSocial | null>(null);
   const [deletingProgram, setDeletingProgram] = useState<Programa | null>(null);
+  const [deletingCommitteeType, setDeletingCommitteeType] = useState<CommitteeType | null>(null);
 
   const [deletingCargo, setDeletingCargo] = useState<Cargo | null>(null);
   const [formData, setFormData] = useState<AdminConfigCreate>({
@@ -192,6 +218,11 @@ const AdminConfigPage: React.FC = () => {
     nombre_programa: "",
     activo: true,
   });
+  const [committeeTypeFormData, setCommitteeTypeFormData] = useState<CommitteeTypeCreate>({
+    name: "",
+    description: "",
+    is_active: true,
+  });
   const [cargoFormData, setCargoFormData] = useState<CargoCreate>({
     nombre_cargo: "",
     periodicidad_emo: null,
@@ -203,6 +234,8 @@ const AdminConfigPage: React.FC = () => {
   const [seguridadSocialRowsPerPage, setSeguridadSocialRowsPerPage] = useState(5);
   const [programasPage, setProgramasPage] = useState(0);
   const [programasRowsPerPage, setProgramasRowsPerPage] = useState(5);
+  const [committeeTypesPage, setCommitteeTypesPage] = useState(0);
+  const [committeeTypesRowsPerPage, setCommitteeTypesRowsPerPage] = useState(5);
   const [cargosPage, setCargosPage] = useState(0);
   const [cargosRowsPerPage, setCargosRowsPerPage] = useState(5);
 
@@ -216,47 +249,14 @@ const AdminConfigPage: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [seguridadSocialResponse, programasResponse, cargosResponse] =
-        await Promise.all([
-          api.get("/admin/config/seguridad-social/"),
-          api.get("/admin/config/programas"),
-          api.get("/admin/config/cargos"),
-        ]);
-
-      // Filtrar solo configuraciones que no sean de seguridad social
-      // const filteredConfigs = Array.isArray(configsResponse.data) ?
-      //   configsResponse.data.filter((config: AdminConfig) =>
-      //     !['eps', 'afp', 'arl'].includes(config.category.toLowerCase())
-      //   ) : [];
-      // setConfigs(filteredConfigs);
-
-      // Verificar la estructura de la respuesta de seguridad social
-      let seguridadSocialData = [];
-      if (seguridadSocialResponse.data) {
-        if (Array.isArray(seguridadSocialResponse.data)) {
-          seguridadSocialData = seguridadSocialResponse.data;
-        } else if (
-          seguridadSocialResponse.data.items &&
-          Array.isArray(seguridadSocialResponse.data.items)
-        ) {
-          seguridadSocialData = seguridadSocialResponse.data.items;
-        }
-      }
-
-      // Asegurar que todos los datos sean arrays
-      const programasData = Array.isArray(programasResponse.data)
-        ? programasResponse.data
-        : [];
-      const cargosData = Array.isArray(cargosResponse.data)
-        ? cargosResponse.data
-        : [];
-
-      setSeguridadSocial(seguridadSocialData);
-      setProgramas(programasData);
-      setCargos(cargosData);
+      await Promise.all([
+        fetchSeguridadSocial(),
+        fetchProgramas(),
+        fetchCargos(),
+        fetchCommitteeTypes(),
+      ]);
     } catch (error) {
       console.error("Error fetching data:", error);
-      setSeguridadSocial([]);
     } finally {
       setLoading(false);
     }
@@ -577,6 +577,89 @@ const AdminConfigPage: React.FC = () => {
         setDeletingSeguridadSocial(null);
       } catch (error) {
         console.error("Error deleting seguridad social:", error);
+      }
+    }
+  };
+
+  // Funciones para Tipos de Comité
+  const fetchCommitteeTypes = async () => {
+    try {
+      const response = await api.get("/committees/types");
+      const data = Array.isArray(response.data) ? response.data : [];
+      setCommitteeTypes(data);
+    } catch (error) {
+      console.error("Error fetching committee types:", error);
+      setCommitteeTypes([]);
+    }
+  };
+
+  const handleOpenCommitteeTypeDialog = (committeeType?: CommitteeType) => {
+    if (committeeType) {
+      setEditingCommitteeType(committeeType);
+      setCommitteeTypeFormData({
+        name: committeeType.name,
+        description: committeeType.description || "",
+        is_active: committeeType.is_active,
+      });
+    } else {
+      setEditingCommitteeType(null);
+      setCommitteeTypeFormData({
+        name: "",
+        description: "",
+        is_active: true,
+      });
+    }
+    setOpenCommitteeTypeDialog(true);
+  };
+
+  const handleCloseCommitteeTypeDialog = () => {
+    setOpenCommitteeTypeDialog(false);
+    setEditingCommitteeType(null);
+    setCommitteeTypeFormData({
+      name: "",
+      description: "",
+      is_active: true,
+    });
+  };
+
+  const handleSaveCommitteeType = async () => {
+    try {
+      if (editingCommitteeType) {
+        const updateData: CommitteeTypeUpdate = {};
+        if (committeeTypeFormData.name !== editingCommitteeType.name) {
+          updateData.name = committeeTypeFormData.name;
+        }
+        if (committeeTypeFormData.description !== editingCommitteeType.description) {
+          updateData.description = committeeTypeFormData.description;
+        }
+        if (committeeTypeFormData.is_active !== editingCommitteeType.is_active) {
+          updateData.is_active = committeeTypeFormData.is_active;
+        }
+        await api.put(`/committees/types/${editingCommitteeType.id}`, updateData);
+      } else {
+        await api.post("/committees/types", committeeTypeFormData);
+      }
+      fetchCommitteeTypes();
+      handleCloseCommitteeTypeDialog();
+    } catch (error) {
+      console.error("Error saving committee type:", error);
+    }
+  };
+
+  const handleDeleteCommitteeType = (committeeType: CommitteeType) => {
+    setDeletingCommitteeType(committeeType);
+    setOpenDeleteCommitteeTypeDialog(true);
+  };
+
+  const confirmDeleteCommitteeType = async () => {
+    if (deletingCommitteeType) {
+      try {
+        await api.delete(`/committees/types/${deletingCommitteeType.id}`);
+        fetchCommitteeTypes();
+        setOpenDeleteCommitteeTypeDialog(false);
+        setDeletingCommitteeType(null);
+      } catch (error) {
+        console.error("Error deleting committee type:", error);
       }
     }
   };
@@ -938,6 +1021,115 @@ const AdminConfigPage: React.FC = () => {
             </Button>
           </Box>
           {renderSeguridadSocialTable()}
+        </CardContent>
+      </Card>
+
+      {/* Sección: Tipos de Comité */}
+      <Typography
+        variant="h5"
+        sx={{ mb: 3, mt: 4, color: "primary.main", fontWeight: "bold" }}
+      >
+        Tipos de Comité
+      </Typography>
+
+      {/* Tipos de Comité */}
+      <Card sx={{ mb: 3, boxShadow: 3 }}>
+        <CardContent>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+          >
+            <Typography
+              variant="h6"
+              sx={{ color: "text.primary", fontWeight: "bold" }}
+            >
+              Gestión de Tipos de Comité
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenCommitteeTypeDialog()}
+              sx={{ borderRadius: 2 }}
+            >
+              Nuevo Tipo de Comité
+            </Button>
+          </Box>
+
+          <Paper sx={{ borderRadius: 2 }}>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "grey.50" }}>
+                    <TableCell sx={{ fontWeight: "bold" }}>Nombre</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Descripción</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Estado</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {committeeTypes
+                    .slice(
+                      committeeTypesPage * committeeTypesRowsPerPage,
+                      committeeTypesPage * committeeTypesRowsPerPage + committeeTypesRowsPerPage
+                    )
+                    .map((committeeType) => (
+                      <TableRow key={committeeType.id} hover>
+                        <TableCell sx={{ fontWeight: "medium" }}>
+                          {committeeType.name}
+                        </TableCell>
+                        <TableCell>
+                          {committeeType.description || "Sin descripción"}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={committeeType.is_active ? "Activo" : "Inactivo"}
+                            color={committeeType.is_active ? "success" : "default"}
+                            size="small"
+                            sx={{ fontWeight: "bold" }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenCommitteeTypeDialog(committeeType)}
+                            sx={{ mr: 1, color: "primary.main" }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteCommitteeType(committeeType)}
+                            sx={{ color: "error.main" }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={committeeTypes.length}
+              rowsPerPage={committeeTypesRowsPerPage}
+              page={committeeTypesPage}
+              onPageChange={(event: unknown, newPage: number) => {
+                setCommitteeTypesPage(newPage);
+              }}
+              onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                setCommitteeTypesRowsPerPage(parseInt(event.target.value, 10));
+                setCommitteeTypesPage(0);
+              }}
+              labelRowsPerPage="Filas por página:"
+              labelDisplayedRows={({ from, to, count }) =>
+                `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+              }
+            />
+          </Paper>
         </CardContent>
       </Card>
 
@@ -1311,6 +1503,103 @@ const AdminConfigPage: React.FC = () => {
           </Button>
           <Button
             onClick={confirmDeleteCargo}
+            variant="contained"
+            color="error"
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog para Tipos de Comité */}
+      <Dialog
+        open={openCommitteeTypeDialog}
+        onClose={handleCloseCommitteeTypeDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingCommitteeType ? "Editar Tipo de Comité" : "Nuevo Tipo de Comité"}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid size={12}>
+              <UppercaseTextField
+                fullWidth
+                label="Nombre"
+                value={committeeTypeFormData.name}
+                onChange={(e) =>
+                  setCommitteeTypeFormData({
+                    ...committeeTypeFormData,
+                    name: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Descripción"
+                multiline
+                rows={3}
+                value={committeeTypeFormData.description}
+                onChange={(e) =>
+                  setCommitteeTypeFormData({
+                    ...committeeTypeFormData,
+                    description: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+            <Grid size={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={committeeTypeFormData.is_active}
+                    onChange={(e) =>
+                      setCommitteeTypeFormData({
+                        ...committeeTypeFormData,
+                        is_active: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Activo"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCommitteeTypeDialog}>Cancelar</Button>
+          <Button onClick={handleSaveCommitteeType} variant="contained">
+            {editingCommitteeType ? "Actualizar" : "Crear"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de confirmación para eliminar tipo de comité */}
+      <Dialog
+        open={openDeleteCommitteeTypeDialog}
+        onClose={() => setOpenDeleteCommitteeTypeDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Confirmar Eliminación</DialogTitle>
+        <DialogContent>
+          <Typography>
+            ¿Está seguro de que desea eliminar el tipo de comité "
+            {deletingCommitteeType?.name}"?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Esta acción no se puede deshacer.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDeleteCommitteeTypeDialog(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDeleteCommitteeType}
             variant="contained"
             color="error"
           >
