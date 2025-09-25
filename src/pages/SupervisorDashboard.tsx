@@ -107,7 +107,7 @@ const SupervisorDashboard: React.FC = () => {
       
     } catch (error) {
       logger.error('Error fetching dashboard data:', error);
-      setError('Error al cargar los datos del dashboard');
+      setError('Hubo un problema al cargar la información del dashboard. Por favor, intenta recargar la página o contacta al soporte técnico si el problema persiste.');
     } finally {
       setLoading(false);
     }

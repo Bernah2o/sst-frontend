@@ -387,6 +387,13 @@ export enum AttendanceStatus {
   PARTIAL = "partial",
 }
 
+export enum MeetingAttendanceStatus {
+  PRESENT = "present",
+  ABSENT = "absent",
+  EXCUSED = "excused",
+  LATE = "late",
+}
+
 export enum AttendanceType {
   IN_PERSON = "in_person",
   VIRTUAL = "virtual",
@@ -1706,3 +1713,641 @@ export interface CourseMaterial extends CourseMaterialResponse {
   progress_percentage?: number;
   status?: string;
 }
+
+// Committee System Enums
+export enum CommitteeType {
+  CONVIVENCIA = "convivencia",
+  COPASST = "copasst",
+}
+
+export enum CommitteeRole {
+  PRESIDENT = "PRESIDENT",
+  VICE_PRESIDENT = "VICE_PRESIDENT",
+  SECRETARY = "SECRETARY",
+  MEMBER = "MEMBER",
+  ALTERNATE = "ALTERNATE",
+}
+
+export enum MeetingStatus {
+  SCHEDULED = "scheduled",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled",
+  POSTPONED = "postponed",
+}
+
+export enum VotingStatus {
+  DRAFT = "draft",
+  ACTIVE = "active",
+  CLOSED = "closed",
+  CANCELLED = "cancelled",
+}
+
+export enum VoteChoice {
+  YES = "yes",
+  NO = "no",
+  ABSTAIN = "abstain",
+}
+
+
+
+export enum ActivityStatus {
+  PENDING = "PENDING",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
+  OVERDUE = "OVERDUE",
+}
+
+export enum ActivityPriority {
+  LOW = "LOW",
+  MEDIUM = "MEDIUM", 
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL"
+}
+
+export enum CommitteeDocumentType {
+  MEETING_MINUTES = "meeting_minutes",
+  VOTING_RECORD = "voting_record",
+  ACTIVITY_REPORT = "activity_report",
+  PRESENTATION = "presentation",
+  AGREEMENT = "agreement",
+  VOTING_RESULTS = "voting_results",
+  REPORTS = "reports",
+  POLICIES = "policies",
+  OTHER = "other",
+}
+
+// Committee Interfaces
+export interface CommitteeBase {
+  name: string;
+  description?: string;
+  committee_type: CommitteeType;
+  committee_type_id: number;
+  is_active: boolean;
+  establishment_date?: string;
+  dissolution_date?: string;
+  meeting_frequency_days: number;
+  quorum_percentage: number;
+  regulations_document_url?: string;
+  notes?: string;
+}
+
+export interface CommitteeCreate extends CommitteeBase {}
+
+export interface CommitteeUpdate {
+  name?: string;
+  description?: string;
+  committee_type?: CommitteeType;
+  committee_type_id?: number;
+  is_active?: boolean;
+  establishment_date?: string;
+  dissolution_date?: string;
+  meeting_frequency_days?: number;
+  quorum_percentage?: number;
+  regulations_document_url?: string;
+  notes?: string;
+}
+
+export interface CommitteeResponse extends CommitteeBase {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  created_by?: number;
+  members_count?: number;
+  active_meetings_count?: number;
+}
+
+// Committee Member Interfaces
+export interface CommitteeMemberBase {
+  committee_id: number;
+  user_id: number;
+  role: CommitteeRole;
+  role_id: number;
+  is_active: boolean;
+  start_date: string;
+  end_date?: string;
+  appointment_document_url?: string;
+  notes?: string;
+}
+
+export interface CommitteeMemberCreate extends CommitteeMemberBase {}
+
+export interface CommitteeMemberUpdate {
+  role?: CommitteeRole;
+  role_id?: number;
+  is_active?: boolean;
+  start_date?: string;
+  end_date?: string;
+  appointment_document_url?: string;
+  notes?: string;
+}
+
+export interface CommitteeMemberResponse extends CommitteeMemberBase {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  created_by?: number;
+  user?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    position?: string;
+    department?: string;
+  };
+}
+
+// Meeting Interfaces
+export interface MeetingBase {
+  committee_id: number;
+  title: string;
+  description?: string;
+  meeting_date: string;
+  duration_minutes?: number;
+  location?: string;
+  meeting_type?: string;
+  agenda?: string;
+  status: MeetingStatus;
+  is_virtual?: boolean;
+  meeting_link?: string;
+  recording_url?: string;
+  notes?: string;
+}
+
+export interface MeetingCreate extends MeetingBase {}
+
+export interface MeetingUpdate {
+  title?: string;
+  description?: string;
+  meeting_date?: string;
+  duration_minutes?: number;
+  location?: string;
+  meeting_type?: string;
+  agenda?: string;
+  status?: MeetingStatus;
+  is_virtual?: boolean;
+  meeting_link?: string;
+  recording_url?: string;
+  notes?: string;
+}
+
+export interface MeetingResponse extends MeetingBase {
+  id: number;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  attendees_count?: number;
+  documents_count?: number;
+  votings_count?: number;
+}
+
+// Meeting Attendance Interfaces
+export interface MeetingAttendanceBase {
+  meeting_id: number;
+  member_id: number;
+  status: MeetingAttendanceStatus;
+  check_in_time?: string;
+  check_out_time?: string;
+  notes?: string;
+}
+
+export interface MeetingAttendanceCreate extends MeetingAttendanceBase {}
+
+export interface MeetingAttendanceUpdate {
+  status?: MeetingAttendanceStatus;
+  check_in_time?: string;
+  check_out_time?: string;
+  notes?: string;
+}
+
+export interface MeetingAttendanceResponse extends MeetingAttendanceBase {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  member?: CommitteeMemberResponse;
+}
+
+// Voting Interfaces
+export interface VotingBase {
+  meeting_id: number;
+  title: string;
+  description?: string;
+  voting_type: string;
+  start_time: string;
+  end_time?: string;
+  status: VotingStatus;
+  is_anonymous: boolean;
+  requires_quorum: boolean;
+  quorum_percentage?: number;
+}
+
+export interface VotingCreate extends VotingBase {}
+
+export interface VotingUpdate {
+  title?: string;
+  description?: string;
+  voting_type?: string;
+  start_time?: string;
+  end_time?: string;
+  status?: VotingStatus;
+  is_anonymous?: boolean;
+  requires_quorum?: boolean;
+  quorum_percentage?: number;
+}
+
+export interface VotingResponse extends VotingBase {
+  id: number;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  total_votes?: number;
+  yes_votes?: number;
+  no_votes?: number;
+  abstain_votes?: number;
+  eligible_voters?: number;
+  participation_rate?: number;
+}
+
+// Vote Interfaces
+export interface VoteBase {
+  voting_id: number;
+  member_id: number;
+  vote_choice: VoteChoice;
+  comments?: string;
+}
+
+export interface VoteCreate extends VoteBase {}
+
+export interface VoteUpdate {
+  vote_choice?: VoteChoice;
+  comments?: string;
+}
+
+export interface VoteResponse extends VoteBase {
+  id: number;
+  voted_at: string;
+  member?: CommitteeMemberResponse;
+}
+
+// Activity Tracking Interfaces
+export interface ActivityBase {
+  committee_id: number;
+  meeting_id?: number;
+  title: string;
+  description?: string;
+  assigned_to?: number;
+  due_date?: string;
+  priority: ActivityPriority;
+  status: ActivityStatus;
+  estimated_hours?: number;
+  actual_hours?: number;
+  progress_percentage?: number;
+  tags?: string;
+  notes?: string;
+}
+
+export interface ActivityCreate extends ActivityBase {}
+
+export interface ActivityUpdate {
+  title?: string;
+  description?: string;
+  assigned_to?: number;
+  due_date?: string;
+  priority?: ActivityPriority;
+  status?: ActivityStatus;
+  estimated_hours?: number;
+  actual_hours?: number;
+  progress_percentage?: number;
+  tags?: string;
+  notes?: string;
+  completion_notes?: string;
+  completed_at?: string;
+}
+
+export interface ActivityResponse extends ActivityBase {
+  id: number;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  completion_notes?: string;
+  completed_at?: string;
+  assigned_user?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+
+// Document Interfaces
+export interface CommitteeDocumentBase {
+  committee_id: number;
+  meeting_id?: number;
+  voting_id?: number;
+  activity_id?: number;
+  title: string;
+  description?: string;
+  document_type: CommitteeDocumentType;
+  file_path: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  is_confidential: boolean;
+  version?: string;
+  tags?: string;
+  expiry_date?: string;
+  notes?: string;
+}
+
+export interface CommitteeDocumentCreate extends CommitteeDocumentBase {}
+
+export interface CommitteeDocumentUpdate {
+  title?: string;
+  description?: string;
+  document_type?: CommitteeDocumentType;
+  is_confidential?: boolean;
+  version?: string;
+  tags?: string;
+  expiry_date?: string;
+  notes?: string;
+}
+
+export interface CommitteeDocumentResponse extends CommitteeDocumentBase {
+  id: number;
+  uploaded_by: number;
+  created_at: string;
+  updated_at: string;
+  download_count?: number;
+}
+
+// Permission Interfaces
+export interface CommitteePermissionBase {
+  committee_id: number;
+  user_id: number;
+  can_view: boolean;
+  can_edit: boolean;
+  can_manage_members: boolean;
+  can_create_meetings: boolean;
+  can_manage_votings: boolean;
+  can_upload_documents: boolean;
+}
+
+export interface CommitteePermissionCreate extends CommitteePermissionBase {}
+
+export interface CommitteePermissionUpdate {
+  can_view?: boolean;
+  can_edit?: boolean;
+  can_manage_members?: boolean;
+  can_create_meetings?: boolean;
+  can_manage_votings?: boolean;
+  can_upload_documents?: boolean;
+}
+
+export interface CommitteePermissionResponse extends CommitteePermissionBase {
+  id: number;
+  granted_by: number;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+
+// Dashboard and Statistics Interfaces
+export interface CommitteeDashboard {
+  committee: CommitteeResponse;
+  upcoming_meetings: MeetingResponse[];
+  active_votings: VotingResponse[];
+  pending_activities: ActivityResponse[];
+  recent_documents: CommitteeDocumentResponse[];
+  statistics: {
+    total_meetings: number;
+    meetings_this_month: number;
+    total_votings: number;
+    active_members: number;
+    attendance_rate: number;
+    completion_rate: number;
+  };
+}
+
+export interface VotingResults {
+  voting: VotingResponse;
+  votes: VoteResponse[];
+  summary: {
+    total_eligible: number;
+    total_votes: number;
+    participation_rate: number;
+    yes_count: number;
+    no_count: number;
+    abstain_count: number;
+    yes_percentage: number;
+    no_percentage: number;
+    abstain_percentage: number;
+    quorum_met: boolean;
+    result: 'approved' | 'rejected' | 'pending';
+  };
+}
+
+// Candidate Voting Types
+export enum CandidateVotingStatus {
+  DRAFT = "draft",
+  ACTIVE = "active",
+  CLOSED = "closed",
+  CANCELLED = "cancelled",
+}
+
+export interface CandidateVotingBase {
+  title: string;
+  description?: string;
+  committee_type: string;
+  start_date: string;
+  end_date: string;
+  max_votes_per_user: number;
+  winner_count: number;
+  is_anonymous: boolean;
+  status: CandidateVotingStatus;
+}
+
+export interface CandidateVotingCreate extends CandidateVotingBase {
+  candidate_worker_ids: number[];
+}
+
+export interface CandidateVotingUpdate {
+  title?: string;
+  description?: string;
+  committee_type?: string;
+  start_date?: string;
+  end_date?: string;
+  max_votes_per_user?: number;
+  winner_count?: number;
+  is_anonymous?: boolean;
+  status?: CandidateVotingStatus;
+}
+
+export interface CandidateVotingResponse extends Omit<CandidateVotingBase, 'committee_type'> {
+  id: number;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  total_votes?: number;
+  total_voters?: number;
+  participation_rate?: number;
+  committee_type_id?: number;
+  committee_type?: {
+    id: number;
+    name: string;
+    description?: string;
+  };
+}
+
+export interface CandidateVotingCandidateBase {
+  voting_id: number;
+  worker_id: number;
+}
+
+export interface CandidateVotingCandidateResponse extends CandidateVotingCandidateBase {
+  id: number;
+  vote_count: number;
+  vote_percentage: number;
+  worker?: {
+    id: number;
+    user_id: number;
+    first_name: string;
+    last_name: string;
+    document_number: string;
+    position?: string;
+    department?: string;
+    user?: {
+      id: number;
+      email: string;
+      first_name: string;
+      last_name: string;
+      position?: string;
+      department?: string;
+    };
+  };
+}
+
+export interface CandidateVoteBase {
+  voting_id: number;
+  candidate_id: number;
+}
+
+export interface CandidateVoteCreate extends CandidateVoteBase {}
+
+export interface CandidateVoteResponse extends CandidateVoteBase {
+  id: number;
+  voter_id: number;
+  voted_at: string;
+  candidate?: CandidateVotingCandidateResponse;
+}
+
+export interface CandidateVotingResultResponse {
+  id: number;
+  voting_id: number;
+  candidate_id: number;
+  final_vote_count: number;
+  final_percentage: number;
+  position: number;
+  is_winner: boolean;
+  candidate?: CandidateVotingCandidateResponse;
+}
+
+export interface CandidateVotingDetailResponse extends CandidateVotingResponse {
+  candidates: CandidateVotingCandidateResponse[];
+  results?: CandidateVotingResultResponse[];
+  user_votes?: CandidateVoteResponse[];
+  can_vote: boolean;
+  has_voted: boolean;
+  remaining_votes: number;
+}
+
+export interface CandidateVotingStatsResponse {
+  total_votings: number;
+  active_votings: number;
+  draft_votings: number;
+  closed_votings: number;
+  total_participants: number;
+  average_participation_rate: number;
+}
+
+export interface WorkerForVotingResponse {
+  id: number;
+  user_id: number;
+  first_name: string;
+  last_name: string;
+  document_number: string;
+  position?: string;
+  department?: string;
+  is_active: boolean;
+  user?: {
+    id: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+    position?: string;
+    department?: string;
+  };
+}
+
+export interface MeetingMinutes {
+  meeting: MeetingResponse;
+  attendance: MeetingAttendanceResponse[];
+  votings: VotingResponse[];
+  activities: ActivityResponse[];
+  documents: CommitteeDocumentResponse[];
+  minutes_content?: string;
+}
+
+// List and Filter Interfaces
+export interface CommitteeListFilters {
+  committee_type?: CommitteeType;
+  is_active?: boolean;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface MeetingListFilters {
+  committee_id?: number;
+  status?: MeetingStatus;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+}
+
+export interface VotingListFilters {
+  committee_id?: number;
+  meeting_id?: number;
+  status?: VotingStatus;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface ActivityListFilters {
+  committee_id?: number;
+  assigned_to?: number;
+  status?: ActivityStatus;
+  priority?: ActivityPriority;
+  due_date_from?: string;
+  due_date_to?: string;
+  search?: string;
+}
+
+// Export types for convenience
+export type Committee = CommitteeResponse;
+export type CommitteeMember = CommitteeMemberResponse;
+export type Meeting = MeetingResponse;
+export type MeetingAttendance = MeetingAttendanceResponse;
+export type Voting = VotingResponse;
+export type Vote = VoteResponse;
+export type Activity = ActivityResponse;
+export type CommitteeDocument = CommitteeDocumentResponse;
+export type CommitteePermission = CommitteePermissionResponse;

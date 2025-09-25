@@ -42,6 +42,21 @@ import Seguimiento from "./pages/Seguimiento";
 import Reinduction from "./pages/Reinduction";
 import Suppliers from "./pages/Suppliers";
 
+// Committee components
+import CommitteeList from "./pages/CommitteeList";
+import CommitteeDetail from "./pages/CommitteeDetail";
+import CommitteeDashboard from "./pages/CommitteeDashboard";
+import CommitteeForm from "./pages/CommitteeForm";
+import ActivityManagement from "./pages/ActivityManagement";
+import VotingManagement from "./pages/VotingManagement";
+import DocumentManagement from "./pages/DocumentManagement";
+import MeetingManagement from "./pages/MeetingManagement";
+import MeetingAttendancePage from "./pages/MeetingAttendance";
+import MemberManagement from "./pages/MemberManagement";
+import CandidateVotingAdmin from "./pages/CandidateVotingAdmin";
+import CandidateVotingForm from "./pages/CandidateVotingForm";
+import CandidateVoting from "./pages/CandidateVoting";
+
 // Absenteeism components
 import Audit from "./pages/Audit";
 import Files from "./pages/Files";
@@ -52,6 +67,7 @@ import RoleManagement from "./pages/RoleManagement";
 import TrainerDashboard from "./pages/TrainerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import EmployeeVacations from "./pages/EmployeeVacations";
+import EmployeeVotings from "./pages/EmployeeVotings";
 import SupervisorDashboard from "./pages/SupervisorDashboard";
 import User from "./pages/User";
 import Worker from "./pages/Worker";
@@ -291,6 +307,180 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
                         <Suppliers />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Rutas de comités */}
+                  <Route
+                    path="/admin/committees"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CommitteeList />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/dashboard"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CommitteeDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/convivencia"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CommitteeDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/copasst"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CommitteeDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/:id"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CommitteeDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/new"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CommitteeForm />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/:id/edit"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CommitteeForm />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Rutas específicas para comités individuales */}
+                  <Route
+                    path="/admin/committees/:id/meetings/new"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <MeetingManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/:id/votings/new"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <VotingManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/:id/activities/new"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <ActivityManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/:id/documents/new"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <DocumentManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Rutas genéricas para gestión de comités */}
+                  <Route
+                    path="/admin/committees/meetings"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <MeetingManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/meetings/:meetingId/attendance"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <MeetingAttendancePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/activities"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <ActivityManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/votings"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <VotingManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/documents"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <DocumentManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/:id/members"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <MemberManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Rutas de votaciones de candidatos */}
+                  <Route
+                    path="/admin/candidate-votings"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CandidateVotingAdmin />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/candidate-votings/new"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CandidateVotingForm />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/candidate-votings/:id/edit"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CandidateVotingForm />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/candidate-voting"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor", "employee"]}>
+                        <CandidateVoting />
                       </ProtectedRoute>
                     }
                   />
@@ -584,6 +774,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["employee"]}>
                         <EmployeeVacations />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/employee/votings"
+                    element={
+                      <ProtectedRoute allowedRoles={["employee"]}>
+                        <EmployeeVotings />
                       </ProtectedRoute>
                     }
                   />
