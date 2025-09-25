@@ -328,22 +328,7 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
-                  <Route
-                    path="/admin/committees/convivencia"
-                    element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
-                        <CommitteeDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/committees/copasst"
-                    element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
-                        <CommitteeDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
+
                   <Route
                     path="/admin/committees/:id"
                     element={

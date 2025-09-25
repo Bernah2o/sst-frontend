@@ -146,9 +146,25 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       setVacationRequests(requests);
       setVacationBalance(balance);
       setVacationStats(stats);
-    } catch (error) {
-      console.error('Error fetching vacation data:', error);
-      showSnackbar('Error al cargar los datos de vacaciones', 'error');
+    } catch (error: any) {
+      // Provide specific error messages based on error type
+      let errorMessage = 'No se pudieron cargar los datos de vacaciones';
+      
+      if (error?.response?.status === 404) {
+        errorMessage = '👤 Trabajador no encontrado: No se encontró información de vacaciones para este empleado.';
+      } else if (error?.response?.status === 403) {
+        errorMessage = '🔒 Sin permisos: No tiene autorización para ver la información de vacaciones de este empleado.';
+      } else if (error?.response?.status === 401) {
+        errorMessage = '🔐 Sesión expirada: Por favor, inicie sesión nuevamente para continuar.';
+      } else if (error?.response?.status >= 500) {
+        errorMessage = '🔧 Error del servidor: Ocurrió un problema técnico. Por favor, intente nuevamente en unos minutos.';
+      } else if (error?.code === 'NETWORK_ERROR' || !error?.response) {
+        errorMessage = '🌐 Error de conexión: No se pudo conectar con el servidor. Verifique su conexión a internet.';
+      } else if (vacationRequests.length === 0 && !error?.response) {
+        errorMessage = '📋 Sin datos: No se encontraron solicitudes de vacaciones para mostrar.';
+      }
+      
+      showSnackbar(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -257,8 +273,6 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       showSnackbar('Solicitud de vacaciones enviada correctamente', 'success');
       
     } catch (error: any) {
-      console.error('Error creating vacation request:', error);
-      
       // Mejorar el mensaje de error basado en el tipo de error
       let errorMessage = 'Error al enviar la solicitud de vacaciones';
       
@@ -316,9 +330,29 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       await fetchVacationData();
       
       showSnackbar('Solicitud aprobada correctamente', 'success');
-    } catch (error) {
-      console.error('Error approving vacation request:', error);
-      showSnackbar('Error al aprobar la solicitud', 'error');
+    } catch (error: any) {
+      let errorMessage = 'No se pudo aprobar la solicitud de vacaciones';
+      
+      if (error?.response?.status === 404) {
+        errorMessage = '📋 Solicitud no encontrada: La solicitud de vacaciones ya no existe o fue eliminada.';
+      } else if (error?.response?.status === 403) {
+        errorMessage = '🔒 Sin permisos: No tiene autorización para aprobar solicitudes de vacaciones.';
+      } else if (error?.response?.status === 400) {
+        const detail = error.response.data?.detail || '';
+        if (detail.includes('ya aprobada') || detail.includes('already approved')) {
+          errorMessage = '✅ Solicitud ya procesada: Esta solicitud ya fue aprobada anteriormente.';
+        } else if (detail.includes('conflicto') || detail.includes('conflict')) {
+          errorMessage = '⚠️ Conflicto de fechas: Las fechas solicitadas ya están ocupadas por otro empleado.';
+        } else {
+          errorMessage = `❌ Error de validación: ${detail}`;
+        }
+      } else if (error?.response?.status >= 500) {
+        errorMessage = '🔧 Error del servidor: No se pudo procesar la aprobación. Intente nuevamente en unos minutos.';
+      } else if (error?.code === 'NETWORK_ERROR' || !error?.response) {
+        errorMessage = '🌐 Error de conexión: No se pudo conectar con el servidor. Verifique su conexión a internet.';
+      }
+      
+      showSnackbar(errorMessage, 'error');
     }
   };
 
@@ -346,9 +380,29 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       await fetchVacationData();
       
       showSnackbar('Solicitud rechazada', 'warning');
-    } catch (error) {
-      console.error('Error rejecting vacation request:', error);
-      showSnackbar('Error al rechazar la solicitud', 'error');
+    } catch (error: any) {
+      let errorMessage = 'No se pudo rechazar la solicitud de vacaciones';
+      
+      if (error?.response?.status === 404) {
+        errorMessage = '📋 Solicitud no encontrada: La solicitud de vacaciones ya no existe o fue eliminada.';
+      } else if (error?.response?.status === 403) {
+        errorMessage = '🔒 Sin permisos: No tiene autorización para rechazar solicitudes de vacaciones.';
+      } else if (error?.response?.status === 400) {
+        const detail = error.response.data?.detail || '';
+        if (detail.includes('ya rechazada') || detail.includes('already rejected')) {
+          errorMessage = '❌ Solicitud ya procesada: Esta solicitud ya fue rechazada anteriormente.';
+        } else if (detail.includes('ya aprobada') || detail.includes('already approved')) {
+          errorMessage = '✅ Solicitud ya aprobada: No se puede rechazar una solicitud que ya fue aprobada.';
+        } else {
+          errorMessage = `❌ Error de validación: ${detail}`;
+        }
+      } else if (error?.response?.status >= 500) {
+        errorMessage = '🔧 Error del servidor: No se pudo procesar el rechazo. Intente nuevamente en unos minutos.';
+      } else if (error?.code === 'NETWORK_ERROR' || !error?.response) {
+        errorMessage = '🌐 Error de conexión: No se pudo conectar con el servidor. Verifique su conexión a internet.';
+      }
+      
+      showSnackbar(errorMessage, 'error');
     }
   };
 
@@ -401,9 +455,31 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       
       showSnackbar('Solicitud actualizada correctamente', 'success');
       
-    } catch (error) {
-      console.error('Error updating vacation request:', error);
-      showSnackbar('Error al actualizar la solicitud', 'error');
+    } catch (error: any) {
+      let errorMessage = 'No se pudo actualizar la solicitud de vacaciones';
+      
+      if (error?.response?.status === 404) {
+        errorMessage = '📋 Solicitud no encontrada: La solicitud de vacaciones ya no existe o fue eliminada.';
+      } else if (error?.response?.status === 403) {
+        errorMessage = '🔒 Sin permisos: No tiene autorización para modificar esta solicitud de vacaciones.';
+      } else if (error?.response?.status === 400) {
+        const detail = error.response.data?.detail || '';
+        if (detail.includes('ya aprobada') || detail.includes('already approved')) {
+          errorMessage = '✅ Solicitud ya aprobada: No se puede modificar una solicitud que ya fue aprobada.';
+        } else if (detail.includes('fechas') || detail.includes('dates')) {
+          errorMessage = '📅 Error de fechas: Las fechas seleccionadas no son válidas o están en conflicto.';
+        } else if (detail.includes('balance') || detail.includes('días')) {
+          errorMessage = '⏰ Balance insuficiente: No tiene suficientes días de vacaciones disponibles.';
+        } else {
+          errorMessage = `❌ Error de validación: ${detail}`;
+        }
+      } else if (error?.response?.status >= 500) {
+        errorMessage = '🔧 Error del servidor: No se pudo procesar la actualización. Intente nuevamente en unos minutos.';
+      } else if (error?.code === 'NETWORK_ERROR' || !error?.response) {
+        errorMessage = '🌐 Error de conexión: No se pudo conectar con el servidor. Verifique su conexión a internet.';
+      }
+      
+      showSnackbar(errorMessage, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -430,8 +506,6 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       showSnackbar('Solicitud cancelada correctamente', 'success');
       
     } catch (error: any) {
-      console.error('Error canceling vacation request:', error);
-      
       let errorMessage = 'Error al cancelar la solicitud';
       
       // Extraer mensaje específico del backend si está disponible

@@ -287,7 +287,7 @@ const WorkersManagement: React.FC = () => {
 
   const fetchAreas = async () => {
     try {
-      const response = await api.get('/areas?limit=100&is_active=true');
+      const response = await api.get('/areas/?limit=100&is_active=true');
       const areas = response.data.items || [];
       setAreaOptions(areas);
     } catch (error) {
