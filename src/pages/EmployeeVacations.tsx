@@ -109,7 +109,7 @@ const EmployeeVacations: React.FC = () => {
       setVacationBalance(balance);
     } catch (error) {
       console.error('Error fetching vacation data:', error);
-      showNotification('Error al cargar los datos de vacaciones', 'error');
+      showNotification('🔄 No se pudieron cargar los datos de vacaciones. Por favor, intente actualizar la página o contacte al administrador si el problema persiste.', 'error');
     } finally {
       setLoading(false);
     }
@@ -139,7 +139,7 @@ const EmployeeVacations: React.FC = () => {
       setOccupiedDates(response);
     } catch (error) {
       console.error('Error loading occupied dates:', error);
-      showNotification('Error al cargar fechas ocupadas', 'error');
+      showNotification('📅 No se pudo cargar el calendario de disponibilidad. Puede continuar con su solicitud, pero recomendamos verificar las fechas disponibles más tarde.', 'warning');
     } finally {
       setCalendarLoading(false);
     }
@@ -323,7 +323,7 @@ const EmployeeVacations: React.FC = () => {
         </Box>
 
         {/* Balance de Vacaciones */}
-        {vacationBalance && (
+        {vacationBalance ? (
           <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
             <CardContent>
               <Typography variant="h6" sx={{ color: 'white', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -374,6 +374,26 @@ const EmployeeVacations: React.FC = () => {
               </Grid>
             </CardContent>
           </Card>
+        ) : (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Alert 
+                severity="warning" 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  '& .MuiAlert-message': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }
+                }}
+              >
+                <Warning sx={{ mr: 1 }} />
+                No se pudo cargar tu balance de vacaciones. Por favor, contacta al área de recursos humanos para verificar tu información.
+              </Alert>
+            </CardContent>
+          </Card>
         )}
 
         {/* Botones de Acción */}
@@ -406,8 +426,20 @@ const EmployeeVacations: React.FC = () => {
               Historial de Solicitudes
             </Typography>
             {vacationRequests.length === 0 ? (
-              <Alert severity="info">
-                No tienes solicitudes de vacaciones registradas.
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  '& .MuiAlert-message': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }
+                }}
+              >
+                <BeachAccess sx={{ mr: 1 }} />
+                ¡Aún no has solicitado vacaciones! Cuando tengas días disponibles, puedes crear tu primera solicitud usando el botón "Nueva Solicitud".
               </Alert>
             ) : (
               <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
