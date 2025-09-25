@@ -11,7 +11,11 @@ import {
   CheckCircle as CheckCircleIcon,
   WorkspacePremium as CertificateIcon,
   PersonAdd as PersonAddIcon,
-  Timeline as TimelineIcon
+  Timeline as TimelineIcon,
+  Groups as GroupsIcon,
+  Description as DocumentIcon,
+  HowToVote as VotingIcon,
+  LocalActivity as ActivityIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -453,7 +457,8 @@ const AdminDashboard: React.FC = () => {
                 Accesos Rápidos
               </Typography>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                {/* Primera fila - Gestiones principales */}
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Button
                     fullWidth
                     variant="contained"
@@ -470,7 +475,7 @@ const AdminDashboard: React.FC = () => {
                     Gestión de Usuarios
                   </Button>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Button
                     fullWidth
                     variant="contained"
@@ -487,7 +492,7 @@ const AdminDashboard: React.FC = () => {
                     Gestión de Cursos
                   </Button>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Button
                     fullWidth
                     variant="contained"
@@ -504,25 +509,7 @@ const AdminDashboard: React.FC = () => {
                     Evaluaciones
                   </Button>
                 </Grid>
-
-                <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    startIcon={<TrendingUpIcon />}
-                    onClick={() => navigate('/admin/reports')}
-                    sx={{ 
-                      height: 60, 
-                      bgcolor: 'rgba(255,255,255,0.2)', 
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
-                      color: 'white',
-                      backdropFilter: 'blur(10px)'
-                    }}
-                  >
-                    Reportes
-                  </Button>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Button
                     fullWidth
                     variant="contained"
@@ -537,6 +524,95 @@ const AdminDashboard: React.FC = () => {
                     }}
                   >
                     Configuración
+                  </Button>
+                </Grid>
+
+                {/* Segunda fila - Gestiones de comités */}
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<GroupsIcon />}
+                    onClick={() => navigate('/admin/committees/meetings')}
+                    sx={{ 
+                      height: 60, 
+                      bgcolor: 'rgba(255,255,255,0.2)', 
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                      color: 'white',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    Gestión de Reuniones
+                  </Button>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<ActivityIcon />}
+                    onClick={() => navigate('/admin/committees/activities')}
+                    sx={{ 
+                      height: 60, 
+                      bgcolor: 'rgba(255,255,255,0.2)', 
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                      color: 'white',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    Gestión de Actividades
+                  </Button>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<VotingIcon />}
+                    onClick={() => navigate('/admin/committees/votings')}
+                    sx={{ 
+                      height: 60, 
+                      bgcolor: 'rgba(255,255,255,0.2)', 
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                      color: 'white',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    Gestión de Votaciones
+                  </Button>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<DocumentIcon />}
+                    onClick={() => navigate('/admin/committees/documents')}
+                    sx={{ 
+                      height: 60, 
+                      bgcolor: 'rgba(255,255,255,0.2)', 
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                      color: 'white',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    Gestión de Documentos
+                  </Button>
+                </Grid>
+
+                {/* Tercera fila - Reportes */}
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<TrendingUpIcon />}
+                    onClick={() => navigate('/admin/reports')}
+                    sx={{ 
+                      height: 60, 
+                      bgcolor: 'rgba(255,255,255,0.2)', 
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                      color: 'white',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    Reportes
                   </Button>
                 </Grid>
               </Grid>

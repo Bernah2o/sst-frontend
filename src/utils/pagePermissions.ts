@@ -167,6 +167,13 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     requiredPermissions: [],
     allowedRoles: ['employee'],
   },
+  {
+    route: '/employee/votings',
+    name: 'Mis Votaciones',
+    description: 'Votaciones disponibles para el empleado',
+    requiredPermissions: [],
+    allowedRoles: ['employee'],
+  },
 
   // Evaluation Management
   {
