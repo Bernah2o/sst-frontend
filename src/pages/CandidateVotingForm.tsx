@@ -112,7 +112,7 @@ const CandidateVotingForm: React.FC = () => {
           await candidateVotingService.createVoting(createData);
         }
 
-        navigate('/candidate-voting/admin');
+        navigate('/admin/candidate-votings');
       } catch (error) {
         console.error('Error saving voting:', error);
         setError('Error al guardar la votación');
@@ -141,9 +141,7 @@ const CandidateVotingForm: React.FC = () => {
         formik.setValues({
           title: votingData.title,
           description: votingData.description || '',
-          committee_type: typeof votingData.committee_type === 'object' && votingData.committee_type 
-            ? votingData.committee_type.name 
-            : votingData.committee_type || '',
+          committee_type: votingData.committee_type || '',
           start_date: new Date(votingData.start_date),
           end_date: new Date(votingData.end_date),
           max_votes_per_user: votingData.max_votes_per_user,
@@ -388,7 +386,7 @@ const CandidateVotingForm: React.FC = () => {
                   <Box display="flex" gap={2} justifyContent="flex-end">
                     <Button
                       variant="outlined"
-                      onClick={() => navigate('/candidate-voting/admin')}
+                      onClick={() => navigate('/admin/candidate-votings')}
                       disabled={loading}
                     >
                       Cancelar

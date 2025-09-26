@@ -214,7 +214,7 @@ const CandidateVoting: React.FC = () => {
 
                     <Box mb={2}>
                       <Chip
-                        label={voting.committee_type?.name || 'N/A'}
+                        label={voting.committee_type || 'N/A'}
                         color="primary"
                         variant="outlined"
                         size="small"
@@ -268,7 +268,7 @@ const CandidateVoting: React.FC = () => {
               <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2" color="text.secondary">
-                    <strong>Tipo de Comité:</strong> {selectedVoting.committee_type?.name}
+                    <strong>Tipo de Comité:</strong> {selectedVoting.committee_type}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>

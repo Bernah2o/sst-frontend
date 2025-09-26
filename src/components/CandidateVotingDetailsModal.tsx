@@ -66,20 +66,15 @@ const CandidateVotingDetailsModal: React.FC<CandidateVotingDetailsModalProps> = 
     try {
       setLoading(true);
       setError(null);
-      const [detailsData, committeeTypesData, workersData] = await Promise.all([
+      const [detailsData, , workersData] = await Promise.all([
         candidateVotingService.getVotingDetail(voting.id),
         candidateVotingService.getCommitteeTypes(),
         candidateVotingService.getActiveWorkers()
       ]);
       
-      // Mapear el tipo de comité a los detalles
-      const foundCommitteeType = detailsData.committee_type_id 
-        ? committeeTypesData.find(type => type.id === detailsData.committee_type_id)
-        : undefined;
-      
+      // El committee_type ya viene como string del backend
       const detailsWithCommitteeType: CandidateVotingDetailResponse = {
-        ...detailsData,
-        committee_type: foundCommitteeType
+        ...detailsData
       };
       
       // Calcular porcentajes y tasa de participación
@@ -198,7 +193,7 @@ const CandidateVotingDetailsModal: React.FC<CandidateVotingDetailsModalProps> = 
                         Tipo de Comité
                       </Typography>
                       <Typography variant="body1">
-                        {details.committee_type?.name || 'N/A'}
+                        {details.committee_type || 'N/A'}
                       </Typography>
                     </Box>
                     <Box sx={{ mb: 2 }}>

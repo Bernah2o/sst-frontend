@@ -332,65 +332,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           path: "/admin/survey-tabulation",
           roles: ["admin", "trainer", "supervisor"],
         },
-
-        {
-          id: "attendance",
-          label: "Asistencia",
-          icon: <CheckCircle />,
-          children: [
-            {
-              id: "attendance-list",
-              label: "Registro de Asistencia",
-              icon: <Schedule />,
-              path: "/admin/attendance",
-              roles: ["admin", "trainer", "supervisor"],
-            },
-            {
-              id: "admin-attendance",
-              label: "Gestión de Asistencia",
-              icon: <Group />,
-              path: "/admin/admin-attendance",
-              roles: ["admin"],
-            },
-          ],
-          roles: ["admin", "trainer", "supervisor"],
-        },
-        {
-          id: "health",
-          label: "Salud Ocupacional",
-          icon: <MedicalServices />,
-          children: [
-            {
-              id: "occupational-exams",
-              label: "Exámenes Ocupacionales",
-              icon: <Healing />,
-              path: "/admin/occupational-exams",
-              roles: ["admin", "supervisor"],
-            },
-            {
-              id: "admin-notifications",
-              label: "Notificaciones",
-              icon: <Notifications />,
-              path: "/admin/notification-acknowledgment",
-              roles: ["admin"],
-            },
-            {
-              id: "seguimientos",
-              label: "Seguimientos",
-              icon: <Timeline />,
-              path: "/admin/seguimientos",
-              roles: ["admin", "supervisor"],
-            },
-            {
-              id: "absenteeism",
-              label: "Ausentismo",
-              icon: <MedicalServices />,
-              path: "/admin/absenteeism",
-              roles: ["admin", "supervisor"],
-            },
-          ],
-          roles: ["admin", "supervisor"],
-        },
         {
           id: "certificates",
           label: "Certificados",
@@ -412,66 +353,123 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           path: "/admin/notifications",
           roles: ["admin", "trainer", "supervisor"],
         },
+      ],
+      roles: ["admin", "trainer", "supervisor"],
+    },
+    {
+      id: "attendance",
+      label: "Asistencia",
+      icon: <CheckCircle />,
+      children: [
         {
-          id: "committees",
-          label: "Comités",
-          icon: <Groups />,
-          children: [
-            {
-              id: "committees-dashboard",
-              label: "Dashboard de Comités",
-              icon: <Dashboard />,
-              path: "/admin/committees/dashboard",
-              roles: ["admin", "supervisor"],
-            },
-            {
-              id: "committees-management",
-              label: "Gestión de Comités",
-              icon: <Groups />,
-              path: "/admin/committees",
-              roles: ["admin", "supervisor"],
-            },
-
-            {
-              id: "committees-meetings",
-              label: "Reuniones",
-              icon: <Schedule />,
-              path: "/admin/committees/meetings",
-              roles: ["admin", "supervisor"],
-            },
-            {
-              id: "committees-activities",
-              label: "Actividades",
-              icon: <Assignment />,
-              path: "/admin/committees/activities",
-              roles: ["admin", "supervisor"],
-            },
-            {
-              id: "committees-votings",
-              label: "Votaciones",
-              icon: <Poll />,
-              path: "/admin/committees/votings",
-              roles: ["admin", "supervisor"],
-            },
-            {
-              id: "committees-documents",
-              label: "Documentos",
-              icon: <Description />,
-              path: "/admin/committees/documents",
-              roles: ["admin", "supervisor"],
-            },
-            {
-              id: "candidate-voting",
-              label: "Votaciones de Candidatos",
-              icon: <HowToVote />,
-              path: "/admin/candidate-votings",
-              roles: ["admin", "trainer", "supervisor"],
-            },
-          ],
-          roles: ["admin", "trainer"],
+          id: "attendance-list",
+          label: "Registro de Asistencia",
+          icon: <Schedule />,
+          path: "/admin/attendance",
+          roles: ["admin", "trainer", "supervisor"],
+        },
+        {
+          id: "admin-attendance",
+          label: "Gestión de Asistencia",
+          icon: <Group />,
+          path: "/admin/admin-attendance",
+          roles: ["admin"],
+        },
+      ],
+      roles: ["admin", "trainer", "supervisor"],
+    },
+    {
+      id: "health",
+      label: "Salud Ocupacional",
+      icon: <MedicalServices />,
+      children: [
+        {
+          id: "occupational-exams",
+          label: "Exámenes Ocupacionales",
+          icon: <Healing />,
+          path: "/admin/occupational-exams",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "admin-notifications",
+          label: "Notificaciones",
+          icon: <Notifications />,
+          path: "/admin/notification-acknowledgment",
+          roles: ["admin"],
+        },
+        {
+          id: "seguimientos",
+          label: "Seguimientos",
+          icon: <Timeline />,
+          path: "/admin/seguimientos",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "absenteeism",
+          label: "Ausentismo",
+          icon: <MedicalServices />,
+          path: "/admin/absenteeism",
+          roles: ["admin", "supervisor"],
         },
       ],
       roles: ["admin", "supervisor"],
+    },
+    {
+      id: "committees",
+      label: "Comités",
+      icon: <Groups />,
+      children: [
+        {
+          id: "committees-dashboard",
+          label: "Dashboard de Comités",
+          icon: <Dashboard />,
+          path: "/admin/committees/dashboard",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "committees-management",
+          label: "Gestión de Comités",
+          icon: <Groups />,
+          path: "/admin/committees",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "committees-meetings",
+          label: "Reuniones",
+          icon: <Schedule />,
+          path: "/admin/committees/meetings",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "committees-activities",
+          label: "Actividades",
+          icon: <Assignment />,
+          path: "/admin/committees/activities",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "committees-votings",
+          label: "Votaciones",
+          icon: <Poll />,
+          path: "/admin/committees/votings",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "committees-documents",
+          label: "Documentos",
+          icon: <Description />,
+          path: "/admin/committees/documents",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "candidate-voting",
+          label: "Votaciones de Candidatos",
+          icon: <HowToVote />,
+          path: "/admin/candidate-votings",
+          roles: ["admin", "trainer", "supervisor"],
+        },
+      ],
+      roles: ["admin", "trainer", "supervisor"],
     },
     {
       id: "administration",
@@ -602,6 +600,16 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
 
             // Suppliers
             suppliers: canViewSuppliersPage,
+
+            // Committees
+            committees: () => true, // Will be filtered by children
+            "committees-dashboard": () => user.role === "admin" || user.role === "supervisor",
+            "committees-management": () => user.role === "admin" || user.role === "supervisor",
+            "committees-meetings": () => user.role === "admin" || user.role === "supervisor",
+            "committees-activities": () => user.role === "admin" || user.role === "supervisor",
+            "committees-votings": () => user.role === "admin" || user.role === "supervisor",
+            "committees-documents": () => user.role === "admin" || user.role === "supervisor",
+            "candidate-voting": () => user.role === "admin" || user.role === "trainer" || user.role === "supervisor",
 
             // Administration (always check individual permissions)
             administration: () => true, // Will be filtered by children

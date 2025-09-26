@@ -64,21 +64,13 @@ const CandidateVotingAdmin: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [votingsData, statsData, committeeTypesData] = await Promise.all([
+      const [votingsData, statsData] = await Promise.all([
         candidateVotingService.getAllVotings(),
         candidateVotingService.getStats(),
-        candidateVotingService.getCommitteeTypes(),
       ]);
       
-      // Mapear los tipos de comité a las votaciones
-      const votingsWithCommitteeTypes: CandidateVotingResponse[] = votingsData.map(voting => ({
-        ...voting,
-        committee_type: voting.committee_type_id 
-          ? committeeTypesData.find(type => type.id === voting.committee_type_id) || undefined
-          : undefined
-      }));
-      
-      setVotings(votingsWithCommitteeTypes);
+      // El backend ya envía committee_type como string, no necesitamos mapear
+      setVotings(votingsData);
       setStats(statsData);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -337,6 +329,7 @@ const CandidateVotingAdmin: React.FC = () => {
                 <TableRow>
                   <TableCell>Título</TableCell>
                   <TableCell>Tipo de Comité</TableCell>
+                  <TableCell>Tipo de Votación</TableCell>
                   <TableCell>Estado</TableCell>
                   <TableCell>Fecha Inicio</TableCell>
                   <TableCell>Fecha Fin</TableCell>
@@ -356,7 +349,15 @@ const CandidateVotingAdmin: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      {voting.committee_type?.name || 'N/A'}
+                      {voting.committee_type || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={voting.is_anonymous ? 'Anónima' : 'Pública'}
+                        color={voting.is_anonymous ? 'secondary' : 'primary'}
+                        size="small"
+                        variant="outlined"
+                      />
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -389,7 +390,7 @@ const CandidateVotingAdmin: React.FC = () => {
                             <Tooltip title="Editar">
                               <IconButton
                                 size="small"
-                                onClick={() => navigate(`/candidate-voting/edit/${voting.id}`)}
+                                onClick={() => navigate(`/admin/candidate-votings/${voting.id}/edit`)}
                               >
                                 <EditIcon />
                               </IconButton>
@@ -416,20 +417,19 @@ const CandidateVotingAdmin: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                         )}
-                        {voting.status === CandidateVotingStatus.DRAFT && (
-                          <Tooltip title="Eliminar">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                setSelectedVoting(voting);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        )}
+                        <Tooltip title="Eliminar">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => {
+                              setSelectedVoting(voting);
+                              setDeleteDialogOpen(true);
+                            }}
+                            disabled={voting.status === CandidateVotingStatus.ACTIVE}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -448,10 +448,25 @@ const CandidateVotingAdmin: React.FC = () => {
             ¿Está seguro de que desea eliminar la votación "{selectedVoting?.title}"?
             Esta acción no se puede deshacer.
           </Typography>
+          {selectedVoting?.status === CandidateVotingStatus.ACTIVE && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              No se puede eliminar una votación activa. Debe cerrarla primero.
+            </Alert>
+          )}
+          {selectedVoting?.status === CandidateVotingStatus.CLOSED && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Esta votación ya está cerrada. La eliminación removerá todos los datos de votación asociados.
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
-          <Button onClick={handleDeleteVoting} color="error" variant="contained">
+          <Button 
+            onClick={handleDeleteVoting} 
+            color="error" 
+            variant="contained"
+            disabled={selectedVoting?.status === CandidateVotingStatus.ACTIVE}
+          >
             Eliminar
           </Button>
         </DialogActions>

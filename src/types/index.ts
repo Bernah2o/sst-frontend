@@ -2196,12 +2196,7 @@ export interface CandidateVotingResponse extends Omit<CandidateVotingBase, 'comm
   total_votes?: number;
   total_voters?: number;
   participation_rate?: number;
-  committee_type_id?: number;
-  committee_type?: {
-    id: number;
-    name: string;
-    description?: string;
-  };
+  committee_type: string;
 }
 
 export interface CandidateVotingCandidateBase {
