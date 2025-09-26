@@ -39,7 +39,6 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  ListItemSecondaryAction,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -49,18 +48,15 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Download as DownloadIcon,
-  Share as ShareIcon,
-  Upload as UploadIcon,
   FilterList as FilterIcon,
   Search as SearchIcon,
-  Folder as FolderIcon,
   PictureAsPdf as PdfIcon,
   Image as ImageIcon,
   InsertDriveFile as FileIcon,
   VideoFile as VideoIcon,
   AudioFile as AudioIcon,
 } from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { committeeDocumentService } from '../services/committeeDocumentService';
 import { committeeService } from '../services/committeeService';
 import { committeePermissionService } from '../services/committeePermissionService';
@@ -70,36 +66,15 @@ import {
   CommitteeDocumentType,
   CommitteeDocumentCreate,
   CommitteeDocumentUpdate,
-  Committee,
+  CommitteeResponse,
+  CommitteeType,
 } from '../types';
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`document-tabpanel-${index}`}
-      aria-labelledby={`document-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+import { logger } from '../utils/logger';
 
 const DocumentManagement: React.FC = () => {
-  const navigate = useNavigate();
   const { id: committeeId } = useParams<{ id: string }>();
   const [documents, setDocuments] = useState<CommitteeDocument[]>([]);
-  const [committees, setCommittees] = useState<Committee[]>([]);
+  const [committees, setCommittees] = useState<CommitteeResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -112,8 +87,12 @@ const DocumentManagement: React.FC = () => {
   const [documentFormOpen, setDocumentFormOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<CommitteeDocument | undefined>(undefined);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [permissions, setPermissions] = useState<{ [key: number]: any }>({});
+  
+  // Log cuando cambian los permisos
+  useEffect(() => {
+    logger.debug('🔐 Permisos actualizados:', permissions);
+  }, [permissions]);
   const [tabValue, setTabValue] = useState(0);
   const [documentCounts, setDocumentCounts] = useState({
     meeting_minutes: 0,
@@ -141,45 +120,62 @@ const DocumentManagement: React.FC = () => {
 
   const loadInitialData = async () => {
     try {
-      // Get user's accessible committees
+      setLoading(true);
+      logger.debug('🔐 loadInitialData started');
+      
       const accessibleCommittees = await committeePermissionService.getUserAccessibleCommittees();
-      const committeeData = await Promise.all(
-        accessibleCommittees.map(async (ac) => {
-          const committee = await committeeService.getCommittee(ac.committee_id);
-          return committee;
-        })
-      );
+      logger.debug('🔐 accessibleCommittees:', accessibleCommittees);
+      
+      if (accessibleCommittees.length === 0) {
+        setError('No tienes acceso a ningún comité');
+        return;
+      }
+      
+      const committeeData = accessibleCommittees.map((item: { committee_id: number; committee_name: string; permissions: string[] }): CommitteeResponse => ({
+        id: item.committee_id,
+        name: item.committee_name,
+        description: undefined,
+        committee_type: CommitteeType.CONVIVENCIA, // Default value, should be fetched from backend
+        committee_type_id: 1, // Default value, should be fetched from backend
+        is_active: true,
+        establishment_date: undefined,
+        dissolution_date: undefined,
+        meeting_frequency_days: 30, // Default value
+        quorum_percentage: 50, // Default value
+        regulations_document_url: undefined,
+        notes: undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        created_by: undefined,
+        members_count: undefined,
+        active_meetings_count: undefined,
+      }));
+      logger.debug('🔐 committeeData loaded:', committeeData);
       setCommittees(committeeData);
-
-      // Load permissions for each committee
-      const permissionsMap: { [key: number]: any } = {};
+      
+      if (!selectedCommittee && committeeData.length > 0) {
+        setSelectedCommittee(committeeData[0].id);
+        logger.debug('🔐 selectedCommittee set to:', committeeData[0].id);
+      }
+      
+      // Cargar permisos para todos los comités
+      const permissionsMap: Record<number, { canView: boolean; canManageDocuments: boolean }> = {};
       for (const committee of committeeData) {
+        logger.debug('🔐 Loading permissions for committee:', committee.id, committee.name);
         const canView = await committeePermissionService.canView(committee.id);
         const canManageDocuments = await committeePermissionService.canUploadDocuments(committee.id);
-
-        permissionsMap[committee.id] = {
-          canView,
-          canManageDocuments,
-        };
+        permissionsMap[committee.id] = { canView, canManageDocuments };
+        logger.debug('🔐 Permissions for committee', committee.id, '- canView:', canView, 'canManageDocuments:', canManageDocuments);
       }
+      
       setPermissions(permissionsMap);
-
-      // Load recent documents from all committees
-      const allRecentDocuments = await Promise.all(
-        committeeData.map(committee => 
-          committeeDocumentService.getRecentDocuments(committee.id, 5)
-        )
-      );
+      logger.debug('🔐 Final permissionsMap:', permissionsMap);
       
-      // Flatten and sort by creation date, then take the most recent 5
-      const flattenedRecent = allRecentDocuments.flat()
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5);
-      
-      setRecentDocuments(flattenedRecent);
-    } catch (err) {
+    } catch (error) {
+      logger.error('Error loading initial data:', error);
       setError('Error al cargar los datos iniciales');
-      console.error('Initial data loading error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -187,50 +183,38 @@ const DocumentManagement: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-
-      const committeeIds = committees.map(c => c.id);
-      if (committeeIds.length === 0) {
-        setDocuments([]);
-        setTotalCount(0);
-        return;
-      }
-
-      // Apply tab-based filtering
-      let typeFilter = selectedDocumentType;
-      switch (tabValue) {
-        case 1:
-          typeFilter = CommitteeDocumentType.MEETING_MINUTES;
-          break;
-        case 2:
-          typeFilter = CommitteeDocumentType.VOTING_RECORD;
-          break;
-        case 3:
-          typeFilter = CommitteeDocumentType.ACTIVITY_REPORT;
-          break;
-        case 4:
-          typeFilter = CommitteeDocumentType.PRESENTATION;
-          break;
-        case 5:
-           typeFilter = CommitteeDocumentType.AGREEMENT;
-           break;
-         case 6:
-           typeFilter = CommitteeDocumentType.OTHER;
-           break;
-      }
-
-      const response = await committeeDocumentService.getDocuments({
-        committee_id: selectedCommittee,
-        document_type: typeFilter,
-        search: searchTerm,
-        page: page + 1,
-        page_size: rowsPerPage,
-      });
-
-      setDocuments(response.items);
-      setTotalCount(response.total);
-    } catch (err) {
+      
+      let documentsData;
+      let totalDocuments;
+      
+      if (selectedCommittee === 0) {
+         logger.debug('📋 Cargando documentos de todos los comités');
+         const response = await committeeDocumentService.getAllDocuments({
+           page: page + 1,
+           page_size: rowsPerPage,
+           search: searchTerm,
+           document_type: selectedDocumentType
+         });
+         documentsData = response.items;
+         totalDocuments = response.total;
+       } else {
+         logger.debug('📋 Cargando documentos del comité:', selectedCommittee);
+         const response = await committeeDocumentService.getDocuments({
+           committee_id: selectedCommittee,
+           page: page + 1,
+           page_size: rowsPerPage,
+           search: searchTerm,
+           document_type: selectedDocumentType
+         });
+         documentsData = response.items;
+         totalDocuments = response.total;
+       }
+      
+      setDocuments(documentsData);
+      setTotalCount(totalDocuments);
+    } catch (error) {
+      logger.error('Error loading documents:', error);
       setError('Error al cargar los documentos');
-      console.error('Documents loading error:', err);
     } finally {
       setLoading(false);
     }
@@ -257,17 +241,30 @@ const DocumentManagement: React.FC = () => {
       };
 
       allStats.forEach(stats => {
-        if (stats.by_type) {
-          Object.keys(aggregatedCounts).forEach(key => {
-            aggregatedCounts[key as keyof typeof aggregatedCounts] += stats.by_type[key] || 0;
+        if (stats.documents_by_type && Array.isArray(stats.documents_by_type)) {
+          stats.documents_by_type.forEach((typeCount: any) => {
+            // Mapear los tipos del backend a las claves del frontend
+            const typeMapping: { [key: string]: keyof typeof aggregatedCounts } = {
+              'meeting_minutes': 'meeting_minutes',
+              'voting_record': 'voting_record',
+              'activity_report': 'activity_report',
+              'presentation': 'presentation',
+              'agreement': 'agreement',
+              'other': 'other'
+            };
+            
+            const typeKey = typeMapping[typeCount.type];
+            if (typeKey) {
+              aggregatedCounts[typeKey] += typeCount.count || 0;
+            }
           });
         }
       });
 
       setDocumentCounts(aggregatedCounts);
-    } catch (err) {
-      console.error('Document counts loading error:', err);
-    }
+     } catch (err) {
+       logger.error('Document counts loading error:', err);
+     }
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -276,6 +273,14 @@ const DocumentManagement: React.FC = () => {
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, document: CommitteeDocument) => {
+    logger.debug('🔍 handleMenuOpen ejecutado');
+    logger.debug('🔍 document:', document);
+    logger.debug('🔍 document.committee_id:', document.committee_id);
+    logger.debug('🔍 permissions:', permissions);
+    logger.debug('🔍 permissions[document.committee_id]:', permissions[document.committee_id]);
+    logger.debug('🔍 canManageDocuments:', permissions[document.committee_id]?.canManageDocuments);
+    logger.debug('🔍 Botón eliminar será visible:', !!(document && permissions[document.committee_id]?.canManageDocuments));
+    
     setAnchorEl(event.currentTarget);
     setSelectedDocument(document);
   };
@@ -288,12 +293,13 @@ const DocumentManagement: React.FC = () => {
   const handleView = async () => {
     if (selectedDocument) {
       try {
-        const url = await committeeDocumentService.getDocumentUrl(selectedDocument.id);
-        window.open(url, '_blank');
+        const documentUrl = await committeeDocumentService.getDocumentUrl(selectedDocument.id);
+        // Abrir el documento en una nueva pestaña para previsualización
+        window.open(documentUrl, '_blank');
       } catch (err) {
-        setError('Error al abrir el documento');
-        console.error('Document view error:', err);
-      }
+         setError('Error al abrir el documento para previsualización');
+         logger.error('Document preview error:', err);
+       }
     }
     handleMenuClose();
   };
@@ -308,9 +314,19 @@ const DocumentManagement: React.FC = () => {
   const handleDownload = async () => {
     if (selectedDocument) {
       try {
-        await committeeDocumentService.downloadDocument(selectedDocument.id);
-        // Increment download counter
-        await committeeDocumentService.incrementDownloadCount(selectedDocument.id);
+        const blob = await committeeDocumentService.downloadDocument(selectedDocument.id);
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', selectedDocument.file_name || `documento_${selectedDocument.id}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        
+        // Note: Download count is automatically incremented by the backend
         loadDocuments();
       } catch (err) {
         setError('Error al descargar el documento');
@@ -328,38 +344,69 @@ const DocumentManagement: React.FC = () => {
     handleMenuClose();
   };
 
-  const handleShareClick = () => {
-    setShareDialogOpen(true);
-    handleMenuClose();
-  };
+
 
   const handleDeleteClick = () => {
+    logger.debug('🔍 handleDeleteClick ejecutado');
+    logger.debug('🔍 selectedDocument:', selectedDocument);
+    logger.debug('🔍 deleteDialogOpen antes:', deleteDialogOpen);
+    logger.debug('🔍 Intentando abrir diálogo de eliminación...');
     setDeleteDialogOpen(true);
-    handleMenuClose();
+    logger.debug('🔍 setDeleteDialogOpen(true) ejecutado');
+    
+    setTimeout(() => {
+      logger.debug('🔍 deleteDialogOpen después de setTimeout:', deleteDialogOpen);
+    }, 100);
+    
+    setAnchorEl(null);
   };
 
   const handleDeleteConfirm = async () => {
-    if (selectedDocument) {
-      try {
-        await committeeDocumentService.deleteDocument(selectedDocument.id);
-        setDeleteDialogOpen(false);
-        setSelectedDocument(undefined);
-        loadDocuments();
-        loadDocumentCounts();
-      } catch (err) {
-        setError('Error al eliminar el documento');
-        console.error('Document deletion error:', err);
-      }
+    logger.debug('🗑️ handleDeleteConfirm ejecutado');
+    logger.debug('🗑️ selectedDocument:', selectedDocument);
+    
+    if (!selectedDocument) {
+      logger.debug('🗑️ No hay documento seleccionado, saliendo');
+      return;
+    }
+    
+    try {
+      logger.debug('🗑️ Iniciando eliminación del documento ID:', selectedDocument.id);
+      logger.debug('🗑️ Committee ID:', selectedDocument.committee_id);
+      await committeeDocumentService.deleteDocument(selectedDocument.committee_id, selectedDocument.id);
+      logger.debug('🗑️ Documento eliminado exitosamente');
+      
+      setDeleteDialogOpen(false);
+      logger.debug('🗑️ Diálogo cerrado');
+      
+      setSelectedDocument(undefined);
+      logger.debug('🗑️ Documento seleccionado limpiado');
+      
+      logger.debug('🗑️ Recargando documentos...');
+      await loadDocuments();
+      logger.debug('🗑️ Documentos recargados exitosamente');
+      
+    } catch (error) {
+      logger.error('Error deleting document:', error);
+      setError('Error al eliminar el documento');
     }
   };
 
   const handleDeleteCancel = () => {
+    logger.debug('🗑️ handleDeleteCancel ejecutado');
+    logger.debug('🗑️ deleteDialogOpen antes de cerrar:', deleteDialogOpen);
     setDeleteDialogOpen(false);
+    logger.debug('🗑️ deleteDialogOpen después de cerrar:', false);
     setSelectedDocument(undefined);
+    logger.debug('🗑️ selectedDocument después de limpiar:', undefined);
   };
 
   const handleCreateDocument = () => {
-    setEditingDocument(undefined);
+    logger.debug('🔍 DocumentManagement - handleCreateDocument llamado');
+    logger.debug('🔍 DocumentManagement - selectedCommittee actual:', selectedCommittee);
+    logger.debug('🔍 DocumentManagement - committees disponibles:', committees.length);
+    
+    setSelectedDocument(undefined);
     setDocumentFormOpen(true);
   };
 
@@ -783,35 +830,68 @@ const DocumentManagement: React.FC = () => {
           <DownloadIcon sx={{ mr: 1 }} />
           Descargar
         </MenuItem>
-        {selectedDocument && permissions[selectedDocument.committee_id]?.canManageDocuments && (
-          <>
-            <MenuItem onClick={handleEdit}>
-              <EditIcon sx={{ mr: 1 }} />
-              Editar
-            </MenuItem>
-            <MenuItem onClick={handleShareClick}>
-              <ShareIcon sx={{ mr: 1 }} />
-              Compartir
-            </MenuItem>
-            <MenuItem
-              onClick={handleDeleteClick}
-              sx={{ color: 'error.main' }}
-            >
-              <DeleteIcon sx={{ mr: 1 }} />
-              Eliminar
-            </MenuItem>
-          </>
-        )}
+        {(() => {
+           const canManage = selectedDocument && permissions[selectedDocument.committee_id]?.canManageDocuments;
+           logger.debug('🔍 Renderizando menú - selectedDocument:', selectedDocument);
+           logger.debug('🔍 Renderizando menú - permissions:', permissions);
+           logger.debug('🔍 Renderizando menú - committee_id:', selectedDocument?.committee_id);
+           logger.debug('🔍 Renderizando menú - permissions for committee:', permissions[selectedDocument?.committee_id || 0]);
+           logger.debug('🔍 Renderizando menú - canManage:', canManage);
+           logger.debug('🔍 Renderizando menú - Botones editar/eliminar visibles:', !!canManage);
+           
+           return canManage ? (
+             <>
+               <MenuItem onClick={handleEdit}>
+                 <EditIcon sx={{ mr: 1 }} />
+                 Editar
+               </MenuItem>
+               <MenuItem
+                 onClick={handleDeleteClick}
+                 sx={{ color: 'error.main' }}
+               >
+                 <DeleteIcon sx={{ mr: 1 }} />
+                 Eliminar
+               </MenuItem>
+             </>
+           ) : null;
+         })()}
       </Menu>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+      >
         <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
           <Typography>
             ¿Estás seguro de que deseas eliminar el documento "{selectedDocument?.title}"?
             Esta acción no se puede deshacer.
           </Typography>
+          {selectedDocument && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Comité:</strong> {committees.find(c => c.id === selectedDocument.committee_id)?.name || 'N/A'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Tamaño:</strong> {formatFileSize(selectedDocument.file_size)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Tipo:</strong> {getDocumentTypeLabel(selectedDocument.document_type)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Subido por:</strong> {selectedDocument.uploaded_by || 'N/A'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Fecha de creación:</strong> {new Date(selectedDocument.created_at).toLocaleString()}
+              </Typography>
+              {selectedDocument.updated_at && (
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Última actualización:</strong> {new Date(selectedDocument.updated_at).toLocaleString()}
+                </Typography>
+              )}
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleDeleteCancel}>Cancelar</Button>
@@ -846,20 +926,10 @@ const DocumentManagement: React.FC = () => {
         committees={committees}
         loading={loading}
         error={error || undefined}
+        defaultCommitteeId={selectedCommittee}
       />
 
-      {/* Share Dialog */}
-      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Compartir Documento</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            Funcionalidad de compartir documentos en desarrollo.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShareDialogOpen(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
+
 
       {/* Details Dialog */}
       <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="md" fullWidth>

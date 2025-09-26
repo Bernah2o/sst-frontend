@@ -1752,18 +1752,18 @@ export enum VoteChoice {
 
 
 export enum ActivityStatus {
-  PENDING = "PENDING",
-  IN_PROGRESS = "IN_PROGRESS",
-  COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
-  OVERDUE = "OVERDUE",
+  PENDING = "pending",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled",
+  OVERDUE = "overdue",
 }
 
 export enum ActivityPriority {
-  LOW = "LOW",
-  MEDIUM = "MEDIUM", 
-  HIGH = "HIGH",
-  CRITICAL = "CRITICAL"
+  LOW = "low",
+  MEDIUM = "medium", 
+  HIGH = "high",
+  CRITICAL = "critical"
 }
 
 export enum CommitteeDocumentType {
@@ -2043,9 +2043,6 @@ export interface ActivityResponse extends ActivityBase {
 // Document Interfaces
 export interface CommitteeDocumentBase {
   committee_id: number;
-  meeting_id?: number;
-  voting_id?: number;
-  activity_id?: number;
   title: string;
   description?: string;
   document_type: CommitteeDocumentType;
@@ -2053,7 +2050,8 @@ export interface CommitteeDocumentBase {
   file_name: string;
   file_size: number;
   mime_type: string;
-  is_confidential: boolean;
+  is_public: boolean;
+  download_count?: number;
   version?: string;
   tags?: string;
   expiry_date?: string;
@@ -2066,7 +2064,7 @@ export interface CommitteeDocumentUpdate {
   title?: string;
   description?: string;
   document_type?: CommitteeDocumentType;
-  is_confidential?: boolean;
+  is_public?: boolean;
   version?: string;
   tags?: string;
   expiry_date?: string;

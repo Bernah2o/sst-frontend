@@ -25,6 +25,7 @@ import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AttendanceStatus, AttendanceType } from "../types";
 import api from "../services/api";
+import { logger } from "../utils/logger";
 
 interface User {
   id: number;
@@ -83,8 +84,8 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
 
   // Debug: Log users state changes
   useEffect(() => {
-    console.log("Users state updated:", users);
-    console.log("Users length:", users.length);
+    logger.debug("Users state updated:", users);
+    logger.debug("Users length:", users.length);
   }, [users]);
 
 
@@ -93,14 +94,14 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
     setLoadingUsers(true);
     try {
       const response = await api.get("/users/");
-      console.log("Response from /users/:", response.data);
+      logger.debug("Response from /users/:", response.data);
       const usersData = response.data.items || response.data;
-      console.log("Users data:", usersData);
-      console.log("Is array?", Array.isArray(usersData));
-      console.log("Data length:", usersData?.length);
+      logger.debug("Users data:", usersData);
+      logger.debug("Is array?", Array.isArray(usersData));
+      logger.debug("Data length:", usersData?.length);
       setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      logger.error("Error fetching users:", error);
       setUsers([]);
       onError("Error al cargar los usuarios");
     } finally {
@@ -300,7 +301,7 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
                 multiple
                 options={users}
                 getOptionLabel={(option) => {
-                  console.log("Option in getOptionLabel:", option);
+                  logger.debug("Option in getOptionLabel:", option);
                   return `${option.full_name || 'Sin nombre'} (${option.email || 'Sin email'})`;
                 }}
                 value={selectedUsers}

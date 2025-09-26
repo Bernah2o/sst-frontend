@@ -63,6 +63,7 @@ import { getApiUrl } from "../config/env";
 import { useAuth } from "../contexts/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
 import { formatDate } from "../utils/dateUtils";
+import { logger } from "../utils/logger";
 
 import api from "./../services/api";
 import {
@@ -2930,15 +2931,15 @@ const CoursesManagement: React.FC = () => {
                 }}
                 title={previewContent.title}
                 onError={(e) => {
-                  console.error('Error loading video:', e);
+                  logger.error('Error loading video:', e);
                   // Fallback: remove poster if it fails
                   e.currentTarget.removeAttribute('poster');
                 }}
                 onLoadStart={() => {
-                  console.log('Video loading started');
+                  logger.debug('Video loading started');
                 }}
                 onCanPlay={() => {
-                  console.log('Video can start playing');
+                  logger.debug('Video can start playing');
                 }}
               >
                 <source

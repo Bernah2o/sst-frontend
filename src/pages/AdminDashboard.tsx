@@ -30,11 +30,9 @@ import {
   ListItemIcon,
   LinearProgress,
   Divider,
-  Alert,
-  Chip,
-  Paper
+  Alert
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -74,8 +72,9 @@ interface AlertItem {
 }
 
 const AdminDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  
   const [stats, setStats] = useState<DashboardStats>({
     total_users: 0,
     total_courses: 0,
@@ -91,18 +90,7 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Verificar si el usuario está autenticado
-    const token = localStorage.getItem('token');
-    
-    if (token && user) {
-      fetchDashboardData();
-    } else {
-      navigate('/login');
-    }
-  }, [user, navigate]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -136,7 +124,27 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Solo proceder cuando el contexto de autenticación haya terminado de cargar
+    if (authLoading) {
+      return; // Esperar a que termine la inicialización
+    }
+
+    // Verificar autenticación de forma segura
+    if (!isAuthenticated || !user) {
+      // Usar setTimeout para evitar navegación durante el renderizado
+      const timer = setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 0);
+      
+      return () => clearTimeout(timer);
+    }
+
+    // Si está autenticado, cargar los datos del dashboard
+    fetchDashboardData();
+  }, [user, authLoading, isAuthenticated, navigate, fetchDashboardData]);
   
   const generateAlerts = (dashboardData: DashboardStats) => {
     const newAlerts: AlertItem[] = [];

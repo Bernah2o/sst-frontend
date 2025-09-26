@@ -1,4 +1,5 @@
 import { apiService as api } from './api';
+import { logger } from '../utils/logger';
 import {
   CommitteeDocument,
   CommitteeDocumentCreate,
@@ -12,11 +13,9 @@ export const committeeDocumentService = {
   // Document CRUD operations
   async getDocuments(filters?: {
     committee_id?: number;
-    meeting_id?: number;
-    voting_id?: number;
-    activity_id?: number;
     document_type?: CommitteeDocumentType;
     search?: string;
+    is_public?: boolean;
     page?: number;
     page_size?: number;
   }): Promise<{ items: CommitteeDocument[]; total: number; page: number; page_size: number; total_pages: number }> {
@@ -25,11 +24,9 @@ export const committeeDocumentService = {
     }
 
     const params = new URLSearchParams();
-    if (filters?.meeting_id) params.append('meeting_id', filters.meeting_id.toString());
-    if (filters?.voting_id) params.append('voting_id', filters.voting_id.toString());
-    if (filters?.activity_id) params.append('activity_id', filters.activity_id.toString());
     if (filters?.document_type) params.append('document_type', filters.document_type);
     if (filters?.search) params.append('search', filters.search);
+    if (filters?.is_public !== undefined) params.append('is_public', filters.is_public.toString());
     if (filters?.page) params.append('skip', ((filters.page - 1) * (filters.page_size || 10)).toString());
     if (filters?.page_size) params.append('limit', filters.page_size.toString());
 
@@ -47,6 +44,63 @@ export const committeeDocumentService = {
     };
   },
 
+  async getAllDocuments(filters?: {
+    document_type?: CommitteeDocumentType;
+    search?: string;
+    is_public?: boolean;
+    page?: number;
+    page_size?: number;
+  }): Promise<{ items: CommitteeDocument[]; total: number; page: number; page_size: number; total_pages: number }> {
+    const { committeePermissionService } = await import('./committeePermissionService');
+    
+    try {
+      // Get all committees the user has access to
+      const accessibleCommittees = await committeePermissionService.getUserAccessibleCommittees();
+      const allDocuments: CommitteeDocument[] = [];
+      
+      // Get documents from each accessible committee
+      for (const committee of accessibleCommittees) {
+        try {
+          const committeeDocuments = await this.getDocuments({
+            committee_id: committee.committee_id,
+            document_type: filters?.document_type,
+            search: filters?.search,
+            is_public: filters?.is_public,
+            page: 1,
+            page_size: 1000 // Get all documents from this committee
+          });
+          allDocuments.push(...committeeDocuments.items);
+        } catch (error) {
+          logger.warn(`Failed to fetch documents for committee ${committee.committee_id}:`, error);
+        }
+      }
+      
+      // Apply pagination
+      const pageSize = filters?.page_size || 10;
+      const page = filters?.page || 1;
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedDocuments = allDocuments.slice(startIndex, endIndex);
+      
+      return {
+        items: paginatedDocuments,
+        total: allDocuments.length,
+        page: page,
+        page_size: pageSize,
+        total_pages: Math.ceil(allDocuments.length / pageSize)
+      };
+    } catch (error) {
+      logger.error('Error in getAllDocuments:', error);
+      return {
+        items: [],
+        total: 0,
+        page: filters?.page || 1,
+        page_size: filters?.page_size || 10,
+        total_pages: 0
+      };
+    }
+  },
+
   async getDocument(id: number): Promise<CommitteeDocument> {
     const response = await api.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -54,20 +108,42 @@ export const committeeDocumentService = {
 
   async createDocument(documentData: CommitteeDocumentCreate, file: File): Promise<CommitteeDocument> {
     const formData = new FormData();
+    
+    // Solo agregar el archivo al FormData
     formData.append('file', file);
-    formData.append('committee_id', documentData.committee_id.toString());
-    if (documentData.meeting_id) formData.append('meeting_id', documentData.meeting_id.toString());
-    if (documentData.voting_id) formData.append('voting_id', documentData.voting_id.toString());
-    if (documentData.activity_id) formData.append('activity_id', documentData.activity_id.toString());
-    formData.append('title', documentData.title);
-    if (documentData.description) formData.append('description', documentData.description);
-    formData.append('document_type', documentData.document_type);
-    if (documentData.version) formData.append('version', documentData.version);
-    if (documentData.tags) formData.append('tags', documentData.tags);
-    if (documentData.expiry_date) formData.append('expiry_date', documentData.expiry_date);
-    if (documentData.notes) formData.append('notes', documentData.notes);
 
-    const response = await api.post(`${BASE_URL}/upload`, formData, {
+    // Agregar campos opcionales al FormData (solo los que no son requeridos como query params)
+    if (documentData.description) {
+      formData.append('description', documentData.description);
+    }
+    if (documentData.version) {
+      formData.append('version', documentData.version);
+    }
+    if (documentData.tags) {
+      formData.append('tags', documentData.tags);
+    }
+    if (documentData.expiry_date) {
+      formData.append('expiry_date', documentData.expiry_date);
+    }
+    if (documentData.notes) {
+      formData.append('notes', documentData.notes);
+    }
+    if (documentData.is_public !== undefined) {
+      formData.append('is_public', documentData.is_public.toString());
+    }
+
+    // Construir URL con todos los parámetros requeridos como query parameters
+    const queryParams = new URLSearchParams({
+      committee_id: documentData.committee_id.toString(),
+      title: documentData.title,
+      document_type: documentData.document_type
+    });
+
+    const uploadUrl = `${BASE_URL}/upload?${queryParams.toString()}`;
+    logger.debug('🔍 URL de upload con query params:', uploadUrl);
+    logger.debug('🔍 FormData solo contiene file y campos opcionales');
+
+    const response = await api.post(uploadUrl, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -79,12 +155,14 @@ export const committeeDocumentService = {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('committee_id', documentData.committee_id.toString());
-    if (documentData.meeting_id) formData.append('meeting_id', documentData.meeting_id.toString());
-    if (documentData.voting_id) formData.append('voting_id', documentData.voting_id.toString());
-    if (documentData.activity_id) formData.append('activity_id', documentData.activity_id.toString());
     formData.append('title', documentData.title);
     if (documentData.description) formData.append('description', documentData.description);
     formData.append('document_type', documentData.document_type);
+    if (documentData.version) formData.append('version', documentData.version);
+    if (documentData.tags) formData.append('tags', documentData.tags);
+    if (documentData.expiry_date) formData.append('expiry_date', documentData.expiry_date);
+    if (documentData.notes) formData.append('notes', documentData.notes);
+    if (documentData.is_public !== undefined) formData.append('is_public', documentData.is_public.toString());
 
     const response = await api.post(`${BASE_URL}/upload`, formData, {
       headers: {
@@ -120,8 +198,8 @@ export const committeeDocumentService = {
     }
   },
 
-  async deleteDocument(id: number): Promise<void> {
-    await api.delete(`${BASE_URL}/${id}`);
+  async deleteDocument(id: number, committee_id: number): Promise<void> {
+    await api.delete(`${BASE_URL}/${id}?committee_id=${committee_id}`);
   },
 
   // Document download and access
@@ -145,9 +223,7 @@ export const committeeDocumentService = {
   },
 
   // Document statistics
-  async incrementDownloadCount(id: number): Promise<void> {
-    await api.post(`${BASE_URL}/${id}/download-count`);
-  },
+  // Note: Download count is automatically incremented by the backend when downloading
 
   async getDocumentStatistics(committeeId: number): Promise<any> {
     const response = await api.get(`${BASE_URL}/statistics/${committeeId}`);
@@ -173,11 +249,13 @@ export const committeeDocumentService = {
       formData.append(`files`, file);
     });
     formData.append('committee_id', documentData.committee_id.toString());
-    if (documentData.meeting_id) formData.append('meeting_id', documentData.meeting_id.toString());
-    if (documentData.voting_id) formData.append('voting_id', documentData.voting_id.toString());
-    if (documentData.activity_id) formData.append('activity_id', documentData.activity_id.toString());
     if (documentData.description) formData.append('description', documentData.description);
     formData.append('document_type', documentData.document_type);
+    if (documentData.version) formData.append('version', documentData.version);
+    if (documentData.tags) formData.append('tags', documentData.tags);
+    if (documentData.expiry_date) formData.append('expiry_date', documentData.expiry_date);
+    if (documentData.notes) formData.append('notes', documentData.notes);
+    if (documentData.is_public !== undefined) formData.append('is_public', documentData.is_public.toString());
 
     const response = await api.post(`${BASE_URL}/bulk-upload`, formData, {
       headers: {

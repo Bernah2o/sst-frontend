@@ -380,7 +380,8 @@ const ActivityManagement: React.FC = () => {
 
   const handleDeleteClick = () => {
     setDeleteDialogOpen(true);
-    handleMenuClose();
+    // No llamar handleMenuClose() aquí para preservar selectedActivity
+    setAnchorEl(null); // Solo cerrar el menú sin limpiar selectedActivity
   };
 
   const handleDeleteConfirm = async () => {
@@ -394,6 +395,8 @@ const ActivityManagement: React.FC = () => {
       } catch (err) {
         setError('Error al eliminar la actividad');
         console.error('Activity deletion error:', err);
+        setDeleteDialogOpen(false);
+        setSelectedActivity(null);
       }
     }
   };

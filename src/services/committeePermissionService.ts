@@ -161,8 +161,13 @@ export const committeePermissionService = {
 
   // Committee access control
   async getUserAccessibleCommittees(): Promise<{ committee_id: number; committee_name: string; permissions: string[] }[]> {
-    const response = await api.get(`${BASE_URL}/accessible-committees`);
-    return response.data;
+    try {
+      const response = await api.get(`${BASE_URL}/accessible-committees`);
+      return response.data;
+    } catch (error) {
+      console.error('Error en getUserAccessibleCommittees:', error);
+      throw error;
+    }
   },
 
   async getCommitteeUsers(committeeId: number): Promise<{ user_id: number; user_name: string; permissions: string[] }[]> {

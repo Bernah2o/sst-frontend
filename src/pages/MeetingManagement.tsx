@@ -56,6 +56,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { meetingService } from '../services/meetingService';
 import { committeeService } from '../services/committeeService';
 import { committeePermissionService } from '../services/committeePermissionService';
+import { logger } from '../utils/logger';
 import {
   Meeting,
   MeetingStatus,
@@ -152,7 +153,7 @@ const MeetingManagement: React.FC = () => {
           canDeleteMeetings: canEdit,
           canManageMeetings: canCreateMeetings,
         };
-        console.log('Permissions loaded for committee', committeeId, ':', newPermissions);
+        logger.debug('Permissions loaded for committee', committeeId, ':', newPermissions);
         setPermissions(newPermissions);
       } else {
         // Si no hay committeeId específico, verificar permisos generales
@@ -164,13 +165,13 @@ const MeetingManagement: React.FC = () => {
           canDeleteMeetings: hasGeneralPermissions,
           canManageMeetings: hasGeneralPermissions,
         };
-        console.log('General permissions loaded:', newPermissions);
+        logger.debug('General permissions loaded:', newPermissions);
         setPermissions(newPermissions);
       }
       
       await loadMeetings();
     } catch (err) {
-      console.error('Error loading initial data:', err);
+      logger.error('Error loading initial data:', err);
       setError('Error al cargar los datos iniciales');
     } finally {
       setLoading(false);
@@ -419,8 +420,8 @@ const MeetingManagement: React.FC = () => {
   };
 
   const handleDeleteMeeting = (meeting: Meeting) => {
-    console.log('handleDeleteMeeting called with meeting:', meeting);
-    console.log('Current permissions:', permissions);
+    logger.debug('handleDeleteMeeting called with meeting:', meeting);
+    logger.debug('Current permissions:', permissions);
     setSelectedMeeting(meeting);
     setDeleteDialogOpen(true);
     // No llamamos a handleMenuClose() aquí para evitar limpiar selectedMeeting
@@ -429,22 +430,22 @@ const MeetingManagement: React.FC = () => {
   };
 
   const confirmDeleteMeeting = async () => {
-    console.log('confirmDeleteMeeting called');
-    console.log('selectedMeeting:', selectedMeeting);
+    logger.debug('confirmDeleteMeeting called');
+    logger.debug('selectedMeeting:', selectedMeeting);
     if (!selectedMeeting) return;
     
     setLoading(true);
     setError('');
     
     try {
-      console.log('Calling deleteMeeting service...');
+      logger.debug('Calling deleteMeeting service...');
       await meetingService.deleteMeeting(selectedMeeting.id, selectedMeeting.committee_id);
-      console.log('Delete successful');
+      logger.debug('Delete successful');
       setDeleteDialogOpen(false);
       setSelectedMeeting(null);
       await loadMeetings();
     } catch (err: any) {
-      console.error('Delete error:', err);
+      logger.error('Delete error:', err);
       setError(err.message || 'Error al eliminar la reunión');
     } finally {
       setLoading(false);
@@ -716,9 +717,9 @@ const MeetingManagement: React.FC = () => {
         {permissions.canDeleteMeetings && (
           <MenuItem 
             onClick={() => {
-              console.log('Delete button clicked');
-              console.log('selectedMeeting:', selectedMeeting);
-              console.log('permissions.canDeleteMeetings:', permissions.canDeleteMeetings);
+              logger.debug('Delete button clicked');
+              logger.debug('selectedMeeting:', selectedMeeting);
+              logger.debug('permissions.canDeleteMeetings:', permissions.canDeleteMeetings);
               if (selectedMeeting) {
                 const meetingToDelete = selectedMeeting;
                 handleDeleteMeeting(meetingToDelete);

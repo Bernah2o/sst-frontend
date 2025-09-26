@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -20,6 +20,7 @@ import {
   Paper,
   FormControlLabel,
   Switch,
+  FormHelperText,
 } from '@mui/material';
 import {
   CloudUpload as UploadIcon,
@@ -34,17 +35,19 @@ import {
   CommitteeDocumentCreate,
   CommitteeDocumentUpdate,
   CommitteeDocumentType,
-  Committee,
+  CommitteeResponse,
 } from '../types';
+import { logger } from '../utils/logger';
 
 interface DocumentFormProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: CommitteeDocumentCreate | CommitteeDocumentUpdate, file?: File) => Promise<void>;
   document?: CommitteeDocument;
-  committees: Committee[];
+  committees: CommitteeResponse[];
   loading?: boolean;
   error?: string;
+  defaultCommitteeId?: number;
 }
 
 const validationSchema = Yup.object({
@@ -55,8 +58,11 @@ const validationSchema = Yup.object({
     .max(1000, 'La descripción no puede exceder 1000 caracteres'),
   document_type: Yup.string()
     .required('El tipo de documento es requerido'),
-  committee_id: Yup.number()
-    .required('El comité es requerido'),
+  committee_id: Yup.mixed()
+    .required('El comité es requerido')
+    .test('is-valid-committee', 'Debe seleccionar un comité válido', function(value) {
+      return value !== '' && value !== 0 && Number(value) > 0;
+    }),
   version: Yup.string()
     .max(20, 'La versión no puede exceder 20 caracteres'),
   tags: Yup.string()
@@ -74,6 +80,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
   committees,
   loading = false,
   error,
+  defaultCommitteeId,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string>('');
@@ -85,9 +92,9 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
       title: document?.title || '',
       description: document?.description || '',
       document_type: document?.document_type || CommitteeDocumentType.MEETING_MINUTES,
-      committee_id: document?.committee_id || 0,
+      committee_id: document?.committee_id || defaultCommitteeId || '',
       version: document?.version || '1.0',
-      is_confidential: document?.is_confidential || false,
+      is_public: document?.is_public || false,
       tags: document?.tags || '',
       expiry_date: document?.expiry_date ? new Date(document.expiry_date).toISOString().split('T')[0] : '',
       notes: document?.notes || '',
@@ -98,6 +105,11 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
       try {
         setFileError('');
         
+        logger.debug('🔍 DocumentForm - Valores del formulario:', values);
+        logger.debug('🔍 DocumentForm - defaultCommitteeId recibido:', defaultCommitteeId);
+        logger.debug('🔍 DocumentForm - committee_id en values:', values.committee_id);
+        logger.debug('🔍 DocumentForm - committee_id convertido:', Number(values.committee_id));
+        
         if (!isEditing && !selectedFile) {
           setFileError('Debe seleccionar un archivo');
           return;
@@ -105,13 +117,16 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
 
         const documentData = {
           ...values,
+          committee_id: Number(values.committee_id),
           expiry_date: values.expiry_date || undefined,
         };
+
+        logger.debug('🔍 DocumentForm - documentData final:', documentData);
 
         await onSubmit(documentData, selectedFile || undefined);
         handleClose();
       } catch (error) {
-        console.error('Error submitting document:', error);
+        logger.error('Error submitting document:', error);
       }
     },
   });
@@ -270,14 +285,13 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
-              <FormControl fullWidth required>
+              <FormControl fullWidth required error={formik.touched.committee_id && Boolean(formik.errors.committee_id)}>
                 <InputLabel>Comité</InputLabel>
                 <Select
                   name="committee_id"
                   value={formik.values.committee_id}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.committee_id && Boolean(formik.errors.committee_id)}
                   label="Comité"
                   MenuProps={{
                     PaperProps: {
@@ -288,12 +302,18 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
                     },
                   }}
                 >
+                  <MenuItem value="" disabled>
+                    Seleccionar comité
+                  </MenuItem>
                   {committees.map((committee) => (
                     <MenuItem key={committee.id} value={committee.id}>
                       {committee.name}
                     </MenuItem>
                   ))}
                 </Select>
+                {formik.touched.committee_id && formik.errors.committee_id && (
+                  <FormHelperText>{formik.errors.committee_id}</FormHelperText>
+                )}
               </FormControl>
             </Grid>
 
@@ -336,7 +356,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.tags && Boolean(formik.errors.tags)}
-                helperText={formik.touched.tags && formik.errors.tags || 'Separe las etiquetas con comas'}
+                helperText={(formik.touched.tags && formik.errors.tags) || 'Separe las etiquetas con comas'}
                 placeholder="etiqueta1, etiqueta2, etiqueta3"
               />
             </Grid>
@@ -355,20 +375,20 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
               />
             </Grid>
 
-            {/* Confidencialidad */}
+            {/* Visibilidad */}
             <Grid size={{ xs: 12 }}>
               <FormControlLabel
                 control={
                   <Switch
-                    name="is_confidential"
-                    checked={formik.values.is_confidential}
+                    name="is_public"
+                    checked={formik.values.is_public}
                     onChange={formik.handleChange}
                   />
                 }
-                label="Documento confidencial"
+                label="Documento público"
               />
               <Typography variant="caption" display="block" color="text.secondary">
-                Los documentos confidenciales solo pueden ser vistos por miembros autorizados
+                Los documentos públicos pueden ser vistos por todos los miembros del comité
               </Typography>
             </Grid>
 
