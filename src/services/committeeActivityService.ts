@@ -23,6 +23,7 @@ export const committeeActivityService = {
     if (filters?.search) params.append('search', filters.search);
     if (filters?.page) params.append('skip', ((filters.page - 1) * (filters.limit || 10)).toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.overdue_only) params.append('overdue_only', filters.overdue_only.toString());
 
     const response = await api.get(`${BASE_URL}?${params.toString()}`);
     return { activities: response.data || [], total: response.data?.length || 0 };

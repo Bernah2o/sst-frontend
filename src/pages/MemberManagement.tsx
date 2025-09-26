@@ -26,7 +26,6 @@ import {
   Select,
   Alert,
   CircularProgress,
-  Tooltip,
   Paper,
   Avatar,
   Grid,
@@ -39,7 +38,6 @@ import {
   Delete as DeleteIcon,
   Group as GroupIcon,
   ArrowBack as ArrowBackIcon,
-  FilterList as FilterIcon,
   Save as SaveIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -179,7 +177,13 @@ const MemberManagement: React.FC = () => {
 
   const handleDeleteClick = () => {
     setDeleteDialogOpen(true);
-    handleMenuClose();
+    // No llamar handleMenuClose() aquí para preservar selectedMember
+    setAnchorEl(null); // Solo cerrar el menú sin limpiar selectedMember
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setSelectedMember(null);
   };
 
   const handleDeleteConfirm = async () => {
@@ -433,7 +437,6 @@ const MemberManagement: React.FC = () => {
                     <TableCell align="right">
                       <IconButton
                         onClick={(e) => handleMenuOpen(e, member)}
-                        disabled={!permissions.canManageMembers}
                       >
                         <MoreVertIcon />
                       </IconButton>
@@ -470,18 +473,29 @@ const MemberManagement: React.FC = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleEditClick}>
-          <EditIcon sx={{ mr: 1 }} />
-          Editar
-        </MenuItem>
-        <MenuItem onClick={handleDeleteClick}>
-          <DeleteIcon sx={{ mr: 1 }} />
-          Eliminar
-        </MenuItem>
+        {permissions.canManageMembers && (
+          <MenuItem onClick={handleEditClick}>
+            <EditIcon sx={{ mr: 1 }} />
+            Editar
+          </MenuItem>
+        )}
+        {permissions.canManageMembers && (
+          <MenuItem onClick={handleDeleteClick}>
+            <DeleteIcon sx={{ mr: 1 }} />
+            Eliminar
+          </MenuItem>
+        )}
+        {!permissions.canManageMembers && (
+          <MenuItem disabled>
+            <Typography variant="body2" color="text.secondary">
+              No tienes permisos para gestionar miembros
+            </Typography>
+          </MenuItem>
+        )}
       </Menu>
 
       {/* Dialog de confirmación de eliminación */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
         <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
           <Typography>
@@ -489,7 +503,7 @@ const MemberManagement: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={handleDeleteCancel}>Cancelar</Button>
           <Button onClick={handleDeleteConfirm} color="error" variant="contained">
             Eliminar
           </Button>

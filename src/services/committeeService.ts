@@ -8,7 +8,7 @@ import {
   CommitteeType,
 } from '../types';
 
-const BASE_URL = '/committees';
+const BASE_URL = '/committees/';
 
 export const committeeService = {
   // Committee CRUD operations
@@ -25,27 +25,27 @@ export const committeeService = {
   },
 
   async getCommittee(id: number): Promise<Committee> {
-    const response = await api.get(`${BASE_URL}/${id}`);
+    const response = await api.get(`${BASE_URL}${id}`);
     return response.data;
   },
 
   async createCommittee(committee: CommitteeCreate): Promise<Committee> {
-    const response = await api.post(BASE_URL, committee);
+    const response = await api.post(BASE_URL.slice(0, -1), committee);
     return response.data;
   },
 
   async updateCommittee(id: number, committee: CommitteeUpdate): Promise<Committee> {
-    const response = await api.put(`${BASE_URL}/${id}`, committee);
+    const response = await api.put(`${BASE_URL}${id}`, committee);
     return response.data;
   },
 
   async deleteCommittee(id: number): Promise<void> {
-    await api.delete(`${BASE_URL}/${id}`);
+    await api.delete(`${BASE_URL}${id}`);
   },
 
   // Committee dashboard
   async getCommitteeDashboard(id: number): Promise<CommitteeDashboard> {
-    const response = await api.get(`${BASE_URL}/${id}/dashboard`);
+    const response = await api.get(`${BASE_URL}${id}/dashboard`);
     return response.data;
   },
 
@@ -60,7 +60,7 @@ export const committeeService = {
   // Get committee types from backend with IDs
   async getCommitteeTypesFromBackend(): Promise<{ id: number; name: string; committee_type: CommitteeType }[]> {
     try {
-      const response = await api.get(`${BASE_URL}/types`);
+      const response = await api.get(`${BASE_URL}types`);
       
       // Helper function to get display name
       const getDisplayName = (typeName: string): string => {
@@ -89,7 +89,7 @@ export const committeeService = {
   // Check user access to committee
   async checkUserAccess(committeeId: number): Promise<boolean> {
     try {
-      const response = await api.get(`${BASE_URL}/${committeeId}/access`);
+      const response = await api.get(`${BASE_URL}${committeeId}/access`);
       return response.data.has_access;
     } catch (error) {
       return false;
@@ -98,7 +98,7 @@ export const committeeService = {
 
   // Get committees accessible to current user
   async getUserCommittees(): Promise<Committee[]> {
-    const response = await api.get(`${BASE_URL}/user/committees`);
+    const response = await api.get(`${BASE_URL}user/committees`);
     return response.data;
   },
 };
