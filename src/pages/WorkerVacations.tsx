@@ -96,7 +96,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
   const [openDialog, setOpenDialog] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [reason, setReason] = useState('');
+  const [comments, setComments] = useState('');
   const [submitting, setSubmitting] = useState(false);
   
   // Estados para edición
@@ -104,7 +104,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [editStartDate, setEditStartDate] = useState<Date | null>(null);
   const [editEndDate, setEditEndDate] = useState<Date | null>(null);
-  const [editReason, setEditReason] = useState('');
+  const [editComments, setEditComments] = useState('');
   
   // Estados para confirmación de eliminación
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -227,7 +227,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
   };
 
   const handleSubmitRequest = async () => {
-    if (!startDate || !endDate || !reason.trim() || !workerId) {
+    if (!startDate || !endDate || !comments.trim() || !workerId) {
       showSnackbar('Por favor completa todos los campos', 'warning');
       return;
     }
@@ -255,7 +255,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       const requestData: VacationRequest = {
         start_date: format(startDate, 'yyyy-MM-dd'),
         end_date: format(endDate, 'yyyy-MM-dd'),
-        reason
+        comments: comments
       };
       
       const newRequest = await vacationService.createVacationRequest(parseInt(workerId), requestData);
@@ -264,7 +264,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       setOpenDialog(false);
       setStartDate(null);
       setEndDate(null);
-      setReason('');
+      setComments('');
       setSelectedRange({ start: null, end: null });
       
       // Actualizar balance después de crear la solicitud
@@ -411,13 +411,13 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
     setEditingRequest(request);
     setEditStartDate(new Date(request.start_date));
     setEditEndDate(new Date(request.end_date));
-    setEditReason(request.reason || '');
+    setEditComments(request.comments || '');
     setOpenEditDialog(true);
     handleCloseMenu();
   };
 
   const handleUpdateRequest = async () => {
-    if (!editingRequest || !editStartDate || !editEndDate || !editReason.trim() || !workerId) {
+    if (!editingRequest || !editStartDate || !editEndDate || !editComments.trim() || !workerId) {
       showSnackbar('Por favor completa todos los campos', 'warning');
       return;
     }
@@ -428,7 +428,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       const updateData: VacationUpdate = {
         start_date: format(editStartDate, 'yyyy-MM-dd'),
         end_date: format(editEndDate, 'yyyy-MM-dd'),
-        reason: editReason.trim()
+        comments: editComments.trim()
       };
       
       const updatedRequest = await vacationService.updateVacationRequest(
@@ -448,7 +448,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       setEditingRequest(null);
       setEditStartDate(null);
       setEditEndDate(null);
-      setEditReason('');
+      setEditComments('');
       
       // Actualizar balance después de la edición
       await fetchVacationData();
@@ -744,7 +744,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
                           secondary={
                             <Box>
                               <Typography variant="body2" color="text.secondary">
-                                {request.reason}
+                                {request.comments}
                               </Typography>
                               {isAdmin && request.status === 'pending' && (
                                 <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
@@ -864,8 +864,8 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
                 label="Motivo de la solicitud"
                 multiline
                 rows={3}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
                 placeholder="Describe el motivo de tu solicitud de vacaciones..."
               />
               {startDate && endDate && (
@@ -884,7 +884,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
             <Button
               onClick={handleSubmitRequest}
               variant="contained"
-              disabled={submitting || !startDate || !endDate || !reason.trim()}
+              disabled={submitting || !startDate || !endDate || !comments.trim()}
             >
               {submitting ? <CircularProgress size={20} /> : 'Enviar Solicitud'}
             </Button>
@@ -934,8 +934,8 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
                 label="Motivo de la solicitud"
                 multiline
                 rows={3}
-                value={editReason}
-                onChange={(e) => setEditReason(e.target.value)}
+                value={editComments}
+                onChange={(e) => setEditComments(e.target.value)}
                 placeholder="Describe el motivo de tu solicitud de vacaciones..."
               />
               {editStartDate && editEndDate && (
@@ -954,7 +954,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
             <Button
               onClick={handleUpdateRequest}
               variant="contained"
-              disabled={submitting || !editStartDate || !editEndDate || !editReason.trim()}
+              disabled={submitting || !editStartDate || !editEndDate || !editComments.trim()}
             >
               {submitting ? <CircularProgress size={20} /> : 'Actualizar Solicitud'}
             </Button>
@@ -979,7 +979,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
                   Fechas: {format(new Date(requestToDelete.start_date), 'dd/MM/yyyy')} - {format(new Date(requestToDelete.end_date), 'dd/MM/yyyy')}
                 </Typography>
                 <Typography variant="body2">
-                  Motivo: {requestToDelete.reason}
+                  Motivo: {requestToDelete.comments}
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                   Estado: {requestToDelete.status === 'pending' ? 'Pendiente' : 

@@ -74,7 +74,7 @@ const EmployeeVacations: React.FC = () => {
   // Estados del formulario
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [reason, setReason] = useState('');
+  const [comments, setComments] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Estados para diálogo de conflictos
@@ -101,15 +101,63 @@ const EmployeeVacations: React.FC = () => {
     try {
       setLoading(true);
       
-      const [requests, balance] = await Promise.all([
-        vacationService.getEmployeeVacationRequests(),
-        vacationService.getEmployeeVacationBalance()
-      ]);
-      setVacationRequests(requests);
-      setVacationBalance(balance);
-    } catch (error) {
+      // Intentar cargar las solicitudes de vacaciones primero
+      let requests: WorkerVacation[] = [];
+      let balance: VacationBalance | null = null;
+      
+      try {
+        requests = await vacationService.getEmployeeVacationRequests();
+        setVacationRequests(requests);
+      } catch (requestError: any) {
+        console.error('Error fetching vacation requests:', requestError);
+        // Si falla cargar las solicitudes, mostrar mensaje específico pero continuar
+        showNotification('📋 No se pudieron cargar las solicitudes de vacaciones. Puede continuar usando otras funciones.', 'warning');
+      }
+      
+      // Intentar cargar el balance de vacaciones
+      try {
+        balance = await vacationService.getEmployeeVacationBalance();
+        setVacationBalance(balance);
+      } catch (balanceError: any) {
+        console.error('Error fetching vacation balance:', balanceError);
+        
+        // Analizar el tipo de error para mostrar un mensaje más específico
+        let errorMessage = '⚠️ No se pudo cargar el balance de vacaciones.';
+        
+        if (balanceError?.response?.status === 500) {
+          // Error del servidor - probablemente problema de base de datos
+          const errorDetail = balanceError?.response?.data?.detail || '';
+          if (errorDetail.includes('pending_days') || errorDetail.includes('column') || errorDetail.includes('does not exist')) {
+            errorMessage = '🔧 El sistema de vacaciones está siendo actualizado. Algunas funciones pueden estar temporalmente limitadas. Las solicitudes de vacaciones siguen funcionando normalmente.';
+          } else {
+            errorMessage = '🔧 Error técnico temporal en el balance de vacaciones. Por favor, intente nuevamente en unos minutos.';
+          }
+        } else if (balanceError?.response?.status === 404) {
+          errorMessage = '📊 No se encontró información de balance de vacaciones. Contacte a recursos humanos para configurar su información.';
+        } else if (balanceError?.response?.status === 403) {
+          errorMessage = '🔒 No tiene permisos para ver el balance de vacaciones. Contacte al administrador.';
+        } else if (balanceError?.response?.status === 401) {
+          errorMessage = '🔐 Su sesión ha expirado. Por favor, inicie sesión nuevamente.';
+        } else if (!balanceError?.response) {
+          errorMessage = '🌐 Error de conexión. Verifique su conexión a internet e intente nuevamente.';
+        }
+        
+        showNotification(errorMessage, 'warning');
+        
+        // Establecer un balance por defecto para que la interfaz siga funcionando
+        setVacationBalance({
+          worker_id: 0,
+          total_days: 0,
+          used_days: 0,
+          pending_days: 0,
+          available_days: 0,
+          year: new Date().getFullYear()
+        });
+      }
+      
+    } catch (error: any) {
       console.error('Error fetching vacation data:', error);
-      showNotification('🔄 No se pudieron cargar los datos de vacaciones. Por favor, intente actualizar la página o contacte al administrador si el problema persiste.', 'error');
+      showNotification('🔄 Error general al cargar los datos de vacaciones. Por favor, recargue la página.', 'error');
     } finally {
       setLoading(false);
     }
@@ -149,7 +197,7 @@ const EmployeeVacations: React.FC = () => {
     setDialogOpen(true);
     setStartDate(null);
     setEndDate(null);
-    setReason('');
+    setComments('');
     setShowCalendar(false);
     setOccupiedDates(null);
   };
@@ -158,7 +206,7 @@ const EmployeeVacations: React.FC = () => {
     setDialogOpen(false);
     setStartDate(null);
     setEndDate(null);
-    setReason('');
+    setComments('');
     setShowCalendar(false);
     setOccupiedDates(null);
   };
@@ -172,7 +220,7 @@ const EmployeeVacations: React.FC = () => {
   };
 
   const handleSubmitRequest = async () => {
-    if (!startDate || !endDate || !reason.trim()) {
+    if (!startDate || !endDate || !comments.trim()) {
       showNotification('Por favor complete todos los campos', 'warning');
       return;
     }
@@ -226,7 +274,7 @@ const EmployeeVacations: React.FC = () => {
         start_date: format(startDate, 'yyyy-MM-dd'),
         end_date: format(endDate, 'yyyy-MM-dd'),
         working_days: workingDays,
-        reason: reason.trim()
+        comments: comments.trim()
       });
 
       showNotification('Solicitud de vacaciones enviada exitosamente', 'success');
@@ -378,7 +426,7 @@ const EmployeeVacations: React.FC = () => {
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Alert 
-                severity="warning" 
+                severity="info" 
                 sx={{ 
                   display: 'flex', 
                   alignItems: 'center',
@@ -389,8 +437,15 @@ const EmployeeVacations: React.FC = () => {
                   }
                 }}
               >
-                <Warning sx={{ mr: 1 }} />
-                No se pudo cargar tu balance de vacaciones. Por favor, contacta al área de recursos humanos para verificar tu información.
+                <CalendarToday sx={{ mr: 1 }} />
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 'medium', mb: 0.5 }}>
+                    Balance de vacaciones temporalmente no disponible
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    Puede continuar creando solicitudes de vacaciones. El sistema calculará automáticamente los días disponibles al procesar su solicitud.
+                  </Typography>
+                </Box>
               </Alert>
             </CardContent>
           </Card>
@@ -466,7 +521,7 @@ const EmployeeVacations: React.FC = () => {
                         <TableCell>
                           {calculateBusinessDays(new Date(request.start_date), new Date(request.end_date))}
                         </TableCell>
-                        <TableCell>{request.reason}</TableCell>
+                        <TableCell>{request.comments}</TableCell>
                         <TableCell>
                           <Chip
                             icon={getStatusIcon(request.status)}
@@ -621,8 +676,8 @@ const EmployeeVacations: React.FC = () => {
                 <Grid size={{ xs: 12 }}>
                   <TextField
                     label="Motivo de la Solicitud"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
                     multiline
                     rows={3}
                     fullWidth
@@ -696,7 +751,7 @@ const EmployeeVacations: React.FC = () => {
                 submitting || 
                 !startDate || 
                 !endDate || 
-                !reason.trim() ||
+                !comments.trim() ||
                 Boolean(startDate && endDate && vacationBalance && 
                  (calculateBusinessDays(startDate, endDate) || 0) > vacationBalance.available_days)
               }

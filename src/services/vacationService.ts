@@ -1,101 +1,36 @@
 import axios, { AxiosInstance } from 'axios';
 
 import { getApiUrl } from '../config/env';
-
-export interface VacationRequest {
-  start_date: string;
-  end_date: string;
-  reason?: string;
-}
-
-export interface VacationUpdate {
-  start_date?: string;
-  end_date?: string;
-  reason?: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'cancelled';
-}
-
-export interface VacationApproval {
-  status: 'approved' | 'rejected';
-  admin_comments?: string;
-}
-
-export interface WorkerVacation {
-  id: number;
-  worker_id: number;
-  start_date: string;
-  end_date: string;
-  days_requested: number;
-  reason?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  admin_comments?: string;
-  created_at: string;
-  updated_at: string;
-  approved_by?: number;
-  approved_at?: string;
-  is_active?: boolean;
-}
+import {
+  WorkerVacation,
+  VacationRequest,
+  VacationUpdate,
+  VacationApproval,
+  VacationBalance,
+  VacationAvailability,
+  VacationStats,
+  OccupiedDatesResponse,
+  OccupiedDate,
+  Worker
+} from '../types/worker';
 
 export interface VacationRequestWithWorker extends WorkerVacation {
   worker_name: string;
 }
 
-export interface VacationBalance {
-  worker_id: number;
-  total_days: number;
-  used_days: number;
-  pending_days: number;
-  available_days: number;
-  year: number;
-}
-
-export interface VacationAvailability {
-  start_date: string;
-  end_date: string;
-  is_available: boolean;
-  conflicts: Array<{
-    worker_name: string;
-    start_date: string;
-    end_date: string;
-    overlapping_days: number;
-  }>;
-  requested_days: number;
-  available_days: number;
-}
-
-export interface VacationStats {
-  total_requests: number;
-  pending_requests: number;
-  approved_requests: number;
-  rejected_requests: number;
-  total_days_used: number;
-}
-
-export interface OccupiedDate {
-  date: string;
-  vacation_id: number;
-  start_date: string;
-  end_date: string;
-}
-
-export interface OccupiedDatesResponse {
-  occupied_dates: OccupiedDate[];
-  total_occupied_days: number;
-  query_range: {
-    start_date: string;
-    end_date: string;
-  };
-}
-
-export interface Worker {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  document_number: string;
-  position: string;
-  user_id: number;
-}
+// Re-export types for convenience
+export type {
+  VacationUpdate,
+  VacationApproval,
+  VacationRequest,
+  WorkerVacation,
+  VacationBalance,
+  VacationAvailability,
+  VacationStats,
+  OccupiedDate,
+  OccupiedDatesResponse,
+  Worker
+} from '../types/worker';
 
 class VacationService {
   private api: AxiosInstance;
