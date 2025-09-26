@@ -128,9 +128,7 @@ const EmployeeVotings: React.FC = () => {
             voting_id: voting.id,
             voting_title: voting.title,
             voting_description: voting.description,
-            committee_type: typeof voting.committee_type === 'string' 
-              ? voting.committee_type 
-              : voting.committee_type?.name || 'Sin especificar',
+            committee_type: voting.committee_type || 'Sin especificar',
             start_date: voting.start_date,
             end_date: voting.end_date,
             max_votes_per_user: voting.max_votes_per_user,
