@@ -68,26 +68,28 @@ export interface WorkerVacation {
   start_date: string;
   end_date: string;
   days_requested: number;
-  reason?: string;
+  comments?: string;
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  admin_comments?: string;
+  request_date: string;
+  approved_by?: number;
+  approved_date?: string;
   created_at: string;
   updated_at: string;
-  approved_by?: number;
-  approved_at?: string;
-  is_active?: boolean;
+  // Información adicional del trabajador y usuarios
+  worker_name?: string;
+  approved_by_name?: string;
 }
 
 export interface VacationRequest {
   start_date: string;
   end_date: string;
-  reason?: string;
+  comments: string;
 }
 
 export interface VacationUpdate {
   start_date?: string;
   end_date?: string;
-  reason?: string;
+  comments?: string;
   status?: 'pending' | 'approved' | 'rejected' | 'cancelled';
 }
 
@@ -100,12 +102,13 @@ export interface VacationBalance {
   worker_id: number;
   total_days: number;
   used_days: number;
+  pending_days: number;
   available_days: number;
   year: number;
 }
 
 export interface VacationAvailability {
-  available: boolean;
+  is_available: boolean;
   conflicts: Array<{
     id: number;
     start_date: string;
@@ -120,4 +123,20 @@ export interface VacationStats {
   approved_requests: number;
   rejected_requests: number;
   total_days_used: number;
+}
+
+export interface OccupiedDate {
+  date: string;
+  vacation_id: number;
+  start_date: string;
+  end_date: string;
+}
+
+export interface OccupiedDatesResponse {
+  occupied_dates: OccupiedDate[];
+  total_occupied_days: number;
+  query_range: {
+    start_date: string;
+    end_date: string;
+  };
 }

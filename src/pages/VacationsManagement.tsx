@@ -84,7 +84,7 @@ const VacationsManagement: React.FC = () => {
   const [editForm, setEditForm] = useState({
     start_date: '',
     end_date: '',
-    reason: '',
+    comments: '',
     status: 'pending' as 'pending' | 'approved' | 'rejected' | 'cancelled'
   });
 
@@ -155,7 +155,7 @@ const VacationsManagement: React.FC = () => {
     setEditForm({
       start_date: format(new Date(request.start_date), 'yyyy-MM-dd'),
       end_date: format(new Date(request.end_date), 'yyyy-MM-dd'),
-      reason: request.reason || '',
+      comments: request.comments || '',
       status: request.status
     });
     setOpenEditDialog(true);
@@ -169,7 +169,7 @@ const VacationsManagement: React.FC = () => {
       const updateData: VacationUpdate = {
         start_date: editForm.start_date,
         end_date: editForm.end_date,
-        reason: editForm.reason,
+        comments: editForm.comments,
         status: editForm.status
       };
 
@@ -609,8 +609,8 @@ const VacationsManagement: React.FC = () => {
                     label="Motivo"
                     multiline
                     rows={3}
-                    value={editForm.reason}
-                    onChange={(e) => setEditForm({ ...editForm, reason: e.target.value })}
+                    value={editForm.comments}
+                    onChange={(e) => setEditForm({ ...editForm, comments: e.target.value })}
                   />
                 </Grid>
                 <Grid size={12}>
