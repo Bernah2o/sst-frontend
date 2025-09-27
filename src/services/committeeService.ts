@@ -75,11 +75,26 @@ export const committeeService = {
       };
       
       // Map backend response to frontend format
-      return response.data.map((type: any) => ({
-        id: type.id,
-        name: getDisplayName(type.name), // Use proper display name
-        committee_type: type.name // Use name directly as committee_type
-      }));
+      return response.data.map((type: any) => {
+        // Mapear el nombre del backend a los valores del enum del frontend
+        let committee_type: string;
+        switch (type.name.toLowerCase()) {
+          case 'convivencia':
+            committee_type = 'convivencia';
+            break;
+          case 'copasst':
+            committee_type = 'copasst';
+            break;
+          default:
+            committee_type = type.name.toLowerCase();
+        }
+        
+        return {
+          id: type.id,
+          name: getDisplayName(type.name), // Use proper display name
+          committee_type: committee_type
+        };
+      });
     } catch (error) {
       console.error('Error fetching committee types from backend:', error);
       throw error;
