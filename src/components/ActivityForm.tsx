@@ -41,10 +41,10 @@ const validationSchema = Yup.object({
   description: Yup.string()
     .max(1000, 'La descripción no puede exceder 1000 caracteres'),
   priority: Yup.string()
-    .oneOf(['low', 'medium', 'high', 'critical'], 'Prioridad inválida')
+    .oneOf(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], 'Prioridad inválida')
     .required('La prioridad es requerida'),
   status: Yup.string()
-    .oneOf(['pending', 'in_progress', 'completed', 'cancelled', 'overdue'], 'Estado inválido')
+    .oneOf(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'OVERDUE'], 'Estado inválido')
     .required('El estado es requerido'),
   assigned_to: Yup.number()
     .nullable(),

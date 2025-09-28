@@ -171,8 +171,8 @@ const MemberManagement: React.FC = () => {
       notes: selectedMember.notes || '',
     });
       setEditDialogOpen(true);
+      setAnchorEl(null); // Solo cerrar el menú, no limpiar selectedMember
     }
-    handleMenuClose();
   };
 
   const handleDeleteClick = () => {
@@ -220,18 +220,24 @@ const MemberManagement: React.FC = () => {
       setFormLoading(true);
       const id = parseInt(committeeId);
 
+      console.log('handleFormSubmit - editDialogOpen:', editDialogOpen);
+      console.log('handleFormSubmit - selectedMember:', selectedMember);
+      console.log('handleFormSubmit - selectedMember.id:', selectedMember?.id);
+
       if (editDialogOpen && selectedMember) {
-        // Update existing member - get role_id if role changed
+        // Update existing member - only send fields that can be updated
+        console.log('Updating member with ID:', selectedMember.id);
         const roleId = await committeeMemberService.getRoleId(formData.role);
         const updateData: CommitteeMemberUpdate = {
-          role: formData.role,
           role_id: roleId,
           start_date: formData.start_date,
           notes: formData.notes,
         };
+        console.log('Update data:', updateData);
         await committeeMemberService.updateCommitteeMember(selectedMember.id, updateData);
       } else {
         // Add new member - get role_id first
+        console.log('Creating new member');
         const roleId = await committeeMemberService.getRoleId(formData.role);
         const createData: CommitteeMemberCreate = {
           committee_id: id,
@@ -516,6 +522,7 @@ const MemberManagement: React.FC = () => {
         onClose={() => {
           setAddDialogOpen(false);
           setEditDialogOpen(false);
+          setSelectedMember(null);
           setError(null);
         }} 
         maxWidth="sm" 
@@ -591,6 +598,7 @@ const MemberManagement: React.FC = () => {
             onClick={() => {
               setAddDialogOpen(false);
               setEditDialogOpen(false);
+              setSelectedMember(null);
               setError(null);
             }}
             disabled={formLoading}

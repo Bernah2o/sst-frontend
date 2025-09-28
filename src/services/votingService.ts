@@ -151,7 +151,7 @@ export const votingService = {
 
   // Get active votings for a committee
   async getActiveVotings(committeeId: number): Promise<Voting[]> {
-    const response = await api.get(`${BASE_URL}/committee/${committeeId}?status=active`);
+    const response = await api.get(`${BASE_URL}/committee/${committeeId}?status=ACTIVE`);
     return response.data;
   },
 

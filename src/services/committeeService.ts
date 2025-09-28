@@ -1,4 +1,4 @@
-import { apiService as api } from './api';
+import { apiService as api } from "./api";
 import {
   Committee,
   CommitteeCreate,
@@ -6,19 +6,30 @@ import {
   CommitteeListFilters,
   CommitteeDashboard,
   CommitteeType,
-} from '../types';
+} from "../types";
 
-const BASE_URL = '/committees/';
+const BASE_URL = "/committees/";
 
 export const committeeService = {
   // Committee CRUD operations
-  async getCommittees(filters?: CommitteeListFilters): Promise<{ items: Committee[]; total: number; page: number; page_size: number; total_pages: number }> {
+  async getCommittees(
+    filters?: CommitteeListFilters
+  ): Promise<{
+    items: Committee[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }> {
     const params = new URLSearchParams();
-    if (filters?.committee_type) params.append('committee_type', filters.committee_type);
-    if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
-    if (filters?.search) params.append('search', filters.search);
-    if (filters?.page) params.append('page', filters.page.toString());
-    if (filters?.page_size) params.append('page_size', filters.page_size.toString());
+    if (filters?.committee_type)
+      params.append("committee_type", filters.committee_type);
+    if (filters?.is_active !== undefined)
+      params.append("is_active", filters.is_active.toString());
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.page_size)
+      params.append("page_size", filters.page_size.toString());
 
     const response = await api.get(`${BASE_URL}?${params.toString()}`);
     return response.data;
@@ -30,11 +41,14 @@ export const committeeService = {
   },
 
   async createCommittee(committee: CommitteeCreate): Promise<Committee> {
-    const response = await api.post(BASE_URL.slice(0, -1), committee);
+    const response = await api.post(BASE_URL, committee);
     return response.data;
   },
 
-  async updateCommittee(id: number, committee: CommitteeUpdate): Promise<Committee> {
+  async updateCommittee(
+    id: number,
+    committee: CommitteeUpdate
+  ): Promise<Committee> {
     const response = await api.put(`${BASE_URL}${id}`, committee);
     return response.data;
   },
@@ -50,53 +64,57 @@ export const committeeService = {
   },
 
   // Committee types
-  async getCommitteeTypes(): Promise<{ value: CommitteeType; label: string }[]> {
+  async getCommitteeTypes(): Promise<
+    { value: CommitteeType; label: string }[]
+  > {
     return [
-      { value: CommitteeType.CONVIVENCIA, label: 'Comité de Convivencia' },
-      { value: CommitteeType.COPASST, label: 'COPASST' },
+      { value: CommitteeType.CONVIVENCIA, label: "Comité de Convivencia" },
+      { value: CommitteeType.COPASST, label: "COPASST" },
     ];
   },
 
   // Get committee types from backend with IDs
-  async getCommitteeTypesFromBackend(): Promise<{ id: number; name: string; committee_type: CommitteeType }[]> {
+  async getCommitteeTypesFromBackend(): Promise<
+    { id: number; name: string; committee_type: CommitteeType }[]
+  > {
     try {
       const response = await api.get(`${BASE_URL}types`);
-      
+
       // Helper function to get display name
       const getDisplayName = (typeName: string): string => {
         switch (typeName.toLowerCase()) {
-          case 'convivencia':
-            return 'Comité de Convivencia';
-          case 'copasst':
-            return 'COPASST (Comité Paritario de Seguridad y Salud en el Trabajo)';
+          case "convivencia":
+            return "Comité de Convivencia";
+          case "copasst":
+            return "COPASST (Comité Paritario de Seguridad y Salud en el Trabajo)";
           default:
             return typeName;
         }
       };
-      
+
       // Map backend response to frontend format
       return response.data.map((type: any) => {
         // Mapear el nombre del backend a los valores del enum del frontend
         let committee_type: string;
         switch (type.name.toLowerCase()) {
-          case 'convivencia':
-            committee_type = 'convivencia';
+          case "convivencia":
+            committee_type = "convivencia";
             break;
-          case 'copasst':
-            committee_type = 'copasst';
+          case "copasst":
+            committee_type = "copasst";
             break;
           default:
             committee_type = type.name.toLowerCase();
         }
-        
+
         return {
           id: type.id,
           name: getDisplayName(type.name), // Use proper display name
-          committee_type: committee_type
+          committee_type: committee_type,
         };
       });
     } catch (error) {
-      console.error('Error fetching committee types from backend:', error);
+      console.error("Error fetching committee types from backend:", error);
       throw error;
     }
   },

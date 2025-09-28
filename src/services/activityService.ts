@@ -172,7 +172,7 @@ export const activityService = {
   // Get activities by status
   async getPendingActivities(committeeId: number): Promise<Activity[]> {
     const response = await api.get(
-      `${BASE_URL}?committee_id=${committeeId}&status=pending`
+      `${BASE_URL}?committee_id=${committeeId}&status=${ActivityStatus.PENDING}`
     );
     return response.data;
   },

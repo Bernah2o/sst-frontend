@@ -23,7 +23,7 @@ export const committeeMemberService = {
   async createCommitteeMember(
     member: CommitteeMemberCreate
   ): Promise<CommitteeMember> {
-    const response = await api.post(BASE_URL.slice(0, -1), member);
+    const response = await api.post(BASE_URL, member);
     return response.data;
   },
 
@@ -52,7 +52,7 @@ export const committeeMemberService = {
     role: CommitteeRole
   ): Promise<CommitteeMember> {
     const roleId = await this.getRoleId(role);
-    const response = await api.patch(`${BASE_URL}${id}/role`, {
+    const response = await api.put(`${BASE_URL}${id}`, {
       role,
       role_id: roleId,
     });
@@ -60,12 +60,12 @@ export const committeeMemberService = {
   },
 
   async deactivateMember(id: number): Promise<CommitteeMember> {
-    const response = await api.patch(`${BASE_URL}${id}/deactivate`);
+    const response = await api.post(`${BASE_URL}${id}/deactivate`);
     return response.data;
   },
 
   async activateMember(id: number): Promise<CommitteeMember> {
-    const response = await api.patch(`${BASE_URL}${id}/activate`);
+    const response = await api.post(`${BASE_URL}${id}/activate`);
     return response.data;
   },
 
