@@ -1737,10 +1737,10 @@ export enum MeetingStatus {
 }
 
 export enum VotingStatus {
-  DRAFT = "draft",
-  ACTIVE = "active",
-  CLOSED = "closed",
-  CANCELLED = "cancelled",
+  DRAFT = "DRAFT",
+  ACTIVE = "ACTIVE",
+  CLOSED = "CLOSED",
+  CANCELLED = "CANCELLED",
 }
 
 export enum VoteChoice {
@@ -1752,18 +1752,18 @@ export enum VoteChoice {
 
 
 export enum ActivityStatus {
-  PENDING = "pending",
-  IN_PROGRESS = "in_progress",
-  COMPLETED = "completed",
-  CANCELLED = "cancelled",
-  OVERDUE = "overdue",
+  PENDING = "PENDING",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
+  OVERDUE = "OVERDUE",
 }
 
 export enum ActivityPriority {
-  LOW = "low",
-  MEDIUM = "medium", 
-  HIGH = "high",
-  CRITICAL = "critical"
+  LOW = "LOW",
+  MEDIUM = "MEDIUM", 
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL"
 }
 
 export enum CommitteeDocumentType {
@@ -2152,10 +2152,10 @@ export interface VotingResults {
 
 // Candidate Voting Types
 export enum CandidateVotingStatus {
-  DRAFT = "draft",
-  ACTIVE = "active",
-  CLOSED = "closed",
-  CANCELLED = "cancelled",
+  DRAFT = "DRAFT",
+  ACTIVE = "ACTIVE",
+  CLOSED = "CLOSED",
+  CANCELLED = "CANCELLED",
 }
 
 export interface CandidateVotingBase {

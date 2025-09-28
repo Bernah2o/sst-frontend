@@ -191,7 +191,7 @@ const EmployeeVotings: React.FC = () => {
   const getStatusColor = (candidate: VotingCandidate): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
     if (candidate.has_voted) return "success";
     if (!candidate.can_vote) return "error";
-    if (candidate.status !== "ACTIVE") return "warning";
+    if (candidate.status !== CandidateVotingStatus.ACTIVE) return "warning";
     return "primary";
   };
 
