@@ -55,6 +55,8 @@ import seguimientoActividadesService, {
   SeguimientoActividadCreate,
   SeguimientoActividadUpdate
 } from '../services/seguimientoActividadesService';
+import ConfirmDialog from './ConfirmDialog';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
 
 interface SeguimientoActividadesModalProps {
   open: boolean;
@@ -97,11 +99,14 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
   };
 
   const prioridadesConfig = {
-    baja: { label: 'Baja', color: 'success' },
-    media: { label: 'Media', color: 'warning' },
-    alta: { label: 'Alta', color: 'error' },
-    critica: { label: 'Crítica', color: 'error' }
+    baja: { label: 'Baja', color: 'success', icon: <FlagIcon /> },
+    media: { label: 'Media', color: 'warning', icon: <FlagIcon /> },
+    alta: { label: 'Alta', color: 'error', icon: <FlagIcon /> },
+    critica: { label: 'Crítica', color: 'error', icon: <WarningIcon /> }
   };
+
+  // Hook para el diálogo de confirmación
+  const { dialogState, showConfirmDialog, hideConfirmDialog } = useConfirmDialog();
 
   useEffect(() => {
     if (open && seguimientoId) {
@@ -166,9 +171,15 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
   };
 
   const handleDeleteActividad = async (id: number) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar esta actividad?')) {
-      return;
-    }
+    const confirmed = await showConfirmDialog({
+      title: 'Eliminar Actividad',
+      message: '¿Está seguro de que desea eliminar esta actividad? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      severity: 'warning'
+    });
+
+    if (!confirmed) return;
 
     try {
       setLoading(true);
@@ -207,9 +218,15 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
   };
 
   const handleDeleteFile = async (actividadId: number) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar este archivo?')) {
-      return;
-    }
+    const confirmed = await showConfirmDialog({
+      title: 'Eliminar Archivo',
+      message: '¿Está seguro de que desea eliminar este archivo? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      severity: 'warning'
+    });
+
+    if (!confirmed) return;
 
     try {
       setLoading(true);
@@ -588,6 +605,18 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de confirmación */}
+      <ConfirmDialog
+        open={dialogState.open}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        severity={dialogState.severity}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
+      />
     </LocalizationProvider>
   );
 };

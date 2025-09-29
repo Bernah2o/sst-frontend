@@ -59,6 +59,8 @@ import {
   NotificationAcknowledgment,
   NotificationFilters,
 } from "../types/adminNotifications";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -119,6 +121,9 @@ const AdminNotifications: React.FC = () => {
     message: string;
     severity: "success" | "error" | "warning" | "info";
   }>({ open: false, message: "", severity: "info" });
+
+  // Hook para el diálogo de confirmación
+  const { dialogState, showConfirmDialog, hideConfirmDialog } = useConfirmDialog();
 
   // Verificar permisos de administrador
   useEffect(() => {
@@ -285,13 +290,15 @@ const AdminNotifications: React.FC = () => {
   };
 
   const handleDeleteAcknowledgment = async (acknowledgmentId: number) => {
-    if (
-      !window.confirm(
-        "¿Estás seguro de que quieres eliminar esta confirmación?"
-      )
-    ) {
-      return;
-    }
+    const confirmed = await showConfirmDialog({
+      title: 'Eliminar Confirmación',
+      message: '¿Estás seguro de que quieres eliminar esta confirmación? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      severity: 'warning'
+    });
+
+    if (!confirmed) return;
 
     setLoading(true);
     try {
@@ -949,6 +956,18 @@ const AdminNotifications: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Diálogo de confirmación */}
+      <ConfirmDialog
+        open={dialogState.open}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        severity={dialogState.severity}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
+      />
     </Box>
   );
 };

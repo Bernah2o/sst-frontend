@@ -54,6 +54,8 @@ import { useParams } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
 
 interface WorkerNovedad {
   id: number;
@@ -206,6 +208,9 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
   const [startDateFilter, setStartDateFilter] = useState<Date | null>(null);
   const [endDateFilter, setEndDateFilter] = useState<Date | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  // Confirm dialog hook
+  const { dialogState, showConfirmDialog, hideConfirmDialog } = useConfirmDialog();
 
   useEffect(() => {
     if (workerId && workerId !== "undefined" && workerId.trim() !== "") {
@@ -416,10 +421,17 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
   };
 
   const handleDeleteNovedad = async (novedadId: number) => {
-    if (!window.confirm("¿Está seguro de que desea eliminar esta novedad?"))
-      return;
-
     try {
+      const confirmed = await showConfirmDialog({
+        title: "Confirmar eliminación",
+        message: "¿Está seguro de que desea eliminar esta novedad? Esta acción no se puede deshacer.",
+        confirmText: "Eliminar",
+        cancelText: "Cancelar",
+        severity: "warning"
+      });
+
+      if (!confirmed) return;
+
       await api.delete(`/workers/novedades/${novedadId}`);
       setSuccess("Novedad eliminada exitosamente");
       fetchNovedades();
@@ -1384,6 +1396,18 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
           {success}
         </Alert>
       </Snackbar>
+
+      {/* Diálogo de confirmación */}
+      <ConfirmDialog
+        open={dialogState.open}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        severity={dialogState.severity}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
+      />
     </Box>
   );
 };

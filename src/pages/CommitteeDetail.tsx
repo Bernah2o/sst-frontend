@@ -47,6 +47,8 @@ import { committeeActivityService } from '../services/committeeActivityService';
 import { committeeDocumentService } from '../services/committeeDocumentService';
 import { committeePermissionService } from '../services/committeePermissionService';
 import ActivityForm from '../components/ActivityForm';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import {
   Committee,
   CommitteeMember,
@@ -105,6 +107,9 @@ const CommitteeDetail: React.FC = () => {
     canManageVotings: false,
     canUploadDocuments: false,
   });
+
+  // Confirm dialog hook
+  const { dialogState, showConfirmDialog, hideConfirmDialog } = useConfirmDialog();
 
   useEffect(() => {
     if (id) {
@@ -329,14 +334,24 @@ const CommitteeDetail: React.FC = () => {
   };
 
   const handleDeleteActivity = async (activityId: number) => {
-    if (committee && window.confirm('¿Estás seguro de que quieres eliminar esta actividad?')) {
-      try {
-        await committeeActivityService.deleteActivity(activityId, committee.id);
-        loadCommitteeData(committee.id);
-      } catch (err) {
-        setError('Error al eliminar la actividad');
-        console.error('Activity deletion error:', err);
-      }
+    if (!committee) return;
+
+    try {
+      const confirmed = await showConfirmDialog({
+        title: "Confirmar eliminación",
+        message: "¿Estás seguro de que quieres eliminar esta actividad? Esta acción no se puede deshacer.",
+        confirmText: "Eliminar",
+        cancelText: "Cancelar",
+        severity: "warning"
+      });
+
+      if (!confirmed) return;
+
+      await committeeActivityService.deleteActivity(activityId, committee.id);
+      loadCommitteeData(committee.id);
+    } catch (err) {
+      setError('Error al eliminar la actividad');
+      console.error('Activity deletion error:', err);
     }
   };
 
@@ -798,6 +813,18 @@ const CommitteeDetail: React.FC = () => {
         activity={editingActivity}
         members={members}
         loading={loading}
+      />
+
+      {/* Diálogo de confirmación */}
+      <ConfirmDialog
+        open={dialogState.open}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        severity={dialogState.severity}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
       />
     </Box>
   );
