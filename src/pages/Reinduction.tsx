@@ -165,6 +165,7 @@ const Reinduction: React.FC = () => {
       
       if (filters.status) params.append('status', filters.status);
       if (filters.worker) params.append('worker_id', filters.worker);
+      if (filters.year) params.append('year', filters.year);
       if (filters.search) params.append('search', filters.search);
 
       const response = await api.get(`/reinduction/records?${params.toString()}`);
@@ -192,7 +193,7 @@ const Reinduction: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, filters.status, filters.worker, filters.search]);
+  }, [page, rowsPerPage, filters.status, filters.worker, filters.year, filters.search]);
 
   useEffect(() => {
     fetchReinductions();

@@ -115,6 +115,7 @@ const NOVEDAD_TYPES = {
   licencia_maternidad: "Licencia de Maternidad",
   horas_extras: "Horas Extras",
   recargos: "Recargos",
+  capacitacion: "Capacitación",
 };
 
 const NOVEDAD_STATUS = {
@@ -539,6 +540,7 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
       "incapacidad_medica",
       "permiso_dia_no_remunerado",
       "licencia_maternidad",
+      "capacitacion",
     ].includes(tipo);
   };
 
