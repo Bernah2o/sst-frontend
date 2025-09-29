@@ -47,6 +47,8 @@ import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import WorkerNovedades from "./WorkerNovedades";
 import WorkerVacations from "./WorkerVacations";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
 
 interface WorkerInfo {
   id: number;
@@ -156,6 +158,9 @@ const WorkerDetail: React.FC = () => {
   const [documentDescription, setDocumentDescription] = useState("");
   const [documentCategory, setDocumentCategory] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Hook para el diálogo de confirmación
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
 
   useEffect(() => {
     if (workerId) {
@@ -328,8 +333,15 @@ const WorkerDetail: React.FC = () => {
   };
 
   const handleDeleteDocument = async (documentId: number) => {
-    if (!window.confirm("¿Está seguro de que desea eliminar este documento?"))
-      return;
+    const confirmed = await showConfirmDialog({
+      title: "Eliminar documento",
+      message: "¿Está seguro de que desea eliminar este documento? Esta acción no se puede deshacer.",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      severity: "error"
+    });
+
+    if (!confirmed) return;
 
     try {
       await api.delete(`/workers/${workerId}/documents/${documentId}`);
@@ -998,6 +1010,18 @@ const WorkerDetail: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Diálogo de confirmación */}
+      <ConfirmDialog
+        open={dialogState.open}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        severity={dialogState.severity}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
+      />
     </Box>
   );
 };
