@@ -299,7 +299,6 @@ const SurveyTabulation: React.FC = () => {
 
   // Helper Functions for Real Statistics
   const calculateRealStatistics = (question: SurveyQuestion, responses: any[]) => {
-
     switch (question.question_type) {
       case 'multiple_choice':
       case 'single_choice':
@@ -316,29 +315,47 @@ const SurveyTabulation: React.FC = () => {
           // Handle different response formats
           let selectedOptions: string[] = [];
           
+          // Priority 1: selected_options field (JSON format)
           if (response.selected_options) {
             try {
               const parsed = JSON.parse(response.selected_options);
               if (Array.isArray(parsed)) {
                 selectedOptions = parsed;
-              } else {
+              } else if (typeof parsed === 'string') {
                 selectedOptions = [parsed];
+              } else {
+                // If it's not an array or string, convert to string
+                selectedOptions = [String(parsed)];
               }
             } catch (e) {
+              // If JSON parsing fails, treat as a single string
               selectedOptions = [response.selected_options];
             }
-          } else if (response.answer_text) {
-            // Handle case where response comes in answer_text instead of selected_options
+          }
+          // Priority 2: answer_text field (for single choice or when selected_options is empty)
+          else if (response.answer_text && response.answer_text.trim() !== '') {
+            // For single choice, answer_text contains the selected option
             selectedOptions = [response.answer_text];
-          } else if (response.display_value) {
-            // Fallback to display_value
+          }
+          // Priority 3: display_value field (fallback)
+          else if (response.display_value && response.display_value !== 'Sin respuesta') {
             selectedOptions = [response.display_value];
           }
           
           // Count the selected options
           selectedOptions.forEach((option: string) => {
-            if (optionCounts.hasOwnProperty(option)) {
-              optionCounts[option]++;
+            // Trim whitespace and check if option exists in the available options
+            const trimmedOption = option.trim();
+            if (optionCounts.hasOwnProperty(trimmedOption)) {
+              optionCounts[trimmedOption]++;
+            } else {
+              // Check for case-insensitive match
+              const matchingOption = options.find((opt: string) => 
+                opt.toLowerCase() === trimmedOption.toLowerCase()
+              );
+              if (matchingOption) {
+                optionCounts[matchingOption]++;
+              }
             }
           });
         });
@@ -352,8 +369,9 @@ const SurveyTabulation: React.FC = () => {
             percentage: totalResponses > 0 ? ((optionCounts[option] || 0) / totalResponses) * 100 : 0
           }))
         };
-        return result;
         
+        return result;
+
       case 'rating':
       case 'scale':
         const numericResponses = responses
@@ -523,11 +541,14 @@ const SurveyTabulation: React.FC = () => {
       case 'multiple_choice':
       case 'single_choice':
         if (statistics.options) {
-          const chartData = statistics.options.map((option, index) => ({
-            name: option.option,
-            value: option.count,
-            percentage: option.percentage
-          }));
+          // Filtrar opciones para el gráfico (solo las que tienen respuestas)
+          const chartData = statistics.options
+            .filter(option => option.count > 0)
+            .map((option, index) => ({
+              name: option.option,
+              value: option.count,
+              percentage: option.percentage
+            }));
 
           return (
             <Box>

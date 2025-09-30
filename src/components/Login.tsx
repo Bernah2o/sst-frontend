@@ -8,7 +8,6 @@ import {
   Alert,
   Card,
   CardContent,
-  Avatar,
   Box,
   Divider,
   InputAdornment,
@@ -18,6 +17,11 @@ import {
   alpha,
   Link,
   CssBaseline,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
 } from "@mui/material";
 import { Email, Lock, Visibility, VisibilityOff } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
@@ -31,16 +35,24 @@ const Login: React.FC = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [openErrorDialog, setOpenErrorDialog] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+    
+    // Limpiar el error cuando el usuario comience a escribir
+    if (error) {
+      setError("");
+      setOpenErrorDialog(false);
+    }
   };
 
   const handleTogglePasswordVisibility = () => {
@@ -49,16 +61,64 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     setError("");
+    setOpenErrorDialog(false); // Asegurar que el diálogo esté cerrado al inicio
     setLoading(true);
 
     try {
-      await login(formData);
-      navigate("/dashboard");
+      const response = await login(formData);
+      
+      // Solo navegar si el login fue exitoso y tenemos una respuesta válida
+      if (response && response.access_token) {
+        setLoading(false);
+        // Pequeño delay para asegurar que el estado se actualice correctamente
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 100);
+      }
     } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión");
-    } finally {
+      // Establecer loading a false primero
       setLoading(false);
+      
+      // Manejar diferentes tipos de errores de autenticación
+      let errorMessage = "Error al iniciar sesión";
+      
+      if (err.response) {
+        const status = err.response.status;
+        const data = err.response.data;
+        
+        switch (status) {
+          case 401:
+            errorMessage = "Credenciales incorrectas. Por favor, verifica tu correo electrónico y contraseña.";
+            break;
+          case 422:
+            if (data.detail && Array.isArray(data.detail)) {
+              errorMessage = "Por favor, verifica que el correo electrónico y la contraseña sean válidos.";
+            } else {
+              errorMessage = data.detail || "Datos de entrada inválidos.";
+            }
+            break;
+          case 429:
+            errorMessage = "Demasiados intentos de inicio de sesión. Por favor, espera un momento antes de intentar nuevamente.";
+            break;
+          case 500:
+            errorMessage = "Error interno del servidor. Por favor, intenta más tarde.";
+            break;
+          default:
+            errorMessage = data.detail || err.message || "Error al iniciar sesión";
+        }
+      } else if (err.request) {
+        errorMessage = "No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet.";
+      } else {
+        errorMessage = err.message || "Error inesperado al iniciar sesión";
+      }
+      
+      // Establecer el error y abrir el diálogo después de un pequeño delay
+      setTimeout(() => {
+        setError(errorMessage);
+        setOpenErrorDialog(true);
+      }, 100);
     }
   };
 
@@ -153,21 +213,6 @@ const Login: React.FC = () => {
               </Box>
 
               <Box component="form" onSubmit={handleSubmit}>
-                {error && (
-                  <Alert
-                    severity="error"
-                    sx={{
-                      mb: 3,
-                      borderRadius: 2,
-                      "& .MuiAlert-message": {
-                        fontSize: "0.95rem",
-                      },
-                    }}
-                  >
-                    {error}
-                  </Alert>
-                )}
-
                 <TextField
                   margin="normal"
                   required
@@ -420,6 +465,60 @@ const Login: React.FC = () => {
           </Typography>
         </Paper>
       </Container>
+
+      {/* Dialog profesional para errores de autenticación */}
+      <Dialog
+        open={openErrorDialog}
+        onClose={() => setOpenErrorDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: theme.shadows[10],
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            backgroundColor: theme.palette.error.main,
+            color: theme.palette.error.contrastText,
+            textAlign: "center",
+            fontWeight: 600,
+            fontSize: "1.25rem",
+          }}
+        >
+          Error de Autenticación
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
+          <DialogContentText
+            sx={{
+              color: theme.palette.text.primary,
+              fontSize: "1rem",
+              lineHeight: 1.6,
+              textAlign: "center",
+            }}
+          >
+            {error}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", pb: 3 }}>
+          <Button
+            onClick={() => setOpenErrorDialog(false)}
+            variant="contained"
+            color="primary"
+            sx={{
+              borderRadius: 2,
+              px: 4,
+              py: 1,
+              fontWeight: 600,
+              textTransform: "none",
+            }}
+          >
+            Entendido
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

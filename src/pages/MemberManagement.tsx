@@ -137,7 +137,6 @@ const MemberManagement: React.FC = () => {
       setUsers(usersData.items || usersData);
     } catch (err) {
       setError('Hubo un problema al cargar la información de miembros. Por favor, intenta recargar la página o contacta al soporte técnico si el problema persiste.');
-      console.error('Member management loading error:', err);
     } finally {
       setLoading(false);
     }
@@ -195,7 +194,6 @@ const MemberManagement: React.FC = () => {
         loadInitialData();
       } catch (err) {
         setError('Error al eliminar el miembro');
-        console.error('Member deletion error:', err);
       }
     }
   };
@@ -220,24 +218,17 @@ const MemberManagement: React.FC = () => {
       setFormLoading(true);
       const id = parseInt(committeeId);
 
-      console.log('handleFormSubmit - editDialogOpen:', editDialogOpen);
-      console.log('handleFormSubmit - selectedMember:', selectedMember);
-      console.log('handleFormSubmit - selectedMember.id:', selectedMember?.id);
-
       if (editDialogOpen && selectedMember) {
         // Update existing member - only send fields that can be updated
-        console.log('Updating member with ID:', selectedMember.id);
         const roleId = await committeeMemberService.getRoleId(formData.role);
         const updateData: CommitteeMemberUpdate = {
           role_id: roleId,
           start_date: formData.start_date,
           notes: formData.notes,
         };
-        console.log('Update data:', updateData);
         await committeeMemberService.updateCommitteeMember(selectedMember.id, updateData);
       } else {
         // Add new member - get role_id first
-        console.log('Creating new member');
         const roleId = await committeeMemberService.getRoleId(formData.role);
         const createData: CommitteeMemberCreate = {
           committee_id: id,
@@ -258,7 +249,6 @@ const MemberManagement: React.FC = () => {
       loadInitialData();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al guardar el miembro');
-      console.error('Member save error:', err);
     } finally {
       setFormLoading(false);
     }

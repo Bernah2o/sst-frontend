@@ -31,6 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData);
+        
         // Validar que el usuario tenga las propiedades necesarias
         if (parsedUser && parsedUser.id && parsedUser.email) {
           setUser(parsedUser);
@@ -94,6 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await apiService.logout();
     } catch (error) {
+      // Error en logout del servidor, pero continuamos limpiando datos locales
     } finally {
       clearAuthData();
     }

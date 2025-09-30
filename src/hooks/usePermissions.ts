@@ -415,6 +415,11 @@ export const usePermissions = () => {
         
         // Cargar accesos a páginas si tiene rol personalizado
         if (user.custom_role_id) {
+          // Verificar nuevamente que el usuario existe antes de hacer la llamada a la API
+          if (!user) {
+            return;
+          }
+          
           const pageResponse = await api.get('/permissions/my-pages');
           setPageAccesses(pageResponse.data);
         } else {
@@ -549,6 +554,11 @@ export const usePermissions = () => {
 
         // Usar el nuevo endpoint optimizado para obtener todos los permisos del usuario
         try {
+          // Verificar nuevamente que el usuario existe antes de hacer la llamada a la API
+          if (!user) {
+            return;
+          }
+          
           const response = await api.get('/auth/me/permissions');
           const userPermissionsData = response.data.pages || [];
           
