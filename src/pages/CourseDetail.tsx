@@ -166,7 +166,7 @@ const CourseDetail: React.FC = () => {
               setHasCertificate(true);
             }
           } catch (error) {
-            console.log('No certificate available yet');
+            // Certificate not available yet
           }
         };
         

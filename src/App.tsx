@@ -6,6 +6,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 
 import ChangePassword from "./components/ChangePassword";
@@ -173,6 +174,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   return <>{children}</>;
 };
 
+// Componente especial para la ruta de login que evita redirecciones automáticas
+const LoginRoute: React.FC = () => {
+  const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
+
+  // Si está cargando, mostrar el componente de login (evita parpadeos)
+  if (loading) {
+    return <Login />;
+  }
+
+  // Solo redirigir si realmente está autenticado, tenemos un usuario válido y no estamos en proceso de login
+  if (isAuthenticated && user && location.pathname === '/login') {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Login />;
+};
+
 // Componente principal de la aplicación
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -198,7 +217,7 @@ const AppContent: React.FC = () => {
         {/* Rutas públicas sin Layout */}
         <Route
           path="/login"
-          element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+          element={<LoginRoute />}
         />
         <Route
           path="/register"

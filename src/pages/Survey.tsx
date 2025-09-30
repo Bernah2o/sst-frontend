@@ -474,11 +474,22 @@ const Survey: React.FC = () => {
       // Redirect to courses or surveys list
       window.location.href = '/employee/courses';
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting survey response:', error);
+      
+      // Extract error message from backend response
+      let errorMessage = 'Error al enviar la encuesta';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setSnackbar({
         open: true,
-        message: 'Debe completar todo el material del curso antes de responder la encuesta',
+        message: errorMessage,
         severity: 'error'
       });
     } finally {
@@ -505,7 +516,8 @@ const Survey: React.FC = () => {
       // Si es una encuesta general y hay usuarios seleccionados, asignarlos
       if (formData.survey_type === 'general' && formSelectedUsers.length > 0) {
         const surveyId = editingSurvey ? editingSurvey.id : surveyResponse.data.id;
-        await api.post(`/surveys/${surveyId}/assign-users`, {
+        await api.post('/surveys/assign', {
+          survey_id: surveyId,
           user_ids: formSelectedUsers
         });
       }
@@ -529,8 +541,35 @@ const Survey: React.FC = () => {
         fetchSurveys();
         setOpenDeleteDialog(false);
         setDeletingSurvey(null);
-      } catch (error) {
+        setSnackbar({
+          open: true,
+          message: 'Encuesta eliminada exitosamente',
+          severity: 'success'
+        });
+      } catch (error: any) {
         console.error('Error deleting survey:', error);
+        
+        let errorMessage = 'Error al eliminar la encuesta';
+        
+        if (error.response?.status === 400) {
+          // Error de integridad de datos
+          errorMessage = error.response.data?.detail || 'No se puede eliminar la encuesta porque tiene respuestas asociadas';
+        } else if (error.response?.status === 403) {
+          errorMessage = 'No tienes permisos para eliminar esta encuesta';
+        } else if (error.response?.status === 404) {
+          errorMessage = 'La encuesta no fue encontrada';
+        } else if (error.response?.status >= 500) {
+          errorMessage = 'Error interno del servidor. Inténtalo más tarde';
+        }
+        
+        setSnackbar({
+          open: true,
+          message: errorMessage,
+          severity: 'error'
+        });
+        
+        setOpenDeleteDialog(false);
+        setDeletingSurvey(null);
       }
     }
   };
@@ -2484,22 +2523,46 @@ const Survey: React.FC = () => {
           onClose={() => setOpenDeleteDialog(false)}
           aria-labelledby="delete-dialog-title"
           aria-describedby="delete-dialog-description"
+          maxWidth="sm"
+          fullWidth
         >
-          <DialogTitle id="delete-dialog-title">
-            Confirmar Eliminación
+          <DialogTitle id="delete-dialog-title" sx={{ pb: 1 }}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <DeleteIcon color="error" />
+              Confirmar Eliminación
+            </Box>
           </DialogTitle>
           <DialogContent>
-            <Typography id="delete-dialog-description">
-              ¿Está seguro de que desea eliminar la encuesta "{deletingSurvey?.title}"?
-              Esta acción no se puede deshacer.
+            <Typography id="delete-dialog-description" variant="body1" sx={{ mb: 2 }}>
+              ¿Está seguro de que desea eliminar la encuesta <strong>"{deletingSurvey?.title}"</strong>?
             </Typography>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Importante:</strong> Esta acción no se puede deshacer.
+              </Typography>
+            </Alert>
+            <Alert severity="info">
+              <Typography variant="body2">
+                <strong>Nota:</strong> Si la encuesta tiene respuestas de usuarios, no podrá ser eliminada. 
+                En ese caso, considere cambiar su estado a "Archivada" en lugar de eliminarla.
+              </Typography>
+            </Alert>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenDeleteDialog(false)} color="primary">
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button 
+              onClick={() => setOpenDeleteDialog(false)} 
+              color="primary"
+              variant="outlined"
+            >
               Cancelar
             </Button>
-            <Button onClick={confirmDeleteSurvey} color="error" variant="contained">
-              Eliminar
+            <Button 
+              onClick={confirmDeleteSurvey} 
+              color="error" 
+              variant="contained"
+              startIcon={<DeleteIcon />}
+            >
+              Eliminar Encuesta
             </Button>
           </DialogActions>
         </Dialog>
