@@ -24,7 +24,7 @@ class Logger {
    */
   debug(...args: any[]): void {
     if (this.isDebugEnabled && !this.isProduction) {
-      console.log('[DEBUG]', ...args);
+      // console.log('[DEBUG]', ...args);
     }
   }
 

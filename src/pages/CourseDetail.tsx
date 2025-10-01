@@ -895,10 +895,10 @@ const CourseDetail: React.FC = () => {
                       e.currentTarget.removeAttribute('poster');
                     }}
                     onLoadStart={() => {
-                      console.log('Video loading started');
+                      // Video loading started
                     }}
                     onCanPlay={() => {
-                      console.log('Video can start playing');
+                      // Video can start playing
                     }}
                   >
                     <source src={materialContent} type="video/mp4" />
