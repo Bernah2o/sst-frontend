@@ -6,7 +6,6 @@ import {
   Routes,
   Route,
   Navigate,
-  useLocation,
 } from "react-router-dom";
 
 import ChangePassword from "./components/ChangePassword";
@@ -126,7 +125,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, loading } = useAuth();
   const permissions = usePermissions();
-  const location = window.location.pathname;
 
   if (loading) {
     return <Box sx={{ p: 4, textAlign: "center" }}>Cargando...</Box>;
@@ -176,19 +174,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
 // Componente especial para la ruta de login que evita redirecciones automáticas
 const LoginRoute: React.FC = () => {
-  const { isAuthenticated, loading, user } = useAuth();
-  const location = useLocation();
+  const { loading } = useAuth();
 
   // Si está cargando, mostrar el componente de login (evita parpadeos)
   if (loading) {
     return <Login />;
   }
 
-  // Solo redirigir si realmente está autenticado, tenemos un usuario válido y no estamos en proceso de login
-  if (isAuthenticated && user && location.pathname === '/login') {
-    return <Navigate to="/" replace />;
-  }
-
+  // Solo mostrar el componente de login sin redirecciones automáticas
   return <Login />;
 };
 
@@ -215,21 +208,22 @@ const AppContent: React.FC = () => {
     <Router>
       <Routes>
         {/* Rutas públicas sin Layout */}
-        <Route
-          path="/login"
-          element={<LoginRoute />}
-        />
+        <Route path="/login" element={<LoginRoute />} />
         <Route
           path="/register"
           element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
         />
         <Route
           path="/forgot-password"
-          element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />}
+          element={
+            isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />
+          }
         />
         <Route
           path="/reset-password"
-          element={isAuthenticated ? <Navigate to="/" replace /> : <ResetPassword />}
+          element={
+            isAuthenticated ? <Navigate to="/" replace /> : <ResetPassword />
+          }
         />
 
         {/* Rutas protegidas con Layout */}
@@ -483,7 +477,9 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/candidate-voting"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor", "employee"]}>
+                      <ProtectedRoute
+                        allowedRoles={["admin", "supervisor", "employee"]}
+                      >
                         <CandidateVoting />
                       </ProtectedRoute>
                     }
@@ -624,7 +620,6 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
-
 
                   {/* Rutas de certificados y notificaciones */}
                   <Route
@@ -837,7 +832,23 @@ const AppContent: React.FC = () => {
 
 // Componente para redirigir al dashboard correcto según el rol
 const DashboardRedirect: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  // Mostrar loading mientras se verifica el usuario
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        Cargando...
+      </Box>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -845,7 +856,7 @@ const DashboardRedirect: React.FC = () => {
 
   // Usar user.role en lugar de user.rol para consistencia
   const userRole = user.role || user.rol;
-  
+
   switch (userRole) {
     case "admin":
       return <Navigate to="/admin/dashboard" replace />;

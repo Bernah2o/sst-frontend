@@ -17,14 +17,9 @@ import {
   alpha,
   Link,
   CssBaseline,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
 } from "@mui/material";
 import { Email, Lock, Visibility, VisibilityOff } from "@mui/icons-material";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 const Login: React.FC = () => {
@@ -35,24 +30,25 @@ const Login: React.FC = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [openErrorDialog, setOpenErrorDialog] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  // Removido openErrorDialog - ahora solo usamos Alert
   const { login } = useAuth();
-  const navigate = useNavigate();
   const theme = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-    
-    // Limpiar el error cuando el usuario comience a escribir
-    if (error) {
-      setError("");
-      setOpenErrorDialog(false);
+
+    // Limpiar solo el estado de éxito cuando el usuario escriba
+    if (success) {
+      setSuccess(false);
     }
+    // No limpiar automáticamente el error - el usuario debe cerrarlo manualmente
   };
 
   const handleTogglePasswordVisibility = () => {
@@ -61,64 +57,73 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Limpiar errores previos solo al iniciar un nuevo intento de login
     setError("");
-    setOpenErrorDialog(false); // Asegurar que el diálogo esté cerrado al inicio
+    setSuccess(false);
     setLoading(true);
 
     try {
       const response = await login(formData);
-      
+
       // Solo navegar si el login fue exitoso y tenemos una respuesta válida
       if (response && response.access_token) {
         setLoading(false);
-        // Pequeño delay para asegurar que el estado se actualice correctamente
+        setSuccess(true);
+        setIsRedirecting(true);
+
+        // Prevenir que el AuthContext cause redirección automática
+        // Esperar un poco más para que el usuario vea el mensaje de éxito
         setTimeout(() => {
-          navigate("/dashboard");
-        }, 100);
+          // Usar window.location.href para una redirección más limpia
+          window.location.href = "/dashboard";
+        }, 3000);
       }
     } catch (err: any) {
       // Establecer loading a false primero
       setLoading(false);
-      
+
       // Manejar diferentes tipos de errores de autenticación
       let errorMessage = "Error al iniciar sesión";
-      
+
       if (err.response) {
         const status = err.response.status;
         const data = err.response.data;
-        
+
         switch (status) {
           case 401:
-            errorMessage = "Credenciales incorrectas. Por favor, verifica tu correo electrónico y contraseña.";
+            errorMessage =
+              "Credenciales incorrectas. Por favor, verifica tu correo electrónico y contraseña.";
             break;
           case 422:
             if (data.detail && Array.isArray(data.detail)) {
-              errorMessage = "Por favor, verifica que el correo electrónico y la contraseña sean válidos.";
+              errorMessage =
+                "Por favor, verifica que el correo electrónico y la contraseña sean válidos.";
             } else {
               errorMessage = data.detail || "Datos de entrada inválidos.";
             }
             break;
           case 429:
-            errorMessage = "Demasiados intentos de inicio de sesión. Por favor, espera un momento antes de intentar nuevamente.";
+            errorMessage =
+              "Demasiados intentos de inicio de sesión. Por favor, espera un momento antes de intentar nuevamente.";
             break;
           case 500:
-            errorMessage = "Error interno del servidor. Por favor, intenta más tarde.";
+            errorMessage =
+              "Error interno del servidor. Por favor, intenta más tarde.";
             break;
           default:
-            errorMessage = data.detail || err.message || "Error al iniciar sesión";
+            errorMessage =
+              data.detail || err.message || "Error al iniciar sesión";
         }
       } else if (err.request) {
-        errorMessage = "No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet.";
+        errorMessage =
+          "No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet.";
       } else {
         errorMessage = err.message || "Error inesperado al iniciar sesión";
       }
-      
-      // Establecer el error y abrir el diálogo después de un pequeño delay
-      setTimeout(() => {
-        setError(errorMessage);
-        setOpenErrorDialog(true);
-      }, 100);
+
+      // Establecer el error inmediatamente - se mostrará como Alert
+      setError(errorMessage);
     }
   };
 
@@ -225,7 +230,7 @@ const Login: React.FC = () => {
                   autoFocus
                   value={formData.email}
                   onChange={handleChange}
-                  disabled={loading}
+                  disabled={loading || isRedirecting}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -275,7 +280,7 @@ const Login: React.FC = () => {
                   autoComplete="current-password"
                   value={formData.password}
                   onChange={handleChange}
-                  disabled={loading}
+                  disabled={loading || isRedirecting}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -288,7 +293,7 @@ const Login: React.FC = () => {
                           aria-label="toggle password visibility"
                           onClick={handleTogglePasswordVisibility}
                           edge="end"
-                          disabled={loading}
+                          disabled={loading || isRedirecting}
                           sx={{
                             color: "action.active",
                             "&:hover": {
@@ -339,10 +344,10 @@ const Login: React.FC = () => {
                   type="submit"
                   fullWidth
                   variant="contained"
-                  disabled={loading}
+                  disabled={loading || isRedirecting}
                   sx={{
                     mt: { xs: 1.5, sm: 2 },
-                    mb: { xs: 3, sm: 4 },
+                    mb: { xs: 2, sm: 3 },
                     py: { xs: 1.5, sm: 1.8 },
                     borderRadius: 2,
                     fontSize: { xs: "1rem", sm: "1.1rem" },
@@ -375,10 +380,84 @@ const Login: React.FC = () => {
                       <CircularProgress size={20} color="inherit" />
                       Iniciando sesión...
                     </Box>
+                  ) : isRedirecting ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CircularProgress size={20} color="inherit" />
+                      Redirigiendo...
+                    </Box>
                   ) : (
                     "Iniciar Sesión"
                   )}
                 </Button>
+
+                {/* Alert para mostrar errores - permanece hasta que el usuario lo cierre */}
+                {error && (
+                  <Alert
+                    severity="error"
+                    sx={{
+                      mt: 2,
+                      mb: 2,
+                      borderRadius: 2,
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                      animation: "fadeIn 0.3s ease-in",
+                      "& .MuiAlert-message": {
+                        width: "100%",
+                        textAlign: "center",
+                      },
+                      "& .MuiAlert-icon": {
+                        fontSize: "1.2rem",
+                      },
+                      "@keyframes fadeIn": {
+                        "0%": {
+                          opacity: 0,
+                          transform: "translateY(-10px)",
+                        },
+                        "100%": {
+                          opacity: 1,
+                          transform: "translateY(0)",
+                        },
+                      },
+                    }}
+                    onClose={() => setError("")}
+                  >
+                    {error}
+                  </Alert>
+                )}
+
+                {/* Alert para mostrar éxito de login */}
+                {success && (
+                  <Alert
+                    severity="success"
+                    sx={{
+                      mt: 2,
+                      mb: 2,
+                      borderRadius: 2,
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                      animation: "fadeIn 0.3s ease-in",
+                      "& .MuiAlert-message": {
+                        width: "100%",
+                        textAlign: "center",
+                      },
+                      "& .MuiAlert-icon": {
+                        fontSize: "1.2rem",
+                      },
+                      "@keyframes fadeIn": {
+                        "0%": {
+                          opacity: 0,
+                          transform: "translateY(-10px)",
+                        },
+                        "100%": {
+                          opacity: 1,
+                          transform: "translateY(0)",
+                        },
+                      },
+                    }}
+                  >
+                    ¡Inicio de sesión exitoso! Redirigiendo al dashboard...
+                  </Alert>
+                )}
 
                 <Box sx={{ textAlign: "center", mt: { xs: 2, sm: 3 } }}>
                   <Typography
@@ -465,60 +544,6 @@ const Login: React.FC = () => {
           </Typography>
         </Paper>
       </Container>
-
-      {/* Dialog profesional para errores de autenticación */}
-      <Dialog
-        open={openErrorDialog}
-        onClose={() => setOpenErrorDialog(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: theme.shadows[10],
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            backgroundColor: theme.palette.error.main,
-            color: theme.palette.error.contrastText,
-            textAlign: "center",
-            fontWeight: 600,
-            fontSize: "1.25rem",
-          }}
-        >
-          Error de Autenticación
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3, pb: 2 }}>
-          <DialogContentText
-            sx={{
-              color: theme.palette.text.primary,
-              fontSize: "1rem",
-              lineHeight: 1.6,
-              textAlign: "center",
-            }}
-          >
-            {error}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: "center", pb: 3 }}>
-          <Button
-            onClick={() => setOpenErrorDialog(false)}
-            variant="contained"
-            color="primary"
-            sx={{
-              borderRadius: 2,
-              px: 4,
-              py: 1,
-              fontWeight: 600,
-              textTransform: "none",
-            }}
-          >
-            Entendido
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
