@@ -14,5 +14,13 @@ EOF
 echo "Runtime configuration generated:"
 cat /app/build/config.js
 
-# Start the application
-exec "$@"
+# Check if logging is disabled in production
+if [ "${REACT_APP_ENABLE_LOGGING:-false}" = "false" ] && [ "${REACT_APP_ENVIRONMENT:-production}" = "production" ]; then
+    echo "Starting application with minimal logging..."
+    # Redirect stdout to /dev/null but keep stderr for critical errors
+    exec "$@" > /dev/null
+else
+    echo "Starting application with full logging..."
+    # Start the application normally
+    exec "$@"
+fi
