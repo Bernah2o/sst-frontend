@@ -32,6 +32,7 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isAccountLocked, setIsAccountLocked] = useState(false);
   // Removido openErrorDialog - ahora solo usamos Alert
   const { login } = useAuth();
   const theme = useTheme();
@@ -44,9 +45,12 @@ const Login: React.FC = () => {
       [name]: value,
     }));
 
-    // Limpiar solo el estado de éxito cuando el usuario escriba
+    // Limpiar estados cuando el usuario escriba
     if (success) {
       setSuccess(false);
+    }
+    if (isAccountLocked) {
+      setIsAccountLocked(false);
     }
     // No limpiar automáticamente el error - el usuario debe cerrarlo manualmente
   };
@@ -102,6 +106,11 @@ const Login: React.FC = () => {
             } else {
               errorMessage = data.detail || "Datos de entrada inválidos.";
             }
+            break;
+          case 423:
+            setIsAccountLocked(true);
+            errorMessage =
+              data.detail || "Su cuenta ha sido bloqueada por múltiples intentos de inicio de sesión fallidos. Para desbloquear su cuenta, debe restablecer su contraseña utilizando el enlace 'Olvidé mi contraseña'.";
             break;
           case 429:
             errorMessage =
@@ -419,9 +428,32 @@ const Login: React.FC = () => {
                         },
                       },
                     }}
-                    onClose={() => setError("")}
+                    onClose={() => {
+                      setError("");
+                      setIsAccountLocked(false);
+                    }}
                   >
-                    {error}
+                    <Box>
+                      {error}
+                      {isAccountLocked && (
+                        <Box sx={{ mt: 1 }}>
+                          <Link
+                            component={RouterLink}
+                            to="/forgot-password"
+                            sx={{
+                              color: "error.dark",
+                              textDecoration: "underline",
+                              fontWeight: 600,
+                              "&:hover": {
+                                color: "error.main",
+                              },
+                            }}
+                          >
+                            Restablecer contraseña ahora
+                          </Link>
+                        </Box>
+                      )}
+                    </Box>
                   </Alert>
                 )}
 
