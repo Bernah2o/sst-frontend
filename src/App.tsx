@@ -41,6 +41,10 @@ import OccupationalExam from "./pages/OccupationalExam";
 import Seguimiento from "./pages/Seguimiento";
 import Reinduction from "./pages/Reinduction";
 import Suppliers from "./pages/Suppliers";
+import Contractors from "./pages/Contractors";
+import ContractorDetail from "./pages/ContractorDetail";
+import ContractorDocuments from "./pages/ContractorDocuments";
+import ContractorForm from "./pages/ContractorForm";
 
 // Committee components
 import CommitteeList from "./pages/CommitteeList";
@@ -299,6 +303,49 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
+
+                  {/* Rutas de contratistas */}
+                  <Route
+                    path="/admin/contractors"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <Contractors />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/contractors/new"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <ContractorForm />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/contractors/:id"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <ContractorDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/contractors/edit/:id"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <ContractorForm />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/contractors/documents"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <ContractorDocuments />
+                      </ProtectedRoute>
+                    }
+                  />
+
                   <Route
                     path="/admin/config"
                     element={

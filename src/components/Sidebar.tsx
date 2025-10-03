@@ -35,6 +35,7 @@ import {
   PersonSearch,
   BeachAccess,
   HowToVote,
+  Business,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -264,6 +265,28 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           label: "Gestión de Vacaciones",
           icon: <BeachAccess />,
           path: "/admin/workers/vacations",
+          roles: ["admin", "supervisor"],
+        },
+      ],
+      roles: ["admin", "supervisor"],
+    },
+    {
+      id: "contractor-management",
+      label: "Gestión de Contratistas",
+      icon: <Business />,
+      children: [
+        {
+          id: "contractors",
+          label: "Contratistas",
+          icon: <Business />,
+          path: "/admin/contractors",
+          roles: ["admin", "supervisor"],
+        },
+        {
+          id: "contractor-documents",
+          label: "Documentos",
+          icon: <Description />,
+          path: "/admin/contractors/documents",
           roles: ["admin", "supervisor"],
         },
       ],
@@ -560,6 +583,14 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             workers: canViewWorkersPage,
             "workers-list": canViewWorkersPage,
             "worker-detail": canViewWorkersPage,
+
+            // Contractor management
+            "contractor-management": () =>
+              user.role === "admin" || user.role === "supervisor",
+            contractors: () =>
+              user.role === "admin" || user.role === "supervisor",
+            "contractor-documents": () =>
+              user.role === "admin" || user.role === "supervisor",
 
             // Course management - Solo para roles administrativos, no para employees
             courses: () => user.role !== "employee" && canViewCoursesPage(),
