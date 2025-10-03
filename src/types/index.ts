@@ -2152,10 +2152,10 @@ export interface VotingResults {
 
 // Candidate Voting Types
 export enum CandidateVotingStatus {
-  DRAFT = "DRAFT",
-  ACTIVE = "ACTIVE",
-  CLOSED = "CLOSED",
-  CANCELLED = "CANCELLED",
+  DRAFT = "draft",
+  ACTIVE = "active",
+  CLOSED = "closed",
+  CANCELLED = "cancelled",
 }
 
 export interface CandidateVotingBase {
@@ -2344,3 +2344,6 @@ export type Vote = VoteResponse;
 export type Activity = ActivityResponse;
 export type CommitteeDocument = CommitteeDocumentResponse;
 export type CommitteePermission = CommitteePermissionResponse;
+
+// Export contractor types
+export * from './contractor';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -22,7 +22,7 @@ import {
   Tooltip,
   Alert,
   CircularProgress,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -34,17 +34,17 @@ import {
   HowToVote as VoteIcon,
   TrendingUp as TrendingUpIcon,
   Schedule as ScheduleIcon,
-} from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import candidateVotingService from '../services/candidateVotingService';
-import CandidateVotingDetailsModal from '../components/CandidateVotingDetailsModal';
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import candidateVotingService from "../services/candidateVotingService";
+import CandidateVotingDetailsModal from "../components/CandidateVotingDetailsModal";
 import {
   CandidateVotingResponse,
   CandidateVotingStatsResponse,
   CandidateVotingStatus,
-} from '../types';
+} from "../types";
 
 const CandidateVotingAdmin: React.FC = () => {
   const navigate = useNavigate();
@@ -53,9 +53,12 @@ const CandidateVotingAdmin: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-  const [selectedVoting, setSelectedVoting] = useState<CandidateVotingResponse | null>(null);
+  const [selectedVoting, setSelectedVoting] =
+    useState<CandidateVotingResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<CandidateVotingStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    CandidateVotingStatus | "all"
+  >("all");
 
   useEffect(() => {
     loadData();
@@ -68,13 +71,13 @@ const CandidateVotingAdmin: React.FC = () => {
         candidateVotingService.getAllVotings(),
         candidateVotingService.getStats(),
       ]);
-      
+
       // El backend ya envía committee_type como string, no necesitamos mapear
       setVotings(votingsData);
       setStats(statsData);
     } catch (error) {
-      console.error('Error loading data:', error);
-      setError('Error al cargar los datos');
+      console.error("Error loading data:", error);
+      setError("Error al cargar los datos");
     } finally {
       setLoading(false);
     }
@@ -85,8 +88,8 @@ const CandidateVotingAdmin: React.FC = () => {
       await candidateVotingService.activateVoting(voting.id);
       await loadData();
     } catch (error) {
-      console.error('Error activating voting:', error);
-      setError('Error al activar la votación');
+      console.error("Error activating voting:", error);
+      setError("Error al activar la votación");
     }
   };
 
@@ -95,8 +98,8 @@ const CandidateVotingAdmin: React.FC = () => {
       await candidateVotingService.closeVoting(voting.id);
       await loadData();
     } catch (error) {
-      console.error('Error closing voting:', error);
-      setError('Error al cerrar la votación');
+      console.error("Error closing voting:", error);
+      setError("Error al cerrar la votación");
     }
   };
 
@@ -109,8 +112,8 @@ const CandidateVotingAdmin: React.FC = () => {
       setDeleteDialogOpen(false);
       setSelectedVoting(null);
     } catch (error) {
-      console.error('Error deleting voting:', error);
-      setError('Error al eliminar la votación');
+      console.error("Error deleting voting:", error);
+      setError("Error al eliminar la votación");
     }
   };
 
@@ -119,42 +122,42 @@ const CandidateVotingAdmin: React.FC = () => {
     setDetailsModalOpen(true);
   };
 
-  const handleCardClick = (filter: CandidateVotingStatus | 'all') => {
+  const handleCardClick = (filter: CandidateVotingStatus | "all") => {
     setStatusFilter(filter);
   };
 
   const getFilteredVotings = () => {
-    if (statusFilter === 'all') {
+    if (statusFilter === "all") {
       return votings;
     }
-    return votings.filter(voting => voting.status === statusFilter);
+    return votings.filter((voting) => voting.status === statusFilter);
   };
 
   const getStatusColor = (status: CandidateVotingStatus) => {
     switch (status) {
       case CandidateVotingStatus.DRAFT:
-        return 'default';
+        return "default";
       case CandidateVotingStatus.ACTIVE:
-        return 'success';
+        return "success";
       case CandidateVotingStatus.CLOSED:
-        return 'info';
+        return "info";
       case CandidateVotingStatus.CANCELLED:
-        return 'error';
+        return "error";
       default:
-        return 'default';
+        return "default";
     }
   };
 
   const getStatusLabel = (status: CandidateVotingStatus) => {
     switch (status) {
       case CandidateVotingStatus.DRAFT:
-        return 'Borrador';
+        return "Borrador";
       case CandidateVotingStatus.ACTIVE:
-        return 'Activa';
+        return "Activa";
       case CandidateVotingStatus.CLOSED:
-        return 'Cerrada';
+        return "Cerrada";
       case CandidateVotingStatus.CANCELLED:
-        return 'Cancelada';
+        return "Cancelada";
       default:
         return status;
     }
@@ -162,7 +165,12 @@ const CandidateVotingAdmin: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress />
       </Box>
     );
@@ -170,14 +178,19 @@ const CandidateVotingAdmin: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
         <Typography variant="h4" component="h1">
           Administración de Votaciones de Candidatos
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/admin/candidate-votings/new')}
+          onClick={() => navigate("/admin/candidate-votings/new")}
         >
           Nueva Votación
         </Button>
@@ -193,18 +206,19 @@ const CandidateVotingAdmin: React.FC = () => {
       {stats && (
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card 
-              sx={{ 
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                border: statusFilter === 'all' ? 2 : 1,
-                borderColor: statusFilter === 'all' ? 'primary.main' : 'divider',
-                '&:hover': { 
-                  transform: 'translateY(-2px)',
-                  boxShadow: 3 
-                }
+            <Card
+              sx={{
+                cursor: "pointer",
+                transition: "all 0.2s",
+                border: statusFilter === "all" ? 2 : 1,
+                borderColor:
+                  statusFilter === "all" ? "primary.main" : "divider",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: 3,
+                },
               }}
-              onClick={() => handleCardClick('all')}
+              onClick={() => handleCardClick("all")}
             >
               <CardContent>
                 <Box display="flex" alignItems="center">
@@ -220,16 +234,19 @@ const CandidateVotingAdmin: React.FC = () => {
             </Card>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card 
-              sx={{ 
-                cursor: 'pointer',
-                transition: 'all 0.2s',
+            <Card
+              sx={{
+                cursor: "pointer",
+                transition: "all 0.2s",
                 border: statusFilter === CandidateVotingStatus.ACTIVE ? 2 : 1,
-                borderColor: statusFilter === CandidateVotingStatus.ACTIVE ? 'success.main' : 'divider',
-                '&:hover': { 
-                  transform: 'translateY(-2px)',
-                  boxShadow: 3 
-                }
+                borderColor:
+                  statusFilter === CandidateVotingStatus.ACTIVE
+                    ? "success.main"
+                    : "divider",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: 3,
+                },
               }}
               onClick={() => handleCardClick(CandidateVotingStatus.ACTIVE)}
             >
@@ -247,16 +264,19 @@ const CandidateVotingAdmin: React.FC = () => {
             </Card>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card 
-              sx={{ 
-                cursor: 'pointer',
-                transition: 'all 0.2s',
+            <Card
+              sx={{
+                cursor: "pointer",
+                transition: "all 0.2s",
                 border: statusFilter === CandidateVotingStatus.CLOSED ? 2 : 1,
-                borderColor: statusFilter === CandidateVotingStatus.CLOSED ? 'info.main' : 'divider',
-                '&:hover': { 
-                  transform: 'translateY(-2px)',
-                  boxShadow: 3 
-                }
+                borderColor:
+                  statusFilter === CandidateVotingStatus.CLOSED
+                    ? "info.main"
+                    : "divider",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: 3,
+                },
               }}
               onClick={() => handleCardClick(CandidateVotingStatus.CLOSED)}
             >
@@ -274,16 +294,19 @@ const CandidateVotingAdmin: React.FC = () => {
             </Card>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card 
-              sx={{ 
-                cursor: 'pointer',
-                transition: 'all 0.2s',
+            <Card
+              sx={{
+                cursor: "pointer",
+                transition: "all 0.2s",
                 border: statusFilter === CandidateVotingStatus.DRAFT ? 2 : 1,
-                borderColor: statusFilter === CandidateVotingStatus.DRAFT ? 'warning.main' : 'divider',
-                '&:hover': { 
-                  transform: 'translateY(-2px)',
-                  boxShadow: 3 
-                }
+                borderColor:
+                  statusFilter === CandidateVotingStatus.DRAFT
+                    ? "warning.main"
+                    : "divider",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: 3,
+                },
               }}
               onClick={() => handleCardClick(CandidateVotingStatus.DRAFT)}
             >
@@ -306,16 +329,23 @@ const CandidateVotingAdmin: React.FC = () => {
       {/* Tabla de votaciones */}
       <Card>
         <CardContent>
-          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            mb={2}
+          >
             <Typography variant="h6">
               Lista de Votaciones
-              {statusFilter !== 'all' && (
+              {statusFilter !== "all" && (
                 <Chip
-                  label={`Filtro: ${getStatusLabel(statusFilter as CandidateVotingStatus)}`}
+                  label={`Filtro: ${getStatusLabel(
+                    statusFilter as CandidateVotingStatus
+                  )}`}
                   size="small"
                   color="primary"
                   sx={{ ml: 2 }}
-                  onDelete={() => setStatusFilter('all')}
+                  onDelete={() => setStatusFilter("all")}
                 />
               )}
             </Typography>
@@ -341,20 +371,20 @@ const CandidateVotingAdmin: React.FC = () => {
                 {getFilteredVotings().map((voting) => (
                   <TableRow key={voting.id}>
                     <TableCell>
-                      <Typography variant="subtitle2">{voting.title}</Typography>
+                      <Typography variant="subtitle2">
+                        {voting.title}
+                      </Typography>
                       {voting.description && (
                         <Typography variant="body2" color="text.secondary">
                           {voting.description}
                         </Typography>
                       )}
                     </TableCell>
-                    <TableCell>
-                      {voting.committee_type || 'N/A'}
-                    </TableCell>
+                    <TableCell>{voting.committee_type || "N/A"}</TableCell>
                     <TableCell>
                       <Chip
-                        label={voting.is_anonymous ? 'Anónima' : 'Pública'}
-                        color={voting.is_anonymous ? 'secondary' : 'primary'}
+                        label={voting.is_anonymous ? "Anónima" : "Pública"}
+                        color={voting.is_anonymous ? "secondary" : "primary"}
                         size="small"
                         variant="outlined"
                       />
@@ -367,13 +397,19 @@ const CandidateVotingAdmin: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      {format(new Date(voting.start_date), 'dd/MM/yyyy HH:mm', { locale: es })}
+                      {format(new Date(voting.start_date), "dd/MM/yyyy HH:mm", {
+                        locale: es,
+                      })}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(voting.end_date), 'dd/MM/yyyy HH:mm', { locale: es })}
+                      {format(new Date(voting.end_date), "dd/MM/yyyy HH:mm", {
+                        locale: es,
+                      })}
                     </TableCell>
                     <TableCell>
-                      {voting.participation_rate ? `${voting.participation_rate.toFixed(1)}%` : 'N/A'}
+                      {voting.participation_rate
+                        ? `${voting.participation_rate.toFixed(1)}%`
+                        : "N/A"}
                     </TableCell>
                     <TableCell>
                       <Box display="flex" gap={1}>
@@ -390,7 +426,11 @@ const CandidateVotingAdmin: React.FC = () => {
                             <Tooltip title="Editar">
                               <IconButton
                                 size="small"
-                                onClick={() => navigate(`/admin/candidate-votings/${voting.id}/edit`)}
+                                onClick={() =>
+                                  navigate(
+                                    `/admin/candidate-votings/${voting.id}/edit`
+                                  )
+                                }
                               >
                                 <EditIcon />
                               </IconButton>
@@ -425,7 +465,9 @@ const CandidateVotingAdmin: React.FC = () => {
                               setSelectedVoting(voting);
                               setDeleteDialogOpen(true);
                             }}
-                            disabled={voting.status === CandidateVotingStatus.ACTIVE}
+                            disabled={
+                              voting.status === CandidateVotingStatus.ACTIVE
+                            }
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -441,12 +483,15 @@ const CandidateVotingAdmin: React.FC = () => {
       </Card>
 
       {/* Dialog de confirmación de eliminación */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
         <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
           <Typography>
-            ¿Está seguro de que desea eliminar la votación "{selectedVoting?.title}"?
-            Esta acción no se puede deshacer.
+            ¿Está seguro de que desea eliminar la votación "
+            {selectedVoting?.title}"? Esta acción no se puede deshacer.
           </Typography>
           {selectedVoting?.status === CandidateVotingStatus.ACTIVE && (
             <Alert severity="warning" sx={{ mt: 2 }}>
@@ -455,15 +500,16 @@ const CandidateVotingAdmin: React.FC = () => {
           )}
           {selectedVoting?.status === CandidateVotingStatus.CLOSED && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              Esta votación ya está cerrada. La eliminación removerá todos los datos de votación asociados.
+              Esta votación ya está cerrada. La eliminación removerá todos los
+              datos de votación asociados.
             </Alert>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
-          <Button 
-            onClick={handleDeleteVoting} 
-            color="error" 
+          <Button
+            onClick={handleDeleteVoting}
+            color="error"
             variant="contained"
             disabled={selectedVoting?.status === CandidateVotingStatus.ACTIVE}
           >
