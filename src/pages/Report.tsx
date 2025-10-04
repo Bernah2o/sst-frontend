@@ -1,18 +1,13 @@
 import {
   Download,
   Refresh,
-  Assessment,
   School,
   Person,
   Event,
   TrendingUp,
   ExpandMore,
   CheckCircle,
-  Cancel,
   Schedule,
-  Grade,
-  PictureAsPdf,
-  MedicalServices,
 } from "@mui/icons-material";
 import {
   Box,
@@ -42,11 +37,6 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  CircularProgress,
   Grid,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -64,9 +54,8 @@ import {
   PointElement,
   LineElement,
 } from "chart.js";
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useCallback } from "react";
 import { Bar, Line } from "react-chartjs-2";
 
 import api from "./../services/api";
@@ -169,14 +158,7 @@ const ReportsManagement: React.FC = () => {
   });
   const [exportLoading, setExportLoading] = useState(false);
   
-
-
-  useEffect(() => {
-    fetchReportData();
-    fetchCourses();
-  }, [selectedCourse, startDate, endDate]);
-
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -226,7 +208,14 @@ const ReportsManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCourse, startDate, endDate]);
+
+  useEffect(() => {
+    fetchReportData();
+    fetchCourses();
+  }, [selectedCourse, startDate, endDate, fetchReportData]);
+
+
 
   const fetchCourses = async () => {
     try {

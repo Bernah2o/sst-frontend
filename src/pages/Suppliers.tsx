@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -26,13 +26,8 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActions,
   Tabs,
   Tab,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   Divider,
   Switch,
   FormControlLabel
@@ -134,13 +129,9 @@ const Suppliers: React.FC = () => {
     'Médico General'
   ];
 
-  useEffect(() => {
-    fetchSuppliers();
-    fetchDoctors();
-    fetchSupplierTypes();
-  }, [filters]);
+  
 
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = useCallback(async () => {
     try {
       setLoading(true);
       const data = await suppliersService.getSuppliers(filters);
@@ -151,25 +142,31 @@ const Suppliers: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
-  const fetchDoctors = async () => {
+  const fetchDoctors = useCallback(async () => {
     try {
       const data = await suppliersService.getDoctors();
       setDoctors(data);
     } catch (error) {
       console.error('Error fetching doctors:', error);
     }
-  };
+  }, []);
 
-  const fetchSupplierTypes = async () => {
+  const fetchSupplierTypes = useCallback(async () => {
     try {
       const types = await suppliersService.getSupplierTypes();
       setSupplierTypes(types);
     } catch (error) {
       console.error('Error fetching supplier types:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSuppliers();
+    fetchDoctors();
+    fetchSupplierTypes();
+  }, [fetchSuppliers, fetchDoctors, fetchSupplierTypes]);
 
   const handleSupplierSubmit = async () => {
     try {

@@ -20,7 +20,6 @@ import {
   AdminPanelSettings,
   SupervisorAccount,
   MenuOpen,
-  Menu as MenuIcon,
   CheckCircle,
   Schedule,
   Group,
@@ -28,7 +27,6 @@ import {
   Description,
   Healing,
   Poll,
-  FilePresent,
   Refresh,
   TrendingUp,
   ManageAccounts,
@@ -75,7 +73,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
   const { user } = useAuth();
   const {
     canUpdateUsers,
-    canAccessPage,
     canViewCoursesPage,
     canViewEvaluationsPage,
     canViewSurveysPage,
@@ -84,7 +81,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     canViewWorkersPage,
     canUpdateWorkers,
     canViewCertificatesPage,
-    canUpdateCertificates,
     canViewReportsPage,
     canViewNotificationsPage,
     canViewOccupationalExamPage,
@@ -156,7 +152,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     );
   };
 
-  const menuItems: MenuItem[] = [
+  const menuItems: MenuItem[] = React.useMemo(
+    () => [
     {
       id: "dashboard",
       label: "Dashboard",
@@ -537,9 +534,11 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
       ],
       roles: ["admin", "supervisor"],
     },
-  ];
+    ],
+    []
+  );
 
-  const filterMenuByRole = (items: MenuItem[]): MenuItem[] => {
+  const filterMenuByRole = React.useCallback((items: MenuItem[]): MenuItem[] => {
     if (!user) return [];
 
     return items
@@ -671,7 +670,25 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         return newItem;
       })
       .filter((item): item is MenuItem => item !== null);
-  };
+  }, [
+    user,
+    canViewCoursesPage,
+    canViewSurveysPage,
+    canViewEvaluationsPage,
+    canViewAttendancePage,
+    canUpdateAttendance,
+    canViewWorkersPage,
+    canUpdateWorkers,
+    canViewCertificatesPage,
+    canViewReportsPage,
+    canViewNotificationsPage,
+    canViewOccupationalExamPage,
+    canViewSeguimientoPage,
+    canViewAdminConfigPage,
+    canUpdateUsers,
+    canViewSuppliersPage,
+    canViewReinductionPage,
+  ]);
 
   const renderMenuItem = (item: MenuItem, level: number = 0) => {
     const hasChildren = item.children && item.children.length > 0;
@@ -735,26 +752,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
   // Memoizar los elementos filtrados para evitar duplicaciones en re-renders
   const filteredMenuItems = React.useMemo(() => {
     return filterMenuByRole(menuItems);
-  }, [
-    user,
-    canViewCoursesPage,
-    canViewEvaluationsPage,
-    canViewSurveysPage,
-    canViewAttendancePage,
-    canUpdateAttendance,
-    canViewWorkersPage,
-    canUpdateWorkers,
-    canViewCertificatesPage,
-    canUpdateCertificates,
-    canViewReportsPage,
-    canViewNotificationsPage,
-    canViewOccupationalExamPage,
-    canViewSeguimientoPage,
-    canViewAdminConfigPage,
-    canViewReinductionPage,
-    canViewSuppliersPage,
-    canUpdateUsers,
-  ]);
+  }, [filterMenuByRole, menuItems]);
 
   const drawerContent = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>

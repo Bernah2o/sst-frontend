@@ -16,7 +16,6 @@ import {
   Alert,
   CircularProgress,
   IconButton,
-  Tooltip,
   Tab,
   Tabs,
   Paper,
@@ -109,7 +108,7 @@ const CommitteeDetail: React.FC = () => {
   });
 
   // Confirm dialog hook
-  const { dialogState, showConfirmDialog, hideConfirmDialog } = useConfirmDialog();
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
 
   useEffect(() => {
     if (id) {

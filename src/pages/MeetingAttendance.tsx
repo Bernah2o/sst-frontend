@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -40,7 +40,6 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { meetingService } from '../services/meetingService';
-import { committeeService } from '../services/committeeService';
 import { committeeMemberService } from '../services/committeeMemberService';
 import {
   Meeting,
@@ -77,13 +76,21 @@ const MeetingAttendancePage: React.FC = () => {
     notes: '',
   });
 
-  useEffect(() => {
-    if (meetingId) {
-      loadMeetingData();
+  const loadAttendances = useCallback(async () => {
+    if (!meetingId || !meeting) return;
+    
+    try {
+      const attendancesData = await meetingService.getMeetingAttendance(
+        parseInt(meetingId), 
+        meeting.committee_id
+      );
+      setAttendances(attendancesData);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar las asistencias');
     }
-  }, [meetingId]);
+  }, [meetingId, meeting]);
 
-  const loadMeetingData = async () => {
+  const loadMeetingData = useCallback(async () => {
     if (!meetingId) return;
     
     setLoading(true);
@@ -113,21 +120,13 @@ const MeetingAttendancePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [meetingId, loadAttendances]);
 
-  const loadAttendances = async () => {
-    if (!meetingId || !meeting) return;
-    
-    try {
-      const attendancesData = await meetingService.getMeetingAttendance(
-        parseInt(meetingId), 
-        meeting.committee_id
-      );
-      setAttendances(attendancesData);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar las asistencias');
+  useEffect(() => {
+    if (meetingId) {
+      loadMeetingData();
     }
-  };
+  }, [meetingId, loadMeetingData]);
 
   const handleCreateAttendance = () => {
     setEditingAttendance(null);

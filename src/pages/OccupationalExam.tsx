@@ -11,14 +11,12 @@ import {
   Pending as PendingIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
-  ExpandMore as ExpandMoreIcon,
   Download as DownloadIcon,
   Print as PrintIcon,
   Assessment as AssessmentIcon,
   Email as EmailIcon,
   PictureAsPdf as PdfIcon,
   CloudUpload as UploadIcon,
-  AttachFile as AttachFileIcon,
   Clear as ClearIcon,
 } from "@mui/icons-material";
 import {
@@ -48,31 +46,25 @@ import {
   MenuItem,
   Pagination,
   Tooltip,
-  Avatar,
   LinearProgress,
   Alert,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
-  Divider,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import jsPDF from "jspdf";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
-import { useAuth } from "../contexts/AuthContext";
+
 import { adminConfigService } from "../services/adminConfigService";
 import api, { apiService } from "../services/api";
 import { formatDate } from "../utils/dateUtils";
 import { suppliersService, Supplier, Doctor } from "../services/suppliersService";
 import AutocompleteField, { AutocompleteOption } from "../components/AutocompleteField";
-import { getApiUrl } from "../config/env";
 
 
 // Enums que coinciden con el backend
@@ -83,7 +75,7 @@ type ExamType =
   | "examen_retiro";
 type MedicalAptitude = "apto" | "apto_con_recomendaciones" | "no_apto";
 
-interface OccupationalExam {
+interface OccupationalExamData {
   id: number;
   worker_id: number;
   worker_name?: string; // Campo calculado del frontend
@@ -152,8 +144,7 @@ interface Programa {
 }
 
 const OccupationalExam: React.FC = () => {
-  const { user } = useAuth();
-  const [exams, setExams] = useState<OccupationalExam[]>([]);
+  const [exams, setExams] = useState<OccupationalExamData[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -162,11 +153,11 @@ const OccupationalExam: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingExam, setEditingExam] = useState<OccupationalExam | null>(null);
-  const [viewingExam, setViewingExam] = useState<OccupationalExam | null>(null);
+  const [editingExam, setEditingExam] = useState<OccupationalExamData | null>(null);
+  const [viewingExam, setViewingExam] = useState<OccupationalExamData | null>(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [deletingExam, setDeletingExam] = useState<OccupationalExam | null>(
+  const [deletingExam, setDeletingExam] = useState<OccupationalExamData | null>(
     null
   );
   const [filters, setFilters] = useState({
@@ -265,24 +256,9 @@ const OccupationalExam: React.FC = () => {
     pendiente: { label: "Pendiente", color: "default", icon: <PendingIcon /> },
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      await fetchWorkers();
-      await fetchProgramas();
-      await fetchSuppliers();
-      await fetchExams();
-    };
-    loadData();
-  }, [page, filters]);
-
-  useEffect(() => {
-    fetchProgramas();
-    fetchSuppliers();
-  }, []);
-
   // Los datos del trabajador ya vienen del backend, no necesitamos enriquecerlos
 
-  const fetchExams = async () => {
+  const fetchExams = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -311,9 +287,9 @@ const OccupationalExam: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filters]);
 
-  const fetchWorkers = async () => {
+  const fetchWorkers = useCallback(async () => {
     try {
       const response = await api.get("/workers/", {
         params: {
@@ -324,16 +300,16 @@ const OccupationalExam: React.FC = () => {
     } catch (error) {
       console.error("Error fetching workers:", error);
     }
-  };
+  }, []);
 
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = useCallback(async () => {
     try {
       const suppliers = await suppliersService.getActiveSuppliers();
       setSuppliers(suppliers);
     } catch (error) {
       console.error("Error fetching suppliers:", error);
     }
-  };
+  }, []);
 
   const fetchDoctorsBySupplier = async (supplierId: number) => {
     try {
@@ -370,7 +346,7 @@ const OccupationalExam: React.FC = () => {
     });
   };
 
-  const fetchProgramas = async () => {
+  const fetchProgramas = useCallback(async () => {
     try {
       const programas = await adminConfigService.getActiveProgramas();
       setProgramas(programas);
@@ -378,7 +354,7 @@ const OccupationalExam: React.FC = () => {
       console.error("Error fetching programas:", error);
       setProgramas([]);
     }
-  };
+  }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -396,33 +372,6 @@ const OccupationalExam: React.FC = () => {
       }
       
       setSelectedFile(file);
-    }
-  };
-
-  const uploadPdfFile = async (examId: number): Promise<string | null> => {
-    if (!selectedFile) return null;
-
-    try {
-      setUploadingPdf(true);
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      const response = await api.post(
-        `/occupational-exams/${examId}/upload-pdf`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-
-      return response.data.pdf_file_path;
-    } catch (error) {
-      console.error('Error uploading PDF:', error);
-      throw error;
-    } finally {
-      setUploadingPdf(false);
     }
   };
 
@@ -589,7 +538,7 @@ const OccupationalExam: React.FC = () => {
     }
   };
 
-  const handleDeleteExam = (exam: OccupationalExam) => {
+  const handleDeleteExam = (exam: OccupationalExamData) => {
     setDeletingExam(exam);
     setOpenDeleteDialog(true);
   };
@@ -607,7 +556,7 @@ const OccupationalExam: React.FC = () => {
     }
   };
 
-  const handleDownloadCertificate = async (exam: OccupationalExam) => {
+  const handleDownloadCertificate = async (exam: OccupationalExamData) => {
     try {
       const response = await api.get(
         `/occupational-exams/${exam.id}/certificate`,
@@ -675,7 +624,7 @@ const OccupationalExam: React.FC = () => {
     }
   };
 
-  const handleSendManualEmail = async (exam: OccupationalExam) => {
+  const handleSendManualEmail = async (exam: OccupationalExamData) => {
     try {
       setSendingEmail(exam.id);
 
@@ -699,7 +648,7 @@ const OccupationalExam: React.FC = () => {
     setPage(1);
   };
 
-  const handleOpenDialog = (exam?: OccupationalExam) => {
+  const handleOpenDialog = (exam?: OccupationalExamData) => {
     if (exam) {
       setEditingExam(exam);
 
@@ -774,13 +723,13 @@ const OccupationalExam: React.FC = () => {
     resetForm();
   };
 
-  const handleViewExam = (exam: OccupationalExam) => {
+  const handleViewExam = (exam: OccupationalExamData) => {
     setViewingExam(exam);
     setOpenViewDialog(true);
   };
 
   // Función para generar PDF de notificación médica individual
-  const handleGenerateIndividualReport = async (exam: OccupationalExam) => {
+  const handleGenerateIndividualReport = async (exam: OccupationalExamData) => {
     try {
       setGeneratingIndividualReport(true);
 
@@ -1023,7 +972,7 @@ const OccupationalExam: React.FC = () => {
     }
   };
 
-  const isExamExpiring = (exam: OccupationalExam) => {
+  const isExamExpiring = (exam: OccupationalExamData) => {
     if (!exam.expires_at) return false;
     const expiryDate = new Date(exam.expires_at);
     const today = new Date();
@@ -1033,10 +982,25 @@ const OccupationalExam: React.FC = () => {
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
   };
 
-  const isExamExpired = (exam: OccupationalExam) => {
+  const isExamExpired = (exam: OccupationalExamData) => {
     if (!exam.expires_at) return false;
     return new Date(exam.expires_at) < new Date();
   };
+
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchWorkers();
+      await fetchProgramas();
+      await fetchSuppliers();
+      await fetchExams();
+    };
+    loadData();
+  }, [page, filters, fetchWorkers, fetchProgramas, fetchSuppliers, fetchExams]);
+
+  useEffect(() => {
+    fetchProgramas();
+    fetchSuppliers();
+  }, [fetchProgramas, fetchSuppliers]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>

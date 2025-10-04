@@ -5,7 +5,6 @@ import {
   ActivityUpdate,
   ActivityListFilters,
   ActivityStatus,
-  ActivityPriority,
 } from '../types';
 
 const BASE_URL = '/committee-activities';

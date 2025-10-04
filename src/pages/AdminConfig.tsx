@@ -33,7 +33,7 @@ import {
   FormControlLabel,
   TablePagination,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import UppercaseTextField from '../components/UppercaseTextField';
 import { useAuth } from "../contexts/AuthContext";
@@ -272,15 +272,7 @@ const AdminConfigPage: React.FC = () => {
   const [cargosPage, setCargosPage] = useState(0);
   const [cargosRowsPerPage, setCargosRowsPerPage] = useState(5);
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       await Promise.all([
         fetchSeguridadSocial(),
@@ -294,7 +286,15 @@ const AdminConfigPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    } else {
+      setLoading(false);
+    }
+  }, [user, fetchData]);
 
   // const fetchConfigs = async () => {
   //   try {

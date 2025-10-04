@@ -2,7 +2,6 @@ import {
   Add,
   Delete,
   Edit,
-  ExpandMore,
   Quiz,
   Refresh,
   RestartAlt,
@@ -38,36 +37,22 @@ import {
   MenuItem,
   Alert,
   Snackbar,
-  Card,
-  CardContent,
-  CardActions,
   Divider,
   FormControlLabel,
   Switch,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Tooltip,
   Radio,
   RadioGroup,
-  Checkbox,
-  FormGroup,
-  Slider,
   Grid,
   CircularProgress,
   useTheme,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import UppercaseTextField from "../components/UppercaseTextField";
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { UserRole } from '../types';
-import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { formatDateTime } from '../utils/dateUtils';
 
 import api from "./../services/api";
 
@@ -161,9 +146,16 @@ interface Course {
   title: string;
 }
 
+interface Stats {
+  total: number;
+  draft: number;
+  published: number;
+  archived: number;
+}
+
 const EvaluationsManagement: React.FC = () => {
   const { user } = useAuth();
-  const { canCreateEvaluations, canUpdateEvaluations, canDeleteEvaluations } = usePermissions();
+  const { canUpdateEvaluations, canDeleteEvaluations } = usePermissions();
   const theme = useTheme();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,12 +184,7 @@ const EvaluationsManagement: React.FC = () => {
     severity: "success" as "success" | "error",
   });
   const [viewingEvaluation, setViewingEvaluation] = useState<Evaluation | null>(null);
-  const [stats, setStats] = useState({
-    total: 0,
-    draft: 0,
-    published: 0,
-    archived: 0,
-  });
+
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deletingEvaluation, setDeletingEvaluation] = useState<Evaluation | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -242,29 +229,25 @@ const EvaluationsManagement: React.FC = () => {
   const [openMaxAttemptsDialog, setOpenMaxAttemptsDialog] = useState(false);
   const [maxAttemptsEvaluation, setMaxAttemptsEvaluation] = useState<Evaluation | null>(null);
   
-  // Error state
-  const [error, setError] = useState<string | null>(null);
+
   
   // Loading state for evaluation buttons
   const [loadingEvaluation, setLoadingEvaluation] = useState(false);
+  
+  // Stats state for evaluation statistics
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [stats, setStats] = useState<Stats>({
+    total: 0,
+    draft: 0,
+    published: 0,
+    archived: 0,
+  });
+  
+  // Error state for displaying error messages
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [error, setError] = useState<string>("");
 
-  useEffect(() => {
-    // Detectar parámetro evaluation_id para modo de respuesta de empleado
-    const urlParams = new URLSearchParams(window.location.search);
-    const evaluationId = urlParams.get('evaluation_id');
-    
-    if (evaluationId && user?.role === 'employee') {
-      setIsEmployeeResponseMode(true);
-      fetchEvaluationToRespond(parseInt(evaluationId));
-    } else {
-      setIsEmployeeResponseMode(false);
-      fetchEvaluations();
-      fetchCourses();
-      if (user?.role === 'employee') {
-        fetchEmployeeResponses();
-      }
-    }
-  }, [page, rowsPerPage, searchTerm, statusFilter, user]);
+
 
   // Cleanup timer on component unmount or when exiting employee response mode
   useEffect(() => {
@@ -292,16 +275,20 @@ const EvaluationsManagement: React.FC = () => {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const fetchCourses = async () => {
+  const showSnackbar = useCallback((message: string, severity: "success" | "error") => {
+    setSnackbar({ open: true, message, severity });
+  }, []);
+
+  const fetchCourses = useCallback(async () => {
     try {
       const response = await api.get('/courses/');
       setCourses(response.data.items || []);
     } catch (error) {
       console.error('Error fetching courses:', error);
     }
-  };
+  }, []);
 
-  const fetchEvaluations = async () => {
+  const fetchEvaluations = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -345,25 +332,14 @@ const EvaluationsManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching evaluations:', error);
-      showSnackbar('No se pudieron cargar las evaluaciones. Verifique su conexión e intente nuevamente.', 'error');
+      showSnackbar('No se pudieron cargar las evaluations. Verifique su conexión e intente nuevamente.', 'error');
     } finally {
       setLoading(false);
       setLoadingEvaluation(false);
     }
-  };
+  }, [page, rowsPerPage, statusFilter, user?.role, showSnackbar]);
 
-  // Helper function to determine status priority
-  const getStatusPriority = (status: string): number => {
-    switch (status) {
-      case 'completed': return 4;
-      case 'in_progress': return 3;
-      case 'blocked': return 2;
-      case 'not_started': return 1;
-      default: return 0;
-    }
-  };
-
-  const fetchEmployeeResponses = async () => {
+  const fetchEmployeeResponses = useCallback(async () => {
     try {
       const response = await api.get('/evaluations/my-results');
       const responses: {[key: number]: any} = {};
@@ -405,196 +381,9 @@ const EvaluationsManagement: React.FC = () => {
     } catch (error) {
       console.error('Error fetching employee responses:', error);
     }
-  };
+  }, []);
 
-  const fetchEvaluationToRespond = async (evaluationId: number) => {
-    try {
-      setLoadingEvaluation(true);
-      setLoading(true);
-      
-      // First, check user status for this evaluation
-      const userStatusResponse = await api.get(`/evaluations/${evaluationId}/user-status`);
-      const userStatus = userStatusResponse.data;
-      
-      // If user is blocked, show error message
-      if (userStatus.status === 'BLOCKED') {
-        setError(userStatus.message || 'Has agotado todos los intentos disponibles para esta evaluación.');
-        setLoading(false);
-        return;
-      }
-      
-      // Get the evaluation details
-      const evaluationResponse = await api.get(`/evaluations/${evaluationId}`);
-      
-      // Check if there's already an in-progress evaluation
-      const isInProgress = employeeResponses[evaluationId]?.status === 'in_progress' || userStatus.status === 'IN_PROGRESS';
-      
-      if (!isInProgress) {
-        // Only start a new evaluation attempt if not already in progress
-        const startResponse = await api.post(`/evaluations/${evaluationId}/start`);
-        setEmployeeAnswers({});
-      } else {
-        // Load saved answers for evaluation in progress
-        try {
-          const savedAnswersResponse = await api.get(`/evaluations/${evaluationId}/user-answers`);
-          if (savedAnswersResponse.data.success && savedAnswersResponse.data.data.user_answers) {
-            const savedAnswers: { [key: number]: any } = {};
-            savedAnswersResponse.data.data.user_answers.forEach((answer: any) => {
-              if (answer.selected_answer_ids) {
-                // For multiple choice questions
-                try {
-                  const selectedIds = JSON.parse(answer.selected_answer_ids);
-                  savedAnswers[answer.question_id] = Array.isArray(selectedIds) ? selectedIds : [selectedIds];
-                } catch {
-                  // If it's a single ID as string
-                  savedAnswers[answer.question_id] = [parseInt(answer.selected_answer_ids)];
-                }
-              } else if (answer.answer_text) {
-                // For open text questions
-                savedAnswers[answer.question_id] = answer.answer_text;
-              }
-            });
-            setEmployeeAnswers(savedAnswers);
-          } else {
-            setEmployeeAnswers({});
-          }
-        } catch (error) {
-          console.error('Error loading saved answers:', error);
-          setEmployeeAnswers({});
-        }
-      }
-      
-      setEvaluationToRespond(evaluationResponse.data);
-      setIsEmployeeResponseMode(true);
-      setStartTime(new Date());
-      
-      // Initialize timer if evaluation has time limit
-      if (evaluationResponse.data.time_limit_minutes) {
-        const timeInSeconds = evaluationResponse.data.time_limit_minutes * 60;
-        setTimeRemaining(timeInSeconds);
-        setTimeExpired(false);
-        
-        // Clear any existing timer
-        if (timerInterval) {
-          clearInterval(timerInterval);
-        }
-        
-        // Start countdown timer
-        const interval = setInterval(() => {
-          setTimeRemaining(prev => {
-            if (prev === null || prev <= 1) {
-              clearInterval(interval);
-              setTimeExpired(true);
-              // Auto-save evaluation when time expires
-              handleSubmitEvaluation(true);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        
-        setTimerInterval(interval);
-      } else {
-        setTimeRemaining(null);
-        setTimeExpired(false);
-      }
-    } catch (error: any) {
-      console.error('Error fetching evaluation to respond:', error);
-      console.error('Error details:', error.response?.data);
-      
-      // Check if error is about maximum attempts exceeded
-        const errorDetail = error.response?.data?.detail || '';
-        if (errorDetail.includes('Maximum attempts') && errorDetail.includes('exceeded')) {
-          // Show custom dialog for maximum attempts
-          setMaxAttemptsEvaluation(evaluationToRespond);
-          setOpenMaxAttemptsDialog(true);
-      } else {
-        showSnackbar(
-          errorDetail || 'No se pudo cargar la evaluación. Verifique su conexión e intente nuevamente.',
-          'error'
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetEvaluation = (evaluation: Evaluation) => {
-    setResettingEvaluation(evaluation);
-    setOpenResetDialog(true);
-  };
-
-  const confirmResetEvaluation = async () => {
-    if (!resettingEvaluation || !user) return;
-    
-    try {
-      setResetLoading(true);
-      await api.post(`/evaluations/${resettingEvaluation.id}/reset-status/${user.id}`);
-      
-      showSnackbar('Evaluación reiniciada exitosamente', 'success');
-      setOpenResetDialog(false);
-      setResettingEvaluation(null);
-      
-      // Refresh data
-      fetchEvaluations();
-      if (user.rol === 'employee') {
-        fetchEmployeeResponses();
-      }
-    } catch (error: any) {
-      console.error('Error resetting evaluation:', error);
-      showSnackbar(
-        error.response?.data?.detail || 'Error al reiniciar la evaluación',
-        'error'
-      );
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  const saveEvaluationProgress = async (showMessage: boolean = false) => {
-    if (!evaluationToRespond) return;
-
-    try {
-      // Prepare user_answers for saving progress
-      const user_answers = Object.entries(employeeAnswers).map(([questionId, answer]) => {
-        const question = evaluationToRespond.questions?.find(q => q.id === parseInt(questionId));
-        
-        if (question?.question_type === 'multiple_choice' || question?.question_type === 'true_false') {
-          return {
-            question_id: parseInt(questionId),
-            selected_answer_ids: JSON.stringify([parseInt(answer)]),
-            time_spent_seconds: Math.floor((new Date().getTime() - (startTime?.getTime() || new Date().getTime())) / 1000)
-          };
-        } else {
-          return {
-            question_id: parseInt(questionId),
-            answer_text: answer,
-            time_spent_seconds: Math.floor((new Date().getTime() - (startTime?.getTime() || new Date().getTime())) / 1000)
-          };
-        }
-      });
-
-      const response = await api.post(`/evaluations/${evaluationToRespond.id}/save-progress`, {
-        user_answers: user_answers
-      });
-      
-      if (showMessage) {
-        showSnackbar('Progreso guardado exitosamente', 'success');
-      }
-      
-    } catch (error: any) {
-      console.error('Error saving evaluation progress:', error);
-      console.error('Error details:', error.response?.data);
-      if (showMessage) {
-        showSnackbar(
-          error.response?.data?.detail || 'Error al guardar el progreso',
-          'error'
-        );
-      }
-    }
-  };
-
-  const handleSubmitEvaluation = async (isAutoSubmit: boolean = false) => {
+  const handleSubmitEvaluation = useCallback(async (isAutoSubmit: boolean = false) => {
     if (!evaluationToRespond || !user) return;
 
     // Validate required questions only if not auto-submit
@@ -697,7 +486,214 @@ const EvaluationsManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, [evaluationToRespond, user, employeeAnswers, showSnackbar, timerInterval, fetchEmployeeResponses, fetchEvaluations]);
+
+  const fetchEvaluationToRespond = useCallback(async (evaluationId: number) => {
+    try {
+      setLoadingEvaluation(true);
+      setLoading(true);
+      
+      // First, check user status for this evaluation
+      const userStatusResponse = await api.get(`/evaluations/${evaluationId}/user-status`);
+      const userStatus = userStatusResponse.data;
+      
+      // If user is blocked, show error message
+      if (userStatus.status === 'BLOCKED') {
+        setError(userStatus.message || 'Has agotado todos los intentos disponibles para esta evaluación.');
+        setLoading(false);
+        return;
+      }
+      
+      // Get the evaluation details
+      const evaluationResponse = await api.get(`/evaluations/${evaluationId}`);
+      
+      // Check if there's already an in-progress evaluation
+      const isInProgress = employeeResponses[evaluationId]?.status === 'in_progress' || userStatus.status === 'IN_PROGRESS';
+      
+      if (!isInProgress) {
+        // Only start a new evaluation attempt if not already in progress
+        await api.post(`/evaluations/${evaluationId}/start`);
+        setEmployeeAnswers({});
+      } else {
+        // Load saved answers for evaluation in progress
+        try {
+          const savedAnswersResponse = await api.get(`/evaluations/${evaluationId}/user-answers`);
+          if (savedAnswersResponse.data.success && savedAnswersResponse.data.data.user_answers) {
+            const savedAnswers: { [key: number]: any } = {};
+            savedAnswersResponse.data.data.user_answers.forEach((answer: any) => {
+              if (answer.selected_answer_ids) {
+                // For multiple choice questions
+                try {
+                  const selectedIds = JSON.parse(answer.selected_answer_ids);
+                  savedAnswers[answer.question_id] = Array.isArray(selectedIds) ? selectedIds : [selectedIds];
+                } catch {
+                  // If it's a single ID as string
+                  savedAnswers[answer.question_id] = [parseInt(answer.selected_answer_ids)];
+                }
+              } else if (answer.answer_text) {
+                // For open text questions
+                savedAnswers[answer.question_id] = answer.answer_text;
+              }
+            });
+            setEmployeeAnswers(savedAnswers);
+          } else {
+            setEmployeeAnswers({});
+          }
+        } catch (error) {
+          console.error('Error loading saved answers:', error);
+          setEmployeeAnswers({});
+        }
+      }
+      
+      setEvaluationToRespond(evaluationResponse.data);
+      setIsEmployeeResponseMode(true);
+      setStartTime(new Date());
+      
+      // Initialize timer if evaluation has time limit
+      if (evaluationResponse.data.time_limit_minutes) {
+        const timeInSeconds = evaluationResponse.data.time_limit_minutes * 60;
+        setTimeRemaining(timeInSeconds);
+        setTimeExpired(false);
+        
+        // Clear any existing timer
+        if (timerInterval) {
+          clearInterval(timerInterval);
+        }
+        
+        // Start countdown timer
+        const interval = setInterval(() => {
+          setTimeRemaining(prev => {
+            if (prev === null || prev <= 1) {
+              clearInterval(interval);
+              setTimeExpired(true);
+              // Auto-save evaluation when time expires
+              handleSubmitEvaluation(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        setTimerInterval(interval);
+      } else {
+        setTimeRemaining(null);
+        setTimeExpired(false);
+      }
+    } catch (error: any) {
+      console.error('Error fetching evaluation to respond:', error);
+      console.error('Error details:', error.response?.data);
+      
+      // Check if error is about maximum attempts exceeded
+        const errorDetail = error.response?.data?.detail || '';
+        if (errorDetail.includes('Maximum attempts') && errorDetail.includes('exceeded')) {
+          // Show custom dialog for maximum attempts
+          setMaxAttemptsEvaluation(evaluationToRespond);
+          setOpenMaxAttemptsDialog(true);
+      } else {
+        showSnackbar(
+          errorDetail || 'No se pudo cargar la evaluación. Verifique su conexión e intente nuevamente.',
+          'error'
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [employeeResponses, evaluationToRespond, timerInterval, showSnackbar, handleSubmitEvaluation]);
+
+  useEffect(() => {
+    // Detectar parámetro evaluation_id para modo de respuesta de empleado
+    const urlParams = new URLSearchParams(window.location.search);
+    const evaluationId = urlParams.get('evaluation_id');
+    
+    if (evaluationId && user?.role === 'employee') {
+      setIsEmployeeResponseMode(true);
+      fetchEvaluationToRespond(parseInt(evaluationId));
+    } else {
+      setIsEmployeeResponseMode(false);
+      fetchEvaluations();
+      fetchCourses();
+      if (user?.role === 'employee') {
+        fetchEmployeeResponses();
+      }
+    }
+  }, [page, rowsPerPage, searchTerm, statusFilter, user, fetchEvaluations, fetchCourses, fetchEmployeeResponses, fetchEvaluationToRespond]);
+
+  const handleResetEvaluation = (evaluation: Evaluation) => {
+    setResettingEvaluation(evaluation);
+    setOpenResetDialog(true);
   };
+
+  const confirmResetEvaluation = async () => {
+    if (!resettingEvaluation || !user) return;
+    
+    try {
+      setResetLoading(true);
+      await api.post(`/evaluations/${resettingEvaluation.id}/reset-status/${user.id}`);
+      
+      showSnackbar('Evaluación reiniciada exitosamente', 'success');
+      setOpenResetDialog(false);
+      setResettingEvaluation(null);
+      
+      // Refresh data
+      fetchEvaluations();
+      if (user.rol === 'employee') {
+        fetchEmployeeResponses();
+      }
+    } catch (error: any) {
+      console.error('Error resetting evaluation:', error);
+      showSnackbar(
+        error.response?.data?.detail || 'Error al reiniciar la evaluación',
+        'error'
+      );
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const saveEvaluationProgress = async (showMessage: boolean = false) => {
+    if (!evaluationToRespond) return;
+
+    try {
+      // Prepare user_answers for saving progress
+      const user_answers = Object.entries(employeeAnswers).map(([questionId, answer]) => {
+        const question = evaluationToRespond.questions?.find(q => q.id === parseInt(questionId));
+        
+        if (question?.question_type === 'multiple_choice' || question?.question_type === 'true_false') {
+          return {
+            question_id: parseInt(questionId),
+            selected_answer_ids: JSON.stringify([parseInt(answer)]),
+            time_spent_seconds: Math.floor((new Date().getTime() - (startTime?.getTime() || new Date().getTime())) / 1000)
+          };
+        } else {
+          return {
+            question_id: parseInt(questionId),
+            answer_text: answer,
+            time_spent_seconds: Math.floor((new Date().getTime() - (startTime?.getTime() || new Date().getTime())) / 1000)
+          };
+        }
+      });
+
+      await api.post(`/evaluations/${evaluationToRespond.id}/save-progress`, {
+        user_answers: user_answers
+      });
+      
+      if (showMessage) {
+        showSnackbar('Progreso guardado exitosamente', 'success');
+      }
+      
+    } catch (error: any) {
+      console.error('Error saving evaluation progress:', error);
+      console.error('Error details:', error.response?.data);
+      if (showMessage) {
+        showSnackbar(
+          error.response?.data?.detail || 'Error al guardar el progreso',
+          'error'
+        );
+      }
+    }
+  };
+
+
 
   const handleCreateEvaluation = () => {
     setEditingEvaluation(null);
@@ -873,59 +869,6 @@ const EvaluationsManagement: React.FC = () => {
     }
   };
 
-  const showSnackbar = (message: string, severity: "success" | "error") => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const submitEmployeeEvaluationResponse = async () => {
-    if (!evaluationToRespond || !startTime) return;
-    
-    try {
-      setLoading(true);
-      
-      const user_answers = Object.entries(employeeAnswers).map(([questionId, answer]) => {
-        const question = evaluationToRespond.questions?.find(q => q.id === parseInt(questionId));
-        
-        if (question?.question_type === 'multiple_choice' || question?.question_type === 'true_false') {
-          return {
-            question_id: parseInt(questionId),
-            selected_answer_ids: JSON.stringify([parseInt(answer)]),
-            time_spent_seconds: Math.floor((new Date().getTime() - startTime.getTime()) / 1000)
-          };
-        } else {
-          return {
-            question_id: parseInt(questionId),
-            answer_text: answer,
-            time_spent_seconds: Math.floor((new Date().getTime() - startTime.getTime()) / 1000)
-          };
-        }
-      });
-      
-      const payload = {
-        user_answers: user_answers
-      };
-      
-      await api.post(`/evaluations/${evaluationToRespond.id}/submit`, payload);
-      
-      showSnackbar('Evaluación enviada exitosamente', 'success');
-      setIsEmployeeResponseMode(false);
-      setEvaluationToRespond(null);
-      setEmployeeAnswers({});
-      setStartTime(null);
-      
-      // Refresh employee responses
-      fetchEmployeeResponses();
-      
-    } catch (error: any) {
-      console.error('Error submitting evaluation response:', error);
-      showSnackbar(
-        error.response?.data?.detail || 'Debe completar todo el material del curso y las encuestas antes de realizar la evaluación',
-        'error'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Question management functions
   const handleAddQuestion = () => {

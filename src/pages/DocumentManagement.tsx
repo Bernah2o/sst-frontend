@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -58,7 +58,6 @@ import {
 } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import { committeeDocumentService } from '../services/committeeDocumentService';
-import { committeeService } from '../services/committeeService';
 import { committeePermissionService } from '../services/committeePermissionService';
 import DocumentForm from '../components/DocumentForm';
 import {
@@ -107,18 +106,9 @@ const DocumentManagement: React.FC = () => {
     committeeId ? parseInt(committeeId) : undefined
   );
   const [selectedDocumentType, setSelectedDocumentType] = useState<CommitteeDocumentType | undefined>(undefined);
-  const [recentDocuments, setRecentDocuments] = useState<CommitteeDocument[]>([]);
+  const [recentDocuments] = useState<CommitteeDocument[]>([]);
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    loadDocuments();
-    loadDocumentCounts();
-  }, [page, rowsPerPage, searchTerm, selectedCommittee, selectedDocumentType, tabValue]);
-
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
       logger.debug('🔐 loadInitialData started');
@@ -177,9 +167,9 @@ const DocumentManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCommittee]);
 
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -218,9 +208,9 @@ const DocumentManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCommittee, page, rowsPerPage, searchTerm, selectedDocumentType]);
 
-  const loadDocumentCounts = async () => {
+  const loadDocumentCounts = useCallback(async () => {
     try {
       const committeeIds = committees.map(c => c.id);
       if (committeeIds.length === 0) return;
@@ -265,7 +255,18 @@ const DocumentManagement: React.FC = () => {
      } catch (err) {
        logger.error('Document counts loading error:', err);
      }
-  };
+  }, [committees]);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  useEffect(() => {
+    loadDocuments();
+    loadDocumentCounts();
+  }, [page, rowsPerPage, searchTerm, selectedCommittee, selectedDocumentType, tabValue, loadDocuments, loadDocumentCounts]);
+
+
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);

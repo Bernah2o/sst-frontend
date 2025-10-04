@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Button,
@@ -29,8 +29,6 @@ import { SelectChangeEvent } from "@mui/material/Select";
 import { es } from "date-fns/locale";
 import { format, parse } from "date-fns";
 import { WorkModality } from "../types";
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import { ArrowBack } from "@mui/icons-material";
 import contractorService from "../services/contractorService";
 import { cargoService, Cargo } from "../services/cargoService";
@@ -107,8 +105,6 @@ const validationSchema = Yup.object({
 const ContractorForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: AlertColor }>({
@@ -283,33 +279,7 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
     },
   });
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        console.log('=== LOADING INITIAL DATA ===');
-        
-        // Cargar cargos y áreas primero
-        const [cargosData, areasData] = await Promise.all([
-          cargoService.getActiveCargos(),
-          areaService.getActiveAreas()
-        ]);
-        
-        console.log('Cargos loaded successfully:', cargosData);
-        console.log('Number of cargos:', cargosData.length);
-        setCargos(cargosData);
-        setAreas(areasData);
 
-        // Si estamos editando, cargar el contratista después de que los cargos y áreas estén disponibles
-        if (id) {
-          await loadContractor(cargosData);
-        }
-      } catch (error) {
-        console.error("Error al cargar datos iniciales:", error);
-      }
-    };
-
-    loadInitialData();
-  }, [id]);
 
   // Cargar opciones de Seguridad Social (EPS/AFP/ARL)
   useEffect(() => {
@@ -331,7 +301,7 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
   }, []);
 
   // Función para cargar contratista (ahora recibe cargos como parámetro)
-  const loadContractor = async (cargosData: Cargo[]) => {
+  const loadContractor = useCallback(async (cargosData: Cargo[]) => {
     try {
       setInitialLoading(true);
       const contractor = await contractorService.getContractor(Number(id));
@@ -430,7 +400,35 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
     } finally {
       setInitialLoading(false);
     }
-  };
+  }, [id, formik]);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        console.log('=== LOADING INITIAL DATA ===');
+        
+        // Cargar cargos y áreas primero
+        const [cargosData, areasData] = await Promise.all([
+          cargoService.getActiveCargos(),
+          areaService.getActiveAreas()
+        ]);
+        
+        console.log('Cargos loaded successfully:', cargosData);
+        console.log('Number of cargos:', cargosData.length);
+        setCargos(cargosData);
+        setAreas(areasData);
+
+        // Si estamos editando, cargar el contratista después de que los cargos y áreas estén disponibles
+        if (id) {
+          await loadContractor(cargosData);
+        }
+      } catch (error) {
+        console.error("Error al cargar datos iniciales:", error);
+      }
+    };
+
+    loadInitialData();
+  }, [id, loadContractor]);
 
   const handleDepartmentChange = (event: SelectChangeEvent<string>) => {
     const department = event.target.value;

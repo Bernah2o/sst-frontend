@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -30,7 +30,6 @@ import candidateVotingService from '../services/candidateVotingService';
 import {
   CandidateVotingCreate,
   CandidateVotingUpdate,
-  CandidateVotingResponse,
   WorkerForVotingResponse,
   CandidateVotingStatus,
 } from '../types';
@@ -122,11 +121,7 @@ const CandidateVotingForm: React.FC = () => {
     },
   });
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       const [workersData, committeeTypesData] = await Promise.all([
         candidateVotingService.getActiveWorkers(),
@@ -157,7 +152,11 @@ const CandidateVotingForm: React.FC = () => {
     } finally {
       setInitialLoading(false);
     }
-  };
+  }, [isEdit, id, formik]);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
 
   const selectedWorkers = workers.filter(worker => 
     formik.values.candidate_worker_ids.includes(worker.id)

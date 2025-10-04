@@ -2,7 +2,6 @@ import {
   Search,
   Refresh,
   RestartAlt,
-  Visibility,
   CheckCircle,
   Cancel,
 } from '@mui/icons-material';
@@ -36,11 +35,11 @@ import {
   CircularProgress,
   Grid,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { formatDateTime } from '../utils/dateUtils';
 
 interface UserEvaluationResult {
   id: number;
@@ -99,11 +98,11 @@ const EvaluationResults: React.FC = () => {
     severity: 'success' as 'success' | 'error',
   });
 
-  useEffect(() => {
-    fetchEvaluationResults();
-  }, [page, rowsPerPage, searchTerm, statusFilter]);
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
+    setSnackbar({ open: true, message, severity });
+  }, []);
 
-  const fetchEvaluationResults = async () => {
+  const fetchEvaluationResults = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -136,7 +135,11 @@ const EvaluationResults: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, searchTerm, statusFilter, showSnackbar]);
+
+  useEffect(() => {
+    fetchEvaluationResults();
+  }, [fetchEvaluationResults]);
 
   const handleReassignEvaluation = (result: UserEvaluationResult) => {
     setReassigningResult(result);
@@ -166,10 +169,6 @@ const EvaluationResults: React.FC = () => {
       setOpenReassignDialog(false);
       setReassigningResult(null);
     }
-  };
-
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    setSnackbar({ open: true, message, severity });
   };
 
   const getStatusColor = (status: string) => {

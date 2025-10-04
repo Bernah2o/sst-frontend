@@ -38,9 +38,8 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-  Divider,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
@@ -162,13 +161,17 @@ const WorkerDetail: React.FC = () => {
   // Hook para el diálogo de confirmación
   const { dialogState, showConfirmDialog } = useConfirmDialog();
 
-  useEffect(() => {
-    if (workerId) {
-      fetchWorkerData();
+  const fetchDocuments = useCallback(async () => {
+    try {
+      const response = await api.get(`/workers/${workerId}/documents`);
+      setDocuments(response.data);
+    } catch (error: any) {
+      console.error("Error fetching documents:", error);
+      // Don't set error state for documents, just log it
     }
   }, [workerId]);
 
-  const fetchWorkerData = async () => {
+  const fetchWorkerData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -188,17 +191,15 @@ const WorkerDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workerId, fetchDocuments]);
 
-  const fetchDocuments = async () => {
-    try {
-      const response = await api.get(`/workers/${workerId}/documents`);
-      setDocuments(response.data);
-    } catch (error: any) {
-      console.error("Error fetching documents:", error);
-      // Don't set error state for documents, just log it
+  useEffect(() => {
+    if (workerId) {
+      fetchWorkerData();
     }
-  };
+  }, [workerId, fetchWorkerData]);
+
+  // fetchDocuments definido arriba con useCallback para estabilidad de dependencias
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);

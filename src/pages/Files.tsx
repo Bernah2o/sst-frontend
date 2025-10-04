@@ -34,7 +34,7 @@ import {
   InputAdornment,
   LinearProgress,
 } from '@mui/material';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import api from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
@@ -58,7 +58,6 @@ interface Course {
 const Files: React.FC = () => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedCourseForUpload, setSelectedCourseForUpload] = useState('');
@@ -74,7 +73,6 @@ const Files: React.FC = () => {
   });
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deletingFile, setDeletingFile] = useState<FileItem | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchFiles();
@@ -83,7 +81,6 @@ const Files: React.FC = () => {
 
   const fetchFiles = async () => {
     try {
-      setLoading(true);
       const response = await api.get('/files/');
       setFiles(response.data);
     } catch (error) {
@@ -93,8 +90,6 @@ const Files: React.FC = () => {
         message: 'No se pudieron cargar los archivos. Verifique su conexión e intente nuevamente.',
         severity: 'error',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -136,7 +131,7 @@ const Files: React.FC = () => {
         formData.append('description', description);
       }
 
-      const response = await api.post('/files/upload', formData, {
+      await api.post('/files/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

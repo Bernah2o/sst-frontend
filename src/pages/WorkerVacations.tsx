@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -15,7 +15,6 @@ import {
   Alert,
   Snackbar,
   IconButton,
-  Tooltip,
   Paper,
   List,
   ListItem,
@@ -38,8 +37,7 @@ import {
   Close as CloseIcon,
   Pending as PendingIcon,
   Info as InfoIcon,
-  DateRange as DateRangeIcon,
-  Person as PersonIcon,
+  
   Schedule as ScheduleIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -59,8 +57,6 @@ import {
   VacationRequest,
   VacationApproval,
   VacationBalance,
-  VacationStats,
-  VacationAvailability,
   VacationUpdate
 } from '../types/worker';
 
@@ -88,7 +84,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
   // Estados principales
   const [vacationRequests, setVacationRequests] = useState<WorkerVacation[]>([]);
   const [vacationBalance, setVacationBalance] = useState<VacationBalance | null>(null);
-  const [vacationStats, setVacationStats] = useState<VacationStats | null>(null);
+  // Eliminado estado no utilizado para estadísticas de vacaciones
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   
@@ -125,31 +121,19 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Cargar datos iniciales
-  useEffect(() => {
-    fetchVacationData();
-    generateCalendarDays();
-  }, [workerId, currentDate]);
-
-  const fetchVacationData = async () => {
+  const fetchVacationData = useCallback(async () => {
     if (!workerId) return;
-    
     try {
       setLoading(true);
-      
       const workerIdNum = parseInt(workerId);
-      const [requests, balance, stats] = await Promise.all([
+      const [requests, balance] = await Promise.all([
         vacationService.getWorkerVacations(workerIdNum),
-        vacationService.getVacationBalance(workerIdNum),
-        vacationService.getVacationStats(workerIdNum)
+        vacationService.getVacationBalance(workerIdNum)
       ]);
-      
       setVacationRequests(requests);
       setVacationBalance(balance);
-      setVacationStats(stats);
     } catch (error: any) {
-      // Provide specific error messages based on error type
       let errorMessage = 'No se pudieron cargar los datos de vacaciones';
-      
       if (error?.response?.status === 404) {
         errorMessage = '👤 Trabajador no encontrado: No se encontró información de vacaciones para este empleado.';
       } else if (error?.response?.status === 403) {
@@ -163,18 +147,16 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
       } else if (vacationRequests.length === 0 && !error?.response) {
         errorMessage = '📋 Sin datos: No se encontraron solicitudes de vacaciones para mostrar.';
       }
-      
       showSnackbar(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [workerId, vacationRequests.length]);
 
-  const generateCalendarDays = () => {
+  const generateCalendarDays = useCallback(() => {
     const start = startOfMonth(currentDate);
     const end = endOfMonth(currentDate);
     const days = eachDayOfInterval({ start, end });
-    
     const calendarDays: CalendarDay[] = days.map(date => {
       const dateStr = format(date, 'yyyy-MM-dd');
       const occupiedRequest = vacationRequests.find(req => 
@@ -187,7 +169,6 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
         dateStr >= req.start_date && 
         dateStr <= req.end_date
       );
-      
       return {
         date,
         isCurrentMonth: true,
@@ -200,9 +181,13 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
         occupiedBy: occupiedRequest ? `Worker ${occupiedRequest.worker_id}` : undefined
       };
     });
-    
     setCalendarDays(calendarDays);
-  };
+  }, [currentDate, vacationRequests, selectedRange]);
+
+  useEffect(() => {
+    fetchVacationData();
+    generateCalendarDays();
+  }, [fetchVacationData, generateCalendarDays]);
 
   const handleDateClick = (date: Date) => {
     if (isWeekend(date) || date < new Date()) return;

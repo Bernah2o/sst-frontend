@@ -39,7 +39,6 @@ import {
   Close as RejectIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
-  CalendarToday as CalendarIcon,
   FileDownload as DownloadIcon,
   MoreVert as MoreVertIcon,
   Edit as EditIcon,
@@ -61,8 +60,6 @@ const VacationsManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'cancelled'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRequest, setSelectedRequest] = useState<VacationRequestWithWorker | null>(null);
-  const [openDialog, setOpenDialog] = useState(false);
   const [snackbar, setSnackbar] = useState({ 
     open: false, 
     message: '', 

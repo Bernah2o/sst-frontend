@@ -281,9 +281,10 @@ export const useCargoAutocomplete = () => {
   });
   
   // Cargar datos inicialmente solo una vez
+  const { setSearchTerm } = result;
   useEffect(() => {
-    result.setSearchTerm('');
-  }, []); // Dependencias vacías para ejecutar solo una vez
+    setSearchTerm('');
+  }, [setSearchTerm]);
   
   return result;
 };

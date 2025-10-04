@@ -1,20 +1,11 @@
 import {
-  Search as SearchIcon,
-  CheckCircle as CompleteIcon,
-  Cancel as CancelIcon,
-  PlayArrow as StartIcon,
-  Stop as StopIcon,
-  BookmarkBorder as BookmarkIcon,
   School as CourseIcon,
   Poll as SurveyIcon,
   Quiz as EvaluationIcon,
   WorkspacePremium as CertificateIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
-  Notifications as NotificationIcon,
-  CheckCircleOutline as CheckIcon,
-  RadioButtonUnchecked as PendingIcon,
-  HourglassEmpty as WaitingIcon
+  CheckCircleOutline as CheckIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -27,37 +18,20 @@ import {
   TableRow,
   Paper,
   Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Pagination,
-  TextField,
-  Grid,
   LinearProgress,
-  Card,
-  CardContent,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
-  Button,
   Alert,
   AlertTitle,
   Collapse,
   IconButton,
-  Tooltip,
-  Badge,
-  Divider,
   CircularProgress
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import { formatDate, formatDateTime } from '../utils/dateUtils';
+ 
 
-interface UserProgress {
+interface UserProgressData {
   id: number;
   user_id: number;
   user_name: string;
@@ -124,10 +98,9 @@ interface User {
 }
 
 const UserProgress: React.FC = () => {
-  const { user } = useAuth();
-  const [userProgresses, setUserProgresses] = useState<UserProgress[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [userProgresses, setUserProgresses] = useState<UserProgressData[]>([]);
+  const [, setCourses] = useState<Course[]>([]);
+  const [, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -135,7 +108,7 @@ const UserProgress: React.FC = () => {
   const [courseDetails, setCourseDetails] = useState<Map<number, CourseProgressDetail>>(new Map());
   const [certificates, setCertificates] = useState<Map<number, Certificate[]>>(new Map());
   const [loadingDetails, setLoadingDetails] = useState<Set<number>>(new Set());
-  const [filters, setFilters] = useState({
+  const [filters] = useState({
     status: '',
     course_id: '',
     user_id: '',
@@ -150,13 +123,7 @@ const UserProgress: React.FC = () => {
     suspendido: { label: 'Suspendido', color: 'warning' }
   };
 
-  useEffect(() => {
-    fetchUserProgresses();
-    fetchCourses();
-    fetchUsers();
-  }, [page, filters]);
-
-  const fetchUserProgresses = async () => {
+  const fetchUserProgresses = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -177,25 +144,31 @@ const UserProgress: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filters]);
 
-  const fetchCourses = async () => {
+  const fetchCourses = useCallback(async () => {
     try {
       const response = await api.get('/courses/');
       setCourses(response.data);
     } catch (error) {
       console.error('Error fetching courses:', error);
     }
-  };
+  }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await api.get('/users/');
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchUserProgresses();
+    fetchCourses();
+    fetchUsers();
+  }, [page, filters, fetchUserProgresses, fetchCourses, fetchUsers]);
 
   const fetchCourseDetails = async (courseId: number, userId: number) => {
     if (loadingDetails.has(courseId)) return;
@@ -243,10 +216,7 @@ const UserProgress: React.FC = () => {
     setExpandedRows(newExpandedRows);
   };
 
-  const handleFilterChange = (field: string, value: any) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
-    setPage(1);
-  };
+  
 
 
 
@@ -267,9 +237,7 @@ const UserProgress: React.FC = () => {
     return config ? config.color : 'default';
   };
 
-  const getStatusLabel = (status: string) => {
-    return statusConfig[status as keyof typeof statusConfig]?.label || status;
-  };
+  
 
   const renderProgressStep = (icon: React.ReactNode, title: string, status: 'completed' | 'current' | 'pending', description?: string) => {
     const getStepColor = () => {

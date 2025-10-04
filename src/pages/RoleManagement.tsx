@@ -28,16 +28,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Switch,
   FormControlLabel,
   Alert,
   Snackbar,
-  Grid,
   Card,
   CardContent,
   Accordion,
@@ -47,10 +41,9 @@ import {
   FormGroup,
   Divider,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import UppercaseTextField from "../components/UppercaseTextField";
-import { useAuth } from "../contexts/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
 import api from "../services/api";
 import { formatDateTime } from "../utils/dateUtils";
@@ -76,13 +69,6 @@ interface Permission {
   is_active: boolean;
 }
 
-interface RolePermission {
-  id: number;
-  role_id: number;
-  permission_id: number;
-  permission: Permission;
-}
-
 interface RoleFormData {
   name: string;
   display_name: string;
@@ -92,9 +78,7 @@ interface RoleFormData {
 }
 
 const RoleManagement: React.FC = () => {
-  const { user } = useAuth();
   const {
-    canViewRolesPage,
     canCreateRoles,
     canUpdateRoles,
     canDeleteRoles,
@@ -102,7 +86,6 @@ const RoleManagement: React.FC = () => {
   } = usePermissions();
   const [roles, setRoles] = useState<CustomRole[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
   const [rolesPermissionsMap, setRolesPermissionsMap] = useState<Record<number, Permission[]>>({});
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -125,6 +108,7 @@ const RoleManagement: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<CustomRole | null>(null);
   const [notifyingUsers, setNotifyingUsers] = useState(false);
+  const [, setRolePermissions] = useState<Permission[]>([]);
 
   // Mapeo de nombres amigables para recursos/páginas
   const resourceNames: Record<string, string> = {
@@ -164,18 +148,7 @@ const RoleManagement: React.FC = () => {
 
   // Agrupar permisos por recurso para mostrar en acordeones
 
-  useEffect(() => {
-    fetchRoles();
-    fetchPermissions();
-  }, []);
-
-  useEffect(() => {
-    if (roles.length > 0) {
-      fetchAllRolePermissions();
-    }
-  }, [roles]);
-
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     try {
       const response = await api.get("/permissions/roles/");
       setRoles(response.data);
@@ -183,9 +156,9 @@ const RoleManagement: React.FC = () => {
       console.error("Error fetching roles:", error);
       showSnackbar("No se pudieron cargar los roles. Verifique su conexión e intente nuevamente.", "error");
     }
-  };
+  }, []);
 
-  const fetchPermissions = async () => {
+  const fetchPermissions = useCallback(async () => {
     try {
       const response = await api.get("/permissions/?is_active=true&limit=500");
       setPermissions(response.data);
@@ -195,9 +168,9 @@ const RoleManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchAllRolePermissions = async () => {
+  const fetchAllRolePermissions = useCallback(async () => {
     try {
       const permissionsMap: Record<number, Permission[]> = {};
       
@@ -215,7 +188,20 @@ const RoleManagement: React.FC = () => {
     } catch (error) {
       console.error("Error fetching role permissions:", error);
     }
-  };
+  }, [roles]);
+
+  useEffect(() => {
+    fetchRoles();
+    fetchPermissions();
+  }, [fetchRoles, fetchPermissions]);
+
+  useEffect(() => {
+    if (roles.length > 0) {
+      fetchAllRolePermissions();
+    }
+  }, [roles, fetchAllRolePermissions]);
+
+
 
   const getActionIcon = (action: string) => {
     const iconMap: Record<string, React.ReactElement> = {

@@ -2,7 +2,6 @@ import {
   ExpandMore,
   PlayArrow,
   CheckCircle,
-  Lock,
   PictureAsPdf,
   VideoLibrary,
   Link as LinkIcon,
@@ -16,7 +15,6 @@ import {
   Typography,
   Card,
   CardContent,
-  CardActions,
   Button,
   LinearProgress,
   Chip,
@@ -42,13 +40,12 @@ import {
   StepContent,
   Paper,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 
-interface CourseDetail {
+interface ICourseDetail {
   id: number;
   title: string;
   description: string;
@@ -95,8 +92,7 @@ interface CourseMaterial {
 const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [course, setCourse] = useState<CourseDetail | null>(null);
+  const [course, setCourse] = useState<ICourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedModule, setExpandedModule] = useState<number | false>(false);
@@ -111,11 +107,41 @@ const CourseDetail: React.FC = () => {
   const [hasEvaluation, setHasEvaluation] = useState<boolean>(false);
   const [hasCertificate, setHasCertificate] = useState<boolean>(false);
 
+  const fetchCourseDetail = useCallback(async () => {
+    if (!id) {
+      setError("ID del curso no válido");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const response = await api.get(`/courses/${id}`);
+      setCourse(response.data);
+      // Cargar estado de progreso/encuestas/evaluación
+      const progressResp = await api.get(`/progress/course/${id}`);
+      setProgressInfo(progressResp.data);
+      
+      // Forzar actualización del activeStep después de cargar los datos
+      setTimeout(() => {
+        if (progressResp.data.overall_progress >= 95) {
+          // Resetear estados para forzar re-evaluación
+          setActiveStep(0);
+        }
+      }, 50);
+    } catch (error: any) {
+      console.error("Error fetching course detail:", error);
+      setError("No se pudo cargar el curso. Verifique su conexión e intente nuevamente.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     if (id) {
       fetchCourseDetail();
     }
-  }, [id]);
+  }, [id, fetchCourseDetail]);
 
   // Forzar actualización del progreso al montar el componente
   useEffect(() => {
@@ -128,7 +154,7 @@ const CourseDetail: React.FC = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [course?.id]);
+  }, [course, progressInfo, fetchCourseDetail]);
 
   // Actualizar progreso cuando el usuario regresa a la página
   useEffect(() => {
@@ -142,7 +168,7 @@ const CourseDetail: React.FC = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [id]);
+  }, [id, fetchCourseDetail]);
 
   // Determinar el paso activo en el flujo de progresión
   useEffect(() => {
@@ -227,36 +253,6 @@ const CourseDetail: React.FC = () => {
       checkCompleteProgress();
     }
   }, [course, progressInfo, id]);
-
-  const fetchCourseDetail = async () => {
-    if (!id) {
-      setError("ID del curso no válido");
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const response = await api.get(`/courses/${id}`);
-      setCourse(response.data);
-      // Cargar estado de progreso/encuestas/evaluación
-      const progressResp = await api.get(`/progress/course/${id}`);
-      setProgressInfo(progressResp.data);
-      
-      // Forzar actualización del activeStep después de cargar los datos
-      setTimeout(() => {
-        if (progressResp.data.overall_progress >= 95) {
-          // Resetear estados para forzar re-evaluación
-          setActiveStep(0);
-        }
-      }, 50);
-    } catch (error: any) {
-      console.error("Error fetching course detail:", error);
-      setError("No se pudo cargar el curso. Verifique su conexión e intente nuevamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Helper function to check if a material is completed
   const isMaterialCompleted = (materialId: number): boolean => {
@@ -407,7 +403,7 @@ const CourseDetail: React.FC = () => {
   // Detectar y convertir URLs de YouTube para embeber
   const getYouTubeEmbedUrl = (url: string): string | null => {
     const youtubeRegex =
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
     const match = url?.match(youtubeRegex);
     if (match) {
       return `https://www.youtube.com/embed/${match[1]}`;

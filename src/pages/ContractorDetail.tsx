@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Paper,
   Typography,
   Grid,
   Card,
@@ -10,7 +9,6 @@ import {
   Divider,
   Button,
   IconButton,
-  Tooltip,
   Alert,
   CircularProgress,
   Avatar,
@@ -21,7 +19,6 @@ import {
   Person as PersonIcon,
   Work as WorkIcon,
   LocationOn as LocationIcon,
-  LocalHospital as MedicalIcon,
   Security as SecurityIcon,
   Description as DocumentIcon,
   Phone as PhoneIcon,

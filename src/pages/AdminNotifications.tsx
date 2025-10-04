@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
   Card,
   CardContent,
   Button,
-  Grid,
   TextField,
   Dialog,
   DialogTitle,
@@ -38,7 +37,6 @@ import {
   Send as SendIcon,
   Block as BlockIcon,
   Refresh as RefreshIcon,
-  FilterList as FilterIcon,
   Assessment as StatsIcon,
   Delete as DeleteIcon,
   Email as EmailIcon,
@@ -54,8 +52,6 @@ import {
   NotificationStatistics,
   ExamStatus,
   ExamNotificationType,
-  NotificationStatus,
-  BulkAction,
   NotificationAcknowledgment,
   NotificationFilters,
 } from "../types/adminNotifications";
@@ -106,14 +102,12 @@ const AdminNotifications: React.FC = () => {
   // Estados para diálogos
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [suppressDialogOpen, setSuppressDialogOpen] = useState(false);
-  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
 
   // Estados para formularios
   const [notificationType, setNotificationType] =
     useState<ExamNotificationType>(ExamNotificationType.REMINDER);
   const [forceSend, setForceSend] = useState(false);
   const [suppressReason, setSuppressReason] = useState("");
-  const [bulkAction, setBulkAction] = useState<BulkAction>(BulkAction.SEND);
 
   // Estados para mensajes
   const [snackbar, setSnackbar] = useState<{
@@ -123,7 +117,7 @@ const AdminNotifications: React.FC = () => {
   }>({ open: false, message: "", severity: "info" });
 
   // Hook para el diálogo de confirmación
-  const { dialogState, showConfirmDialog, hideConfirmDialog } = useConfirmDialog();
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
 
   // Verificar permisos de administrador
   useEffect(() => {
@@ -136,14 +130,7 @@ const AdminNotifications: React.FC = () => {
     }
   }, [user]);
 
-  // Cargar datos iniciales
-  useEffect(() => {
-    if (user?.role === "admin") {
-      loadData();
-    }
-  }, [user, filters, tabValue]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       if (tabValue === 0) {
@@ -184,7 +171,14 @@ const AdminNotifications: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tabValue, filters]);
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    if (user?.role === "admin") {
+      loadData();
+    }
+  }, [user, loadData]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);

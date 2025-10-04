@@ -9,7 +9,6 @@ import {
   Error,
   Link,
   LinkOff,
-  PersonAdd,
   CheckCircle,
   Cancel,
   Close as CloseIcon,
@@ -44,8 +43,7 @@ import {
   Grid,
   CircularProgress,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
 
 import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
 import UppercaseTextField from '../components/UppercaseTextField';
@@ -54,8 +52,6 @@ import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
 import { useCargoAutocompleteOptimized } from '../hooks/useCargoAutocompleteOptimized';
 import { 
   Worker, 
-  WorkerCreate, 
-  WorkerUpdate,
   WorkerList,
   Gender, 
   DocumentType, 
@@ -138,7 +134,7 @@ const WorkersManagement: React.FC = () => {
   // Debug: Contar renders del componente principal
 
   
-  const navigate = useNavigate();
+  
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -149,11 +145,11 @@ const WorkersManagement: React.FC = () => {
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
   
   // Estados para las configuraciones administrativas
-  const [adminConfigs, setAdminConfigs] = useState<AdminConfig[]>([]);
+  const [, setAdminConfigs] = useState<AdminConfig[]>([]);
   const [epsOptions, setEpsOptions] = useState<AdminConfig[]>([]);
   const [afpOptions, setAfpOptions] = useState<AdminConfig[]>([]);
   const [arlOptions, setArlOptions] = useState<AdminConfig[]>([]);
-  const [cargoOptions, setCargos] = useState<Cargo[]>([]);
+  const [, setCargos] = useState<Cargo[]>([]);
   const [areaOptions, setAreaOptions] = useState<Area[]>([]);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [formData, setFormData] = useState<WorkerFormData>({
@@ -210,12 +206,50 @@ const WorkersManagement: React.FC = () => {
   const [previewWorker, setPreviewWorker] = useState<Worker | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
+  const fetchWorkers = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Si estamos en la primera página y no hay búsqueda, obtener más registros para calcular el total
+      const isFirstPageNoSearch = page === 0 && !searchTerm;
+      const limitForTotal = isFirstPageNoSearch ? 1000 : rowsPerPage;
+
+      const response = await api.get("/workers", {
+        params: {
+          skip: page * rowsPerPage,
+          limit: limitForTotal,
+          search: searchTerm || undefined,
+        },
+      });
+
+      const allWorkers = response.data || [];
+
+      if (isFirstPageNoSearch) {
+        setWorkers(allWorkers.slice(0, rowsPerPage));
+        setTotalWorkers(allWorkers.length);
+      } else {
+        setWorkers(allWorkers);
+        if (allWorkers.length === rowsPerPage) {
+          setTotalWorkers((page + 1) * rowsPerPage + 1);
+        } else {
+          setTotalWorkers(page * rowsPerPage + allWorkers.length);
+        }
+      }
+    } catch (error) {
+      logger.error("Error fetching workers:", error);
+      showSnackbar("No se pudieron cargar los trabajadores. Verifique su conexión e intente nuevamente.", "error");
+      setWorkers([]);
+      setTotalWorkers(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, rowsPerPage, searchTerm]);
+
   useEffect(() => {
     fetchWorkers();
     fetchAdminConfigs();
     fetchCargos();
     fetchAreas();
-  }, [page, rowsPerPage, searchTerm]);
+  }, [fetchWorkers]);
 
   const fetchAdminConfigs = async () => {
     try {
@@ -330,50 +364,7 @@ const WorkersManagement: React.FC = () => {
     }
   };
 
-  const fetchWorkers = async () => {
-    try {
-      setLoading(true);
-      
-      // Si estamos en la primera página y no hay búsqueda, obtener más registros para calcular el total
-      const isFirstPageNoSearch = page === 0 && !searchTerm;
-      const limitForTotal = isFirstPageNoSearch ? 1000 : rowsPerPage;
-      
-      const response = await api.get("/workers", {
-        params: {
-          skip: page * rowsPerPage,
-          limit: limitForTotal,
-          search: searchTerm || undefined,
-        },
-      });
-      
-      const allWorkers = response.data || [];
-      
-      if (isFirstPageNoSearch) {
-        // Si obtuvimos todos los registros, usar esa información
-        setWorkers(allWorkers.slice(0, rowsPerPage));
-        setTotalWorkers(allWorkers.length);
-      } else {
-        // Para otras páginas o con búsqueda, usar los datos tal como vienen
-        setWorkers(allWorkers);
-        // Estimar el total basado en si hay más registros
-        if (allWorkers.length === rowsPerPage) {
-          // Probablemente hay más registros
-          setTotalWorkers((page + 1) * rowsPerPage + 1);
-        } else {
-          // Esta es probablemente la última página
-          setTotalWorkers(page * rowsPerPage + allWorkers.length);
-        }
-      }
-    } catch (error) {
-      logger.error("Error fetching workers:", error);
-      showSnackbar("No se pudieron cargar los trabajadores. Verifique su conexión e intente nuevamente.", "error");
-      // Reset to empty array on error
-      setWorkers([]);
-      setTotalWorkers(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  
 
   const handleCreateWorker = async () => {
     setEditingWorker(null);
@@ -1786,7 +1777,7 @@ const CargoAutocompleteField: React.FC<{
   // Debug: Contar renders del componente de cargo
   
   
-  const { options, loading, error } = useCargoAutocompleteOptimized();
+  const { options, error } = useCargoAutocompleteOptimized();
   
   // Log para debugging
 

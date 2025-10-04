@@ -18,12 +18,11 @@ import {
   TableBody,
   TableCell,
   TableContainer,
-  TableRow,
-  Paper
+  TableRow
 } from '@mui/material';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { usePermissions } from '../../hooks/usePermissions';
@@ -42,7 +41,7 @@ const AbsenteeismDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadAbsenteeism = async () => {
+  const loadAbsenteeism = useCallback(async () => {
     if (!id) return;
     
     try {
@@ -55,13 +54,13 @@ const AbsenteeismDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (canViewWorkersPage()) {
       loadAbsenteeism();
     }
-  }, [id, canViewWorkersPage]);
+  }, [canViewWorkersPage, loadAbsenteeism]);
 
   const getEventTypeColor = (eventType: EventTypeEnum) => {
     switch (eventType) {
