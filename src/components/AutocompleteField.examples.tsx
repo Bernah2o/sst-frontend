@@ -274,7 +274,7 @@ const UserAutocompleteExample: React.FC<{
   value: AutocompleteOption | null;
   onChange: (value: AutocompleteOption | null) => void;
 }> = ({ value, onChange }) => {
-  const { options, loading, error, setSearchTerm } = useUserAutocomplete();
+  const { options, error } = useUserAutocomplete();
   
   const handleChange = (value: AutocompleteOption | AutocompleteOption[] | null) => {
     if (Array.isArray(value)) {
@@ -303,7 +303,7 @@ const WorkerAutocompleteExample: React.FC<{
   value: AutocompleteOption | null;
   onChange: (value: AutocompleteOption | null) => void;
 }> = ({ value, onChange }) => {
-  const { options, loading, error } = useWorkerAutocomplete();
+  const { options, error } = useWorkerAutocomplete();
   
   const handleChange = (value: AutocompleteOption | AutocompleteOption[] | null) => {
     if (Array.isArray(value)) {
@@ -332,7 +332,7 @@ const CourseAutocompleteExample: React.FC<{
   value: AutocompleteOption | null;
   onChange: (value: AutocompleteOption | null) => void;
 }> = ({ value, onChange }) => {
-  const { options, loading, error } = useCourseAutocomplete();
+  const { options, error } = useCourseAutocomplete();
   
   const handleChange = (value: AutocompleteOption | AutocompleteOption[] | null) => {
     if (Array.isArray(value)) {
@@ -361,7 +361,7 @@ const CargoAutocompleteExample: React.FC<{
   value: AutocompleteOption | null;
   onChange: (value: AutocompleteOption | null) => void;
 }> = ({ value, onChange }) => {
-  const { options, loading, error } = useCargoAutocomplete();
+  const { options, error } = useCargoAutocomplete();
   
   const handleChange = (value: AutocompleteOption | AutocompleteOption[] | null) => {
     if (Array.isArray(value)) {

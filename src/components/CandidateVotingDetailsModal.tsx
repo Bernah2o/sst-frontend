@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -54,13 +54,7 @@ const CandidateVotingDetailsModal: React.FC<CandidateVotingDetailsModalProps> = 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open && voting) {
-      loadVotingDetails();
-    }
-  }, [open, voting]);
-
-  const loadVotingDetails = async () => {
+  const loadVotingDetails = useCallback(async () => {
     if (!voting) return;
 
     try {
@@ -104,7 +98,13 @@ const CandidateVotingDetailsModal: React.FC<CandidateVotingDetailsModalProps> = 
     } finally {
       setLoading(false);
     }
-  };
+  }, [voting]);
+
+  useEffect(() => {
+    if (open) {
+      loadVotingDetails();
+    }
+  }, [open, loadVotingDetails]);
 
   const getStatusColor = (status: CandidateVotingStatus) => {
     switch (status) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -67,11 +67,9 @@ const CommitteeList: React.FC = () => {
     search: '',
   });
 
-  useEffect(() => {
-    loadCommittees();
-  }, [page, rowsPerPage, filters]);
 
-  const loadCommittees = async () => {
+
+  const loadCommittees = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -122,7 +120,11 @@ const CommitteeList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, filters]);
+
+  useEffect(() => {
+    loadCommittees();
+  }, [page, rowsPerPage, filters, loadCommittees]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, committee: Committee) => {
     setAnchorEl(event.currentTarget);
@@ -162,10 +164,7 @@ const CommitteeList: React.FC = () => {
     handleMenuClose();
   };
 
-  const handleDeleteClick = () => {
-    setDeleteDialogOpen(true);
-    // No llamamos handleMenuClose() aquí para evitar limpiar selectedCommittee
-  };
+
 
   const handleDeleteConfirm = async () => {
     if (selectedCommittee) {

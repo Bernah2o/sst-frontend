@@ -5,13 +5,10 @@ import {
   Search,
   Refresh,
   Visibility,
-  People,
-  Schedule,
   FolderOpen,
   Description,
   CloudUpload,
   Link as LinkIcon,
-  Quiz,
   CheckCircle,
   VideoLibrary,
   PictureAsPdf,
@@ -48,14 +45,13 @@ import {
   Card,
   CardContent,
   CardActions,
-  Divider,
   FormControlLabel,
   Switch,
   Grid,
   LinearProgress,
   CircularProgress,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import PDFViewer from '../components/PDFViewerNew';
 import UppercaseTextField from "../components/UppercaseTextField";
@@ -74,17 +70,10 @@ import {
   CourseMaterial,
   CourseModule,
   CourseBase,
-  CourseCreate,
-  CourseUpdate,
   CourseResponse,
-  CourseListResponse,
   CourseMaterialBase,
-  CourseMaterialCreate,
-  CourseMaterialUpdate,
   CourseMaterialResponse,
   CourseModuleBase,
-  CourseModuleCreate,
-  CourseModuleUpdate,
   CourseModuleResponse,
 } from "./../types";
 
@@ -215,20 +204,7 @@ const CoursesManagement: React.FC = () => {
     title: string;
   }>({ type: "pdf", content: "", title: "" });
 
-  // Estados para diálogos de error
-  const [errorDialog, setErrorDialog] = useState({
-    open: false,
-    title: "",
-    message: "",
-  });
 
-  // Estados para diálogos de confirmación
-  const [confirmDialog, setConfirmDialog] = useState({
-    open: false,
-    title: "",
-    message: "",
-    onConfirm: () => {},
-  });
 
   // Estados para diálogos de edición
   const [openModuleEditDialog, setOpenModuleEditDialog] = useState(false);
@@ -259,6 +235,20 @@ const CoursesManagement: React.FC = () => {
     type: string;
     url: string;
   } | null>(null);
+
+  // Estados para diálogos de error y confirmación
+  const [errorDialog, setErrorDialog] = useState({
+    open: false,
+    title: "",
+    message: "",
+  });
+
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
 
   // Función helper para construir URLs de previsualización
   const getPreviewUrl = (content: string): string => {
@@ -324,15 +314,9 @@ const CoursesManagement: React.FC = () => {
     // Monitorear cambios en selectedCourse
   }, [selectedCourse]);
 
-  useEffect(() => {
-    if (user?.role === "employee") {
-      fetchEnrolledCourses();
-    } else {
-      fetchCourses();
-    }
-  }, [page, rowsPerPage, searchTerm, user]);
 
-  const fetchCourses = async () => {
+
+  const fetchCourses = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get("/courses", {
@@ -383,9 +367,9 @@ const CoursesManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, searchTerm]);
 
-  const fetchEnrolledCourses = async () => {
+  const fetchEnrolledCourses = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get("/enrollments/my-enrollments", {
@@ -424,7 +408,15 @@ const CoursesManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, searchTerm]);
+
+  useEffect(() => {
+    if (user?.role === "employee") {
+      fetchEnrolledCourses();
+    } else {
+      fetchCourses();
+    }
+  }, [page, rowsPerPage, searchTerm, user, fetchCourses, fetchEnrolledCourses]);
 
   const handleCreateCourse = () => {
     setEditingCourse(null);
@@ -744,11 +736,6 @@ const CoursesManagement: React.FC = () => {
     if (!selectedCourse) return;
 
     try {
-      const moduleData = {
-        ...moduleFormData,
-        course_id: selectedCourse.id,
-      };
-
       if (editingModule) {
         await api.put(`/courses/modules/${editingModule.id}`, moduleFormData);
         showSnackbar("Módulo actualizado exitosamente", "success");
@@ -1151,7 +1138,7 @@ const CoursesManagement: React.FC = () => {
             file_url: materialFormData.material_type === MaterialType.LINK ? materialFormData.file_url : undefined,
           };
           
-          const updateResponse = await api.put(`/courses/materials/${editingMaterial.id}`, materialData);
+          await api.put(`/courses/materials/${editingMaterial.id}`, materialData);
           showSnackbar("Material actualizado exitosamente", "success");
         } else {
           // Crear nuevo material
@@ -1168,7 +1155,7 @@ const CoursesManagement: React.FC = () => {
               file_url: materialFormData.file_url,
             };
             
-            const linkResponse = await api.post(`/courses/modules/${selectedModule.id}/materials`, materialData);
+            await api.post(`/courses/modules/${selectedModule.id}/materials`, materialData);
             
             showSnackbar("Material creado exitosamente", "success");
             
@@ -1240,7 +1227,7 @@ const CoursesManagement: React.FC = () => {
                 is_required: materialFormData.is_required,
               };
               
-              const updateResponse = await api.put(`/courses/materials/${materialId}`, updateData);
+              await api.put(`/courses/materials/${materialId}`, updateData);
             }
           }
           
@@ -1378,7 +1365,7 @@ const CoursesManagement: React.FC = () => {
   // Función para detectar y convertir URLs de YouTube
   const getYouTubeEmbedUrl = (url: string): string | null => {
     const youtubeRegex =
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/ |.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
     const match = url.match(youtubeRegex);
     if (match) {
       return `https://www.youtube.com/embed/${match[1]}`;
@@ -3223,6 +3210,66 @@ const CoursesManagement: React.FC = () => {
             startIcon={<Delete />}
           >
             Eliminar Material
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de error */}
+      <Dialog
+        open={errorDialog.open}
+        onClose={() => setErrorDialog({ ...errorDialog, open: false })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Error color="error" />
+          {errorDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{errorDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setErrorDialog({ ...errorDialog, open: false })}
+            variant="contained"
+            color="primary"
+          >
+            Entendido
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de confirmación */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning color="warning" />
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+            variant="outlined"
+            color="primary"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => {
+              confirmDialog.onConfirm();
+              setConfirmDialog({ ...confirmDialog, open: false });
+            }}
+            variant="contained"
+            color="primary"
+          >
+            Confirmar
           </Button>
         </DialogActions>
       </Dialog>

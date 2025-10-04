@@ -7,7 +7,6 @@ import {
   Typography,
   Alert,
   Container,
-  Avatar,
   CssBaseline,
   MenuItem,
   FormControl,

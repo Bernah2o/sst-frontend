@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Grid,
@@ -41,15 +41,12 @@ import {
   Description as DocumentIcon,
   Visibility as ViewIcon,
   Edit as EditIcon,
-  Settings as SettingsIcon,
   FilterList as FilterIcon,
   Refresh as RefreshIcon,
   PersonAdd as PersonAddIcon,
   Schedule as ScheduleIcon,
   TrendingUp as TrendingUpIcon,
   Warning as WarningIcon,
-  CheckCircle as CheckCircleIcon,
-  AccessTime as AccessTimeIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { committeeService } from '../services/committeeService';
@@ -59,7 +56,6 @@ import { committeeActivityService } from '../services/committeeActivityService';
 import { committeePermissionService } from '../services/committeePermissionService';
 import {
   Committee,
-  CommitteeDashboard as DashboardData,
   Meeting,
   Voting,
   Activity,
@@ -67,7 +63,6 @@ import {
   ActivityStatus,
   MeetingStatus,
   VotingStatus,
-  CommitteeListFilters,
 } from '../types';
 
 interface DashboardFilters {
@@ -80,7 +75,6 @@ const CommitteeDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [userCommittees, setUserCommittees] = useState<Committee[]>([]);
   const [filteredCommittees, setFilteredCommittees] = useState<Committee[]>([]);
   const [upcomingMeetings, setUpcomingMeetings] = useState<Meeting[]>([]);
@@ -105,15 +99,9 @@ const CommitteeDashboard: React.FC = () => {
     completedActivitiesThisMonth: 0,
   });
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [filters, userCommittees]);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...userCommittees];
 
     // Filter by search term
@@ -136,9 +124,25 @@ const CommitteeDashboard: React.FC = () => {
     }
 
     setFilteredCommittees(filtered);
-  };
+  }, [userCommittees, filters]);
 
-  const loadDashboardData = async () => {
+  const calculateStatistics = useCallback((committees: Committee[]) => {
+    const activeCommittees = committees.filter(c => c.is_active).length;
+    
+    setStatistics({
+      totalCommittees: committees.length,
+      activeCommittees,
+      upcomingMeetingsCount: upcomingMeetings.length,
+      activeVotingsCount: activeVotings.length,
+      pendingActivitiesCount: pendingActivities.length,
+      overdueMeetings: upcomingMeetings.filter(m => 
+        new Date(m.meeting_date) < new Date()
+      ).length,
+      completedActivitiesThisMonth: 0, // This would need additional API call
+    });
+  }, [upcomingMeetings, activeVotings, pendingActivities]);
+
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -187,7 +191,7 @@ const CommitteeDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [calculateStatistics]);
 
   const loadDashboardMetrics = async (committees: Committee[]) => {
     try {
@@ -232,21 +236,7 @@ const CommitteeDashboard: React.FC = () => {
     }
   };
 
-  const calculateStatistics = (committees: Committee[]) => {
-    const activeCommittees = committees.filter(c => c.is_active).length;
-    
-    setStatistics({
-      totalCommittees: committees.length,
-      activeCommittees,
-      upcomingMeetingsCount: upcomingMeetings.length,
-      activeVotingsCount: activeVotings.length,
-      pendingActivitiesCount: pendingActivities.length,
-      overdueMeetings: upcomingMeetings.filter(m => 
-        new Date(m.meeting_date) < new Date()
-      ).length,
-      completedActivitiesThisMonth: 0, // This would need additional API call
-    });
-  };
+
 
   const handleFilterChange = (field: keyof DashboardFilters, value: any) => {
     setFilters(prev => ({
@@ -260,6 +250,14 @@ const CommitteeDashboard: React.FC = () => {
       search: '',
     });
   };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [filters, userCommittees, applyFilters]);
 
   const handleQuickAction = (action: string, committeeId?: number) => {
     switch (action) {

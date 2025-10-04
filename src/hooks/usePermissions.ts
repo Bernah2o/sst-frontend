@@ -944,7 +944,7 @@ export const usePermissions = () => {
       } finally {
         setLoading(false);
       }
-  }, [user?.custom_role_id, user?.role]);
+  }, [user]);
 
   // Efecto para cargar datos cuando cambie el usuario
   useEffect(() => {
@@ -1524,9 +1524,8 @@ export const usePermissions = () => {
     // Si ninguna de las condiciones anteriores se cumple, no tiene acceso
     return false;
   }, [
-    user, 
-    pageAccesses, 
-    userPermissions,
+    user,
+    pageAccesses,
     canUpdateUsers,
     canViewUsersPage,
     canViewCoursesPage,
@@ -1552,8 +1551,7 @@ export const usePermissions = () => {
     canViewCertificatesPage,
     canCreateCertificates,
     canViewReportsPage,
-    canViewNotificationsPage,
-    canViewSuppliersPage
+    canViewNotificationsPage
   ]);
 
   return {

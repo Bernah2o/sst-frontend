@@ -42,23 +42,17 @@ import {
   Tooltip,
   Switch,
   FormControlLabel,
-  Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Divider
+
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
 
-interface Notification {
+interface NotificationData {
   id: number;
   title: string;
   message: string;
@@ -85,14 +79,13 @@ interface User {
 }
 
 const Notification: React.FC = () => {
-  const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingNotification, setEditingNotification] = useState<Notification | null>(null);
+  const [editingNotification, setEditingNotification] = useState<NotificationData | null>(null);
   const [filters, setFilters] = useState({
     type: '',
     channel: '',
@@ -138,12 +131,7 @@ const Notification: React.FC = () => {
     failed: { label: 'Fallida', color: 'error' }
   };
 
-  useEffect(() => {
-    fetchNotifications();
-    fetchUsers();
-  }, [page, filters]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -164,7 +152,12 @@ const Notification: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filters]);
+
+  useEffect(() => {
+    fetchNotifications();
+    fetchUsers();
+  }, [page, filters, fetchNotifications]);
 
   const fetchUsers = async () => {
     try {
@@ -264,7 +257,7 @@ const Notification: React.FC = () => {
     setPage(1);
   };
 
-  const handleOpenDialog = (notification?: Notification) => {
+  const handleOpenDialog = (notification?: NotificationData) => {
     if (notification) {
       setEditingNotification(notification);
       setFormData({

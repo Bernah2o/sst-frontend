@@ -53,13 +53,11 @@ import {
   EDUCATION_LEVELS,
   CONTRACT_TYPES,
 } from '../types/contractor';
-import { useAuth } from '../contexts/AuthContext';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const Contractors: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { dialogState, showConfirmDialog } = useConfirmDialog();
 
   // State
@@ -207,16 +205,7 @@ const Contractors: React.FC = () => {
     />
   );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-CO');
-  };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-    }).format(amount);
-  };
 
   return (
     <Box sx={{ p: 3 }}>

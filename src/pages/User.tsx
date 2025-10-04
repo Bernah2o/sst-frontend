@@ -27,7 +27,7 @@ import {
   Alert,
   Snackbar,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import AutocompleteField, { AutocompleteOption } from '../components/AutocompleteField';
 import UppercaseTextField from '../components/UppercaseTextField';
@@ -109,13 +109,9 @@ const UsersManagement: React.FC = () => {
   const [loadingWorkerData, setLoadingWorkerData] = useState(false);
   const [workerDataFound, setWorkerDataFound] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-    fetchCustomRoles();
-    fetchCargos();
-  }, [page, rowsPerPage, searchTerm]);
+  // (Mover este useEffect debajo de las declaraciones de funciones)
 
-  const fetchCustomRoles = async () => {
+  const fetchCustomRoles = useCallback(async () => {
     try {
       const response = await api.get("/permissions/roles/");
       setCustomRoles(response.data || []);
@@ -128,16 +124,16 @@ const UsersManagement: React.FC = () => {
       });
       setCustomRoles([]); // Asegurar que el estado esté limpio
     }
-  };
+  }, []);
 
-  const fetchCargos = async () => {
+  const fetchCargos = useCallback(async () => {
     try {
       const response = await api.get('/admin/config/cargos/active');
       setCargos(response.data || []);
     } catch (error) {
       console.error('Error fetching cargos:', error);
     }
-  };
+  }, []);
 
   const searchWorkerByDocument = async (documentNumber: string) => {
     if (!documentNumber || documentNumber.length < 3) {
@@ -180,7 +176,7 @@ const UsersManagement: React.FC = () => {
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get("/users/", {
@@ -200,7 +196,14 @@ const UsersManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, searchTerm]);
+
+  // useEffect para cargar datos iniciales una vez definidas las funciones
+  useEffect(() => {
+    fetchUsers();
+    fetchCustomRoles();
+    fetchCargos();
+  }, [fetchUsers, fetchCustomRoles, fetchCargos]);
 
   const handleCreateUser = () => {
     setEditingUser(null);

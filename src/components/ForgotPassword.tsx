@@ -7,7 +7,6 @@ import {
   Typography,
   Alert,
   Container,
-  Avatar,
   CssBaseline,
 } from '@mui/material';
 import React, { useState } from 'react';

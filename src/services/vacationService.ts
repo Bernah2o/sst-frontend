@@ -10,7 +10,6 @@ import {
   VacationAvailability,
   VacationStats,
   OccupiedDatesResponse,
-  OccupiedDate,
   Worker
 } from '../types/worker';
 
@@ -216,4 +215,5 @@ class VacationService {
   }
 }
 
-export default new VacationService();
+const vacationService = new VacationService();
+export default vacationService;

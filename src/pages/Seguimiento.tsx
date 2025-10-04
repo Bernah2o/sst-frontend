@@ -5,40 +5,14 @@ import {
   Visibility as ViewIcon,
   Assignment as AssignmentIcon,
   Person as PersonIcon,
-  Schedule as ScheduleIcon,
   CheckCircle as CompleteIcon,
-  Cancel as CancelIcon,
-  Pending as PendingIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
-  Warning as WarningIcon,
-  Info as InfoIcon,
-  Error as ErrorIcon,
-  TrendingUp as TrendingUpIcon,
-  Assessment as AssessmentIcon,
-  ExpandMore as ExpandMoreIcon,
+
   Flag as FlagIcon,
-  PlayArrow as StartIcon,
-  Stop as StopIcon,
-  FilterList as FilterListIcon,
-  Clear as ClearIcon,
-  Pause as PauseIcon,
-  HealthAndSafety as HealthAndSafetyIcon,
-  Psychology as PsychologyIcon,
-  MedicalServices as MedicalServicesIcon,
-  MonitorHeart as MonitorHeartIcon,
-  Accessibility as AccessibilityIcon,
-  LocalHospital as LocalHospitalIcon
+
 } from '@mui/icons-material';
-import {
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot,
-  TimelineOppositeContent
-} from '@mui/lab';
+
 import {
   Box,
   Typography,
@@ -67,32 +41,23 @@ import {
   Pagination,
   Tooltip,
   Avatar,
-  LinearProgress,
-  Alert,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
+  Alert
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import SeguimientoActividadesModal from '../components/SeguimientoActividadesModal';
 
-import { useAuth } from '../contexts/AuthContext';
+
 import { adminConfigService, ProgramaOption } from '../services/adminConfigService';
 import api from '../services/api';
 import { workerService } from '../services/workerService';
-import { User } from '../types';
+
 import { WorkerList } from '../types/worker';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 
-interface Seguimiento {
+interface SeguimientoData {
   id: number;
   worker_id: number;
   programa: string;
@@ -115,29 +80,18 @@ interface Seguimiento {
   updated_at: string;
 }
 
-// Interfaz para acciones de seguimiento (si se necesita en el futuro)
-interface SeguimientoAction {
-  id: number;
-  action_date: string;
-  action_type: 'evaluacion' | 'tratamiento' | 'seguimiento' | 'capacitacion' | 'otro';
-  description: string;
-  responsible: string;
-  result?: string;
-  next_action?: string;
-}
+
 
 const Seguimiento: React.FC = () => {
-  const { user } = useAuth();
-  const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([]);
+  const [seguimientos, setSeguimientos] = useState<SeguimientoData[]>([]);
   const [workers, setWorkers] = useState<WorkerList[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [programas, setProgramas] = useState<ProgramaOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingSeguimiento, setEditingSeguimiento] = useState<Seguimiento | null>(null);
-  const [viewingSeguimiento, setViewingSeguimiento] = useState<Seguimiento | null>(null);
+  const [editingSeguimiento, setEditingSeguimiento] = useState<SeguimientoData | null>(null);
+  const [viewingSeguimiento, setViewingSeguimiento] = useState<SeguimientoData | null>(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   // const [openActionDialog, setOpenActionDialog] = useState(false); // Comentado - funcionalidad de acciones no incluida
   const [confirmDialog, setConfirmDialog] = useState({ open: false, seguimientoId: null as number | null });
@@ -187,26 +141,7 @@ const Seguimiento: React.FC = () => {
     terminado: { label: 'Terminado', color: 'success', icon: <CompleteIcon /> }
   };
 
-  const actionTypes = [
-    { value: 'evaluacion', label: 'Evaluación' },
-    { value: 'tratamiento', label: 'Tratamiento' },
-    { value: 'seguimiento', label: 'Seguimiento' },
-    { value: 'capacitacion', label: 'Capacitación' },
-    { value: 'otro', label: 'Otro' }
-  ];
-
-  useEffect(() => {
-    fetchSeguimientos();
-    fetchWorkers();
-    fetchUsers();
-  }, [page, filters]);
-
-  useEffect(() => {
-    // Cargar programas solo una vez al montar el componente
-    fetchProgramas();
-  }, []);
-
-  const fetchSeguimientos = async () => {
+  const fetchSeguimientos = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -228,7 +163,19 @@ const Seguimiento: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filters]);
+
+  useEffect(() => {
+    fetchSeguimientos();
+    fetchWorkers();
+  }, [fetchSeguimientos]);
+
+  useEffect(() => {
+    // Cargar programas solo una vez al montar el componente
+    fetchProgramas();
+  }, []);
+
+
 
   const fetchWorkers = async () => {
     try {
@@ -239,14 +186,7 @@ const Seguimiento: React.FC = () => {
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      const response = await api.get('/users/');
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
+
 
   const fetchProgramas = async () => {
     try {
@@ -338,21 +278,14 @@ const Seguimiento: React.FC = () => {
     setConfirmDialog({ open: false, seguimientoId: null });
   };
 
-  const handleUpdateStatus = async (id: number, newEstado: string) => {
-    try {
-      await api.patch(`/seguimientos/${id}`, { estado: newEstado });
-      fetchSeguimientos();
-    } catch (error) {
-      console.error('Error updating status:', error);
-    }
-  };
+
 
   const handleFilterChange = (field: string, value: any) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     setPage(1);
   };
 
-  const handleOpenDialog = (seguimiento?: Seguimiento) => {
+  const handleOpenDialog = (seguimiento?: SeguimientoData) => {
     if (seguimiento) {
       setEditingSeguimiento(seguimiento);
       setFormData({
@@ -396,7 +329,7 @@ const Seguimiento: React.FC = () => {
     setEditingSeguimiento(null);
   };
 
-  const handleViewSeguimiento = async (seguimiento: Seguimiento) => {
+  const handleViewSeguimiento = async (seguimiento: SeguimientoData) => {
     try {
       const response = await api.get(`/seguimientos/${seguimiento.id}`);
       setViewingSeguimiento(response.data);
@@ -418,15 +351,9 @@ const Seguimiento: React.FC = () => {
 
 
 
-  const getProgressColor = (estado: string) => {
-    switch (estado) {
-      case 'terminado': return 'success';
-      case 'iniciado': return 'info';
-      default: return 'info';
-    }
-  };
 
-  const isOverdue = (seguimiento: Seguimiento) => {
+
+  const isOverdue = (seguimiento: SeguimientoData) => {
     if (!seguimiento.fecha_final || seguimiento.estado === 'terminado') return false;
     return new Date(seguimiento.fecha_final) < new Date();
   };

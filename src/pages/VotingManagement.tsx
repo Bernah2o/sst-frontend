@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -31,8 +31,6 @@ import {
   Grid,
   LinearProgress,
   Avatar,
-  FormControlLabel,
-  Checkbox,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -47,7 +45,7 @@ import {
   Assessment as ResultsIcon,
   FilterList as FilterIcon,
 } from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { votingService } from '../services/votingService';
 import { committeeService } from '../services/committeeService';
 import { committeePermissionService } from '../services/committeePermissionService';
@@ -66,7 +64,6 @@ import {
 } from '../types';
 
 const VotingManagement: React.FC = () => {
-  const navigate = useNavigate();
   const { id: committeeId } = useParams<{ id: string }>();
   const [votings, setVotings] = useState<Voting[]>([]);
   const [committees, setCommittees] = useState<Committee[]>([]);
@@ -98,9 +95,7 @@ const VotingManagement: React.FC = () => {
     loadInitialData();
   }, []);
 
-  useEffect(() => {
-    loadVotings();
-  }, [page, rowsPerPage, filters]);
+  // useEffect moved below to avoid use-before-define warning for loadVotings
 
   const loadInitialData = async () => {
     try {
@@ -132,7 +127,7 @@ const VotingManagement: React.FC = () => {
     }
   };
 
-  const loadVotings = async () => {
+  const loadVotings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -158,7 +153,11 @@ const VotingManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [committees, filters, page, rowsPerPage]);
+
+  useEffect(() => {
+    loadVotings();
+  }, [loadVotings]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, voting: Voting) => {
     setAnchorEl(event.currentTarget);

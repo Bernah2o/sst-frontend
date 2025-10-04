@@ -279,4 +279,5 @@ class ContractorService {
   }
 }
 
-export default new ContractorService();
+const contractorService = new ContractorService();
+export default contractorService;

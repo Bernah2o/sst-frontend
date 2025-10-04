@@ -1,7 +1,6 @@
 import {
   Search as SearchIcon,
   Clear as ClearIcon,
-  KeyboardArrowDown as ArrowDownIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import {
@@ -17,7 +16,7 @@ import {
   Alert,
 } from '@mui/material';
 import { SxProps, Theme } from '@mui/material/styles';
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState } from 'react';
 
 import { useAutocomplete, UseAutocompleteOptions } from '../hooks/useAutocomplete';
 
@@ -95,7 +94,6 @@ const AutocompleteField: React.FC<AutocompleteFieldProps> = ({
     error,
     searchTerm,
     setSearchTerm,
-    clearCache,
     refetch,
   } = useAutocomplete(autocompleteOptions);
   

@@ -37,7 +37,7 @@ import {
 } from '@mui/material';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { usePermissions } from '../../hooks/usePermissions';
@@ -46,7 +46,6 @@ import {
   AbsenteeismListResponse,
   AbsenteeismFilters,
   EventTypeEnum,
-  MonthEnum,
   EVENT_TYPE_OPTIONS,
   MONTH_OPTIONS
 } from '../../types/absenteeism';
@@ -75,7 +74,7 @@ const AbsenteeismList: React.FC = () => {
     year: new Date().getFullYear()
   });
 
-  const loadAbsenteeisms = async () => {
+  const loadAbsenteeisms = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -93,13 +92,13 @@ const AbsenteeismList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, filters]);
 
   useEffect(() => {
     if (canViewWorkersPage()) {
       loadAbsenteeisms();
     }
-  }, [page, rowsPerPage, filters, canViewWorkersPage]);
+  }, [loadAbsenteeisms, canViewWorkersPage]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);

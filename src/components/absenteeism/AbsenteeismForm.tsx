@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { format, differenceInDays } from 'date-fns';
 import { useFormik } from 'formik';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import * as Yup from 'yup';
 
@@ -28,13 +28,12 @@ import { workerService } from '../../services/workerService';
 import {
   AbsenteeismCreate,
   AbsenteeismUpdate,
-  AbsenteeismResponse,
   EventTypeEnum,
   MonthEnum,
   EVENT_TYPE_OPTIONS,
   MONTH_OPTIONS
 } from '../../types/absenteeism';
-import { Worker, WorkerList } from '../../types/worker';
+import { WorkerList } from '../../types/worker';
 
 interface AbsenteeismFormProps {
   mode: 'create' | 'edit';
@@ -75,7 +74,6 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
   const [error, setError] = useState<string | null>(null);
   const [workers, setWorkers] = useState<WorkerList[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<WorkerList | null>(null);
-  const [absenteeism, setAbsenteeism] = useState<AbsenteeismResponse | null>(null);
   const [loadingWorkers, setLoadingWorkers] = useState(false);
 
   const isEditMode = mode === 'edit';
@@ -156,13 +154,12 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
   };
 
   // Cargar datos del absenteeism en modo edición
-  const loadAbsenteeism = async () => {
+  const loadAbsenteeism = useCallback(async () => {
     if (!isEditMode || !id) return;
     
     try {
       setLoading(true);
       const data = await absenteeismService.getAbsenteeism(parseInt(id));
-      setAbsenteeism(data);
       
       // Encontrar el trabajador seleccionado
       if (data.worker) {
@@ -196,7 +193,7 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isEditMode, id, workers, formik]);
 
   useEffect(() => {
     loadWorkers();
@@ -206,20 +203,21 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
     if (workers.length > 0) {
       loadAbsenteeism();
     }
-  }, [workers, id, isEditMode]);
+  }, [workers, loadAbsenteeism]);
 
   // Calcular días automáticamente cuando cambian las fechas
+  const { values, setFieldValue } = formik;
   useEffect(() => {
-    if (formik.values.start_date && formik.values.end_date) {
-      const startDate = new Date(formik.values.start_date);
-      const endDate = new Date(formik.values.end_date);
+    if (values.start_date && values.end_date) {
+      const startDate = new Date(values.start_date);
+      const endDate = new Date(values.end_date);
       const days = differenceInDays(endDate, startDate) + 1;
       
-      if (days > 0 && days !== formik.values.disability_days) {
-        formik.setFieldValue('disability_days', days);
+      if (days > 0 && days !== values.disability_days) {
+        setFieldValue('disability_days', days);
       }
     }
-  }, [formik.values.start_date, formik.values.end_date]);
+  }, [values.start_date, values.end_date, values.disability_days, setFieldValue]);
 
   const handleWorkerChange = (worker: WorkerList | null) => {
     setSelectedWorker(worker);

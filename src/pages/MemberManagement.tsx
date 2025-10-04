@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -89,11 +89,7 @@ const MemberManagement: React.FC = () => {
     canManageMembers: false,
   });
 
-  useEffect(() => {
-    loadInitialData();
-  }, [committeeId]);
-
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     if (!committeeId) {
       setError('ID de comité no válido');
       setLoading(false);
@@ -140,7 +136,11 @@ const MemberManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [committeeId]);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [committeeId, loadInitialData]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);

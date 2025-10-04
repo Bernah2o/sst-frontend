@@ -7,7 +7,7 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
 import usePermissions from '../hooks/usePermissions';

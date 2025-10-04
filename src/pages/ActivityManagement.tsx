@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -46,13 +46,10 @@ import {
   Pause as PauseIcon,
   CheckCircle as CompleteIcon,
   Cancel as CancelIcon,
-  Person as AssignIcon,
   FilterList as FilterIcon,
-  Schedule as ScheduleIcon,
   Warning as WarningIcon,
-  TrendingUp as ProgressIcon,
 } from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import ActivityForm from '../components/ActivityForm';
 import { committeeActivityService } from '../services/committeeActivityService';
 import { committeeService } from '../services/committeeService';
@@ -68,30 +65,9 @@ import {
   CommitteeMember,
 } from '../types';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`activity-tabpanel-${index}`}
-      aria-labelledby={`activity-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
 
 const ActivityManagement: React.FC = () => {
-  const navigate = useNavigate();
   const { id: committeeId } = useParams<{ id: string }>();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [committees, setCommittees] = useState<Committee[]>([]);
@@ -105,7 +81,6 @@ const ActivityManagement: React.FC = () => {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -143,12 +118,7 @@ const ActivityManagement: React.FC = () => {
     loadInitialData();
   }, []);
 
-  useEffect(() => {
-    if (committees.length > 0) {
-      loadActivities();
-      loadActivityCounts();
-    }
-  }, [page, rowsPerPage, filters, tabValue, committees]);
+
 
   const loadInitialData = async () => {
     try {
@@ -180,7 +150,7 @@ const ActivityManagement: React.FC = () => {
     }
   };
 
-  const loadActivities = async () => {
+  const loadActivities = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -240,9 +210,9 @@ const ActivityManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [committees, filters, tabValue, page, rowsPerPage]);
 
-  const loadActivityCounts = async () => {
+  const loadActivityCounts = useCallback(async () => {
     try {
       const committeeIds = committees.map(c => c.id);
       if (committeeIds.length === 0) return;
@@ -275,7 +245,14 @@ const ActivityManagement: React.FC = () => {
     } catch (err) {
       console.error('Activity counts loading error:', err);
     }
-  };
+  }, [committees]);
+
+  useEffect(() => {
+    if (committees.length > 0) {
+      loadActivities();
+      loadActivityCounts();
+    }
+  }, [committees, loadActivities, loadActivityCounts]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -373,10 +350,7 @@ const ActivityManagement: React.FC = () => {
     handleMenuClose();
   };
 
-  const handleAssignClick = () => {
-    setAssignDialogOpen(true);
-    handleMenuClose();
-  };
+
 
   const handleDeleteClick = () => {
     setDeleteDialogOpen(true);
@@ -849,10 +823,6 @@ const ActivityManagement: React.FC = () => {
             <MenuItem onClick={handleEdit}>
               <EditIcon sx={{ mr: 1 }} />
               Editar
-            </MenuItem>
-            <MenuItem onClick={handleAssignClick}>
-              <AssignIcon sx={{ mr: 1 }} />
-              Asignar
             </MenuItem>
             <MenuItem
               onClick={handleStartActivity}

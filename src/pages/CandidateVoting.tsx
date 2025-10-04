@@ -31,7 +31,6 @@ import candidateVotingService from '../services/candidateVotingService';
 import {
   CandidateVotingResponse,
   CandidateVotingDetailResponse,
-  CandidateVotingCandidateResponse,
   CandidateVoteCreate,
   CandidateVotingStatus,
 } from '../types';

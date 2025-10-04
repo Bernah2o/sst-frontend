@@ -37,35 +37,27 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Pagination,
   TablePagination,
   Tooltip,
   Avatar,
-  LinearProgress,
   Alert,
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
-  Divider,
-  Stepper,
-  Menu,
-  Step,
-  StepLabel,
-  StepContent
+  Menu
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { es } from 'date-fns/locale';
+
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { useAuth } from '../contexts/AuthContext';
+
 import api from '../services/api';
 import { formatDate } from '../utils/dateUtils';
 import { logger } from '../utils/logger';
 
-interface Reinduction {
+interface ReinductionData {
   id: number;
   worker_id: number;
   year: number;
@@ -111,8 +103,7 @@ interface Worker {
 
 
 const Reinduction: React.FC = () => {
-  const { user } = useAuth();
-  const [reinductions, setReinductions] = useState<Reinduction[]>([]);
+  const [reinductions, setReinductions] = useState<ReinductionData[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -120,8 +111,8 @@ const Reinduction: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingReinduction, setEditingReinduction] = useState<Reinduction | null>(null);
-  const [viewingReinduction, setViewingReinduction] = useState<Reinduction | null>(null);
+  const [editingReinduction, setEditingReinduction] = useState<ReinductionData | null>(null);
+  const [viewingReinduction, setViewingReinduction] = useState<ReinductionData | null>(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
@@ -142,7 +133,7 @@ const Reinduction: React.FC = () => {
   const [enrollConfirmDialog, setEnrollConfirmDialog] = useState({ open: false, reinductionId: null as number | null });
   const [notificationConfirmDialog, setNotificationConfirmDialog] = useState({ open: false, workerId: null as number | null });
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedReinduction, setSelectedReinduction] = useState<Reinduction | null>(null);
+  const [selectedReinduction, setSelectedReinduction] = useState<ReinductionData | null>(null);
 
   const statusConfig = {
     pending: { label: 'Pendiente', color: 'default', icon: <PendingIcon /> },
@@ -195,10 +186,19 @@ const Reinduction: React.FC = () => {
     }
   }, [page, rowsPerPage, filters.status, filters.worker, filters.year, filters.search]);
 
+  const fetchWorkers = useCallback(async () => {
+    try {
+      const response = await api.get('/workers/');
+      setWorkers(response.data);
+    } catch (error) {
+      logger.error('Error fetching workers:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchReinductions();
     fetchWorkers();
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, fetchReinductions, fetchWorkers]);
 
   // Debounce effect for search filter
   useEffect(() => {
@@ -225,18 +225,6 @@ const Reinduction: React.FC = () => {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [fetchReinductions]);
-
-  const fetchWorkers = async () => {
-    try {
-      const response = await api.get('/workers/');
-      setWorkers(response.data);
-    } catch (error) {
-      logger.error('Error fetching workers:', error);
-    }
-  };
-
-
-
 
 
   const handleSaveReinduction = async () => {
@@ -315,7 +303,7 @@ const Reinduction: React.FC = () => {
     setPage(0);
   };
 
-  const handleOpenDialog = (reinduction?: Reinduction) => {
+  const handleOpenDialog = (reinduction?: ReinductionData) => {
     if (reinduction) {
       setEditingReinduction(reinduction);
       setFormData({
@@ -349,12 +337,12 @@ const Reinduction: React.FC = () => {
     setEditingReinduction(null);
   };
 
-  const handleViewReinduction = (reinduction: Reinduction) => {
+  const handleViewReinduction = (reinduction: ReinductionData) => {
     setViewingReinduction(reinduction);
     setOpenViewDialog(true);
   };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, reinduction: Reinduction) => {
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, reinduction: ReinductionData) => {
     setAnchorEl(event.currentTarget);
     setSelectedReinduction(reinduction);
   };

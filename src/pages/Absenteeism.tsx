@@ -4,11 +4,8 @@ import {
   Delete,
   Search,
   Refresh,
-  Visibility,
   Assessment,
   FilterList,
-  Clear,
-  GetApp,
 } from "@mui/icons-material";
 import {
   Box,
@@ -40,20 +37,17 @@ import {
   CardContent,
   Autocomplete,
   Tooltip,
-  Fab,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import api from "../services/api";
 import {
   AbsenteeismResponse,
-  AbsenteeismCreate,
-  AbsenteeismUpdate,
   AbsenteeismListResponse,
   AbsenteeismStats,
   AbsenteeismFilters,
@@ -101,7 +95,6 @@ const AbsenteeismManagement: React.FC = () => {
   // Estados para trabajadores
   const [workers, setWorkers] = useState<WorkerBasicInfo[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<WorkerBasicInfo | null>(null);
-  const [workerSearchTerm, setWorkerSearchTerm] = useState("");
   
   const [formData, setFormData] = useState<AbsenteeismFormData>({
     event_month: MonthEnum.ENERO,
@@ -130,12 +123,7 @@ const AbsenteeismManagement: React.FC = () => {
     severity: "success" as "success" | "error",
   });
 
-  useEffect(() => {
-    fetchAbsenteeismRecords();
-    fetchWorkers();
-  }, [page, rowsPerPage, searchTerm, filters]);
-
-  const fetchAbsenteeismRecords = async () => {
+  const fetchAbsenteeismRecords = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -156,7 +144,12 @@ const AbsenteeismManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, searchTerm, filters]);
+
+  useEffect(() => {
+    fetchAbsenteeismRecords();
+    fetchWorkers();
+  }, [fetchAbsenteeismRecords]);
 
   const fetchWorkers = async () => {
     try {
@@ -356,10 +349,7 @@ const AbsenteeismManagement: React.FC = () => {
     }
   };
 
-  const clearFilters = () => {
-    setFilters({});
-    setSearchTerm("");
-  };
+
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>

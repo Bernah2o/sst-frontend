@@ -90,10 +90,7 @@ const ContractorDocuments: React.FC = () => {
     otro: 'Otro',
   };
 
-  useEffect(() => {
-    loadDocuments();
-    loadContractors();
-  }, [page, rowsPerPage, filterContractor, filterType, searchTerm]);
+
 
   const loadDocuments = useCallback(async () => {
     try {
@@ -115,7 +112,7 @@ const ContractorDocuments: React.FC = () => {
     }
   }, [filterContractor, filterType, searchTerm, page, rowsPerPage]);
 
-  const loadContractors = async () => {
+  const loadContractors = useCallback(async () => {
     try {
       const response = await contractorService.getContractors({ size: 100 });
       setContractors(response?.contractors || []);
@@ -123,7 +120,12 @@ const ContractorDocuments: React.FC = () => {
       console.error('Error loading contractors:', err);
       setContractors([]);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadDocuments();
+    loadContractors();
+  }, [page, rowsPerPage, filterContractor, filterType, searchTerm, loadDocuments, loadContractors]);
 
   const handleUploadDocument = async () => {
     if (!selectedContractor || !uploadFile || !documentType) {

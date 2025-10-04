@@ -1,16 +1,9 @@
 import {
-  Dashboard as DashboardIcon,
   School as SchoolIcon,
   People as PeopleIcon,
   Event as EventIcon,
-  Assignment as AssignmentIcon,
-  Schedule as ScheduleIcon,
   TrendingUp as TrendingUpIcon,
   CheckCircle as CheckCircleIcon,
-  AccessTime as AccessTimeIcon,
-  PlayArrow as PlayArrowIcon,
-  Stop as StopIcon,
-  Visibility as VisibilityIcon,
   Assessment as AssessmentIcon
 } from '@mui/icons-material';
 import {
@@ -20,15 +13,12 @@ import {
   CardContent,
   Typography,
   Button,
-  Paper,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
   Chip,
   LinearProgress,
-  Avatar,
-  IconButton,
   Divider,
   Table,
   TableBody,
@@ -41,7 +31,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+// import api from '../services/api';
 import { formatDate } from '../utils/dateUtils';
 import { logger } from '../utils/logger';
 

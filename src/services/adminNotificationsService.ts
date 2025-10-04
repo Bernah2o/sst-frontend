@@ -6,7 +6,6 @@ import {
   SendNotificationResponse,
   SuppressNotificationRequest,
   SuppressNotificationResponse,
-  NotificationAcknowledgment,
   NotificationStatistics,
   NotificationFilters,
   AcknowledgmentFilters,

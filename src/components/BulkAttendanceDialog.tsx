@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -75,22 +75,7 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // Cargar usuarios al abrir el diálogo
-  useEffect(() => {
-    if (open) {
-      fetchUsers();
-    }
-  }, [open]);
-
-  // Debug: Log users state changes
-  useEffect(() => {
-    logger.debug("Users state updated:", users);
-    logger.debug("Users length:", users.length);
-  }, [users]);
-
-
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
       const response = await api.get("/users/");
@@ -107,7 +92,24 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, [onError]);
+
+  // Cargar usuarios al abrir el diálogo
+  useEffect(() => {
+    if (open) {
+      fetchUsers();
+    }
+  }, [open, fetchUsers]);
+
+  // Debug: Log users state changes
+  useEffect(() => {
+    logger.debug("Users state updated:", users);
+    logger.debug("Users length:", users.length);
+  }, [users]);
+
+
+
+
 
   const handleSubmit = async () => {
     if (!formData.course_name.trim()) {

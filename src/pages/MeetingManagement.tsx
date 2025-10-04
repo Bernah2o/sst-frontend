@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -26,15 +26,11 @@ import {
   Select,
   Alert,
   CircularProgress,
-  Tooltip,
-  Paper,
   Grid,
   Avatar,
   Tabs,
   Tab,
   Badge,
-  FormControlLabel,
-  Checkbox,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -45,9 +41,7 @@ import {
   Delete as DeleteIcon,
   PlayArrow as StartIcon,
   CheckCircle as CompleteIcon,
-  Cancel as CancelIcon,
   People as AttendanceIcon,
-  FilterList as FilterIcon,
   Schedule as ScheduleIcon,
   LocationOn as LocationIcon,
   VideoCall as VideoCallIcon,
@@ -83,7 +77,6 @@ const MeetingManagement: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -119,7 +112,7 @@ const MeetingManagement: React.FC = () => {
     cancelled: 0,
   });
   
-  const [filters, setFilters] = useState<MeetingListFilters>({
+  const [filters] = useState<MeetingListFilters>({
     committee_id: committeeId ? parseInt(committeeId) : undefined,
     status: undefined,
     search: '',
@@ -127,12 +120,104 @@ const MeetingManagement: React.FC = () => {
     date_to: undefined,
   });
 
+  // Obtener filtros según la pestaña
+  const getFiltersForTab = useCallback((tab: number) => {
+    const baseFilters = { ...filters };
+    
+    switch (tab) {
+      case 0: // Todas
+        delete baseFilters.status;
+        break;
+      case 1: // Programadas
+        baseFilters.status = MeetingStatus.SCHEDULED;
+        break;
+      case 2: // En progreso
+        baseFilters.status = MeetingStatus.IN_PROGRESS;
+        break;
+      case 3: // Completadas
+        baseFilters.status = MeetingStatus.COMPLETED;
+        break;
+      case 4: // Canceladas
+        baseFilters.status = MeetingStatus.CANCELLED;
+        break;
+      default:
+        delete baseFilters.status;
+    }
+    
+    return baseFilters;
+  }, [filters]);
 
+  // Cargar conteos para pestañas
+  const loadMeetingCounts = useCallback(async () => {
+    try {
+      const baseFilters = { committee_id: filters.committee_id };
+      
+      let allCount, scheduledCount, inProgressCount, completedCount, cancelledCount;
+      
+      if (filters.committee_id) {
+        // Si hay committee_id, usar getMeetings
+        [allCount, scheduledCount, inProgressCount, completedCount, cancelledCount] = await Promise.all([
+          meetingService.getMeetings({ ...baseFilters }).then(r => r.length),
+          meetingService.getMeetings({ ...baseFilters, status: MeetingStatus.SCHEDULED }).then(r => r.length),
+          meetingService.getMeetings({ ...baseFilters, status: MeetingStatus.IN_PROGRESS }).then(r => r.length),
+          meetingService.getMeetings({ ...baseFilters, status: MeetingStatus.COMPLETED }).then(r => r.length),
+          meetingService.getMeetings({ ...baseFilters, status: MeetingStatus.CANCELLED }).then(r => r.length),
+        ]);
+      } else {
+        // Si no hay committee_id, usar getAllMeetings
+        [allCount, scheduledCount, inProgressCount, completedCount, cancelledCount] = await Promise.all([
+          meetingService.getAllMeetings({}).then(r => r.length),
+          meetingService.getAllMeetings({ status: MeetingStatus.SCHEDULED }).then(r => r.length),
+          meetingService.getAllMeetings({ status: MeetingStatus.IN_PROGRESS }).then(r => r.length),
+          meetingService.getAllMeetings({ status: MeetingStatus.COMPLETED }).then(r => r.length),
+          meetingService.getAllMeetings({ status: MeetingStatus.CANCELLED }).then(r => r.length),
+        ]);
+      }
+      
+      setMeetingCounts({
+        all: allCount,
+        scheduled: scheduledCount,
+        inProgress: inProgressCount,
+        completed: completedCount,
+        cancelled: cancelledCount,
+      });
+    } catch (err) {
+      // Error loading meeting counts - silently fail
+    }
+  }, [filters.committee_id]);
 
+  // Cargar reuniones
+  const loadMeetings = useCallback(async () => {
+    try {
+      const currentFilters = getFiltersForTab(tabValue);
+      let response: Meeting[];
+      
+      // Si hay committee_id, usar getMeetings, sino usar getAllMeetings
+      if (currentFilters.committee_id) {
+        response = await meetingService.getMeetings(currentFilters);
+      } else {
+        // Usar getAllMeetings para obtener todas las reuniones sin filtro de comité
+        const { committee_id, ...filtersWithoutCommittee } = currentFilters;
+        response = await meetingService.getAllMeetings(filtersWithoutCommittee);
+      }
 
+      // Simular paginación en el frontend ya que el servicio no la maneja
+      const startIndex = page * rowsPerPage;
+      const endIndex = startIndex + rowsPerPage;
+      const paginatedMeetings = response.slice(startIndex, endIndex);
+
+      setMeetings(paginatedMeetings);
+      setTotalCount(response.length);
+      
+      // Cargar conteos para las pestañas
+      await loadMeetingCounts();
+    } catch (err) {
+      setError('Error al cargar las reuniones');
+    }
+  }, [tabValue, page, rowsPerPage, loadMeetingCounts, getFiltersForTab]);
 
   // Cargar datos iniciales
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -176,114 +261,18 @@ const MeetingManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Cargar reuniones
-  const loadMeetings = async () => {
-    try {
-      const currentFilters = getFiltersForTab(tabValue);
-      let response: Meeting[];
-      
-      // Si hay committee_id, usar getMeetings, sino usar getAllMeetings
-      if (currentFilters.committee_id) {
-        response = await meetingService.getMeetings(currentFilters);
-      } else {
-        // Usar getAllMeetings para obtener todas las reuniones sin filtro de comité
-        const { committee_id, ...filtersWithoutCommittee } = currentFilters;
-        response = await meetingService.getAllMeetings(filtersWithoutCommittee);
-      }
-
-      // Simular paginación en el frontend ya que el servicio no la maneja
-      const startIndex = page * rowsPerPage;
-      const endIndex = startIndex + rowsPerPage;
-      const paginatedMeetings = response.slice(startIndex, endIndex);
-
-      setMeetings(paginatedMeetings);
-      setTotalCount(response.length);
-      
-      // Cargar conteos para las pestañas
-      await loadMeetingCounts();
-    } catch (err) {
-      setError('Error al cargar las reuniones');
-    }
-  };
-
-  // Cargar conteos para pestañas
-  const loadMeetingCounts = async () => {
-    try {
-      const baseFilters = { committee_id: filters.committee_id };
-      
-      let allCount, scheduledCount, inProgressCount, completedCount, cancelledCount;
-      
-      if (filters.committee_id) {
-        // Si hay committee_id, usar getMeetings
-        [allCount, scheduledCount, inProgressCount, completedCount, cancelledCount] = await Promise.all([
-          meetingService.getMeetings({ ...baseFilters }).then(r => r.length),
-          meetingService.getMeetings({ ...baseFilters, status: MeetingStatus.SCHEDULED }).then(r => r.length),
-          meetingService.getMeetings({ ...baseFilters, status: MeetingStatus.IN_PROGRESS }).then(r => r.length),
-          meetingService.getMeetings({ ...baseFilters, status: MeetingStatus.COMPLETED }).then(r => r.length),
-          meetingService.getMeetings({ ...baseFilters, status: MeetingStatus.CANCELLED }).then(r => r.length),
-        ]);
-      } else {
-        // Si no hay committee_id, usar getAllMeetings
-        [allCount, scheduledCount, inProgressCount, completedCount, cancelledCount] = await Promise.all([
-          meetingService.getAllMeetings({}).then(r => r.length),
-          meetingService.getAllMeetings({ status: MeetingStatus.SCHEDULED }).then(r => r.length),
-          meetingService.getAllMeetings({ status: MeetingStatus.IN_PROGRESS }).then(r => r.length),
-          meetingService.getAllMeetings({ status: MeetingStatus.COMPLETED }).then(r => r.length),
-          meetingService.getAllMeetings({ status: MeetingStatus.CANCELLED }).then(r => r.length),
-        ]);
-      }
-      
-      setMeetingCounts({
-        all: allCount,
-        scheduled: scheduledCount,
-        inProgress: inProgressCount,
-        completed: completedCount,
-        cancelled: cancelledCount,
-      });
-    } catch (err) {
-      // Error loading meeting counts - silently fail
-    }
-  };
-
-  // Obtener filtros según la pestaña
-  const getFiltersForTab = (tab: number) => {
-    const baseFilters = { ...filters };
-    
-    switch (tab) {
-      case 0: // Todas
-        delete baseFilters.status;
-        break;
-      case 1: // Programadas
-        baseFilters.status = MeetingStatus.SCHEDULED;
-        break;
-      case 2: // En progreso
-        baseFilters.status = MeetingStatus.IN_PROGRESS;
-        break;
-      case 3: // Completadas
-        baseFilters.status = MeetingStatus.COMPLETED;
-        break;
-      case 4: // Canceladas
-        baseFilters.status = MeetingStatus.CANCELLED;
-        break;
-      default:
-        delete baseFilters.status;
-    }
-    
-    return baseFilters;
-  };
+  }, [committeeId, loadMeetings]);
 
   // Efectos
   useEffect(() => {
     loadInitialData();
-  }, [committeeId]);
+  }, [loadInitialData]);
 
   useEffect(() => {
     if (!loading) {
       loadMeetings();
     }
-  }, [page, rowsPerPage, tabValue, filters]);
+  }, [loadMeetings, loading]);
 
   // Manejadores de eventos
   const handleChangePage = (event: unknown, newPage: number) => {

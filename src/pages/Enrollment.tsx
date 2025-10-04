@@ -6,7 +6,6 @@ import {
   Refresh,
   CheckCircle,
   Cancel,
-  School,
   Person,
   Warning,
 } from "@mui/icons-material";
@@ -40,13 +39,12 @@ import {
 
   Grid,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 
-import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { formatDate } from '../utils/dateUtils';
 
 import api from "./../services/api";
-import { Inscripcion } from "./../types";
 
 // Enums del backend
 enum EnrollmentStatus {
@@ -208,21 +206,7 @@ const EnrollmentsManagement: React.FC = () => {
     curso_id: 0,
   });
 
-  useEffect(() => {
-    fetchEnrollments();
-    fetchUsers();
-    fetchCourses();
-    fetchStats();
-  }, [page, rowsPerPage, searchTerm, statusFilter]);
-
-  // Cargar trabajadores disponibles cuando se selecciona un curso para inscripción masiva
-  useEffect(() => {
-    if (bulkFormData.course_id && openBulkDialog) {
-      fetchAvailableWorkersForCourse(bulkFormData.course_id);
-    }
-  }, [bulkFormData.course_id, openBulkDialog]);
-
-  const fetchEnrollments = async () => {
+  const fetchEnrollments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get("/enrollments", {
@@ -276,7 +260,7 @@ const EnrollmentsManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, searchTerm, statusFilter]);
 
   const fetchUsers = async () => {
     try {
@@ -352,7 +336,7 @@ const EnrollmentsManagement: React.FC = () => {
     }
   };
 
-  const fetchWorkers = async () => {
+  const fetchWorkers = useCallback(async () => {
     try {
       setLoadingWorkers(true);
       const response = await api.get("/workers/basic", {
@@ -369,9 +353,9 @@ const EnrollmentsManagement: React.FC = () => {
     } finally {
       setLoadingWorkers(false);
     }
-  };
+  }, [workerSearchTerm]);
 
-  const fetchAvailableWorkersForCourse = async (courseId: number) => {
+  const fetchAvailableWorkersForCourse = useCallback(async (courseId: number) => {
     try {
       setLoadingWorkers(true);
       
@@ -401,7 +385,23 @@ const EnrollmentsManagement: React.FC = () => {
     } finally {
       setLoadingWorkers(false);
     }
-  };
+  }, [workerSearchTerm, fetchWorkers]);
+
+  useEffect(() => {
+    fetchEnrollments();
+    fetchUsers();
+    fetchCourses();
+    fetchStats();
+  }, [fetchEnrollments, page, rowsPerPage, searchTerm, statusFilter]);
+
+  // Cargar trabajadores disponibles cuando se selecciona un curso para inscripción masiva
+  useEffect(() => {
+    if (bulkFormData.course_id && openBulkDialog) {
+      fetchAvailableWorkersForCourse(bulkFormData.course_id);
+    }
+  }, [bulkFormData.course_id, openBulkDialog, fetchAvailableWorkersForCourse]);
+
+
 
   const handleCreateEnrollment = () => {
     setFormData({

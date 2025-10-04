@@ -4,11 +4,6 @@ import {
   Delete,
   Visibility,
   CheckCircle,
-  Cancel,
-  Warning,
-  AttachFile,
-  Download,
-  Close as CloseIcon,
   GetApp as ExportIcon,
   FilterList as FilterIcon,
 } from "@mui/icons-material";
@@ -49,8 +44,8 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+// import { useParams } from "react-router-dom"; // eliminado por no uso
 
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
@@ -210,22 +205,9 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
   const [exporting, setExporting] = useState(false);
 
   // Confirm dialog hook
-  const { dialogState, showConfirmDialog, hideConfirmDialog } = useConfirmDialog();
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
 
-  useEffect(() => {
-    if (workerId && workerId !== "undefined" && workerId.trim() !== "") {
-      fetchNovedades();
-      fetchStats();
-    } else {
-      // Limpiar datos si no hay workerId válido
-      setNovedades([]);
-      setStats(null);
-      setTotalCount(0);
-      setLoading(false);
-    }
-  }, [workerId, page, rowsPerPage]);
-
-  const fetchNovedades = async () => {
+  const fetchNovedades = useCallback(async () => {
     if (!workerId || workerId === "undefined" || workerId.trim() === "") {
       setNovedades([]);
       setTotalCount(0);
@@ -258,9 +240,9 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [workerId, page, rowsPerPage]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!workerId || workerId === "undefined" || workerId.trim() === "") {
       setStats(null);
       return;
@@ -273,7 +255,20 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
       console.error("Error fetching stats:", error);
       setStats(null);
     }
-  };
+  }, [workerId]);
+
+  useEffect(() => {
+    if (workerId && workerId !== "undefined" && workerId.trim() !== "") {
+      fetchNovedades();
+      fetchStats();
+    } else {
+      // Limpiar datos si no hay workerId válido
+      setNovedades([]);
+      setStats(null);
+      setTotalCount(0);
+      setLoading(false);
+    }
+  }, [fetchNovedades, fetchStats, workerId]);
 
   const handleCreateNovedad = async () => {
     try {

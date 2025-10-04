@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
+  
   Button,
   TextField,
   FormControl,
@@ -19,15 +19,12 @@ import {
   Alert,
   List,
   ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   Divider,
   LinearProgress,
   Tooltip,
   FormControlLabel,
   RadioGroup,
-  Radio,
-  Grid
+  Radio
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,7 +35,6 @@ import {
   Close as CloseIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  AttachFile as AttachFileIcon,
   PictureAsPdf as PdfIcon,
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
@@ -106,15 +102,8 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
   };
 
   // Hook para el diálogo de confirmación
-  const { dialogState, showConfirmDialog, hideConfirmDialog } = useConfirmDialog();
-
-  useEffect(() => {
-    if (open && seguimientoId) {
-      fetchActividades();
-    }
-  }, [open, seguimientoId]);
-
-  const fetchActividades = async () => {
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
+  const fetchActividades = useCallback(async () => {
     try {
       setLoading(true);
       const data = await seguimientoActividadesService.getActividadesBySeguimiento(seguimientoId);
@@ -125,7 +114,13 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
     } finally {
       setLoading(false);
     }
-  };
+  }, [seguimientoId]);
+
+  useEffect(() => {
+    if (open && seguimientoId) {
+      fetchActividades();
+    }
+  }, [open, seguimientoId, fetchActividades]);
 
   const handleSaveActividad = async () => {
     try {

@@ -1,21 +1,15 @@
 import {
-  Dashboard as DashboardIcon,
   School as SchoolIcon,
-  Assignment as AssignmentIcon,
-  Schedule as ScheduleIcon,
   TrendingUp as TrendingUpIcon,
   CheckCircle as CheckCircleIcon,
   AccessTime as AccessTimeIcon,
-  PlayArrow as PlayArrowIcon,
   WorkspacePremium as CertificateIcon,
   Notifications as NotificationsIcon,
   Event as EventIcon,
   Assessment as AssessmentIcon,
-  BookmarkBorder as BookmarkIcon,
   Star as StarIcon,
   Refresh as RefreshIcon,
-  Add as AddIcon,
-  CalendarToday as CalendarIcon
+  PlayArrow as PlayArrowIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -23,17 +17,13 @@ import {
   CardContent,
   Typography,
   Button,
-  Paper,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
   Chip,
   LinearProgress,
-  Avatar,
-  IconButton,
   Divider,
-  CardActions,
   Container,
   Stack,
   useTheme,
@@ -42,18 +32,14 @@ import {
   Snackbar,
   Alert
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
-import { formatDate } from '../utils/dateUtils';
-import { logger } from '../utils/logger';
 
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { es } from 'date-fns/locale';
-import { format } from 'date-fns';
 
 interface EmployeeStats {
   enrolled_courses: number;
@@ -95,7 +81,7 @@ interface Achievement {
 const EmployeeDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<EmployeeStats>({
+  const [stats] = useState<EmployeeStats>({
     enrolled_courses: 0,
     completed_courses: 0,
     in_progress_courses: 0,
@@ -103,148 +89,19 @@ const EmployeeDashboard: React.FC = () => {
     certificates_earned: 0,
     reinductions_completed: 0
   });
-  const [myCourses, setMyCourses] = useState<MyCourse[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [myCourses] = useState<MyCourse[]>([]);
+  const [upcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [achievements] = useState<Achievement[]>([]);
+  const [loading] = useState(true);
   const theme = useTheme();
 
 
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [reason, setReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [notification, setNotification] = useState<{
     type: 'success' | 'error' | 'warning';
     message: string;
   } | null>(null);
-  const [dateError, setDateError] = useState('');
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
 
 
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      // Obtener cursos del empleado (incluye datos de inscripción)
-      const coursesResponse = await api.get('/courses/user');
-      const userCourses = coursesResponse.data || [];
-      
-      // Obtener certificados del empleado
-      const certificatesResponse = await api.get('/certificates/my-certificates?limit=10');
-      const certificates = certificatesResponse.data.items || [];
-      
-      // Obtener resultados de evaluaciones
-      const evaluationsResponse = await api.get('/evaluations/my-results');
-      const evaluations = evaluationsResponse.data.data || [];
-      
-      // Obtener historial de reinducciones del trabajador
-      let reinductionsCompleted = 0;
-      try {
-        // Usar worker_id en lugar de user.id
-        if (user?.worker_id) {
-          const reinductionsResponse = await api.get(`/workers/${user.worker_id}/reinduction-history`);
-          const reinductions = reinductionsResponse.data || [];
-          reinductionsCompleted = reinductions.filter((r: any) => r.status === 'COMPLETED').length;
-        } else {
-          logger.warn('Usuario no tiene worker_id asociado');
-        }
-      } catch (reinductionError) {
-        logger.warn('Error fetching reinduction history:', reinductionError);
-        // No es crítico, continuar sin datos de reinducción
-      }
-      
-      // Calcular estadísticas basadas en datos reales
-      const completedCourses = userCourses.filter((course: any) => course.completed).length;
-      const inProgressCourses = userCourses.filter((course: any) => !course.completed && course.progress > 0).length;
-      const pendingEvaluations = evaluations.filter((e: any) => e.status === 'pending' || e.status === 'in_progress').length;
-      
-      setStats({
-        enrolled_courses: userCourses.length,
-        completed_courses: completedCourses,
-        in_progress_courses: inProgressCourses,
-        pending_evaluations: pendingEvaluations,
-        certificates_earned: certificates.length,
-        reinductions_completed: reinductionsCompleted
-      });
-      
-      // Mapear cursos con datos reales
-      const mappedCourses = userCourses.slice(0, 3).map((course: any) => {
-        const progress = course.progress || 0;
-        // Determinar status basado en progreso
-        let status;
-        if (course.completed || progress >= 100) {
-          status = 'completed';
-        } else if (progress > 0) {
-          status = 'in_progress';
-        } else {
-          status = 'pending';
-        }
-        
-        return {
-          id: course.id,
-          title: course.title || 'Curso sin título',
-          progress: progress,
-          status: status,
-          due_date: null, // No disponible en el modelo actual
-          last_activity: course.updated_at
-        };
-      });
-      
-      setMyCourses(mappedCourses);
-      
-      // Crear eventos próximos basados en evaluaciones pendientes
-      const upcomingEvals = evaluations
-        .filter((e: any) => e.status === 'pending' || e.status === 'in_progress')
-        .slice(0, 3)
-        .map((evaluation: any) => ({
-          id: evaluation.id,
-          type: 'evaluation',
-          title: `Evaluación: ${evaluation.evaluation_title}`,
-          date: new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Fecha aleatoria en los próximos 7 días
-          time: '14:00',
-          location: 'Online'
-        }));
-      
-      setUpcomingEvents(upcomingEvals);
-      
-      // Crear logros basados en certificados
-      const recentCertificates = certificates.slice(0, 2).map((cert: any) => ({
-        id: cert.id,
-        title: cert.title || cert.course_title || 'Certificado Obtenido',
-        description: `Certificado completado`,
-        date: cert.issued_at || cert.created_at,
-        type: 'certificate'
-      }));
-      
-      setAchievements(recentCertificates);
-      
-      setLoading(false);
-    } catch (error) {
-      logger.error('Error fetching dashboard data:', error);
-      // Fallback a datos básicos en caso de error
-      setStats({
-        enrolled_courses: 0,
-        completed_courses: 0,
-        in_progress_courses: 0,
-        pending_evaluations: 0,
-        certificates_earned: 0,
-        reinductions_completed: 0
-      });
-      setMyCourses([]);
-      setUpcomingEvents([]);
-      setAchievements([]);
-      setLoading(false);
-    }
-  };
-
-  const showSnackbar = (message: string, type: 'success' | 'error' | 'warning') => {
-    setNotification({ message, type });
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {

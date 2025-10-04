@@ -1,20 +1,9 @@
 import {
   HowToVote as VoteIcon,
   AccessTime as AccessTimeIcon,
-  Group as GroupIcon,
   CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  Info as InfoIcon,
   Person as PersonIcon,
   Business as BusinessIcon,
-  Badge as BadgeIcon,
-  HowToVote,
-  CheckCircle,
-  CalendarToday,
-  AccessTime,
-  Business,
-  Person,
-  Badge
 } from '@mui/icons-material';
 import {
   Box,
@@ -35,14 +24,10 @@ import {
   DialogContent,
   DialogActions,
   Divider,
-  CardActions
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-import { useAuth } from '../contexts/AuthContext';
 import candidateVotingService from '../services/candidateVotingService';
-import { formatDate } from '../utils/dateUtils';
 import { logger } from '../utils/logger';
 import { CandidateVotingStatus } from '../types';
 
@@ -77,8 +62,6 @@ interface VotingCandidate {
 
 const EmployeeVotings: React.FC = () => {
   const theme = useTheme();
-  const navigate = useNavigate();
-  const { user } = useAuth();
   
   const [candidates, setCandidates] = useState<VotingCandidate[]>([]);
   const [loading, setLoading] = useState(true);
