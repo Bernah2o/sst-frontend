@@ -155,10 +155,6 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting }) => {
-      console.log('=== FORM SUBMISSION STARTED ===');
-      console.log('Form values:', values);
-      console.log('Cargos state:', cargos);
-      console.log('Cargos length:', cargos.length);
       
       // Prevent submission if cargos are not loaded
       if (cargos.length === 0) {
@@ -195,14 +191,7 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
 
       try {
         setLoading(true);
-        
-        // LOGS ESPECÍFICOS PARA DEBUGGING POSITION
-        console.log('=== MAPPING POSITION ===');
-        console.log('Cargo value from form:', values.cargo);
-        console.log('Selected cargo object:', selectedCargo);
-        console.log('Selected cargo nombre_cargo:', selectedCargo?.nombre_cargo);
-        console.log('Position will be set to:', selectedCargo.nombre_cargo);
-        
+      
         const formattedValues = {
           // Alinear con el esquema que exige el backend (inglés)
           document_type: values.tipo_documento?.toLowerCase(),
@@ -240,10 +229,7 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
           activo: values.activo,
         };
 
-        console.log('=== FINAL FORMATTED VALUES ===');
-        console.log('formattedValues:', formattedValues);
-        console.log('cargo field specifically:', formattedValues.cargo);
-
+        
         if (id) {
           await contractorService.updateContractor(Number(id), formattedValues as any);
           setSnackbar({
@@ -274,10 +260,13 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
       } finally {
         setLoading(false);
         setSubmitting(false);
-        console.log('=== FORM SUBMISSION COMPLETED ===');
+        
       }
     },
   });
+
+  // Estabiliza el método de Formik para evitar falsas dependencias en hooks
+  const setFormValues = formik.setValues;
 
 
 
@@ -306,9 +295,6 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
       setInitialLoading(true);
       const contractor = await contractorService.getContractor(Number(id));
       
-      console.log('=== CONTRACTOR DATA FROM BACKEND ===');
-      console.log('Raw contractor data:', contractor);
-
       // Format dates for form - Mapeo corregido basado en el modelo del backend
       const mappedValues = {
         // Información personal
@@ -368,20 +354,8 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
         activo: contractor.activo !== undefined ? contractor.activo : true,
       };
 
-      console.log('=== MAPPED VALUES FOR FORM ===');
-      console.log('Mapped values:', mappedValues);
-      console.log('Specific fields:');
-      console.log('- primer_nombre:', mappedValues.primer_nombre);
-      console.log('- segundo_nombre:', mappedValues.segundo_nombre);
-      console.log('- primer_apellido:', mappedValues.primer_apellido);
-      console.log('- segundo_apellido:', mappedValues.segundo_apellido);
-      console.log('- departamento:', mappedValues.departamento);
-      console.log('- ciudad:', mappedValues.ciudad);
-      console.log('- cargo:', mappedValues.cargo);
-      console.log('- tipo_contrato:', mappedValues.tipo_contrato);
-      console.log('- nivel_riesgo:', mappedValues.nivel_riesgo);
-
-      formik.setValues(mappedValues as any);
+      
+      setFormValues(mappedValues as any);
 
       // Load cities for the selected department
       const department = contractor.departamento;
@@ -400,21 +374,16 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
     } finally {
       setInitialLoading(false);
     }
-  }, [id, formik]);
+  }, [id, setFormValues]);
 
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        console.log('=== LOADING INITIAL DATA ===');
-        
         // Cargar cargos y áreas primero
         const [cargosData, areasData] = await Promise.all([
           cargoService.getActiveCargos(),
           areaService.getActiveAreas()
         ]);
-        
-        console.log('Cargos loaded successfully:', cargosData);
-        console.log('Number of cargos:', cargosData.length);
         setCargos(cargosData);
         setAreas(areasData);
 
@@ -810,11 +779,6 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       name="cargo"
                       value={formik.values.cargo}
                       onChange={(e) => {
-                        console.log('=== CARGO SELECTION ===');
-                        console.log('Selected cargo ID:', e.target.value);
-                        const selectedCargo = cargos.find(c => c.id.toString() === e.target.value);
-                        console.log('Selected cargo object:', selectedCargo);
-                        console.log('Cargo name:', selectedCargo?.nombre_cargo);
                         formik.handleChange(e);
                       }}
                       label="Cargo"
