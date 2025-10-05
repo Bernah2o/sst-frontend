@@ -61,4 +61,4 @@ LABEL maintainer="SST Platform Team" \
 
 # Use entrypoint script to generate runtime config and start serve
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["serve", "-s", "build", "-l", "3000", "--silent"]
+CMD ["serve", "-s", "build", "-l", "3000"]
