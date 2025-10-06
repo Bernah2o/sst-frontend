@@ -40,7 +40,7 @@ import {
   StepContent,
   Paper,
 } from "@mui/material";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import api from "../services/api";
@@ -106,6 +106,7 @@ const CourseDetail: React.FC = () => {
   const [hasSurveys, setHasSurveys] = useState<boolean>(false);
   const [hasEvaluation, setHasEvaluation] = useState<boolean>(false);
   const [hasCertificate, setHasCertificate] = useState<boolean>(false);
+  const hasRefreshedOnCompletion = useRef(false);
 
   const fetchCourseDetail = useCallback(async () => {
     if (!id) {
@@ -144,17 +145,23 @@ const CourseDetail: React.FC = () => {
   }, [id, fetchCourseDetail]);
 
   // Forzar actualización del progreso al montar el componente
+  // Usar valores derivados para evitar depender de objetos completos y cumplir ESLint
+  const courseId = course?.id;
+  const overallProgress = progressInfo?.overall_progress;
+
   useEffect(() => {
-    if (course && progressInfo) {
-      // Forzar re-evaluación del activeStep para cursos ya completados
-      const timer = setTimeout(() => {
-        if (progressInfo.overall_progress >= 95) {
-          fetchCourseDetail();
-        }
-      }, 100);
-      return () => clearTimeout(timer);
+    if (!courseId || overallProgress == null) return;
+    // Evitar bucles: refrescar una sola vez cuando el progreso alcance 95+
+    if (overallProgress >= 95 && !hasRefreshedOnCompletion.current) {
+      hasRefreshedOnCompletion.current = true;
+      fetchCourseDetail();
     }
-  }, [course, progressInfo, fetchCourseDetail]);
+  }, [overallProgress, fetchCourseDetail, courseId]);
+
+  // Resetear la bandera cuando cambie el curso (id)
+  useEffect(() => {
+    hasRefreshedOnCompletion.current = false;
+  }, [id]);
 
   // Actualizar progreso cuando el usuario regresa a la página
   useEffect(() => {
