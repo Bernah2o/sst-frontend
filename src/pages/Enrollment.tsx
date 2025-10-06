@@ -217,8 +217,16 @@ const EnrollmentsManagement: React.FC = () => {
           status: statusFilter !== "all" ? statusFilter : undefined,
         },
       });
+      // Fallback: filtrar por estado del lado del cliente si el backend ignora el parámetro
+      let items: any[] = response.data.items || [];
+      if (statusFilter && statusFilter !== "all") {
+        items = items.filter((enrollment: any) =>
+          String(enrollment.status || "").toLowerCase() === String(statusFilter).toLowerCase()
+        );
+      }
+
       // Mapear campos del backend a campos legacy del frontend
-      const mappedEnrollments = (response.data.items || []).map((enrollment: any) => ({
+      const mappedEnrollments = items.map((enrollment: any) => ({
         ...enrollment,
         // Campos del nuevo schema
         id: enrollment.id,
