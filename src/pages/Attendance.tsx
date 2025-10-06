@@ -179,10 +179,23 @@ const AttendanceManagement: React.FC = () => {
   }, [page, rowsPerPage, statusFilter, dateFilter]);
 
   // useEffect para actualizar estadísticas cuando cambien solo los filtros relevantes
+  // Para empleados, evitamos llamar al endpoint de stats (retorna 403) y
+  // computamos estadísticas locales basadas en los registros cargados.
   useEffect(() => {
-    fetchStats();
+    if (user?.role !== "employee") {
+      fetchStats();
+    }
     // eslint-disable-next-line
-  }, [statusFilter, dateFilter]);
+  }, [statusFilter, dateFilter, user?.role]);
+
+  // Recalcular estadísticas locales para empleados cuando cambien sus asistencias
+  useEffect(() => {
+    if (user?.role === "employee") {
+      const computed = computeEmployeeStats(attendances || []);
+      setStats(computed);
+    }
+    // eslint-disable-next-line
+  }, [attendances, user?.role]);
 
   const fetchAttendances = async () => {
     try {
@@ -289,6 +302,52 @@ const AttendanceManagement: React.FC = () => {
     } catch (error) {
       logger.error("Error fetching stats:", error);
     }
+  };
+
+  // Calcula estadísticas locales para el rol empleado usando los registros visibles
+  const computeEmployeeStats = (items: Attendance[]): AttendanceStats => {
+    const total = items.length;
+    let present = 0;
+    let absent = 0;
+    let late = 0;
+    let excused = 0;
+    let partial = 0;
+
+    for (const a of items) {
+      switch (a.status) {
+        case AttendanceStatus.PRESENT:
+          present++;
+          break;
+        case AttendanceStatus.ABSENT:
+          absent++;
+          break;
+        case AttendanceStatus.LATE:
+          late++;
+          break;
+        case AttendanceStatus.EXCUSED:
+          excused++;
+          break;
+        case AttendanceStatus.PARTIAL:
+          partial++;
+          break;
+        default:
+          break;
+      }
+    }
+
+    const totalAttendance = present + late + excused + partial;
+    const attendance_rate = total ? (totalAttendance / total) * 100 : 0;
+
+    return {
+      total,
+      total_attendance: totalAttendance,
+      present,
+      absent,
+      late,
+      excused,
+      partial,
+      attendance_rate,
+    };
   };
 
   const handleCreateAttendance = () => {

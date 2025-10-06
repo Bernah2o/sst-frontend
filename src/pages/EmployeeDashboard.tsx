@@ -32,7 +32,7 @@ import {
   Snackbar,
   Alert
 } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -92,7 +92,7 @@ const EmployeeDashboard: React.FC = () => {
   const [myCourses] = useState<MyCourse[]>([]);
   const [upcomingEvents] = useState<UpcomingEvent[]>([]);
   const [achievements] = useState<Achievement[]>([]);
-  const [loading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const theme = useTheme();
 
 
@@ -100,6 +100,12 @@ const EmployeeDashboard: React.FC = () => {
     type: 'success' | 'error' | 'warning';
     message: string;
   } | null>(null);
+
+  // Al montar el componente, salimos del estado de carga.
+  // Más adelante se puede reemplazar por carga real de datos.
+  useEffect(() => {
+    setLoading(false);
+  }, []);
 
 
 
