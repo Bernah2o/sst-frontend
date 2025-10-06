@@ -516,34 +516,7 @@ const EvaluationsManagement: React.FC = () => {
         await api.post(`/evaluations/${evaluationId}/start`);
         setEmployeeAnswers({});
       } else {
-        // Load saved answers for evaluation in progress
-        try {
-          const savedAnswersResponse = await api.get(`/evaluations/${evaluationId}/user-answers`);
-          if (savedAnswersResponse.data.success && savedAnswersResponse.data.data.user_answers) {
-            const savedAnswers: { [key: number]: any } = {};
-            savedAnswersResponse.data.data.user_answers.forEach((answer: any) => {
-              if (answer.selected_answer_ids) {
-                // For multiple choice questions
-                try {
-                  const selectedIds = JSON.parse(answer.selected_answer_ids);
-                  savedAnswers[answer.question_id] = Array.isArray(selectedIds) ? selectedIds : [selectedIds];
-                } catch {
-                  // If it's a single ID as string
-                  savedAnswers[answer.question_id] = [parseInt(answer.selected_answer_ids)];
-                }
-              } else if (answer.answer_text) {
-                // For open text questions
-                savedAnswers[answer.question_id] = answer.answer_text;
-              }
-            });
-            setEmployeeAnswers(savedAnswers);
-          } else {
-            setEmployeeAnswers({});
-          }
-        } catch (error) {
-          console.error('Error loading saved answers:', error);
-          setEmployeeAnswers({});
-        }
+        setEmployeeAnswers({});
       }
       
       setEvaluationToRespond(evaluationResponse.data);
