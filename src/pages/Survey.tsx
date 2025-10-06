@@ -324,20 +324,26 @@ const Survey: React.FC = () => {
   }, [page, filters, user]);
 
   // Re-run initial data fetches after fetchSurveys is defined to avoid use-before-define
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const surveyId = urlParams.get("survey_id");
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const surveyId = urlParams.get("survey_id");
 
-    if (surveyId && user?.role === "employee") {
-      setIsEmployeeResponseMode(true);
-      fetchSurveyForResponse(parseInt(surveyId));
+  if (surveyId && user?.role === "employee") {
+    setIsEmployeeResponseMode(true);
+    fetchSurveyForResponse(parseInt(surveyId));
+  } else {
+    setIsEmployeeResponseMode(false);
+    // Empleado: solo cargar sus encuestas, evitar llamadas extra innecesarias
+    if (user?.role === "employee") {
+      fetchSurveys();
     } else {
-      setIsEmployeeResponseMode(false);
+      // Otros roles: cargar datos completos necesarios para gestión
       fetchSurveys();
       fetchWorkers();
       fetchCourses();
     }
-  }, [page, filters, user, fetchSurveys]);
+  }
+}, [page, filters, user, fetchSurveys]);
 
   const fetchWorkers = async () => {
     try {

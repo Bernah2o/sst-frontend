@@ -46,7 +46,7 @@ import {
   CircularProgress,
   useTheme,
 } from "@mui/material";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 import UppercaseTextField from "../components/UppercaseTextField";
 import { useAuth } from '../contexts/AuthContext';
@@ -191,6 +191,7 @@ const EvaluationsManagement: React.FC = () => {
   
   // Employee response mode states
   const [isEmployeeResponseMode, setIsEmployeeResponseMode] = useState(false);
+  const hasFetchedEvaluationOnParam = useRef(false);
   const [evaluationToRespond, setEvaluationToRespond] = useState<Evaluation | null>(null);
   const [employeeAnswers, setEmployeeAnswers] = useState<{[key: number]: string}>({});
   const [startTime, setStartTime] = useState<Date | null>(null);
@@ -600,23 +601,33 @@ const EvaluationsManagement: React.FC = () => {
     }
   }, [employeeResponses, evaluationToRespond, timerInterval, showSnackbar, handleSubmitEvaluation]);
 
+  // Efecto 1: manejar evaluación por parámetro en modo empleado
   useEffect(() => {
-    // Detectar parámetro evaluation_id para modo de respuesta de empleado
     const urlParams = new URLSearchParams(window.location.search);
     const evaluationId = urlParams.get('evaluation_id');
-    
     if (evaluationId && user?.role === 'employee') {
       setIsEmployeeResponseMode(true);
-      fetchEvaluationToRespond(parseInt(evaluationId));
-    } else {
+      if (!hasFetchedEvaluationOnParam.current) {
+        hasFetchedEvaluationOnParam.current = true;
+        fetchEvaluationToRespond(parseInt(evaluationId));
+      }
+    }
+  }, [user?.role, fetchEvaluationToRespond]);
+
+  // Efecto 2: listado normal cuando no hay evaluation_id
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const evaluationId = urlParams.get('evaluation_id');
+    if (!evaluationId) {
       setIsEmployeeResponseMode(false);
       fetchEvaluations();
       fetchCourses();
       if (user?.role === 'employee') {
         fetchEmployeeResponses();
       }
+      hasFetchedEvaluationOnParam.current = false;
     }
-  }, [page, rowsPerPage, searchTerm, statusFilter, user, fetchEvaluations, fetchCourses, fetchEmployeeResponses, fetchEvaluationToRespond]);
+  }, [page, rowsPerPage, searchTerm, statusFilter, user?.role, fetchEvaluations, fetchCourses, fetchEmployeeResponses]);
 
   const handleResetEvaluation = (evaluation: Evaluation) => {
     setResettingEvaluation(evaluation);
