@@ -36,6 +36,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -81,7 +82,7 @@ interface Achievement {
 const EmployeeDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats] = useState<EmployeeStats>({
+  const [stats, setStats] = useState<EmployeeStats>({
     enrolled_courses: 0,
     completed_courses: 0,
     in_progress_courses: 0,
@@ -89,9 +90,9 @@ const EmployeeDashboard: React.FC = () => {
     certificates_earned: 0,
     reinductions_completed: 0
   });
-  const [myCourses] = useState<MyCourse[]>([]);
-  const [upcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [achievements] = useState<Achievement[]>([]);
+  const [myCourses, setMyCourses] = useState<MyCourse[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
 
@@ -101,11 +102,94 @@ const EmployeeDashboard: React.FC = () => {
     message: string;
   } | null>(null);
 
-  // Al montar el componente, salimos del estado de carga.
-  // Más adelante se puede reemplazar por carga real de datos.
+  // Cargar indicadores reales del Dashboard del empleado
   useEffect(() => {
-    setLoading(false);
-  }, []);
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+
+        // Si no hay usuario autenticado, finalizar
+        if (!user || !user.id) {
+          setLoading(false);
+          return;
+        }
+
+        // Obtener inscripciones del usuario, certificados y progreso agregado
+        const [enrollmentsRes, certificatesRes, progressRes] = await Promise.all([
+          api.get('/enrollments/my-enrollments'),
+          api.get('/certificates/my-certificates'),
+          api.get('/user-progress/', { params: { user_id: user.id, limit: 100 } })
+        ]);
+
+        const enrollments = (enrollmentsRes.data?.items ?? enrollmentsRes.data ?? []) as any[];
+        const certificates = (certificatesRes.data?.items ?? certificatesRes.data ?? []) as any[];
+        const progresses = (progressRes.data?.items ?? progressRes.data ?? []) as any[];
+
+        // Calcular indicadores
+        const enrolledCourses = enrollments.length;
+        const completedCourses = enrollments.filter((e: any) => {
+          const status = String(e?.status || '').toLowerCase();
+          const progress = Number(e?.progress ?? e?.progress_percentage ?? 0);
+          return status === 'completed' || progress === 100 || !!e?.completed_at;
+        }).length;
+
+        const inProgressCourses = enrollments.filter((e: any) => {
+          const status = String(e?.status || '').toLowerCase();
+          const progress = Number(e?.progress ?? e?.progress_percentage ?? 0);
+          return status === 'in_progress' || (progress > 0 && progress < 100);
+        }).length;
+
+        // Evaluaciones pendientes segun progreso del usuario
+        const pendingEvaluations = progresses.filter((p: any) => {
+          const evalStatus = String(p?.evaluation_status || '').toLowerCase();
+          const evalCompleted = Boolean(p?.evaluation_completed);
+          const canTakeEval = Boolean(p?.can_take_evaluation);
+          return !evalCompleted && canTakeEval && evalStatus !== 'completed';
+        }).length;
+
+        // Reinducciones completadas: si no hay endpoint específico, mantener 0
+        const reinductionsCompleted = 0;
+
+        setStats({
+          enrolled_courses: enrolledCourses,
+          completed_courses: completedCourses,
+          in_progress_courses: inProgressCourses,
+          pending_evaluations: pendingEvaluations,
+          certificates_earned: certificates.length,
+          reinductions_completed: reinductionsCompleted
+        });
+
+        // Mapear cursos del usuario para la sección "Mis Cursos"
+        const mappedCourses: MyCourse[] = enrollments.map((e: any) => ({
+          id: Number(e?.course_id ?? e?.id ?? 0),
+          title: String(e?.course_title ?? e?.course?.title ?? 'Curso'),
+          progress: Number(e?.progress ?? e?.progress_percentage ?? 0),
+          status: String(e?.status || 'pending').toLowerCase(),
+          due_date: e?.due_date ?? e?.completion_date ?? undefined,
+          last_activity: e?.updated_at ?? e?.last_activity ?? undefined,
+        }));
+        setMyCourses(mappedCourses);
+
+        // Placeholder de próximos eventos y logros (se puede conectar a endpoints futuros)
+        setUpcomingEvents([]);
+        setAchievements([]);
+      } catch (error) {
+        // En caso de error, dejar los indicadores en 0 y salir del loading
+        setStats({
+          enrolled_courses: 0,
+          completed_courses: 0,
+          in_progress_courses: 0,
+          pending_evaluations: 0,
+          certificates_earned: 0,
+          reinductions_completed: 0
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [user]);
 
 
 

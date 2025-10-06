@@ -260,7 +260,80 @@ const EnrollmentsManagement: React.FC = () => {
         estado: enrollment.status,
         fecha_inscripcion: enrollment.enrolled_at,
       }));
-      setEnrollments(mappedEnrollments);
+      // Enriquecer con resultados de evaluación. Priorizar endpoint de resultados (admin), fallback a progreso de usuario
+      try {
+        const enriched = await Promise.all(
+          mappedEnrollments.map(async (enr: any) => {
+            // 1) Intentar obtener resultado exacto por enrollment_id
+            try {
+              const params = new URLSearchParams();
+              params.append('limit', '1');
+              params.append('enrollment_id', String(enr.id));
+              if (enr.user_id) params.append('user_id', String(enr.user_id));
+              if (enr.course_id) params.append('course_id', String(enr.course_id));
+
+              const res = await api.get(`/evaluations/admin/all-results?${params.toString()}`);
+              const results = res.data?.success ? (res.data.data || []) : (res.data.items || res.data || []);
+              const r = Array.isArray(results) ? results[0] : null;
+              if (r) {
+                const score = r.score ?? null;
+                const maxPoints = r.max_points ?? r.total_points ?? null;
+                const percentage = r.percentage ?? (score != null && maxPoints ? Math.round((score / maxPoints) * 100) : null);
+                return {
+                  ...enr,
+                  evaluation: {
+                    score,
+                    percentage,
+                    total_points: r.total_points ?? r.max_points ?? null,
+                    max_points: maxPoints,
+                    status: r.status,
+                  },
+                };
+              }
+            } catch (e) {
+              // Continuar con fallback
+            }
+
+            // 2) Fallback: usar /user-progress/ si no hay resultado directo
+            try {
+              const resp = await api.get('/user-progress/', {
+                params: {
+                  // Preferir el id de usuario enlazado al trabajador
+                  user_id: enr.user_id ?? enr?.worker?.user_id ?? undefined,
+                  course_id: enr.course_id,
+                  limit: 1,
+                },
+              });
+              const items = resp.data.items || [];
+              const detail = items.find((it: any) => (
+                it.course_id === enr.course_id && (it.enrollment_id === enr.id)
+              ));
+              if (detail && (detail.evaluation_score != null)) {
+                const score = detail.evaluation_score;
+                const maxPoints = detail.max_points ?? detail.total_points ?? null;
+                const percentage = detail.percentage ?? (score != null && maxPoints ? Math.round((score / maxPoints) * 100) : null);
+                return {
+                  ...enr,
+                  evaluation: {
+                    score,
+                    percentage,
+                    total_points: detail.total_points ?? detail.max_points ?? null,
+                    max_points: maxPoints,
+                    status: detail.evaluation_status || (detail.evaluation_completed ? 'completed' : undefined),
+                  },
+                };
+              }
+            } catch {
+              // Ignorar errores por inscripción individual
+            }
+
+            return enr;
+          })
+        );
+        setEnrollments(enriched);
+      } catch (e) {
+        setEnrollments(mappedEnrollments);
+      }
       setTotalEnrollments(response.data.total);
     } catch (error) {
       console.error("Error fetching enrollments:", error);
@@ -834,13 +907,23 @@ const EnrollmentsManagement: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    {enrollment.evaluation && enrollment.evaluation.score !== null
-                      ? `${enrollment.evaluation.score}/100`
-                      : enrollment.evaluation && enrollment.evaluation.percentage !== null
-                      ? `${enrollment.evaluation.percentage}%`
-                      : enrollment.grade || enrollment.calificacion
-                      ? `${enrollment.grade || enrollment.calificacion}/100`
-                      : "Sin calificar"}
+                    {(() => {
+                      const evalData = enrollment.evaluation;
+                      if (evalData && evalData.percentage !== null && evalData.percentage !== undefined) {
+                        return `${evalData.percentage}%`;
+                      }
+                      if (evalData && evalData.score !== null && evalData.score !== undefined) {
+                        if (evalData.max_points) {
+                          return `${evalData.score}/${evalData.max_points}`;
+                        }
+                        return `${evalData.score}`;
+                      }
+                      const legacy = enrollment.grade ?? enrollment.calificacion;
+                      if (legacy !== null && legacy !== undefined) {
+                        return `${legacy}`;
+                      }
+                      return "Sin calificar";
+                    })()}
                   </TableCell>
                   <TableCell align="center">
                     <IconButton

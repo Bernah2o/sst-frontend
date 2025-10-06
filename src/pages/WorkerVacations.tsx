@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Card,
@@ -87,6 +87,9 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
   // Eliminado estado no utilizado para estadísticas de vacaciones
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Guardia para evitar múltiples fetch simultáneos o repetidos
+  const fetchInProgressRef = useRef(false);
   
   // Estados para el diálogo de nueva solicitud
   const [openDialog, setOpenDialog] = useState(false);
@@ -123,8 +126,11 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
   // Cargar datos iniciales
   const fetchVacationData = useCallback(async () => {
     if (!workerId) return;
+    // Evitar llamadas repetidas si un fetch está en curso
+    if (fetchInProgressRef.current) return;
     try {
       setLoading(true);
+      fetchInProgressRef.current = true;
       const workerIdNum = parseInt(workerId);
       const [requests, balance] = await Promise.all([
         vacationService.getWorkerVacations(workerIdNum),
@@ -144,14 +150,13 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
         errorMessage = '🔧 Error del servidor: Ocurrió un problema técnico. Por favor, intente nuevamente en unos minutos.';
       } else if (error?.code === 'NETWORK_ERROR' || !error?.response) {
         errorMessage = '🌐 Error de conexión: No se pudo conectar con el servidor. Verifique su conexión a internet.';
-      } else if (vacationRequests.length === 0 && !error?.response) {
-        errorMessage = '📋 Sin datos: No se encontraron solicitudes de vacaciones para mostrar.';
       }
       showSnackbar(errorMessage, 'error');
     } finally {
       setLoading(false);
+      fetchInProgressRef.current = false;
     }
-  }, [workerId, vacationRequests.length]);
+  }, [workerId]);
 
   const generateCalendarDays = useCallback(() => {
     const start = startOfMonth(currentDate);
@@ -184,10 +189,15 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({ workerId: propWorkerI
     setCalendarDays(calendarDays);
   }, [currentDate, vacationRequests, selectedRange]);
 
+  // Efecto para cargar datos iniciales y cuando cambie el trabajador
   useEffect(() => {
     fetchVacationData();
+  }, [fetchVacationData]);
+
+  // Efecto independiente para regenerar el calendario cuando cambien sus dependencias
+  useEffect(() => {
     generateCalendarDays();
-  }, [fetchVacationData, generateCalendarDays]);
+  }, [generateCalendarDays]);
 
   const handleDateClick = (date: Date) => {
     if (isWeekend(date) || date < new Date()) return;
