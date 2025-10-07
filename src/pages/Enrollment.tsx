@@ -45,6 +45,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { formatDate } from '../utils/dateUtils';
 
 import api from "./../services/api";
+import usePermissions from "../hooks/usePermissions";
 
 // Enums del backend
 enum EnrollmentStatus {
@@ -185,6 +186,9 @@ const EnrollmentsManagement: React.FC = () => {
     in_progress: 0,
     pending: 0,
   });
+  
+  // Permisos del usuario para evitar llamadas que generan 403 en ciertos roles
+  const { canReadEnrollment } = usePermissions();
   
   // Estados para diálogo de confirmación de eliminación
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -469,11 +473,18 @@ const EnrollmentsManagement: React.FC = () => {
   }, [workerSearchTerm, fetchWorkers]);
 
   useEffect(() => {
-    fetchEnrollments();
+    // Evitar 403 para roles sin permiso de lectura de inscripciones
+    if (canReadEnrollment()) {
+      fetchEnrollments();
+      fetchStats();
+    } else {
+      setEnrollments([]);
+      setTotalEnrollments(0);
+      setStats({ total: 0, completed: 0, in_progress: 0, pending: 0 });
+    }
     fetchUsers();
     fetchCourses();
-    fetchStats();
-  }, [fetchEnrollments, page, rowsPerPage, searchTerm, statusFilter]);
+  }, [fetchEnrollments, page, rowsPerPage, searchTerm, statusFilter, canReadEnrollment]);
 
   // Cargar trabajadores disponibles cuando se selecciona un curso para inscripción masiva
   useEffect(() => {

@@ -154,62 +154,63 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
 
   const menuItems: MenuItem[] = React.useMemo(
     () => [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: <Dashboard />,
-      children: [
-        {
-          id: "admin-dashboard",
-          label: "Panel Administrativo",
-          icon: <AdminPanelSettings />,
-          path: "/admin/dashboard",
-          roles: ["admin"],
-        },
-        {
-          id: "trainer-dashboard",
-          label: "Panel Entrenador",
-          icon: <SupervisorAccount />,
-          path: "/trainer/dashboard",
-          roles: ["trainer"],
-        },
-        {
-          id: "supervisor-dashboard",
-          label: "Panel Supervisor",
-          icon: <SupervisorAccount />,
-          path: "/supervisor/dashboard",
-          roles: ["supervisor"],
-        },
-        {
-          id: "employee-dashboard",
-          label: "Panel Empleado",
-          icon: <Person />,
-          path: "/employee/dashboard",
-          roles: ["employee"],
-        },
-      ],
-    },
-    {
-      id: "employee-courses",
-      label: "Mis Cursos",
-      icon: <School />,
-      path: "/employee/courses",
-      roles: ["employee"],
-    },
-    {
-      id: "employee-surveys",
-      label: "Mis Encuestas",
-      icon: <Poll />,
-      path: "/employee/surveys",
-      roles: ["employee"],
-    },
-    {
-      id: "employee-evaluations",
-      label: "Mis Evaluaciones",
-      icon: <Quiz />,
-      path: "/employee/evaluations",
-      roles: ["employee"],
-    },
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        icon: <Dashboard />,
+        children: [
+          {
+            id: "admin-dashboard",
+            label: "Panel Administrativo",
+            icon: <AdminPanelSettings />,
+            path: "/admin/dashboard",
+            roles: ["admin"],
+          },
+          {
+            id: "trainer-dashboard",
+            label: "Panel Entrenador",
+            icon: <SupervisorAccount />,
+            path: "/trainer/dashboard",
+            roles: ["trainer"],
+          },
+          {
+            id: "supervisor-dashboard",
+            label: "Panel Supervisor",
+            icon: <SupervisorAccount />,
+            path: "/supervisor/dashboard",
+            roles: ["supervisor"],
+          },
+          {
+            id: "employee-dashboard",
+            label: "Panel Empleado",
+            icon: <Person />,
+            path: "/employee/dashboard",
+            roles: ["employee"],
+          },
+        ],
+      },
+      {
+        id: "employee-courses",
+        label: "Mis Cursos",
+        icon: <School />,
+        path: "/employee/courses",
+        roles: ["employee"],
+      },
+      {
+        id: "employee-surveys",
+        label: "Mis Encuestas",
+        icon: <Poll />,
+        path: "/employee/surveys",
+        roles: ["employee"],
+      },
+      {
+        id: "employee-evaluations",
+        label: "Mis Evaluaciones",
+        icon: <Quiz />,
+        path: "/employee/evaluations",
+        roles: ["employee"],
+      },
+      /*
     {
       id: "employee-attendance",
       label: "Mi Asistencia",
@@ -217,478 +218,489 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
       path: "/employee/attendance",
       roles: ["employee"],
     },
-    {
-      id: "employee-certificates",
-      label: "Mis Certificados",
-      icon: <CardMembership />,
-      path: "/employee/certificates",
-      roles: ["employee"],
-    },
-    {
-      id: "employee-vacations",
-      label: "Mis Vacaciones",
-      icon: <BeachAccess />,
-      path: "/employee/vacations",
-      roles: ["employee"],
-    },
-    {
-      id: "employee-votings",
-      label: "Mis Votaciones",
-      icon: <HowToVote />,
-      path: "/employee/votings",
-      roles: ["employee"],
-    },
-    {
-      id: "worker-management",
-      label: "Gestión de Trabajadores",
-      icon: <ManageAccounts />,
-      children: [
-        {
-          id: "workers",
-          label: "Trabajadores",
-          icon: <Work />,
-          path: "/admin/workers",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "worker-detail",
-          label: "Consulta Individual",
-          icon: <PersonSearch />,
-          path: "/admin/workers/detail",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "worker-vacations",
-          label: "Gestión de Vacaciones",
-          icon: <BeachAccess />,
-          path: "/admin/workers/vacations",
-          roles: ["admin", "supervisor"],
-        },
-      ],
-      roles: ["admin", "supervisor"],
-    },
-    {
-      id: "contractor-management",
-      label: "Gestión de Contratistas",
-      icon: <Business />,
-      children: [
-        {
-          id: "contractors",
-          label: "Contratistas",
-          icon: <Business />,
-          path: "/admin/contractors",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "contractor-documents",
-          label: "Documentos",
-          icon: <Description />,
-          path: "/admin/contractors/documents",
-          roles: ["admin", "supervisor"],
-        },
-      ],
-      roles: ["admin", "supervisor"],
-    },
-    {
-      id: "courses",
-      label: "Gestión de Cursos",
-      icon: <School />,
-      children: [
-        {
-          id: "courses-list",
-          label: "Cursos",
-          icon: <Folder />,
-          path: "/admin/courses",
-          roles: ["admin", "trainer"],
-        },
-        // Sesiones eliminadas - funcionalidad removida del sistema
-        {
-          id: "enrollments",
-          label: "Inscripciones",
-          icon: <Assignment />,
-          path: "/admin/enrollments",
-          roles: ["admin", "trainer", "supervisor"],
-        },
-        {
-          id: "reinduction",
-          label: "Reinducciones",
-          icon: <Refresh />,
-          path: "/admin/reinduction",
-          roles: ["admin", "trainer", "supervisor"],
-        },
-      ],
-      roles: ["admin", "trainer", "supervisor"],
-    },
-    {
-      id: "evaluations",
-      label: "Evaluaciones y Encuestas",
-      icon: <Assessment />,
-      children: [
-        {
-          id: "evaluations-list",
-          label: "Evaluaciones",
-          icon: <Quiz />,
-          path: "/admin/evaluations",
-          roles: ["admin", "trainer"],
-        },
-        {
-          id: "evaluation-results",
-          label: "Resultados de Evaluaciones",
-          icon: <BarChart />,
-          path: "/admin/evaluation-results",
-          roles: ["admin", "trainer"],
-        },
-        {
-          id: "surveys",
-          label: "Encuestas",
-          icon: <Poll />,
-          path: "/admin/surveys",
-          roles: ["admin", "trainer"],
-        },
-        {
-          id: "survey-tabulation",
-          label: "Tabulación de Encuestas",
-          icon: <TrendingUp />,
-          path: "/admin/survey-tabulation",
-          roles: ["admin", "trainer", "supervisor"],
-        },
-        {
-          id: "certificates",
-          label: "Certificados",
-          icon: <CardMembership />,
-          path: "/admin/certificates",
-          roles: ["admin", "trainer", "supervisor"],
-        },
-        {
-          id: "reports",
-          label: "Reportes",
-          icon: <Description />,
-          path: "/admin/reports",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "notifications",
-          label: "Notificaciones Generales",
-          icon: <Notifications />,
-          path: "/admin/notifications",
-          roles: ["admin", "trainer", "supervisor"],
-        },
-      ],
-      roles: ["admin", "trainer", "supervisor"],
-    },
-    {
-      id: "attendance",
-      label: "Asistencia",
-      icon: <CheckCircle />,
-      children: [
-        {
-          id: "attendance-list",
-          label: "Registro de Asistencia",
-          icon: <Schedule />,
-          path: "/admin/attendance",
-          roles: ["admin", "trainer", "supervisor"],
-        },
-        {
-          id: "admin-attendance",
-          label: "Gestión de Asistencia",
-          icon: <Group />,
-          path: "/admin/admin-attendance",
-          roles: ["admin"],
-        },
-      ],
-      roles: ["admin", "trainer", "supervisor"],
-    },
-    {
-      id: "health",
-      label: "Salud Ocupacional",
-      icon: <MedicalServices />,
-      children: [
-        {
-          id: "occupational-exams",
-          label: "Exámenes Ocupacionales",
-          icon: <Healing />,
-          path: "/admin/occupational-exams",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "admin-notifications",
-          label: "Notificaciones",
-          icon: <Notifications />,
-          path: "/admin/notification-acknowledgment",
-          roles: ["admin"],
-        },
-        {
-          id: "seguimientos",
-          label: "Seguimientos",
-          icon: <Timeline />,
-          path: "/admin/seguimientos",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "absenteeism",
-          label: "Ausentismo",
-          icon: <MedicalServices />,
-          path: "/admin/absenteeism",
-          roles: ["admin", "supervisor"],
-        },
-      ],
-      roles: ["admin", "supervisor"],
-    },
-    {
-      id: "committees",
-      label: "Comités",
-      icon: <Groups />,
-      children: [
-        {
-          id: "committees-dashboard",
-          label: "Dashboard de Comités",
-          icon: <Dashboard />,
-          path: "/admin/committees/dashboard",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "committees-management",
-          label: "Gestión de Comités",
-          icon: <Groups />,
-          path: "/admin/committees",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "committees-meetings",
-          label: "Reuniones",
-          icon: <Schedule />,
-          path: "/admin/committees/meetings",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "committees-activities",
-          label: "Actividades",
-          icon: <Assignment />,
-          path: "/admin/committees/activities",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "committees-votings",
-          label: "Votaciones",
-          icon: <Poll />,
-          path: "/admin/committees/votings",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "committees-documents",
-          label: "Documentos",
-          icon: <Description />,
-          path: "/admin/committees/documents",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "candidate-voting",
-          label: "Votaciones de Candidatos",
-          icon: <HowToVote />,
-          path: "/admin/candidate-votings",
-          roles: ["admin", "trainer", "supervisor"],
-        },
-      ],
-      roles: ["admin", "trainer", "supervisor"],
-    },
-    {
-      id: "administration",
-      label: "Administración",
-      icon: <AdminPanelSettings />,
-      children: [
-        {
-          id: "audit",
-          label: "Auditoría",
-          icon: <Security />,
-          path: "/admin/audit",
-          roles: ["admin"],
-        },
-        {
-          id: "config",
-          label: "Configuración",
-          icon: <Settings />,
-          path: "/admin/config",
-          roles: ["admin"],
-        },
-        {
-          id: "roles",
-          label: "Gestión de Roles",
-          icon: <ManageAccounts />,
-          path: "/admin/roles",
-          roles: ["admin"],
-        },
-        {
-          id: "users",
-          label: "Gestión de Usuarios",
-          icon: <People />,
-          path: "/admin/users",
-          roles: ["admin", "supervisor"],
-        },
-        {
-          id: "suppliers",
-          label: "Proveedores",
-          icon: <MedicalServices />,
-          path: "/admin/suppliers",
-          roles: ["admin", "supervisor"],
-        },
-      ],
-      roles: ["admin", "supervisor"],
-    },
+    */
+      {
+        id: "employee-certificates",
+        label: "Mis Certificados",
+        icon: <CardMembership />,
+        path: "/employee/certificates",
+        roles: ["employee"],
+      },
+      {
+        id: "employee-vacations",
+        label: "Mis Vacaciones",
+        icon: <BeachAccess />,
+        path: "/employee/vacations",
+        roles: ["employee"],
+      },
+      {
+        id: "employee-votings",
+        label: "Mis Votaciones",
+        icon: <HowToVote />,
+        path: "/employee/votings",
+        roles: ["employee"],
+      },
+      {
+        id: "worker-management",
+        label: "Gestión de Trabajadores",
+        icon: <ManageAccounts />,
+        children: [
+          {
+            id: "workers",
+            label: "Trabajadores",
+            icon: <Work />,
+            path: "/admin/workers",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "worker-detail",
+            label: "Consulta Individual",
+            icon: <PersonSearch />,
+            path: "/admin/workers/detail",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "worker-vacations",
+            label: "Gestión de Vacaciones",
+            icon: <BeachAccess />,
+            path: "/admin/workers/vacations",
+            roles: ["admin", "supervisor"],
+          },
+        ],
+        roles: ["admin", "supervisor"],
+      },
+      {
+        id: "contractor-management",
+        label: "Gestión de Contratistas",
+        icon: <Business />,
+        children: [
+          {
+            id: "contractors",
+            label: "Contratistas",
+            icon: <Business />,
+            path: "/admin/contractors",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "contractor-documents",
+            label: "Documentos",
+            icon: <Description />,
+            path: "/admin/contractors/documents",
+            roles: ["admin", "supervisor"],
+          },
+        ],
+        roles: ["admin", "supervisor"],
+      },
+      {
+        id: "courses",
+        label: "Gestión de Cursos",
+        icon: <School />,
+        children: [
+          {
+            id: "courses-list",
+            label: "Cursos",
+            icon: <Folder />,
+            path: "/admin/courses",
+            roles: ["admin", "trainer"],
+          },
+          {
+            id: "enrollments",
+            label: "Inscripciones",
+            icon: <Assignment />,
+            path: "/admin/enrollments",
+            roles: ["admin", "trainer", "supervisor"],
+          },
+          {
+            id: "reinduction",
+            label: "Reinducciones",
+            icon: <Refresh />,
+            path: "/admin/reinduction",
+            roles: ["admin"],
+          },
+        ],
+        roles: ["admin", "trainer", "supervisor"],
+      },
+      {
+        id: "evaluations",
+        label: "Evaluaciones y Encuestas",
+        icon: <Assessment />,
+        children: [
+          {
+            id: "evaluations-list",
+            label: "Evaluaciones",
+            icon: <Quiz />,
+            path: "/admin/evaluations",
+            roles: ["admin", "trainer"],
+          },
+          {
+            id: "evaluation-results",
+            label: "Resultados de Evaluaciones",
+            icon: <BarChart />,
+            path: "/admin/evaluation-results",
+            roles: ["admin", "trainer"],
+          },
+          {
+            id: "surveys",
+            label: "Encuestas",
+            icon: <Poll />,
+            path: "/admin/surveys",
+            roles: ["admin", "trainer"],
+          },
+          {
+            id: "survey-tabulation",
+            label: "Tabulación de Encuestas",
+            icon: <TrendingUp />,
+            path: "/admin/survey-tabulation",
+            roles: ["admin"],
+          },
+          {
+            id: "certificates",
+            label: "Certificados",
+            icon: <CardMembership />,
+            path: "/admin/certificates",
+            roles: ["admin", "trainer", "supervisor"],
+          },
+          {
+            id: "reports",
+            label: "Reportes",
+            icon: <Description />,
+            path: "/admin/reports",
+            roles: ["admin"],
+          },
+          {
+            id: "notifications",
+            label: "Notificaciones Generales",
+            icon: <Notifications />,
+            path: "/admin/notifications",
+            roles: ["admin", "trainer", "supervisor"],
+          },
+        ],
+        roles: ["admin", "trainer", "supervisor"],
+      },
+      {
+        id: "attendance",
+        label: "Asistencia",
+        icon: <CheckCircle />,
+        children: [
+          {
+            id: "attendance-list",
+            label: "Registro de Asistencia",
+            icon: <Schedule />,
+            path: "/admin/attendance",
+            roles: ["admin", "trainer", "supervisor"],
+          },
+          {
+            id: "admin-attendance",
+            label: "Gestión de Asistencia",
+            icon: <Group />,
+            path: "/admin/admin-attendance",
+            roles: ["admin"],
+          },
+        ],
+        roles: ["admin", "trainer", "supervisor"],
+      },
+      {
+        id: "health",
+        label: "Salud Ocupacional",
+        icon: <MedicalServices />,
+        children: [
+          {
+            id: "occupational-exams",
+            label: "Exámenes Ocupacionales",
+            icon: <Healing />,
+            path: "/admin/occupational-exams",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "admin-notifications",
+            label: "Notificaciones",
+            icon: <Notifications />,
+            path: "/admin/notification-acknowledgment",
+            roles: ["admin"],
+          },
+          {
+            id: "seguimientos",
+            label: "Seguimientos",
+            icon: <Timeline />,
+            path: "/admin/seguimientos",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "absenteeism",
+            label: "Ausentismo",
+            icon: <MedicalServices />,
+            path: "/admin/absenteeism",
+            roles: ["admin", "supervisor"],
+          },
+        ],
+        roles: ["admin", "supervisor"],
+      },
+      {
+        id: "committees",
+        label: "Comités",
+        icon: <Groups />,
+        children: [
+          {
+            id: "committees-dashboard",
+            label: "Dashboard de Comités",
+            icon: <Dashboard />,
+            path: "/admin/committees/dashboard",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "committees-management",
+            label: "Gestión de Comités",
+            icon: <Groups />,
+            path: "/admin/committees",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "committees-meetings",
+            label: "Reuniones",
+            icon: <Schedule />,
+            path: "/admin/committees/meetings",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "committees-activities",
+            label: "Actividades",
+            icon: <Assignment />,
+            path: "/admin/committees/activities",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "committees-votings",
+            label: "Votaciones",
+            icon: <Poll />,
+            path: "/admin/committees/votings",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "committees-documents",
+            label: "Documentos",
+            icon: <Description />,
+            path: "/admin/committees/documents",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "candidate-voting",
+            label: "Votaciones de Candidatos",
+            icon: <HowToVote />,
+            path: "/admin/candidate-votings",
+            roles: ["admin"],
+          },
+        ],
+        roles: ["admin", "trainer", "supervisor"],
+      },
+      {
+        id: "administration",
+        label: "Administración",
+        icon: <AdminPanelSettings />,
+        children: [
+          {
+            id: "audit",
+            label: "Auditoría",
+            icon: <Security />,
+            path: "/admin/audit",
+            roles: ["admin"],
+          },
+          {
+            id: "config",
+            label: "Configuración",
+            icon: <Settings />,
+            path: "/admin/config",
+            roles: ["admin"],
+          },
+          {
+            id: "roles",
+            label: "Gestión de Roles",
+            icon: <ManageAccounts />,
+            path: "/admin/roles",
+            roles: ["admin"],
+          },
+          {
+            id: "users",
+            label: "Gestión de Usuarios",
+            icon: <People />,
+            path: "/admin/users",
+            roles: ["admin"],
+          },
+          {
+            id: "suppliers",
+            label: "Proveedores",
+            icon: <MedicalServices />,
+            path: "/admin/suppliers",
+            roles: ["admin", "supervisor"],
+          },
+        ],
+        roles: ["admin", "supervisor"],
+      },
     ],
     []
   );
 
-  const filterMenuByRole = React.useCallback((items: MenuItem[]): MenuItem[] => {
-    if (!user) return [];
+  const filterMenuByRole = React.useCallback(
+    (items: MenuItem[]): MenuItem[] => {
+      if (!user) return [];
 
-    return items
-      .map((item) => {
-        // Crear una copia profunda del item para evitar mutaciones
-        const newItem: MenuItem = {
-          ...item,
-          children: item.children ? [...item.children] : undefined,
-        };
-
-        // Verificación granular por permisos específicos para usuarios con rol personalizado
-        if (user.custom_role_id) {
-          // Mapeo de elementos del menú a permisos específicos
-          const permissionMap: Record<string, () => boolean> = {
-            // Dashboard - acceso basado en rol y permisos personalizados
-            dashboard: () => true, // Will be filtered by children
-            "admin-dashboard": () => user.role === "admin",
-            "trainer-dashboard": () => user.role === "trainer",
-            "supervisor-dashboard": () => user.role === "supervisor",
-            "employee-dashboard": () => user.role === "employee",
-
-            // Employee sections - verificar permisos específicos
-            "employee-courses": () =>
-              user.role === "employee" && canViewCoursesPage(),
-            "employee-surveys": () =>
-              user.role === "employee" && canViewSurveysPage(),
-            "employee-evaluations": () =>
-              user.role === "employee" && canViewEvaluationsPage(),
-            "employee-attendance": () =>
-              user.role === "employee" && canViewAttendancePage(),
-            "employee-certificates": () =>
-              user.role === "employee" && canViewCertificatesPage(),
-            "employee-vacations": () =>
-              user.role === "employee",
-            "employee-votings": () =>
-              user.role === "employee",
-
-            // Worker management
-            "worker-management": () =>
-              canViewWorkersPage() || canUpdateWorkers(),
-            workers: canViewWorkersPage,
-            "workers-list": canViewWorkersPage,
-            "worker-detail": canViewWorkersPage,
-
-            // Contractor management
-            "contractor-management": () =>
-              user.role === "admin" || user.role === "supervisor",
-            contractors: () =>
-              user.role === "admin" || user.role === "supervisor",
-            "contractor-documents": () =>
-              user.role === "admin" || user.role === "supervisor",
-
-            // Course management - Solo para roles administrativos, no para employees
-            courses: () => user.role !== "employee" && canViewCoursesPage(),
-            "courses-list": () =>
-              user.role !== "employee" && canViewCoursesPage(),
-            enrollments: () => user.role !== "employee" && canViewCoursesPage(),
-            reinduction: () =>
-              user.role !== "employee" && canViewReinductionPage(),
-
-            // Evaluation management
-            evaluations: canViewEvaluationsPage,
-            "evaluations-list": canViewEvaluationsPage,
-            "evaluation-results": canViewEvaluationsPage,
-            surveys: canViewSurveysPage,
-            "survey-tabulation": canViewSurveysPage,
-
-            // Attendance
-            attendance: canViewAttendancePage,
-            "attendance-list": canViewAttendancePage,
-            "admin-attendance": canUpdateAttendance,
-
-            // Health/Medical
-            health: () =>
-              canViewOccupationalExamPage() || canViewSeguimientoPage(),
-            "occupational-exams": () => canViewOccupationalExamPage(),
-            "admin-notifications": () => user.role === "admin",
-            seguimientos: () => canViewSeguimientoPage(),
-
-            // Certificates - Solo para roles administrativos, no para employees
-            certificates: () =>
-              user.role !== "employee" && canViewCertificatesPage(),
-
-            // Reports
-            reports: canViewReportsPage,
-
-            // Notifications
-            notifications: canViewNotificationsPage,
-
-            // Suppliers
-            suppliers: canViewSuppliersPage,
-
-            // Committees
-            committees: () => true, // Will be filtered by children
-            "committees-dashboard": () => user.role === "admin" || user.role === "supervisor",
-            "committees-management": () => user.role === "admin" || user.role === "supervisor",
-            "committees-meetings": () => user.role === "admin" || user.role === "supervisor",
-            "committees-activities": () => user.role === "admin" || user.role === "supervisor",
-            "committees-votings": () => user.role === "admin" || user.role === "supervisor",
-            "committees-documents": () => user.role === "admin" || user.role === "supervisor",
-            "candidate-voting": () => user.role === "admin" || user.role === "trainer" || user.role === "supervisor",
-
-            // Administration (always check individual permissions)
-            administration: () => true, // Will be filtered by children
-            audit: () => user.role === "admin", // Solo admins pueden ver auditoría
-            config: () => canViewAdminConfigPage(),
-            roles: () => user.role === "admin", // Solo admins pueden gestionar roles
-            users: canUpdateUsers,
+      return items
+        .map((item) => {
+          // Crear una copia profunda del item para evitar mutaciones
+          const newItem: MenuItem = {
+            ...item,
+            children: item.children ? [...item.children] : undefined,
           };
 
-          const permissionCheck = permissionMap[newItem.id];
-          if (permissionCheck && !permissionCheck()) {
-            return null;
-          }
-        } else {
-          // Verificación tradicional por roles del sistema para usuarios sin rol personalizado
-          if (newItem.roles && !newItem.roles.includes(user.role)) {
-            return null;
-          }
-        }
+          // Verificación granular por permisos específicos para usuarios con rol personalizado
+          if (user.custom_role_id) {
+            // Mapeo de elementos del menú a permisos específicos
+            const permissionMap: Record<string, () => boolean> = {
+              // Dashboard - acceso basado en rol y permisos personalizados
+              dashboard: () => true, // Will be filtered by children
+              "admin-dashboard": () => user.role === "admin",
+              "trainer-dashboard": () => user.role === "trainer",
+              "supervisor-dashboard": () => user.role === "supervisor",
+              "employee-dashboard": () => user.role === "employee",
 
-        // Para elementos con hijos, filtrar recursivamente sin mutar el original
-        if (newItem.children) {
-          const filteredChildren = filterMenuByRole(newItem.children);
-          newItem.children = filteredChildren;
-          return filteredChildren.length > 0 ? newItem : null;
-        }
+              // Employee sections - verificar permisos específicos
+              "employee-courses": () =>
+                user.role === "employee" && canViewCoursesPage(),
+              "employee-surveys": () =>
+                user.role === "employee" && canViewSurveysPage(),
+              "employee-evaluations": () =>
+                user.role === "employee" && canViewEvaluationsPage(),
+              "employee-attendance": () =>
+                user.role === "employee" && canViewAttendancePage(),
+              "employee-certificates": () =>
+                user.role === "employee" && canViewCertificatesPage(),
+              "employee-vacations": () => user.role === "employee",
+              "employee-votings": () => user.role === "employee",
 
-        return newItem;
-      })
-      .filter((item): item is MenuItem => item !== null);
-  }, [
-    user,
-    canViewCoursesPage,
-    canViewSurveysPage,
-    canViewEvaluationsPage,
-    canViewAttendancePage,
-    canUpdateAttendance,
-    canViewWorkersPage,
-    canUpdateWorkers,
-    canViewCertificatesPage,
-    canViewReportsPage,
-    canViewNotificationsPage,
-    canViewOccupationalExamPage,
-    canViewSeguimientoPage,
-    canViewAdminConfigPage,
-    canUpdateUsers,
-    canViewSuppliersPage,
-    canViewReinductionPage,
-  ]);
+              // Worker management
+              "worker-management": () =>
+                canViewWorkersPage() || canUpdateWorkers(),
+              workers: canViewWorkersPage,
+              "workers-list": canViewWorkersPage,
+              "worker-detail": canViewWorkersPage,
+
+              // Contractor management
+              "contractor-management": () =>
+                user.role === "admin" || user.role === "supervisor",
+              contractors: () =>
+                user.role === "admin" || user.role === "supervisor",
+              "contractor-documents": () =>
+                user.role === "admin" || user.role === "supervisor",
+
+              // Course management - Solo para roles administrativos, no para employees
+              courses: () => user.role !== "employee" && canViewCoursesPage(),
+              "courses-list": () =>
+                user.role !== "employee" && canViewCoursesPage(),
+              enrollments: () =>
+                user.role !== "employee" && canViewCoursesPage(),
+              reinduction: () =>
+                user.role !== "employee" && canViewReinductionPage(),
+
+              // Evaluation management
+              evaluations: canViewEvaluationsPage,
+              "evaluations-list": canViewEvaluationsPage,
+              "evaluation-results": canViewEvaluationsPage,
+              surveys: canViewSurveysPage,
+              "survey-tabulation": canViewSurveysPage,
+
+              // Attendance
+              attendance: canViewAttendancePage,
+              "attendance-list": canViewAttendancePage,
+              "admin-attendance": canUpdateAttendance,
+
+              // Health/Medical
+              health: () =>
+                canViewOccupationalExamPage() || canViewSeguimientoPage(),
+              "occupational-exams": () => canViewOccupationalExamPage(),
+              "admin-notifications": () => user.role === "admin",
+              seguimientos: () => canViewSeguimientoPage(),
+
+              // Certificates - Solo para roles administrativos, no para employees
+              certificates: () =>
+                user.role !== "employee" && canViewCertificatesPage(),
+
+              // Reports
+              reports: canViewReportsPage,
+
+              // Notifications
+              notifications: canViewNotificationsPage,
+
+              // Suppliers
+              suppliers: canViewSuppliersPage,
+
+              // Committees
+              committees: () => true, // Will be filtered by children
+              "committees-dashboard": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "committees-management": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "committees-meetings": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "committees-activities": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "committees-votings": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "committees-documents": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "candidate-voting": () =>
+                user.role === "admin" ||
+                user.role === "trainer" ||
+                user.role === "supervisor",
+
+              // Administration (always check individual permissions)
+              administration: () => true, // Will be filtered by children
+              audit: () => user.role === "admin", // Solo admins pueden ver auditoría
+              config: () => canViewAdminConfigPage(),
+              roles: () => user.role === "admin", // Solo admins pueden gestionar roles
+              users: canUpdateUsers,
+            };
+
+            const permissionCheck = permissionMap[newItem.id];
+            if (permissionCheck && !permissionCheck()) {
+              return null;
+            }
+          } else {
+            // Verificación tradicional por roles del sistema para usuarios sin rol personalizado
+            if (newItem.roles && !newItem.roles.includes(user.role)) {
+              return null;
+            }
+          }
+
+          // Para elementos con hijos, filtrar recursivamente sin mutar el original
+          if (newItem.children) {
+            const filteredChildren = filterMenuByRole(newItem.children);
+            newItem.children = filteredChildren;
+            return filteredChildren.length > 0 ? newItem : null;
+          }
+
+          return newItem;
+        })
+        .filter((item): item is MenuItem => item !== null);
+    },
+    [
+      user,
+      canViewCoursesPage,
+      canViewSurveysPage,
+      canViewEvaluationsPage,
+      canViewAttendancePage,
+      canUpdateAttendance,
+      canViewWorkersPage,
+      canUpdateWorkers,
+      canViewCertificatesPage,
+      canViewReportsPage,
+      canViewNotificationsPage,
+      canViewOccupationalExamPage,
+      canViewSeguimientoPage,
+      canViewAdminConfigPage,
+      canUpdateUsers,
+      canViewSuppliersPage,
+      canViewReinductionPage,
+    ]
+  );
 
   const renderMenuItem = (item: MenuItem, level: number = 0) => {
     const hasChildren = item.children && item.children.length > 0;

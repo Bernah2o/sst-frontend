@@ -250,53 +250,31 @@ const AttendanceManagement: React.FC = () => {
       setUsers(response.data.items || []);
     } catch (error) {
       logger.error("Error fetching users:", error);
-      showSnackbar("👥 No se pudo cargar la lista de usuarios. Intente actualizar la página.", "error");
+      showSnackbar(
+        "👥 No se pudo cargar la lista de usuarios. Intente actualizar la página.",
+        "error"
+      );
     }
   };
-
-  // const fetchCourses = async () => {
-  //   try {
-  //     const response = await api.get("/courses", {
-  //       params: {
-  //         status: "published",
-  //       },
-  //     });
-  //     setCourses(response.data.items || []);
-  //   } catch (error) {
-  //     console.error("Error fetching courses:", error);
-  //   }
-  // };
-
-  // const fetchSessions = async () => {
-  //   try {
-  //     const response = await api.get('/sessions', {
-  //       params: {
-  //         activo: true
-  //       }
-  //     });
-  //     setSessions(response.data.items || []);
-  //   } catch (error) {
-  //     console.error('Error fetching sessions:', error);
-  //   }
-  // };
-
   const fetchStats = async () => {
     try {
       const params = new URLSearchParams();
-      
+
       // Agregar filtros si están activos
       if (statusFilter && statusFilter !== "all") {
         params.append("status", statusFilter);
       }
-      
+
       if (dateFilter) {
-        const formattedDate = dateFilter.toISOString().split('T')[0];
+        const formattedDate = dateFilter.toISOString().split("T")[0];
         params.append("date", formattedDate);
       }
-      
+
       const queryString = params.toString();
-      const url = queryString ? `/attendance/stats?${queryString}` : "/attendance/stats";
-      
+      const url = queryString
+        ? `/attendance/stats?${queryString}`
+        : "/attendance/stats";
+
       const response = await api.get(url);
       setStats(response.data);
     } catch (error) {
@@ -438,7 +416,10 @@ const AttendanceManagement: React.FC = () => {
       fetchStats();
     } catch (error) {
       logger.error("Error saving attendance:", error);
-      showSnackbar("💾 No se pudo guardar el registro de asistencia. Verifique los datos ingresados e intente nuevamente.", "error");
+      showSnackbar(
+        "💾 No se pudo guardar el registro de asistencia. Verifique los datos ingresados e intente nuevamente.",
+        "error"
+      );
     }
   };
 
@@ -460,8 +441,11 @@ const AttendanceManagement: React.FC = () => {
         setOpenDeleteDialog(false);
         setDeletingAttendance(null);
       } catch (error) {
-      logger.error("Error deleting attendance:", error);
-      showSnackbar("🗑️ No se pudo eliminar el registro de asistencia. Puede que no tenga permisos o que el registro esté siendo utilizado.", "error");
+        logger.error("Error deleting attendance:", error);
+        showSnackbar(
+          "🗑️ No se pudo eliminar el registro de asistencia. Puede que no tenga permisos o que el registro esté siendo utilizado.",
+          "error"
+        );
       }
     }
   };
@@ -491,33 +475,47 @@ const AttendanceManagement: React.FC = () => {
       showSnackbar("Reporte de asistencia exportado exitosamente", "success");
     } catch (error) {
       logger.error("Error exporting attendance:", error);
-      showSnackbar("📊 No se pudo exportar el reporte de asistencia. Verifique que haya datos disponibles e intente nuevamente.", "error");
+      showSnackbar(
+        "📊 No se pudo exportar el reporte de asistencia. Verifique que haya datos disponibles e intente nuevamente.",
+        "error"
+      );
     }
   };
 
   const handleGenerateCertificate = async (attendance: Attendance) => {
     try {
-      const response = await api.get(`/attendance/${attendance.id}/certificate`, {
-        responseType: "blob",
-        timeout: 180000, // 3 minutos para certificados individuales
-        params: {
-          download: true,
-        },
-      });
+      const response = await api.get(
+        `/attendance/${attendance.id}/certificate`,
+        {
+          responseType: "blob",
+          timeout: 180000, // 3 minutos para certificados individuales
+          params: {
+            download: true,
+          },
+        }
+      );
 
       // Validar que la respuesta sea un blob válido
       if (!response.data || response.data.size === 0) {
-        showSnackbar("📄 El certificado no pudo generarse correctamente. Intente nuevamente o contacte al administrador.", "error");
+        showSnackbar(
+          "📄 El certificado no pudo generarse correctamente. Intente nuevamente o contacte al administrador.",
+          "error"
+        );
         return;
       }
 
       // Crear nombre de archivo seguro
-      const userName = getUserDisplayName(attendance).replace(/[^a-zA-Z0-9]/g, '_');
-      const courseName = (attendance.course_name || 'curso').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+      const userName = getUserDisplayName(attendance).replace(
+        /[^a-zA-Z0-9]/g,
+        "_"
+      );
+      const courseName = (attendance.course_name || "curso")
+        .replace(/[^a-zA-Z0-9]/g, "_")
+        .substring(0, 20);
       const fileName = `certificado_asistencia_${userName}_${courseName}.pdf`;
 
       // Crear blob con tipo MIME específico para PDF
-      const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+      const pdfBlob = new Blob([response.data], { type: "application/pdf" });
 
       // Crear enlace de descarga
       const url = window.URL.createObjectURL(pdfBlob);
@@ -526,58 +524,74 @@ const AttendanceManagement: React.FC = () => {
       link.setAttribute("download", fileName);
       link.style.display = "none";
       document.body.appendChild(link);
-      
+
       // Forzar la descarga
       link.click();
-      
+
       // Limpiar después de un breve delay
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
       }, 100);
 
-      showSnackbar("Certificado de asistencia generado exitosamente", "success");
+      showSnackbar(
+        "Certificado de asistencia generado exitosamente",
+        "success"
+      );
     } catch (error: any) {
       logger.error("Error generating attendance certificate:", error);
       if (error.response?.status === 500) {
-        showSnackbar("🔧 Error del servidor al generar el certificado. Contacte al administrador del sistema.", "error");
+        showSnackbar(
+          "🔧 Error del servidor al generar el certificado. Contacte al administrador del sistema.",
+          "error"
+        );
       } else {
-        showSnackbar("📜 No se pudo generar el certificado de asistencia. Verifique que el registro esté completo e intente nuevamente.", "error");
+        showSnackbar(
+          "📜 No se pudo generar el certificado de asistencia. Verifique que el registro esté completo e intente nuevamente.",
+          "error"
+        );
       }
     }
   };
 
   const handleGenerateAttendanceList = async () => {
     if (!dateFilter) {
-      showSnackbar("📅 Por favor seleccione una fecha específica para generar la lista de asistencia.", "error");
+      showSnackbar(
+        "📅 Por favor seleccione una fecha específica para generar la lista de asistencia.",
+        "error"
+      );
       return;
     }
 
     // Obtener el curso más común en la fecha seleccionada
-    const filteredAttendances = attendances.filter(attendance => {
+    const filteredAttendances = attendances.filter((attendance) => {
       const attendanceDate = new Date(attendance.session_date);
       return attendanceDate.toDateString() === dateFilter.toDateString();
     });
 
     if (filteredAttendances.length === 0) {
-      showSnackbar("📋 No hay registros de asistencia para la fecha seleccionada. Intente con otra fecha o verifique que existan datos.", "error");
+      showSnackbar(
+        "📋 No hay registros de asistencia para la fecha seleccionada. Intente con otra fecha o verifique que existan datos.",
+        "error"
+      );
       return;
     }
 
     // Obtener el curso más frecuente
     const courseCount: { [key: string]: number } = {};
-    filteredAttendances.forEach(attendance => {
-      const courseName = attendance.course_name || attendance.course?.title || "";
+    filteredAttendances.forEach((attendance) => {
+      const courseName =
+        attendance.course_name || attendance.course?.title || "";
       courseCount[courseName] = (courseCount[courseName] || 0) + 1;
     });
 
-    const mostFrequentCourse = Object.keys(courseCount).reduce((a, b) => 
+    const mostFrequentCourse = Object.keys(courseCount).reduce((a, b) =>
       courseCount[a] > courseCount[b] ? a : b
     );
 
     try {
-      const sessionDate = dateFilter.toISOString().split('T')[0]; // YYYY-MM-DD format
-      
+      const sessionDate = dateFilter.toISOString().split("T")[0]; // YYYY-MM-DD format
+
       const response = await api.get("/attendance/attendance-list", {
         responseType: "blob",
         timeout: 300000, // 5 minutos para PDFs grandes
@@ -590,17 +604,22 @@ const AttendanceManagement: React.FC = () => {
 
       // Validar que la respuesta sea un blob válido
       if (!response.data || response.data.size === 0) {
-        showSnackbar("📄 La lista de asistencia no pudo generarse correctamente. Intente nuevamente o contacte al administrador.", "error");
+        showSnackbar(
+          "📄 La lista de asistencia no pudo generarse correctamente. Intente nuevamente o contacte al administrador.",
+          "error"
+        );
         return;
       }
 
       // Crear nombre de archivo seguro
-      const safeCourse = mostFrequentCourse.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+      const safeCourse = mostFrequentCourse
+        .replace(/[^a-zA-Z0-9]/g, "_")
+        .substring(0, 20);
       const fileName = `lista_asistencia_${safeCourse}_${sessionDate}.pdf`;
 
       // Crear blob con tipo MIME específico para PDF
-      const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
-      
+      const pdfBlob = new Blob([response.data], { type: "application/pdf" });
+
       // Crear enlace de descarga
       const url = window.URL.createObjectURL(pdfBlob);
       const link = document.createElement("a");
@@ -608,10 +627,10 @@ const AttendanceManagement: React.FC = () => {
       link.setAttribute("download", fileName);
       link.style.display = "none";
       document.body.appendChild(link);
-      
+
       // Forzar la descarga
       link.click();
-      
+
       // Limpiar después de un breve delay
       setTimeout(() => {
         document.body.removeChild(link);
@@ -622,11 +641,20 @@ const AttendanceManagement: React.FC = () => {
     } catch (error: any) {
       logger.error("Error generating attendance list:", error);
       if (error.response?.status === 404) {
-        showSnackbar("🔍 No se encontraron registros suficientes para generar la lista. Verifique que existan datos de asistencia para la fecha seleccionada.", "error");
+        showSnackbar(
+          "🔍 No se encontraron registros suficientes para generar la lista. Verifique que existan datos de asistencia para la fecha seleccionada.",
+          "error"
+        );
       } else if (error.response?.status === 500) {
-        showSnackbar("🔧 Error del servidor al generar la lista. Contacte al administrador del sistema.", "error");
+        showSnackbar(
+          "🔧 Error del servidor al generar la lista. Contacte al administrador del sistema.",
+          "error"
+        );
       } else {
-        showSnackbar("📋 No se pudo generar la lista de asistencia. Verifique los datos e intente nuevamente.", "error");
+        showSnackbar(
+          "📋 No se pudo generar la lista de asistencia. Verifique los datos e intente nuevamente.",
+          "error"
+        );
       }
     }
   };
@@ -646,16 +674,21 @@ const AttendanceManagement: React.FC = () => {
         return `${attendance.user.first_name} ${attendance.user.last_name}`;
       }
       // Campos legacy
-      if ((attendance.user as any).nombre && (attendance.user as any).apellido) {
-        return `${(attendance.user as any).nombre} ${(attendance.user as any).apellido}`;
+      if (
+        (attendance.user as any).nombre &&
+        (attendance.user as any).apellido
+      ) {
+        return `${(attendance.user as any).nombre} ${
+          (attendance.user as any).apellido
+        }`;
       }
       if (attendance.user.email) {
         return attendance.user.email;
       }
     }
-    
+
     // Si no, buscar en la lista de usuarios cargados
-    const user = users.find(u => u.id === attendance.user_id);
+    const user = users.find((u) => u.id === attendance.user_id);
     if (user) {
       if (user.full_name) {
         return user.full_name;
@@ -671,7 +704,7 @@ const AttendanceManagement: React.FC = () => {
         return user.email;
       }
     }
-    
+
     return `Usuario ID: ${attendance.user_id}`;
   };
 
@@ -690,7 +723,9 @@ const AttendanceManagement: React.FC = () => {
                 <Typography color="text.secondary" gutterBottom>
                   Total Registros
                 </Typography>
-                <Typography variant="h4">{stats.total_attendance || stats.total || 0}</Typography>
+                <Typography variant="h4">
+                  {stats.total_attendance || stats.total || 0}
+                </Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -897,9 +932,7 @@ const AttendanceManagement: React.FC = () => {
                   <TableRow key={attendance.id}>
                     <TableCell>{attendance.id}</TableCell>
                     {user?.role !== "employee" && (
-                      <TableCell>
-                        {getUserDisplayName(attendance)}
-                      </TableCell>
+                      <TableCell>{getUserDisplayName(attendance)}</TableCell>
                     )}
                     <TableCell>
                       {attendance.course?.title ||
