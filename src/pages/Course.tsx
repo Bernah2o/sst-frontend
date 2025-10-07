@@ -1861,6 +1861,27 @@ const CoursesManagement: React.FC = () => {
                         size="small"
                       />
                     )}
+                    {(() => {
+                      const evaluation: any = (enrollment as any).evaluation;
+                      const hasPercentage = evaluation && evaluation.percentage != null;
+                      const hasScore = evaluation && evaluation.score != null;
+                      const hasGradeField = (enrollment as any).grade != null || (enrollment as any).calificacion != null;
+                      if (!hasPercentage && !hasScore && !hasGradeField) return null;
+                      const label = hasPercentage
+                        ? `Calificación: ${evaluation.percentage}%`
+                        : hasScore
+                        ? `Calificación: ${evaluation.score}/100`
+                        : `Calificación: ${(enrollment as any).grade ?? (enrollment as any).calificacion}/100`;
+                      const statusLower = (enrollment.status || '').toLowerCase();
+                      const color: any = statusLower === 'completed' ? 'success' : 'default';
+                      return (
+                        <Chip
+                          label={label}
+                          color={color}
+                          size="small"
+                        />
+                      );
+                    })()}
                   </Box>
 
                   {/* Fechas */}

@@ -643,6 +643,22 @@ const CourseDetail: React.FC = () => {
                         Ir a Evaluación
                       </Button>
                     )}
+                    {(progressInfo?.evaluation_status === 'completed' || progressInfo?.evaluation_completed) && (
+                      <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip
+                          label={`Calificación: ${progressInfo?.evaluation_score ?? 0}%`}
+                          color={(progressInfo?.evaluation_score ?? 0) >= (progressInfo?.passing_score ?? 0) ? 'success' : 'warning'}
+                          size="small"
+                        />
+                        {typeof progressInfo?.passing_score !== 'undefined' && (
+                          <Chip
+                            label={`Mínima: ${progressInfo?.passing_score}%`}
+                            variant="outlined"
+                            size="small"
+                          />
+                        )}
+                      </Box>
+                    )}
                     {progressInfo?.evaluation_status === "blocked" && (
                       <Alert severity="error" sx={{ mt: 2 }}>
                         La evaluación está bloqueada. Has agotado todos los intentos disponibles sin superar la puntuación mínima requerida.

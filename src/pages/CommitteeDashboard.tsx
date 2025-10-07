@@ -126,21 +126,24 @@ const CommitteeDashboard: React.FC = () => {
     setFilteredCommittees(filtered);
   }, [userCommittees, filters]);
 
-  const calculateStatistics = useCallback((committees: Committee[]) => {
+  const calculateStatistics = useCallback((
+    committees: Committee[],
+    meetings: Meeting[],
+    votings: Voting[],
+    activities: Activity[]
+  ) => {
     const activeCommittees = committees.filter(c => c.is_active).length;
-    
+
     setStatistics({
       totalCommittees: committees.length,
       activeCommittees,
-      upcomingMeetingsCount: upcomingMeetings.length,
-      activeVotingsCount: activeVotings.length,
-      pendingActivitiesCount: pendingActivities.length,
-      overdueMeetings: upcomingMeetings.filter(m => 
-        new Date(m.meeting_date) < new Date()
-      ).length,
-      completedActivitiesThisMonth: 0, // This would need additional API call
+      upcomingMeetingsCount: meetings.length,
+      activeVotingsCount: votings.length,
+      pendingActivitiesCount: activities.length,
+      overdueMeetings: meetings.filter(m => new Date(m.meeting_date) < new Date()).length,
+      completedActivitiesThisMonth: 0,
     });
-  }, [upcomingMeetings, activeVotings, pendingActivities]);
+  }, []);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -180,11 +183,16 @@ const CommitteeDashboard: React.FC = () => {
 
       // Load dashboard data if user has committees
       if (committees.length > 0) {
-        await loadDashboardMetrics(committees);
+        const { meetings, votings, activities } = await loadDashboardMetrics(committees);
+        setUpcomingMeetings(meetings);
+        setActiveVotings(votings);
+        setPendingActivities(activities);
+        // Calculate statistics based on freshly fetched metrics
+        calculateStatistics(committees, meetings, votings, activities);
+      } else {
+        // Reset statistics if no committees
+        calculateStatistics([], [], [], []);
       }
-
-      // Calculate statistics
-      calculateStatistics(committees);
     } catch (err) {
       setError('Hubo un problema al cargar la información del dashboard. Por favor, intenta recargar la página o contacta al soporte técnico si el problema persiste.');
       console.error('Dashboard loading error:', err);
@@ -227,12 +235,14 @@ const CommitteeDashboard: React.FC = () => {
         }
       }
 
-      // Sort and limit results
-      setUpcomingMeetings(allMeetings.slice(0, 5));
-      setActiveVotings(allVotings.slice(0, 5));
-      setPendingActivities(allActivities.slice(0, 5));
+      // Sort and limit results, return to caller
+      const meetings = allMeetings.slice(0, 5);
+      const votings = allVotings.slice(0, 5);
+      const activities = allActivities.slice(0, 5);
+      return { meetings, votings, activities };
     } catch (err) {
       console.error('Error loading dashboard metrics:', err);
+      return { meetings: [], votings: [], activities: [] };
     }
   };
 
