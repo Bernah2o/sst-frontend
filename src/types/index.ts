@@ -404,6 +404,8 @@ export enum AttendanceType {
 export interface AttendanceBase {
   user_id: number;
   course_id: number;
+  // Opcional para coincidir con el backend actual que acepta course_name
+  course_name?: string;
   session_date: string;
   status: AttendanceStatus;
   attendance_type: AttendanceType;

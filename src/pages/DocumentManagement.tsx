@@ -88,10 +88,7 @@ const DocumentManagement: React.FC = () => {
   const [editingDocument, setEditingDocument] = useState<CommitteeDocument | undefined>(undefined);
   const [permissions, setPermissions] = useState<{ [key: number]: any }>({});
   
-  // Log cuando cambian los permisos
-  useEffect(() => {
-    logger.debug('🔐 Permisos actualizados:', permissions);
-  }, [permissions]);
+  // Limpieza: se eliminaron logs de depuración innecesarios
   const [tabValue, setTabValue] = useState(0);
   const [documentCounts, setDocumentCounts] = useState({
     meeting_minutes: 0,
@@ -111,10 +108,8 @@ const DocumentManagement: React.FC = () => {
   const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
-      logger.debug('🔐 loadInitialData started');
       
       const accessibleCommittees = await committeePermissionService.getUserAccessibleCommittees();
-      logger.debug('🔐 accessibleCommittees:', accessibleCommittees);
       
       if (accessibleCommittees.length === 0) {
         setError('No tienes acceso a ningún comité');
@@ -140,26 +135,21 @@ const DocumentManagement: React.FC = () => {
         members_count: undefined,
         active_meetings_count: undefined,
       }));
-      logger.debug('🔐 committeeData loaded:', committeeData);
       setCommittees(committeeData);
       
       if (!selectedCommittee && committeeData.length > 0) {
         setSelectedCommittee(committeeData[0].id);
-        logger.debug('🔐 selectedCommittee set to:', committeeData[0].id);
       }
       
       // Cargar permisos para todos los comités
       const permissionsMap: Record<number, { canView: boolean; canManageDocuments: boolean }> = {};
       for (const committee of committeeData) {
-        logger.debug('🔐 Loading permissions for committee:', committee.id, committee.name);
         const canView = await committeePermissionService.canView(committee.id);
         const canManageDocuments = await committeePermissionService.canUploadDocuments(committee.id);
         permissionsMap[committee.id] = { canView, canManageDocuments };
-        logger.debug('🔐 Permissions for committee', committee.id, '- canView:', canView, 'canManageDocuments:', canManageDocuments);
       }
       
       setPermissions(permissionsMap);
-      logger.debug('🔐 Final permissionsMap:', permissionsMap);
       
     } catch (error) {
       logger.error('Error loading initial data:', error);
@@ -178,7 +168,6 @@ const DocumentManagement: React.FC = () => {
       let totalDocuments;
       
       if (selectedCommittee === 0) {
-         logger.debug('📋 Cargando documentos de todos los comités');
          const response = await committeeDocumentService.getAllDocuments({
            page: page + 1,
            page_size: rowsPerPage,
@@ -188,7 +177,6 @@ const DocumentManagement: React.FC = () => {
          documentsData = response.items;
          totalDocuments = response.total;
        } else {
-         logger.debug('📋 Cargando documentos del comité:', selectedCommittee);
          const response = await committeeDocumentService.getDocuments({
            committee_id: selectedCommittee,
            page: page + 1,
@@ -274,13 +262,6 @@ const DocumentManagement: React.FC = () => {
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, document: CommitteeDocument) => {
-    logger.debug('🔍 handleMenuOpen ejecutado');
-    logger.debug('🔍 document:', document);
-    logger.debug('🔍 document.committee_id:', document.committee_id);
-    logger.debug('🔍 permissions:', permissions);
-    logger.debug('🔍 permissions[document.committee_id]:', permissions[document.committee_id]);
-    logger.debug('🔍 canManageDocuments:', permissions[document.committee_id]?.canManageDocuments);
-    logger.debug('🔍 Botón eliminar será visible:', !!(document && permissions[document.committee_id]?.canManageDocuments));
     
     setAnchorEl(event.currentTarget);
     setSelectedDocument(document);
@@ -348,44 +329,24 @@ const DocumentManagement: React.FC = () => {
 
 
   const handleDeleteClick = () => {
-    logger.debug('🔍 handleDeleteClick ejecutado');
-    logger.debug('🔍 selectedDocument:', selectedDocument);
-    logger.debug('🔍 deleteDialogOpen antes:', deleteDialogOpen);
-    logger.debug('🔍 Intentando abrir diálogo de eliminación...');
     setDeleteDialogOpen(true);
-    logger.debug('🔍 setDeleteDialogOpen(true) ejecutado');
-    
-    setTimeout(() => {
-      logger.debug('🔍 deleteDialogOpen después de setTimeout:', deleteDialogOpen);
-    }, 100);
     
     setAnchorEl(null);
   };
 
   const handleDeleteConfirm = async () => {
-    logger.debug('🗑️ handleDeleteConfirm ejecutado');
-    logger.debug('🗑️ selectedDocument:', selectedDocument);
     
     if (!selectedDocument) {
-      logger.debug('🗑️ No hay documento seleccionado, saliendo');
       return;
     }
     
     try {
-      logger.debug('🗑️ Iniciando eliminación del documento ID:', selectedDocument.id);
-      logger.debug('🗑️ Committee ID:', selectedDocument.committee_id);
       await committeeDocumentService.deleteDocument(selectedDocument.committee_id, selectedDocument.id);
-      logger.debug('🗑️ Documento eliminado exitosamente');
       
       setDeleteDialogOpen(false);
-      logger.debug('🗑️ Diálogo cerrado');
       
       setSelectedDocument(undefined);
-      logger.debug('🗑️ Documento seleccionado limpiado');
-      
-      logger.debug('🗑️ Recargando documentos...');
       await loadDocuments();
-      logger.debug('🗑️ Documentos recargados exitosamente');
       
     } catch (error) {
       logger.error('Error deleting document:', error);
@@ -394,18 +355,11 @@ const DocumentManagement: React.FC = () => {
   };
 
   const handleDeleteCancel = () => {
-    logger.debug('🗑️ handleDeleteCancel ejecutado');
-    logger.debug('🗑️ deleteDialogOpen antes de cerrar:', deleteDialogOpen);
     setDeleteDialogOpen(false);
-    logger.debug('🗑️ deleteDialogOpen después de cerrar:', false);
     setSelectedDocument(undefined);
-    logger.debug('🗑️ selectedDocument después de limpiar:', undefined);
   };
 
   const handleCreateDocument = () => {
-    logger.debug('🔍 DocumentManagement - handleCreateDocument llamado');
-    logger.debug('🔍 DocumentManagement - selectedCommittee actual:', selectedCommittee);
-    logger.debug('🔍 DocumentManagement - committees disponibles:', committees.length);
     
     setSelectedDocument(undefined);
     setDocumentFormOpen(true);
@@ -833,12 +787,6 @@ const DocumentManagement: React.FC = () => {
         </MenuItem>
         {(() => {
            const canManage = selectedDocument && permissions[selectedDocument.committee_id]?.canManageDocuments;
-           logger.debug('🔍 Renderizando menú - selectedDocument:', selectedDocument);
-           logger.debug('🔍 Renderizando menú - permissions:', permissions);
-           logger.debug('🔍 Renderizando menú - committee_id:', selectedDocument?.committee_id);
-           logger.debug('🔍 Renderizando menú - permissions for committee:', permissions[selectedDocument?.committee_id || 0]);
-           logger.debug('🔍 Renderizando menú - canManage:', canManage);
-           logger.debug('🔍 Renderizando menú - Botones editar/eliminar visibles:', !!canManage);
            
            return canManage ? (
              <>

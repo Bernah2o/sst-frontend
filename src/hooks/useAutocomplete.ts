@@ -241,7 +241,7 @@ export const useUserAutocomplete = () => {
 // Hook especializado para trabajadores
 export const useWorkerAutocomplete = () => {
   return useAutocomplete({
-    apiEndpoint: '/workers/search',
+    apiEndpoint: '/workers',
     transformResponse: (data: any[]) => data.map(worker => ({
       id: worker.id,
       label: `${worker.first_name} ${worker.last_name}`,

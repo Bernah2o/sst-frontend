@@ -210,15 +210,15 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         path: "/employee/evaluations",
         roles: ["employee"],
       },
-      /*
-    {
-      id: "employee-attendance",
-      label: "Mi Asistencia",
-      icon: <Schedule />,
-      path: "/employee/attendance",
-      roles: ["employee"],
-    },
-    */
+
+      {
+        id: "employee-attendance",
+        label: "Mi Asistencia",
+        icon: <Schedule />,
+        path: "/employee/attendance",
+        roles: ["employee"],
+      },
+
       {
         id: "employee-certificates",
         label: "Mis Certificados",

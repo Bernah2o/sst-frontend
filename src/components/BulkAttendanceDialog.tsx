@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -10,15 +10,20 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip,
   Box,
   Typography,
   Alert,
-  Autocomplete,
   FormControlLabel,
   Switch,
   Grid,
   CircularProgress,
+  Checkbox,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
@@ -26,24 +31,21 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AttendanceStatus, AttendanceType } from "../types";
 import api from "../services/api";
 import { logger } from "../utils/logger";
-
-interface User {
-  id: number;
-  full_name: string;
-  email: string;
-  first_name?: string;
-  last_name?: string;
-}
+import workerService from "../services/workerService";
+import { WorkerList } from "../types/worker";
 
 interface BulkAttendanceData {
   course_name: string;
   session_date: Date;
   user_ids: number[];
+  // Almacenar ids de trabajadores seleccionados para resolver user_id al enviar
+  worker_ids?: number[];
   status: AttendanceStatus;
   attendance_type: AttendanceType;
   location?: string;
   notes?: string;
   send_notifications: boolean;
+  verified_by?: number;
 }
 
 interface BulkAttendanceDialogProps {
@@ -68,44 +70,17 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
     location: "",
     notes: "",
     send_notifications: false,
+    verified_by: undefined,
   });
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [workers, setWorkers] = useState<WorkerList[]>([]);
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingUsers, setLoadingUsers] = useState(false);
 
-  const fetchUsers = useCallback(async () => {
-    setLoadingUsers(true);
-    try {
-      const response = await api.get("/users/");
-      logger.debug("Response from /users/:", response.data);
-      const usersData = response.data.items || response.data;
-      logger.debug("Users data:", usersData);
-      logger.debug("Is array?", Array.isArray(usersData));
-      logger.debug("Data length:", usersData?.length);
-      setUsers(Array.isArray(usersData) ? usersData : []);
-    } catch (error) {
-      logger.error("Error fetching users:", error);
-      setUsers([]);
-      onError("Error al cargar los usuarios");
-    } finally {
-      setLoadingUsers(false);
-    }
-  }, [onError]);
+  // Eliminado: carga inicial de trabajadores. AutocompleteField se encarga de la búsqueda.
 
-  // Cargar usuarios al abrir el diálogo
-  useEffect(() => {
-    if (open) {
-      fetchUsers();
-    }
-  }, [open, fetchUsers]);
-
-  // Debug: Log users state changes
-  useEffect(() => {
-    logger.debug("Users state updated:", users);
-    logger.debug("Users length:", users.length);
-  }, [users]);
+  // Limpieza: se eliminaron logs de depuración innecesarios
 
 
 
@@ -117,8 +92,8 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
       return;
     }
 
-    if (formData.user_ids.length === 0) {
-      onError("Por favor selecciona al menos un usuario");
+    if (selectedWorkerIds.length === 0) {
+      onError("Por favor selecciona al menos un trabajador");
       return;
     }
 
@@ -128,37 +103,64 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
       let errorCount = 0;
       const errors: string[] = [];
 
-      // Convertir la fecha a formato datetime ISO
-      const sessionDate = formData.session_date.toISOString();
+      // Convertir la fecha a formato YYYY-MM-DD (compatibilidad backend)
+      const sessionDate = formData.session_date
+        .toISOString()
+        .split("T")[0];
 
-      // Procesar cada usuario individualmente
-      for (const userId of formData.user_ids) {
+      // Resolver user_ids consultando el detalle del trabajador
+      const resolvedUserIds: Array<{ workerId: number; userId: number | null }> = [];
+      for (const workerId of selectedWorkerIds) {
+        try {
+          const detailResp = await api.get(`/workers/${workerId}`);
+          const detail = detailResp.data;
+          const uid = detail?.user_id ?? detail?.user?.id ?? null;
+          resolvedUserIds.push({ workerId, userId: typeof uid === 'number' ? uid : null });
+        } catch (e) {
+          logger.error(`Error resolviendo user_id para trabajador ${workerId}`, e);
+          resolvedUserIds.push({ workerId, userId: null });
+        }
+      }
+
+      // Procesar cada usuario resuelto individualmente
+      for (const item of resolvedUserIds) {
+        const userId = item.userId;
+        if (typeof userId !== 'number') {
+          errorCount++;
+          const workerName = workers.find((w) => w.id === item.workerId)?.full_name || `Trabajador ${item.workerId}`;
+          errors.push(`${workerName}: sin usuario vinculado`);
+          continue;
+        }
         try {
           const payload = {
-             user_id: userId,
-             course_name: formData.course_name,
-             session_date: sessionDate,
-             status: formData.status,
-             attendance_type: formData.attendance_type,
-             notes: formData.notes || null,
-             check_in_time: null,
-             check_out_time: null,
-             completion_percentage: 100,
-           };
+            user_id: userId,
+            course_name: formData.course_name,
+            session_date: sessionDate,
+            status: formData.status,
+            attendance_type: formData.attendance_type,
+            location: formData.location || null,
+            verified_by: formData.verified_by ?? null,
+            notes: formData.notes || null,
+            check_in_time: null,
+            check_out_time: null,
+            duration_minutes: null,
+            scheduled_duration_minutes: null,
+            completion_percentage: 100,
+          };
 
           await api.post("/attendance/", payload);
           successCount++;
         } catch (error: any) {
           errorCount++;
-          const userName = users.find(u => u.id === userId)?.full_name || `Usuario ${userId}`;
-          errors.push(`${userName}: ${error.response?.data?.detail || error.message}`);
-          console.error(`Error creating attendance for user ${userId}:`, error);
+          const workerName = workers.find((w) => w.id === item.workerId)?.full_name || `Trabajador ${item.workerId}`;
+          errors.push(`${workerName}: ${error.response?.data?.detail || error.message}`);
+          console.error(`Error creating attendance for worker/user ${userId}:`, error);
         }
       }
 
       // Mostrar resultado
       if (successCount > 0 && errorCount === 0) {
-        onSuccess(`Asistencias registradas exitosamente: ${successCount} usuarios`);
+        onSuccess(`Asistencias registradas exitosamente: ${successCount} trabajadores`);
       } else if (successCount > 0 && errorCount > 0) {
         onError(`Registro parcial: ${successCount} exitosos, ${errorCount} errores. Errores: ${errors.join(", ")}`);
       } else {
@@ -186,18 +188,15 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
       location: "",
       notes: "",
       send_notifications: false,
+      verified_by: undefined,
     });
-    setSelectedUsers([]);
+    setSelectedWorkerIds([]);
+    setSearchTerm("");
+    setWorkers([]);
     onClose();
   };
 
-  const handleUserChange = (event: any, newValue: User[]) => {
-    setSelectedUsers(newValue);
-    setFormData(prev => ({
-      ...prev,
-      user_ids: newValue.map(user => user.id),
-    }));
-  };
+  // Eliminado: manejador de Autocomplete anterior (no usado)
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
@@ -264,6 +263,8 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
               </FormControl>
             </Grid>
 
+            {/* Campos eliminados: Instructor y Duración (no usados por backend) */}
+
             {/* Tipo de Asistencia */}
             <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
@@ -297,48 +298,92 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
               />
             </Grid>
 
-            {/* Selección de Usuarios */}
+            {/* Selección de Trabajadores - búsqueda y tabla */}
             <Grid size={{ xs: 12 }}>
-              <Autocomplete
-                multiple
-                options={users}
-                getOptionLabel={(option) => {
-                  logger.debug("Option in getOptionLabel:", option);
-                  return `${option.full_name || 'Sin nombre'} (${option.email || 'Sin email'})`;
-                }}
-                value={selectedUsers}
-                onChange={handleUserChange}
-                loading={loadingUsers}
-                renderTags={(value, getTagProps) =>
-                  value.map((option, index) => (
-                    <Chip
-                      variant="outlined"
-                      label={option.full_name}
-                      {...getTagProps({ index })}
-                      key={option.id}
-                    />
-                  ))
-                }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Seleccionar Usuarios"
-                    placeholder="Buscar usuarios..."
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {loadingUsers ? <CircularProgress color="inherit" size={20} /> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-              />
-              <Typography variant="caption" color="textSecondary">
-                {selectedUsers.length} usuario(s) seleccionado(s)
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Buscar trabajadores..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Button variant="outlined" onClick={async () => {
+                  try {
+                    setLoading(true);
+                    const items = await workerService.searchWorkers(searchTerm);
+                    setWorkers(items);
+                  } catch (err) {
+                    logger.error('Error buscando trabajadores:', err);
+                    setWorkers([]);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}>Buscar</Button>
+                <Button variant="text" onClick={() => {
+                  if (selectedWorkerIds.length === workers.length) {
+                    setSelectedWorkerIds([]);
+                  } else {
+                    setSelectedWorkerIds(workers.map(w => w.id));
+                  }
+                }} disabled={workers.length === 0}>
+                  {selectedWorkerIds.length === workers.length && workers.length > 0 ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                </Button>
+              </Box>
+
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                Seleccionar Trabajadores ({selectedWorkerIds.length} seleccionados)
               </Typography>
+
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Seleccionar</TableCell>
+                      <TableCell>Nombre</TableCell>
+                      <TableCell>Documento</TableCell>
+                      <TableCell>Departamento</TableCell>
+                      <TableCell>Estado</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={5}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CircularProgress size={20} />
+                            <Typography variant="body2">Cargando trabajadores...</Typography>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ) : workers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5}>
+                          <Alert severity="info">No hay resultados. Intenta otra búsqueda.</Alert>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      workers.map((w) => (
+                        <TableRow key={w.id} hover>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedWorkerIds.includes(w.id)}
+                              onChange={() => setSelectedWorkerIds(prev => prev.includes(w.id) ? prev.filter(x => x !== w.id) : [...prev, w.id])}
+                            />
+                          </TableCell>
+                          <TableCell>{w.full_name || `${w.first_name} ${w.last_name}`}</TableCell>
+                          <TableCell>{w.document_number}</TableCell>
+                          <TableCell>{w.department || '-'}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'inline-flex', alignItems: 'center', px: 1, py: 0.5, borderRadius: 1, bgcolor: w.is_registered ? 'success.light' : 'warning.light', color: w.is_registered ? 'success.dark' : 'warning.dark' }}>
+                              {w.is_registered ? 'Registrado' : 'No vinculado'}
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </Grid>
 
             {/* Notas */}
@@ -379,22 +424,37 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
             <Typography variant="body2">
               <strong>Información:</strong> El registro masivo creará asistencias para todos los usuarios seleccionados 
               con los mismos parámetros. Si ya existe una asistencia para un usuario en la fecha especificada, 
-              será omitida para evitar duplicados.
+              será omitida para evitar duplicados. El campo <em>Ubicación</em> es opcional; si no se especifica, el backend 
+              aplicará sus valores por defecto y calculará la duración según corresponda.
             </Typography>
           </Alert>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
-          Cancelar
-        </Button>
+        <Button onClick={handleClose} disabled={loading}>Cancelar</Button>
+        <Button 
+          variant="outlined" 
+          onClick={async () => {
+            try {
+              setLoading(true);
+              const items = await workerService.searchWorkers(searchTerm);
+              setWorkers(items);
+            } catch (err) {
+              logger.error('Error buscando trabajadores:', err);
+              setWorkers([]);
+            } finally {
+              setLoading(false);
+            }
+          }}
+          disabled={loading}
+        >Buscar</Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
-          disabled={loading || !formData.course_name.trim() || formData.user_ids.length === 0}
+          disabled={loading || !formData.course_name.trim() || selectedWorkerIds.length === 0}
           startIcon={loading ? <CircularProgress size={20} /> : null}
         >
-          {loading ? "Registrando..." : "Registrar Asistencias"}
+          {loading ? "Registrando..." : `Registrar Asistencias (${selectedWorkerIds.length})`}
         </Button>
       </DialogActions>
     </Dialog>
