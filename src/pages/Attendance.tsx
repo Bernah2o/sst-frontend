@@ -7,6 +7,7 @@ import {
   Download,
   GroupAdd,
   PictureAsPdf,
+  Send,
 } from "@mui/icons-material";
 import {
   Box,
@@ -46,6 +47,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../utils/dateUtils";
 import { logger } from "../utils/logger";
 import BulkAttendanceDialog from "../components/BulkAttendanceDialog";
+import AutocompleteField, { AutocompleteOption } from "../components/AutocompleteField";
 
 import api from "./../services/api";
 import { AttendanceStatus, AttendanceType, AttendanceStats } from "./../types";
@@ -102,23 +104,11 @@ interface AttendanceFormData {
   verified_at?: string;
 }
 
-interface User {
-  id: number;
-  first_name?: string;
-  last_name?: string;
-  email: string;
-  full_name?: string;
-  // Campos legacy para compatibilidad
-  nombre?: string;
-  apellido?: string;
-}
+
 
 const AttendanceManagement: React.FC = () => {
   const { user } = useAuth();
   const [attendances, setAttendances] = useState<Attendance[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  // const [courses, setCourses] = useState<Course[]>([]);
-  // const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -162,15 +152,11 @@ const AttendanceManagement: React.FC = () => {
   const [deletingAttendance, setDeletingAttendance] =
     useState<Attendance | null>(null);
   const [openBulkDialog, setOpenBulkDialog] = useState(false);
+  // Eliminado: estado local de trabajadores (se usa AutocompleteField para búsqueda)
 
   // (Move this useEffect below the function declarations)
 
-  // useEffect para cargar datos iniciales
-  useEffect(() => {
-    fetchUsers();
-    // fetchSessions();
-    // eslint-disable-next-line
-  }, []);
+  // Eliminado: carga inicial de trabajadores (ya no se requiere)
 
   // useEffect para actualizar asistencias cuando cambien filtros o paginación
   useEffect(() => {
@@ -220,7 +206,7 @@ const AttendanceManagement: React.FC = () => {
         }
       }
 
-      const response = await api.get("/attendance/", { params });
+      const response = await api.get("/attendance", { params });
       setAttendances(response.data.items || []);
       setTotalAttendances(response.data.total || 0);
     } catch (error) {
@@ -234,28 +220,7 @@ const AttendanceManagement: React.FC = () => {
     }
   };
 
-  const fetchUsers = async () => {
-    // Solo cargar usuarios para administradores
-    if (user?.role === "employee") {
-      return;
-    }
-
-    try {
-      const response = await api.get("/users", {
-        params: {
-          rol: "employee",
-          activo: true,
-        },
-      });
-      setUsers(response.data.items || []);
-    } catch (error) {
-      logger.error("Error fetching users:", error);
-      showSnackbar(
-        "👥 No se pudo cargar la lista de usuarios. Intente actualizar la página.",
-        "error"
-      );
-    }
-  };
+  // Eliminado: función fetchWorkers (la selección usa búsqueda dinámica)
   const fetchStats = async () => {
     try {
       const params = new URLSearchParams();
@@ -378,10 +343,42 @@ const AttendanceManagement: React.FC = () => {
 
   const handleSaveAttendance = async () => {
     try {
-      // Convertir la fecha a formato datetime ISO si solo es una fecha
+      // Si estamos creando, resolver user_id a partir del trabajador seleccionado
+      let resolvedUserId = formData.user_id;
+      if (!editingAttendance) {
+        try {
+          const workerResp = await api.get(`/workers/${formData.user_id}`);
+          const workerDetail = workerResp.data;
+          const uid = workerDetail?.user_id ?? workerDetail?.user?.id;
+          if (typeof uid !== "number") {
+            showSnackbar(
+              "El trabajador seleccionado no tiene usuario vinculado. Primero vincule un usuario desde la página de Trabajadores.",
+              "error"
+            );
+            return; // Abortamos guardado
+          }
+          resolvedUserId = uid as number;
+        } catch (e) {
+          logger.error("Error resolviendo usuario del trabajador:", e);
+          showSnackbar(
+            "No se pudo obtener el usuario vinculado del trabajador seleccionado.",
+            "error"
+          );
+          return;
+        }
+      }
+
+      // Validar y normalizar la fecha de la sesión (YYYY-MM-DD)
+      if (!formData.session_date || !formData.session_date.trim()) {
+        showSnackbar(
+          "Por favor ingresa la fecha de la sesión.",
+          "error"
+        );
+        return;
+      }
       const sessionDate = formData.session_date.includes("T")
-        ? formData.session_date
-        : `${formData.session_date}T00:00:00`;
+        ? formData.session_date.split("T")[0]
+        : formData.session_date;
 
       // Convertir tiempos a datetime completos usando la fecha de sesión
       const convertTimeToDateTime = (time: string, baseDate: string) => {
@@ -392,6 +389,8 @@ const AttendanceManagement: React.FC = () => {
 
       const dataToSend = {
         ...formData,
+        // Enviar siempre user_id del usuario (no worker_id)
+        user_id: resolvedUserId,
         session_date: sessionDate,
         check_in_time: convertTimeToDateTime(
           formData.check_in_time || "",
@@ -404,9 +403,10 @@ const AttendanceManagement: React.FC = () => {
       };
 
       if (editingAttendance) {
-        await api.put(`/attendance/${editingAttendance.id}/`, dataToSend);
+        await api.put(`/attendance/${editingAttendance.id}`, dataToSend);
         showSnackbar("Asistencia actualizada exitosamente", "success");
       } else {
+        // Ajuste de endpoint: algunos backends requieren la barra final para crear
         await api.post("/attendance/", dataToSend);
         showSnackbar("Asistencia registrada exitosamente", "success");
       }
@@ -431,7 +431,7 @@ const AttendanceManagement: React.FC = () => {
   const confirmDeleteAttendance = async () => {
     if (deletingAttendance) {
       try {
-        await api.delete(`/attendance/${deletingAttendance.id}/`);
+        await api.delete(`/attendance/${deletingAttendance.id}`);
         showSnackbar(
           "Registro de asistencia eliminado exitosamente",
           "success"
@@ -452,7 +452,7 @@ const AttendanceManagement: React.FC = () => {
 
   const handleExportAttendance = async () => {
     try {
-      const response = await api.get("/attendance/export/", {
+      const response = await api.get("/attendance/export", {
         responseType: "blob",
         params: {
           session_date: dateFilter
@@ -548,6 +548,34 @@ const AttendanceManagement: React.FC = () => {
       } else {
         showSnackbar(
           "📜 No se pudo generar el certificado de asistencia. Verifique que el registro esté completo e intente nuevamente.",
+          "error"
+        );
+      }
+    }
+  };
+
+  const handleSendCertificate = async (attendance: Attendance) => {
+    try {
+      await api.post(`/attendance/${attendance.id}/send-certificate`);
+      showSnackbar(
+        "Certificado emitido y enviado al empleado. Disponible en 'Mis certificados'",
+        "success"
+      );
+    } catch (error: any) {
+      logger.error("Error sending certificate:", error);
+      if (error.response?.status === 403) {
+        showSnackbar(
+          "No tienes permisos para enviar certificados",
+          "error"
+        );
+      } else if (error.response?.status === 404) {
+        showSnackbar(
+          "Registro de asistencia no encontrado",
+          "error"
+        );
+      } else {
+        showSnackbar(
+          "No se pudo enviar el certificado. Intente nuevamente",
           "error"
         );
       }
@@ -687,24 +715,7 @@ const AttendanceManagement: React.FC = () => {
       }
     }
 
-    // Si no, buscar en la lista de usuarios cargados
-    const user = users.find((u) => u.id === attendance.user_id);
-    if (user) {
-      if (user.full_name) {
-        return user.full_name;
-      }
-      if (user.first_name && user.last_name) {
-        return `${user.first_name} ${user.last_name}`;
-      }
-      // Campos legacy
-      if ((user as any).nombre && (user as any).apellido) {
-        return `${(user as any).nombre} ${(user as any).apellido}`;
-      }
-      if (user.email) {
-        return user.email;
-      }
-    }
-
+    // Fallback: si no llegó información de usuario, mostrar el ID
     return `Usuario ID: ${attendance.user_id}`;
   };
 
@@ -898,11 +909,7 @@ const AttendanceManagement: React.FC = () => {
                 <TableCell>Fecha Sesión</TableCell>
                 <TableCell>Estado</TableCell>
                 <TableCell>Tipo</TableCell>
-                <TableCell>Entrada</TableCell>
-                <TableCell>Salida</TableCell>
-                <TableCell>Duración</TableCell>
                 <TableCell>% Completado</TableCell>
-                <TableCell>Notas</TableCell>
                 {user?.role !== "employee" && (
                   <TableCell align="center">Acciones</TableCell>
                 )}
@@ -912,7 +919,7 @@ const AttendanceManagement: React.FC = () => {
               {loading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={user?.role === "employee" ? 11 : 13}
+                    colSpan={user?.role === "employee" ? 6 : 8}
                     align="center"
                   >
                     Cargando registros de asistencia...
@@ -921,7 +928,7 @@ const AttendanceManagement: React.FC = () => {
               ) : !attendances || attendances.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={user?.role === "employee" ? 11 : 13}
+                    colSpan={user?.role === "employee" ? 6 : 8}
                     align="center"
                   >
                     No se encontraron registros de asistencia
@@ -986,15 +993,7 @@ const AttendanceManagement: React.FC = () => {
                         size="small"
                       />
                     </TableCell>
-                    <TableCell>{attendance.check_in_time || "N/A"}</TableCell>
-                    <TableCell>{attendance.check_out_time || "N/A"}</TableCell>
-                    <TableCell>
-                      {attendance.duration_minutes
-                        ? `${attendance.duration_minutes} min`
-                        : "N/A"}
-                    </TableCell>
                     <TableCell>{attendance.completion_percentage}%</TableCell>
-                    <TableCell>{attendance.notes || "N/A"}</TableCell>
                     {user?.role !== "employee" && (
                       <TableCell align="center">
                         <IconButton
@@ -1013,6 +1012,16 @@ const AttendanceManagement: React.FC = () => {
                         >
                           <PictureAsPdf />
                         </IconButton>
+                        {user?.role === "admin" && (
+                          <IconButton
+                            color="success"
+                            onClick={() => handleSendCertificate(attendance)}
+                            size="small"
+                            title="Enviar Certificado"
+                          >
+                            <Send />
+                          </IconButton>
+                        )}
                         <IconButton
                           color="error"
                           onClick={() => handleDeleteAttendance(attendance)}
@@ -1057,28 +1066,32 @@ const AttendanceManagement: React.FC = () => {
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid size={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Empleado</InputLabel>
-                  <Select
-                    value={formData.user_id}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        user_id: e.target.value as number,
-                      })
-                    }
-                    label="Empleado"
-                    disabled={!!editingAttendance}
-                  >
-                    {users.map((user) => (
-                      <MenuItem key={user.id} value={user.id}>
-                        {user.full_name ||
-                          `${user.first_name} ${user.last_name}`}{" "}
-                        ({user.email})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <AutocompleteField
+                  label="Trabajador"
+                  placeholder="Buscar trabajador..."
+                  value={null}
+                  onChange={(value) => {
+                    const opt = Array.isArray(value) ? (value[0] || null) : (value as AutocompleteOption | null);
+                    const id = opt ? Number(opt.id) : 0;
+                    setFormData({ ...formData, user_id: id });
+                  }}
+                  autocompleteOptions={{
+                    apiEndpoint: '/workers',
+                    minSearchLength: 1,
+                    transformResponse: (data: any[]) => data.map((worker: any) => {
+                      const name = worker.full_name ?? `${worker.first_name ?? ''} ${worker.last_name ?? ''}`.trim();
+                      const doc = worker.document_number ?? worker.cedula;
+                      return {
+                        id: worker.id,
+                        label: `${name}${doc ? ` (${doc})` : ''}`,
+                        value: worker,
+                        description: worker.email ?? worker.user?.email ?? undefined,
+                      } as AutocompleteOption;
+                    }),
+                  }}
+                  required
+                  disabled={!!editingAttendance}
+                />
               </Grid>
               <Grid size={6}>
                 <TextField
@@ -1153,120 +1166,7 @@ const AttendanceManagement: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid size={6}>
-                <TextField
-                  fullWidth
-                  label="Hora de Entrada"
-                  type="time"
-                  value={formData.check_in_time}
-                  onChange={(e) => {
-                    const newFormData = {
-                      ...formData,
-                      check_in_time: e.target.value,
-                    };
-                    // Calcular duración automáticamente si ambas horas están presentes
-                    if (e.target.value && formData.check_out_time) {
-                      const checkIn = new Date(
-                        `2000-01-01T${e.target.value}:00`
-                      );
-                      const checkOut = new Date(
-                        `2000-01-01T${formData.check_out_time}:00`
-                      );
-                      const durationMs = checkOut.getTime() - checkIn.getTime();
-                      const durationMinutes = Math.max(
-                        0,
-                        Math.round(durationMs / (1000 * 60))
-                      );
-                      newFormData.duration_minutes = durationMinutes;
-                      newFormData.scheduled_duration_minutes = durationMinutes;
-                      newFormData.completion_percentage = 100;
-                    }
-                    setFormData(newFormData);
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid size={6}>
-                <TextField
-                  fullWidth
-                  label="Hora de Salida"
-                  type="time"
-                  value={formData.check_out_time}
-                  onChange={(e) => {
-                    const newFormData = {
-                      ...formData,
-                      check_out_time: e.target.value,
-                    };
-                    // Calcular duración automáticamente si ambas horas están presentes
-                    if (formData.check_in_time && e.target.value) {
-                      const checkIn = new Date(
-                        `2000-01-01T${formData.check_in_time}:00`
-                      );
-                      const checkOut = new Date(
-                        `2000-01-01T${e.target.value}:00`
-                      );
-                      const durationMs = checkOut.getTime() - checkIn.getTime();
-                      const durationMinutes = Math.max(
-                        0,
-                        Math.round(durationMs / (1000 * 60))
-                      );
-                      newFormData.duration_minutes = durationMinutes;
-                      newFormData.scheduled_duration_minutes = durationMinutes;
-                      newFormData.completion_percentage = 100;
-                    }
-                    setFormData(newFormData);
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid size={6}>
-                <TextField
-                  fullWidth
-                  label="Duración (minutos)"
-                  type="number"
-                  value={formData.duration_minutes}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      duration_minutes: Number(e.target.value),
-                    })
-                  }
-                  InputProps={{
-                    readOnly: !!(
-                      formData.check_in_time && formData.check_out_time
-                    ),
-                  }}
-                  helperText={
-                    formData.check_in_time && formData.check_out_time
-                      ? "Calculado automáticamente"
-                      : ""
-                  }
-                />
-              </Grid>
-              <Grid size={6}>
-                <TextField
-                  fullWidth
-                  label="Duración Programada (minutos)"
-                  type="number"
-                  value={formData.scheduled_duration_minutes}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      scheduled_duration_minutes: Number(e.target.value),
-                    })
-                  }
-                  InputProps={{
-                    readOnly: !!(
-                      formData.check_in_time && formData.check_out_time
-                    ),
-                  }}
-                  helperText={
-                    formData.check_in_time && formData.check_out_time
-                      ? "Calculado automáticamente"
-                      : ""
-                  }
-                />
-              </Grid>
+              {/* Campos opcionales del backend (entrada/salida/duración/notes) removidos de la UI */}
               <Grid size={6}>
                 <TextField
                   fullWidth
@@ -1280,32 +1180,10 @@ const AttendanceManagement: React.FC = () => {
                       completion_percentage: Number(e.target.value),
                     })
                   }
-                  InputProps={{
-                    readOnly: !!(
-                      formData.check_in_time && formData.check_out_time
-                    ),
-                  }}
-                  helperText={
-                    formData.check_in_time && formData.check_out_time
-                      ? "Calculado automáticamente"
-                      : ""
-                  }
+                  helperText="0 a 100"
                 />
               </Grid>
-
-              <Grid size={12}>
-                <TextField
-                  fullWidth
-                  label="Notas"
-                  value={formData.notes || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  multiline
-                  rows={3}
-                  placeholder="Notas adicionales..."
-                />
-              </Grid>
+              {/* Notas removido para simplificar y alinear con interfaz actual */}
             </Grid>
           </DialogContent>
           <DialogActions>

@@ -238,7 +238,6 @@ const MeetingManagement: React.FC = () => {
           canDeleteMeetings: canEdit,
           canManageMeetings: canCreateMeetings,
         };
-        logger.debug('Permissions loaded for committee', committeeId, ':', newPermissions);
         setPermissions(newPermissions);
       } else {
         // Si no hay committeeId específico, verificar permisos generales
@@ -250,7 +249,6 @@ const MeetingManagement: React.FC = () => {
           canDeleteMeetings: hasGeneralPermissions,
           canManageMeetings: hasGeneralPermissions,
         };
-        logger.debug('General permissions loaded:', newPermissions);
         setPermissions(newPermissions);
       }
       
@@ -409,8 +407,6 @@ const MeetingManagement: React.FC = () => {
   };
 
   const handleDeleteMeeting = (meeting: Meeting) => {
-    logger.debug('handleDeleteMeeting called with meeting:', meeting);
-    logger.debug('Current permissions:', permissions);
     setSelectedMeeting(meeting);
     setDeleteDialogOpen(true);
     // No llamamos a handleMenuClose() aquí para evitar limpiar selectedMeeting
@@ -419,17 +415,13 @@ const MeetingManagement: React.FC = () => {
   };
 
   const confirmDeleteMeeting = async () => {
-    logger.debug('confirmDeleteMeeting called');
-    logger.debug('selectedMeeting:', selectedMeeting);
     if (!selectedMeeting) return;
     
     setLoading(true);
     setError('');
     
     try {
-      logger.debug('Calling deleteMeeting service...');
       await meetingService.deleteMeeting(selectedMeeting.id, selectedMeeting.committee_id);
-      logger.debug('Delete successful');
       setDeleteDialogOpen(false);
       setSelectedMeeting(null);
       await loadMeetings();
@@ -706,9 +698,6 @@ const MeetingManagement: React.FC = () => {
         {permissions.canDeleteMeetings && (
           <MenuItem 
             onClick={() => {
-              logger.debug('Delete button clicked');
-              logger.debug('selectedMeeting:', selectedMeeting);
-              logger.debug('permissions.canDeleteMeetings:', permissions.canDeleteMeetings);
               if (selectedMeeting) {
                 const meetingToDelete = selectedMeeting;
                 handleDeleteMeeting(meetingToDelete);

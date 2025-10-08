@@ -105,11 +105,6 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
       try {
         setFileError('');
         
-        logger.debug('🔍 DocumentForm - Valores del formulario:', values);
-        logger.debug('🔍 DocumentForm - defaultCommitteeId recibido:', defaultCommitteeId);
-        logger.debug('🔍 DocumentForm - committee_id en values:', values.committee_id);
-        logger.debug('🔍 DocumentForm - committee_id convertido:', Number(values.committee_id));
-        
         if (!isEditing && !selectedFile) {
           setFileError('Debe seleccionar un archivo');
           return;
@@ -120,8 +115,6 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
           committee_id: Number(values.committee_id),
           expiry_date: values.expiry_date || undefined,
         };
-
-        logger.debug('🔍 DocumentForm - documentData final:', documentData);
 
         await onSubmit(documentData, selectedFile || undefined);
         handleClose();
