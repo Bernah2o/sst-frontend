@@ -1,5 +1,4 @@
 import {
-  AbsenteeismCreate,
   AbsenteeismUpdate,
   AbsenteeismResponse,
   AbsenteeismListResponse,
@@ -31,7 +30,7 @@ export const absenteeismService = {
       if (filters.year) params.append('year', filters.year.toString());
     }
 
-    const response = await apiService.get(`/absenteeism?${params.toString()}`);
+    const response = await apiService.get(`/absenteeism/?${params.toString()}`);
     
     // Asegurar que la respuesta tenga todas las propiedades requeridas
     return {
@@ -51,17 +50,8 @@ export const absenteeismService = {
     return response.data;
   },
 
-  // Crear nuevo absenteeism
-  createAbsenteeism: async (data: AbsenteeismCreate): Promise<AbsenteeismResponse> => {
-    // Ensure disability_or_charged_days is a valid number
-    const cleanedData = {
-      ...data,
-      disability_or_charged_days: Number(data.disability_or_charged_days) || 0
-    };
-    
-    const response = await apiService.post('/absenteeism', cleanedData);
-    return response.data;
-  },
+  // La función createAbsenteeism ha sido eliminada para evitar duplicaciones
+  // La creación de registros se maneja directamente en Absenteeism.tsx
 
   // Actualizar absenteeism
   updateAbsenteeism: async (id: number, data: AbsenteeismUpdate): Promise<AbsenteeismResponse> => {

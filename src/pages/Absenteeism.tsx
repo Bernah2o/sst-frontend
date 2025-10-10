@@ -37,13 +37,14 @@ import {
   CardContent,
   Autocomplete,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 import api from "../services/api";
 import {
@@ -122,6 +123,10 @@ const AbsenteeismManagement: React.FC = () => {
     message: "",
     severity: "success" as "success" | "error",
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSubmissionHash, setLastSubmissionHash] = useState<string>('');
+  const submissionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchAbsenteeismRecords = useCallback(async () => {
     try {
@@ -135,7 +140,7 @@ const AbsenteeismManagement: React.FC = () => {
         ),
       });
 
-      const response = await api.get(`/absenteeism?${params}`);
+      const response = await api.get(`/absenteeism/?${params}`);
       setAbsenteeismRecords(response.data.items);
       setTotalRecords(response.data.total);
     } catch (error) {
@@ -150,6 +155,15 @@ const AbsenteeismManagement: React.FC = () => {
     fetchAbsenteeismRecords();
     fetchWorkers();
   }, [fetchAbsenteeismRecords]);
+
+  // Cleanup effect para limpiar timeouts
+  useEffect(() => {
+    return () => {
+      if (submissionTimeoutRef.current) {
+        clearTimeout(submissionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const fetchWorkers = async () => {
     try {
@@ -171,8 +185,42 @@ const AbsenteeismManagement: React.FC = () => {
     }
   };
 
+  // Función para generar hash único de los datos del formulario
+  const generateSubmissionHash = (data: any) => {
+    return btoa(JSON.stringify({
+      ...data,
+      timestamp: Math.floor(Date.now() / 1000) // Redondear a segundos para evitar duplicados por milisegundos
+    }));
+  };
+
   const handleSubmit = async () => {
+    // Verificar múltiples condiciones para prevenir duplicación
+    if (submitting || isSubmitting) {
+      console.log('Submission already in progress, ignoring duplicate call');
+      return;
+    }
+
+    // Generar hash único para esta submission
+    const currentHash = generateSubmissionHash(formData);
+    
+    // Verificar si es una submission duplicada basada en el hash
+    if (currentHash === lastSubmissionHash) {
+      console.log('Duplicate submission detected by hash, ignoring');
+      return;
+    }
+
+    // Limpiar timeout anterior si existe
+    if (submissionTimeoutRef.current) {
+      clearTimeout(submissionTimeoutRef.current);
+    }
+
     try {
+      // Establecer estados de bloqueo inmediatamente
+      setSubmitting(true);
+      setIsSubmitting(true);
+      setLastSubmissionHash(currentHash);
+
+      // Validaciones dentro del bloque try para asegurar cleanup correcto
       if (!formData.worker_id || !formData.start_date || !formData.end_date) {
         showSnackbar("Por favor complete todos los campos requeridos", "error");
         return;
@@ -185,6 +233,8 @@ const AbsenteeismManagement: React.FC = () => {
           return;
         }
       }
+
+      console.log('Making POST request to /absenteeism/ with data:', formData);
 
       const submitData = {
         event_month: formData.event_month,
@@ -204,21 +254,44 @@ const AbsenteeismManagement: React.FC = () => {
         assumed_costs_ac_eg: formData.assumed_costs_ac_eg,
       };
 
+      let response;
       if (editingRecord) {
-        await api.put(`/absenteeism/${editingRecord.id}`, submitData);
+        response = await api.put(`/absenteeism/${editingRecord.id}`, submitData);
         showSnackbar("Registro actualizado exitosamente", "success");
       } else {
-        await api.post("/absenteeism", submitData);
+        response = await api.post("/absenteeism/", submitData);
         showSnackbar("Registro creado exitosamente", "success");
       }
 
+      console.log('API response:', response);
+
+      // Actualizar la lista de registros
+      await fetchAbsenteeismRecords();
+      
+      // Cerrar el diálogo y resetear el formulario
       setOpenDialog(false);
       resetForm();
-      fetchAbsenteeismRecords();
+
+      console.log(editingRecord ? 'Record updated successfully' : 'Record created successfully');
+
     } catch (error: any) {
-      console.error("Error saving absenteeism record:", error);
+      console.error('Error submitting form:', error);
       const errorMessage = error.response?.data?.detail || "Error al guardar el registro";
       showSnackbar(errorMessage, "error");
+      // En caso de error, resetear el hash para permitir reintento
+      setLastSubmissionHash('');
+    } finally {
+      // Resetear estados de bloqueo
+      setSubmitting(false);
+      
+      // Usar timeout para resetear isSubmitting después de un delay
+      submissionTimeoutRef.current = setTimeout(() => {
+        setIsSubmitting(false);
+        // Limpiar el hash después de 5 segundos para permitir submissions legítimas
+        setTimeout(() => {
+          setLastSubmissionHash('');
+        }, 5000);
+      }, 2000); // 2 segundos de bloqueo adicional
     }
   };
 
@@ -834,8 +907,14 @@ const AbsenteeismManagement: React.FC = () => {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit} variant="contained">
+            <Button onClick={() => setOpenDialog(false)} disabled={submitting}>Cancelar</Button>
+            <Button 
+              onClick={handleSubmit} 
+              color="primary" 
+              variant="contained" 
+              disabled={submitting}
+              startIcon={submitting ? <CircularProgress size={20} /> : null}
+            >
               {editingRecord ? "Actualizar" : "Crear"}
             </Button>
           </DialogActions>

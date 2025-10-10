@@ -152,21 +152,12 @@ const AttendanceManagement: React.FC = () => {
   const [deletingAttendance, setDeletingAttendance] =
     useState<Attendance | null>(null);
   const [openBulkDialog, setOpenBulkDialog] = useState(false);
-  // Eliminado: estado local de trabajadores (se usa AutocompleteField para búsqueda)
-
-  // (Move this useEffect below the function declarations)
-
-  // Eliminado: carga inicial de trabajadores (ya no se requiere)
-
-  // useEffect para actualizar asistencias cuando cambien filtros o paginación
+  
   useEffect(() => {
     fetchAttendances();
     // eslint-disable-next-line
   }, [page, rowsPerPage, statusFilter, dateFilter]);
 
-  // useEffect para actualizar estadísticas cuando cambien solo los filtros relevantes
-  // Para empleados, evitamos llamar al endpoint de stats (retorna 403) y
-  // computamos estadísticas locales basadas en los registros cargados.
   useEffect(() => {
     if (user?.role !== "employee") {
       fetchStats();
@@ -556,7 +547,7 @@ const AttendanceManagement: React.FC = () => {
 
   const handleSendCertificate = async (attendance: Attendance) => {
     try {
-      await api.post(`/attendance/${attendance.id}/send-certificate`);
+      await api.post(`/attendance/${attendance.id}/send-certificate`, {});
       showSnackbar(
         "Certificado emitido y enviado al empleado. Disponible en 'Mis certificados'",
         "success"
@@ -575,7 +566,7 @@ const AttendanceManagement: React.FC = () => {
         );
       } else {
         showSnackbar(
-          "No se pudo enviar el certificado. Intente nuevamente",
+          error.response?.data?.detail || "No se pudo enviar el certificado. Intente nuevamente",
           "error"
         );
       }
