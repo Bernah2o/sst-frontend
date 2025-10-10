@@ -630,7 +630,7 @@ export enum CertificateStatus {
 
 export interface CertificateBase {
   user_id: number;
-  course_id: number;
+  course_id: number | null;
   title: string;
   description?: string;
   score_achieved?: number;

@@ -176,7 +176,7 @@ class ApiService {
 
   // Métodos específicos para ausentismo
   async getAbsenteeismRecords(params?: any): Promise<any> {
-    const response = await this.api.get('/absenteeism', { params });
+    const response = await this.api.get('/absenteeism/', { params });
     return response.data;
   }
 

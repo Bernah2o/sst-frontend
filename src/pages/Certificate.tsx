@@ -1,10 +1,10 @@
 import {
-  Add as AddIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
   Print as PrintIcon,
   Autorenew as RegenerateIcon,
   Block as RevokeIcon,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -68,7 +68,7 @@ interface Certificate {
   certificate_number: string;
   title: string;
   user_id: number;
-  course_id: number;
+  course_id: number | null;
   status: "issued" | "expired" | "revoked" | "pending";
   issue_date: string;
   expiry_date?: string;
@@ -98,7 +98,6 @@ const CertificatePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [openDialog, setOpenDialog] = useState(false);
   const [filters, setFilters] = useState({
     user_id: "",
     course_id: "",
@@ -114,11 +113,6 @@ const CertificatePage: React.FC = () => {
     onConfirm: () => {}
   });
   const [regeneratingCertificate, setRegeneratingCertificate] = useState<number | null>(null);
-  const [formData, setFormData] = useState({
-    user_id: "",
-    course_id: "",
-    expiry_date: null as Date | null,
-  });
 
   const fetchCertificates = React.useCallback(async () => {
     try {
@@ -179,20 +173,6 @@ const CertificatePage: React.FC = () => {
       setCourses(response.data.items || response.data);
     } catch (error) {
       console.error("Error fetching courses:", error);
-    }
-  };
-
-  const handleGenerateCertificate = async () => {
-    try {
-      await api.post("/certificates/", {
-        user_id: parseInt(formData.user_id),
-        course_id: parseInt(formData.course_id),
-        expiry_date: formData.expiry_date,
-      });
-      fetchCertificates();
-      handleCloseDialog();
-    } catch (error) {
-      console.error("Error generating certificate:", error);
     }
   };
 
@@ -257,6 +237,24 @@ const CertificatePage: React.FC = () => {
     });
   };
 
+  const handleDeleteCertificate = async (certificateId: number) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar eliminación',
+      message: '¿Está seguro de que desea eliminar este certificado? Esta acción revocará el certificado y no se podrá deshacer.',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/certificates/${certificateId}`);
+          fetchCertificates();
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error) {
+          console.error("Error deleting certificate:", error);
+          setConfirmDialog({ ...confirmDialog, open: false });
+        }
+      }
+    });
+  };
+
   const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
     setPage(1);
@@ -272,19 +270,6 @@ const CertificatePage: React.FC = () => {
       end_date: null,
     });
     setPage(1);
-  };
-
-  const handleOpenDialog = () => {
-    setFormData({
-      user_id: "",
-      course_id: "",
-      expiry_date: null,
-    });
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
   };
 
   const getStatusChip = (status: string) => {
@@ -416,16 +401,6 @@ const CertificatePage: React.FC = () => {
                   >
                     Limpiar filtros
                   </Button>
-                  {user?.role !== UserRole.EMPLOYEE && (
-                    <Button
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      onClick={handleOpenDialog}
-                      size="small"
-                    >
-                      Generar
-                    </Button>
-                  )}
                 </Box>
               </Grid>
             </Grid>
@@ -562,6 +537,20 @@ const CertificatePage: React.FC = () => {
                                     </IconButton>
                                   </Tooltip>
                                 )}
+                                {user?.role === "admin" && certificate.status !== "revoked" && (
+                                  <Tooltip title="Eliminar Certificado">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
+                                        handleDeleteCertificate(certificate.id)
+                                      }
+                                      color="error"
+                                      sx={{ ml: 0.5 }}
+                                    >
+                                      <DeleteIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
                               </>
                             )}
                           </Box>
@@ -587,75 +576,7 @@ const CertificatePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Dialog para Generar Certificado */}
-        <Dialog
-          open={openDialog}
-          onClose={handleCloseDialog}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Generar Nuevo Certificado</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid size={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Usuario</InputLabel>
-                  <Select
-                    value={formData.user_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, user_id: e.target.value })
-                    }
-                  >
-                    {workers.map((worker) => (
-                      <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.first_name || worker.nombre}{" "}
-                        {worker.last_name || worker.apellido} -{" "}
-                        {worker.document_number || worker.documento}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid size={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Curso</InputLabel>
-                  <Select
-                    value={formData.course_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, course_id: e.target.value })
-                    }
-                  >
-                    {courses.map((course) => (
-                      <MenuItem key={course.id} value={course.id.toString()}>
-                        {course.title || course.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid size={12}>
-                <DatePicker
-                  label="Fecha de Expiración (Opcional)"
-                  value={formData.expiry_date}
-                  onChange={(date) =>
-                    setFormData({ ...formData, expiry_date: date })
-                  }
-                  slotProps={{ textField: { fullWidth: true } }}
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancelar</Button>
-            <Button
-              onClick={handleGenerateCertificate}
-              variant="contained"
-              disabled={!formData.user_id || !formData.course_id}
-            >
-              Generar Certificado
-            </Button>
-          </DialogActions>
-        </Dialog>
+
 
         {/* Diálogo de confirmación */}
         <Dialog

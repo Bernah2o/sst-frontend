@@ -127,8 +127,6 @@ const AbsenteeismForm: React.FC<AbsenteeismFormProps> = ({ mode }) => {
         
         if (isEditMode && id) {
           await absenteeismService.updateAbsenteeism(parseInt(id), processedValues as AbsenteeismUpdate);
-        } else {
-          await absenteeismService.createAbsenteeism(processedValues as AbsenteeismCreate);
         }
         
         navigate('/admin/absenteeism');
