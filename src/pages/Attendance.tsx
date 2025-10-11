@@ -72,6 +72,7 @@ interface Attendance {
   // Información del usuario y curso (del backend)
   user?: {
     id: number;
+    name?: string; // Campo principal que viene del backend
     first_name?: string;
     last_name?: string;
     email: string;
@@ -685,7 +686,11 @@ const AttendanceManagement: React.FC = () => {
   const getUserDisplayName = (attendance: Attendance) => {
     // Si el backend devuelve la información del usuario, usarla
     if (attendance.user) {
-      // Intentar diferentes formatos de nombre
+      // El backend devuelve el campo 'name' que contiene el nombre completo del empleado
+      if ((attendance.user as any).name) {
+        return (attendance.user as any).name;
+      }
+      // Intentar diferentes formatos de nombre como fallback
       if (attendance.user.full_name) {
         return attendance.user.full_name;
       }
