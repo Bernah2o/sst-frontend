@@ -13,8 +13,6 @@ import {
   Box,
   Typography,
   Alert,
-  FormControlLabel,
-  Switch,
   Grid,
   CircularProgress,
   Checkbox,
@@ -24,6 +22,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
@@ -37,15 +37,10 @@ import { WorkerList } from "../types/worker";
 interface BulkAttendanceData {
   course_name: string;
   session_date: Date;
-  user_ids: number[];
-  // Almacenar ids de trabajadores seleccionados para resolver user_id al enviar
-  worker_ids?: number[];
   status: AttendanceStatus;
   attendance_type: AttendanceType;
-  location?: string;
-  notes?: string;
+  notes: string;
   send_notifications: boolean;
-  verified_by?: number;
 }
 
 interface BulkAttendanceDialogProps {
@@ -64,13 +59,10 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
   const [formData, setFormData] = useState<BulkAttendanceData>({
     course_name: "",
     session_date: new Date(),
-    user_ids: [],
     status: AttendanceStatus.PRESENT,
     attendance_type: AttendanceType.IN_PERSON,
-    location: "",
     notes: "",
     send_notifications: false,
-    verified_by: undefined,
   });
 
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -88,83 +80,92 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
 
   const handleSubmit = async () => {
     if (!formData.course_name.trim()) {
-      onError("Por favor ingresa el nombre del curso");
+      onError("El nombre del curso es requerido");
       return;
     }
 
     if (selectedWorkerIds.length === 0) {
-      onError("Por favor selecciona al menos un trabajador");
+      onError("Debe seleccionar al menos un trabajador");
       return;
     }
 
     setLoading(true);
+
     try {
-      let successCount = 0;
-      let errorCount = 0;
+      // Obtener información de usuarios para los trabajadores seleccionados
+      const userIds: number[] = [];
       const errors: string[] = [];
 
-      // Convertir la fecha a formato YYYY-MM-DD (compatibilidad backend)
-      const sessionDate = formData.session_date
-        .toISOString()
-        .split("T")[0];
-
-      // Resolver user_ids consultando el detalle del trabajador
-      const resolvedUserIds: Array<{ workerId: number; userId: number | null }> = [];
       for (const workerId of selectedWorkerIds) {
         try {
-          const detailResp = await api.get(`/workers/${workerId}`);
-          const detail = detailResp.data;
-          const uid = detail?.user_id ?? detail?.user?.id ?? null;
-          resolvedUserIds.push({ workerId, userId: typeof uid === 'number' ? uid : null });
-        } catch (e) {
-          logger.error(`Error resolviendo user_id para trabajador ${workerId}`, e);
-          resolvedUserIds.push({ workerId, userId: null });
+          const workerResponse = await workerService.getWorker(workerId);
+          const userId = (workerResponse as any).user_id;
+          if (userId) {
+            userIds.push(userId);
+          } else {
+            const workerName = workers.find((w) => w.id === workerId)?.full_name || `Trabajador ${workerId}`;
+            errors.push(`${workerName}: sin usuario vinculado`);
+          }
+        } catch (error) {
+          console.error(`Error getting user for worker ${workerId}:`, error);
+          const workerName = workers.find((w) => w.id === workerId)?.full_name || `Trabajador ${workerId}`;
+          errors.push(`${workerName}: error al obtener información del usuario`);
         }
       }
 
-      // Procesar cada usuario resuelto individualmente
-      for (const item of resolvedUserIds) {
-        const userId = item.userId;
-        if (typeof userId !== 'number') {
-          errorCount++;
-          const workerName = workers.find((w) => w.id === item.workerId)?.full_name || `Trabajador ${item.workerId}`;
-          errors.push(`${workerName}: sin usuario vinculado`);
-          continue;
-        }
+      if (userIds.length === 0) {
+        onError(`No se pudieron obtener usuarios válidos. Errores: ${errors.join(", ")}`);
+        return;
+      }
+
+      // Crear registros de asistencia individuales usando el endpoint simple
+      const sessionDate = formData.session_date.toISOString().split('T')[0]; // Solo fecha YYYY-MM-DD
+      let successCount = 0;
+      let skipCount = 0;
+      const individualErrors: string[] = [];
+
+      for (const userId of userIds) {
         try {
-          const payload = {
+          const attendanceData = {
             user_id: userId,
             course_name: formData.course_name,
             session_date: sessionDate,
             status: formData.status,
             attendance_type: formData.attendance_type,
-            location: formData.location || null,
-            verified_by: formData.verified_by ?? null,
-            notes: formData.notes || null,
-            check_in_time: null,
-            check_out_time: null,
-            duration_minutes: null,
-            scheduled_duration_minutes: null,
             completion_percentage: 100,
+            notes: formData.notes || "",
+            send_notifications: formData.send_notifications,
           };
 
-          await api.post("/attendance/", payload);
+          await api.post("/attendance/", attendanceData);
           successCount++;
         } catch (error: any) {
-          errorCount++;
-          const workerName = workers.find((w) => w.id === item.workerId)?.full_name || `Trabajador ${item.workerId}`;
-          errors.push(`${workerName}: ${error.response?.data?.detail || error.message}`);
-          console.error(`Error creating attendance for worker/user ${userId}:`, error);
+          console.error(`Error creating attendance for user ${userId}:`, error);
+          if (error.response?.status === 400 && error.response?.data?.detail?.includes("already exists")) {
+            skipCount++;
+          } else {
+            const workerName = workers.find((w) => (w as any).user_id === userId)?.full_name || `Usuario ${userId}`;
+            individualErrors.push(`${workerName}: ${error.response?.data?.detail || "Error desconocido"}`);
+          }
         }
       }
 
       // Mostrar resultado
-      if (successCount > 0 && errorCount === 0) {
-        onSuccess(`Asistencias registradas exitosamente: ${successCount} trabajadores`);
-      } else if (successCount > 0 && errorCount > 0) {
-        onError(`Registro parcial: ${successCount} exitosos, ${errorCount} errores. Errores: ${errors.join(", ")}`);
+      if (successCount > 0 && individualErrors.length === 0) {
+        let message = `Asistencias registradas exitosamente: ${successCount} trabajadores`;
+        if (skipCount > 0) {
+          message += ` (${skipCount} ya existían)`;
+        }
+        onSuccess(message);
+      } else if (successCount > 0 && individualErrors.length > 0) {
+        onError(`Registro parcial: ${successCount} exitosos, ${skipCount} duplicados, ${individualErrors.length} errores. Errores: ${individualErrors.join(", ")}`);
       } else {
-        onError(`Error al registrar asistencias: ${errors.join(", ")}`);
+        onError(`Error al registrar asistencias: ${individualErrors.join(", ")}`);
+      }
+      
+      // Agregar errores de usuarios sin vincular si los hay
+      if (errors.length > 0) {
+        onError(`Algunos trabajadores no pudieron ser procesados: ${errors.join(", ")}`);
       }
       
       handleClose();
@@ -182,13 +183,10 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
     setFormData({
       course_name: "",
       session_date: new Date(),
-      user_ids: [],
       status: AttendanceStatus.PRESENT,
       attendance_type: AttendanceType.IN_PERSON,
-      location: "",
       notes: "",
       send_notifications: false,
-      verified_by: undefined,
     });
     setSelectedWorkerIds([]);
     setSearchTerm("");
@@ -286,17 +284,7 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
               </FormControl>
             </Grid>
 
-            {/* Ubicación */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Ubicación (Opcional)"
-                value={formData.location}
-                onChange={(e) =>
-                  setFormData(prev => ({ ...prev, location: e.target.value }))
-                }
-              />
-            </Grid>
+
 
             {/* Selección de Trabajadores - búsqueda y tabla */}
             <Grid size={{ xs: 12 }}>
@@ -424,8 +412,8 @@ const BulkAttendanceDialog: React.FC<BulkAttendanceDialogProps> = ({
             <Typography variant="body2">
               <strong>Información:</strong> El registro masivo creará asistencias para todos los usuarios seleccionados 
               con los mismos parámetros. Si ya existe una asistencia para un usuario en la fecha especificada, 
-              será omitida para evitar duplicados. El campo <em>Ubicación</em> es opcional; si no se especifica, el backend 
-              aplicará sus valores por defecto y calculará la duración según corresponda.
+              será omitida para evitar duplicados. Si activa las notificaciones por email, cada trabajador recibirá 
+              un correo confirmando su registro de asistencia. El sistema calculará automáticamente la duración y otros campos según corresponda.
             </Typography>
           </Alert>
         </Box>

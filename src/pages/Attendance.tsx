@@ -134,6 +134,7 @@ const AttendanceManagement: React.FC = () => {
     completion_percentage: 100,
     notes: "",
   });
+  const [selectedWorker, setSelectedWorker] = useState<AutocompleteOption | null>(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -287,6 +288,7 @@ const AttendanceManagement: React.FC = () => {
 
   const handleCreateAttendance = () => {
     setEditingAttendance(null);
+    setSelectedWorker(null);
     setFormData({
       user_id: 0,
       course_name: "",
@@ -307,6 +309,31 @@ const AttendanceManagement: React.FC = () => {
 
   const handleEditAttendance = (attendance: Attendance) => {
     setEditingAttendance(attendance);
+    
+    // Establecer el trabajador seleccionado basado en la asistencia
+    if (attendance.user) {
+      // Usar el campo 'name' que viene del backend o construir el nombre
+      let displayName = '';
+      if ((attendance.user as any).name) {
+        displayName = (attendance.user as any).name;
+      } else if (attendance.user.first_name && attendance.user.last_name) {
+        displayName = `${attendance.user.first_name} ${attendance.user.last_name}`;
+      } else if (attendance.user.full_name) {
+        displayName = attendance.user.full_name;
+      } else {
+        displayName = attendance.user.email;
+      }
+      
+      const workerOption: AutocompleteOption = {
+        id: attendance.user.id,
+        label: displayName,
+        value: attendance.user.id.toString()
+      };
+      setSelectedWorker(workerOption);
+    } else {
+      setSelectedWorker(null);
+    }
+    
     // Extraer solo la fecha (YYYY-MM-DD) de session_date
     const sessionDateOnly = attendance.session_date
       ? attendance.session_date.split("T")[0]
@@ -1065,10 +1092,11 @@ const AttendanceManagement: React.FC = () => {
                 <AutocompleteField
                   label="Trabajador"
                   placeholder="Buscar trabajador..."
-                  value={null}
+                  value={selectedWorker}
                   onChange={(value) => {
                     const opt = Array.isArray(value) ? (value[0] || null) : (value as AutocompleteOption | null);
                     const id = opt ? Number(opt.id) : 0;
+                    setSelectedWorker(opt);
                     setFormData({ ...formData, user_id: id });
                   }}
                   autocompleteOptions={{
