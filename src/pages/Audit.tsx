@@ -19,7 +19,6 @@ import {
   Paper,
   Chip,
   TextField,
-  Grid,
   FormControl,
   InputLabel,
   Select,
@@ -33,6 +32,8 @@ import {
   DialogActions,
   Button,
   Divider,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -42,20 +43,21 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import { formatDateTime } from "../utils/dateUtils";
+import { AuditAction } from "../types";
 
 interface AuditLog {
   id: number;
-  user_id: number;
-  user_name: string;
-  user_email: string;
-  action: string;
+  user_id?: number;
+  user_name?: string;
+  user_email?: string;
+  action: AuditAction;
   resource_type: string;
-  resource_id: number;
-  resource_name: string;
+  resource_id?: number;
+  resource_name?: string;
   old_values?: string;
   new_values?: string;
-  ip_address: string;
-  user_agent: string;
+  ip_address?: string;
+  user_agent?: string;
   session_id?: string;
   request_id?: string;
   details?: string;
@@ -63,6 +65,14 @@ interface AuditLog {
   error_message?: string;
   duration_ms?: number;
   created_at: string;
+}
+
+interface AuditLogListResponse {
+  items: AuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
 }
 
 const Audit: React.FC = () => {
@@ -75,6 +85,7 @@ const Audit: React.FC = () => {
   const [availableResourceTypes, setAvailableResourceTypes] = useState<string[]>([]);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     user_id: "",
     action: "",
@@ -105,6 +116,7 @@ const Audit: React.FC = () => {
   const fetchAuditLogs = React.useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams();
       params.append("page", page.toString());
       params.append("limit", "20");
@@ -119,13 +131,13 @@ const Audit: React.FC = () => {
       if (filters.search) params.append("search", filters.search);
 
       const response = await api.get(`/audit/?${params.toString()}`);
-      setAuditLogs(response.data.items || []);
-      // Use the 'pages' field directly from API response instead of calculating
-      setTotalPages(
-        response.data.pages || Math.ceil((response.data.total || 0) / 20)
-      );
-    } catch (error) {
+      const data: AuditLogListResponse = response.data;
+      
+      setAuditLogs(data.items || []);
+      setTotalPages(data.total_pages || Math.ceil((data.total || 0) / 20));
+    } catch (error: any) {
       console.error("Error fetching audit logs:", error);
+      setError(error.response?.data?.detail || "Error al cargar los logs de auditoría");
     } finally {
       setLoading(false);
     }
@@ -196,6 +208,10 @@ const Audit: React.FC = () => {
     }
   };
 
+  const handleCloseError = () => {
+    setError(null);
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ p: 3 }}>
@@ -206,14 +222,26 @@ const Audit: React.FC = () => {
           Registro de todas las acciones realizadas en el sistema
         </Typography>
 
+        {/* Error Snackbar */}
+        <Snackbar 
+          open={!!error} 
+          autoHideDuration={6000} 
+          onClose={handleCloseError}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
+
         {/* Filtros */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
               Filtros
             </Typography>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 3 }}>
+            <Box display="flex" flexWrap="wrap" gap={2}>
+              <Box sx={{ minWidth: { xs: '100%', md: '250px' }, flex: { md: '1 1 250px' } }}>
                 <TextField
                   fullWidth
                   label="Buscar"
@@ -226,8 +254,8 @@ const Audit: React.FC = () => {
                     ),
                   }}
                 />
-              </Grid>
-              <Grid size={{ xs: 12, md: 2 }}>
+              </Box>
+              <Box sx={{ minWidth: { xs: '100%', md: '150px' }, flex: { md: '1 1 150px' } }}>
                 <FormControl fullWidth>
                   <InputLabel>Acción</InputLabel>
                   <Select
@@ -247,8 +275,8 @@ const Audit: React.FC = () => {
                     })}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid size={{ xs: 12, md: 2 }}>
+              </Box>
+              <Box sx={{ minWidth: { xs: '100%', md: '150px' }, flex: { md: '1 1 150px' } }}>
                 <FormControl fullWidth>
                   <InputLabel>Tipo de Recurso</InputLabel>
                   <Select
@@ -265,24 +293,24 @@ const Audit: React.FC = () => {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid size={{ xs: 12, md: 2 }}>
+              </Box>
+              <Box sx={{ minWidth: { xs: '100%', md: '150px' }, flex: { md: '1 1 150px' } }}>
                 <DatePicker
                   label="Fecha Inicio"
                   value={filters.start_date}
                   onChange={(date) => handleFilterChange("start_date", date)}
                   slotProps={{ textField: { fullWidth: true } }}
                 />
-              </Grid>
-              <Grid size={{ xs: 12, md: 2 }}>
+              </Box>
+              <Box sx={{ minWidth: { xs: '100%', md: '150px' }, flex: { md: '1 1 150px' } }}>
                 <DatePicker
                   label="Fecha Fin"
                   value={filters.end_date}
                   onChange={(date) => handleFilterChange("end_date", date)}
                   slotProps={{ textField: { fullWidth: true } }}
                 />
-              </Grid>
-              <Grid size={{ xs: 12, md: 1 }}>
+              </Box>
+              <Box sx={{ minWidth: { xs: '100%', md: 'auto' } }}>
                 <Box display="flex" gap={1}>
                   <Tooltip title="Actualizar">
                     <IconButton onClick={fetchAuditLogs}>
@@ -295,8 +323,8 @@ const Audit: React.FC = () => {
                     </IconButton>
                   </Tooltip>
                 </Box>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
 
@@ -320,13 +348,13 @@ const Audit: React.FC = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">
+                      <TableCell colSpan={8} align="center">
                         Cargando logs de auditoría...
                       </TableCell>
                     </TableRow>
                   ) : auditLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">
+                      <TableCell colSpan={8} align="center">
                         No se encontraron logs de auditoría
                       </TableCell>
                     </TableRow>
@@ -343,7 +371,7 @@ const Audit: React.FC = () => {
                             {log.user_name || 'Sistema'}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {log.user_email || `ID: ${log.user_id}`}
+                            {log.user_email || (log.user_id ? `ID: ${log.user_id}` : 'Sistema')}
                           </Typography>
                         </TableCell>
                         <TableCell>{getActionChip(log.action)}</TableCell>
@@ -354,9 +382,11 @@ const Audit: React.FC = () => {
                           >
                             {log.resource_type}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            ID: {log.resource_id}
-                          </Typography>
+                          {log.resource_id && (
+                            <Typography variant="caption" color="text.secondary">
+                              ID: {log.resource_id}
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
@@ -380,7 +410,7 @@ const Audit: React.FC = () => {
                             variant="body2"
                             sx={{ fontFamily: "monospace" }}
                           >
-                            {log.ip_address}
+                            {log.ip_address || '-'}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -438,8 +468,8 @@ const Audit: React.FC = () => {
                 <Typography variant="h6" gutterBottom>
                   Información General
                 </Typography>
-                <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid size={{ xs: 6 }}>
+                <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} sx={{ mb: 2 }}>
+                  <Box>
                     <Typography variant="body2" color="text.secondary">
                       Usuario:
                     </Typography>
@@ -447,26 +477,26 @@ const Audit: React.FC = () => {
                       {selectedLog.user_name || 'Sistema'}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {selectedLog.user_email || `ID: ${selectedLog.user_id}`}
+                      {selectedLog.user_email || (selectedLog.user_id ? `ID: ${selectedLog.user_id}` : 'Sistema')}
                     </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6 }}>
+                  </Box>
+                  <Box>
                     <Typography variant="body2" color="text.secondary">
                       Fecha y Hora:
                     </Typography>
                     <Typography variant="body1">
                       {formatDateTime(selectedLog.created_at)}
                     </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6 }}>
+                  </Box>
+                  <Box>
                     <Typography variant="body2" color="text.secondary">
                       Acción:
                     </Typography>
                     <Box sx={{ mt: 0.5 }}>
                       {getActionChip(selectedLog.action)}
                     </Box>
-                  </Grid>
-                  <Grid size={{ xs: 6 }}>
+                  </Box>
+                  <Box>
                     <Typography variant="body2" color="text.secondary">
                       Estado:
                     </Typography>
@@ -477,8 +507,8 @@ const Audit: React.FC = () => {
                         size="small"
                       />
                     </Box>
-                  </Grid>
-                </Grid>
+                  </Box>
+                </Box>
 
                 <Divider sx={{ my: 2 }} />
 
@@ -486,32 +516,32 @@ const Audit: React.FC = () => {
                 <Typography variant="h6" gutterBottom>
                   Recurso Afectado
                 </Typography>
-                <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid size={{ xs: 6 }}>
+                <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} sx={{ mb: 2 }}>
+                  <Box>
                     <Typography variant="body2" color="text.secondary">
                       Tipo:
                     </Typography>
                     <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>
                       {selectedLog.resource_type}
                     </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6 }}>
+                  </Box>
+                  <Box>
                     <Typography variant="body2" color="text.secondary">
                       ID:
                     </Typography>
                     <Typography variant="body1">
-                      {selectedLog.resource_id}
+                      {selectedLog.resource_id || '-'}
                     </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  </Box>
+                  <Box sx={{ gridColumn: '1 / -1' }}>
                     <Typography variant="body2" color="text.secondary">
                       Nombre:
                     </Typography>
                     <Typography variant="body1">
                       {selectedLog.resource_name || '-'}
                     </Typography>
-                  </Grid>
-                </Grid>
+                  </Box>
+                </Box>
 
                 <Divider sx={{ my: 2 }} />
 
@@ -519,130 +549,118 @@ const Audit: React.FC = () => {
                 <Typography variant="h6" gutterBottom>
                   Información Técnica
                 </Typography>
-                <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid size={{ xs: 6 }}>
+                <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} sx={{ mb: 2 }}>
+                  <Box>
                     <Typography variant="body2" color="text.secondary">
                       IP:
                     </Typography>
                     <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>
-                      {selectedLog.ip_address}
+                      {selectedLog.ip_address || '-'}
                     </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6 }}>
+                  </Box>
+                  <Box>
                     <Typography variant="body2" color="text.secondary">
                       Duración:
                     </Typography>
                     <Typography variant="body1">
                       {selectedLog.duration_ms ? `${selectedLog.duration_ms}ms` : '-'}
                     </Typography>
-                  </Grid>
+                  </Box>
                   {selectedLog.session_id && (
-                    <Grid size={{ xs: 6 }}>
+                    <Box>
                       <Typography variant="body2" color="text.secondary">
                         Session ID:
                       </Typography>
                       <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
                         {selectedLog.session_id}
                       </Typography>
-                    </Grid>
+                    </Box>
                   )}
                   {selectedLog.request_id && (
-                    <Grid size={{ xs: 6 }}>
+                    <Box>
                       <Typography variant="body2" color="text.secondary">
                         Request ID:
                       </Typography>
                       <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
                         {selectedLog.request_id}
                       </Typography>
-                    </Grid>
+                    </Box>
                   )}
-                  <Grid size={{ xs: 12 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      User Agent:
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontSize: '0.875rem', wordBreak: 'break-all' }}>
-                      {selectedLog.user_agent}
-                    </Typography>
-                  </Grid>
-                </Grid>
+                  {selectedLog.user_agent && (
+                    <Box sx={{ gridColumn: '1 / -1' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        User Agent:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                        {selectedLog.user_agent}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
 
-                {/* Detalles Adicionales */}
+                {/* Detalles adicionales */}
                 {selectedLog.details && (
                   <>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="h6" gutterBottom>
-                      Detalles
+                      Detalles Adicionales
                     </Typography>
-                    <Typography variant="body1" sx={{ mb: 2 }}>
-                      {selectedLog.details}
-                    </Typography>
+                    <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                        {selectedLog.details}
+                      </Typography>
+                    </Paper>
                   </>
                 )}
 
-                {/* Error Message */}
+                {/* Error message */}
                 {selectedLog.error_message && (
                   <>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="h6" gutterBottom color="error">
                       Mensaje de Error
                     </Typography>
-                    <Typography variant="body1" color="error" sx={{ mb: 2 }}>
-                      {selectedLog.error_message}
-                    </Typography>
+                    <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                        {selectedLog.error_message}
+                      </Typography>
+                    </Paper>
                   </>
                 )}
 
-                {/* Valores Anteriores y Nuevos */}
+                {/* Valores anteriores y nuevos */}
                 {(selectedLog.old_values || selectedLog.new_values) && (
                   <>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="h6" gutterBottom>
                       Cambios de Datos
                     </Typography>
-                    <Grid container spacing={2}>
+                    <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={2}>
                       {selectedLog.old_values && (
-                        <Grid size={{ xs: 12, md: 6 }}>
+                        <Box>
                           <Typography variant="body2" color="text.secondary" gutterBottom>
                             Valores Anteriores:
                           </Typography>
-                          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                            <Typography
-                              variant="body2"
-                              component="pre"
-                              sx={{
-                                fontFamily: 'monospace',
-                                fontSize: '0.75rem',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word'
-                              }}
-                            >
+                          <Paper sx={{ p: 2, bgcolor: 'grey.50', maxHeight: 300, overflow: 'auto' }}>
+                            <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
                               {JSON.stringify(parseJsonSafely(selectedLog.old_values), null, 2)}
                             </Typography>
                           </Paper>
-                        </Grid>
+                        </Box>
                       )}
                       {selectedLog.new_values && (
-                        <Grid size={{ xs: 12, md: 6 }}>
+                        <Box>
                           <Typography variant="body2" color="text.secondary" gutterBottom>
                             Valores Nuevos:
                           </Typography>
-                          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                            <Typography
-                              variant="body2"
-                              component="pre"
-                              sx={{
-                                fontFamily: 'monospace',
-                                fontSize: '0.75rem',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word'
-                              }}
-                            >
+                          <Paper sx={{ p: 2, bgcolor: 'grey.50', maxHeight: 300, overflow: 'auto' }}>
+                            <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
                               {JSON.stringify(parseJsonSafely(selectedLog.new_values), null, 2)}
                             </Typography>
                           </Paper>
-                        </Grid>
+                        </Box>
                       )}
-                    </Grid>
+                    </Box>
                   </>
                 )}
               </Box>
