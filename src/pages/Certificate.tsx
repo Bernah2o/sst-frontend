@@ -241,7 +241,7 @@ const CertificatePage: React.FC = () => {
     setConfirmDialog({
       open: true,
       title: 'Confirmar eliminación',
-      message: '¿Está seguro de que desea eliminar este certificado? Esta acción revocará el certificado y no se podrá deshacer.',
+      message: '¿Está seguro de que desea eliminar este certificado? Esta acción eliminará permanentemente el certificado y no se podrá deshacer.',
       onConfirm: async () => {
         try {
           await api.delete(`/certificates/${certificateId}`);
