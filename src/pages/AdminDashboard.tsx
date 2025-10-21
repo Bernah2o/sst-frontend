@@ -575,7 +575,7 @@ const AdminDashboard: React.FC = () => {
                     fullWidth
                     variant="contained"
                     startIcon={<VotingIcon />}
-                    onClick={() => navigate('/admin/committees/votings')}
+                    onClick={() => navigate('/admin/committees')}
                     sx={{ 
                       height: 60, 
                       bgcolor: 'rgba(255,255,255,0.2)', 
@@ -584,7 +584,7 @@ const AdminDashboard: React.FC = () => {
                       backdropFilter: 'blur(10px)'
                     }}
                   >
-                    Gestión de Votaciones
+                    Gestión de Comités
                   </Button>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>

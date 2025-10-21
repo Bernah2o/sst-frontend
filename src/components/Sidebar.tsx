@@ -468,13 +468,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             path: "/admin/committees/activities",
             roles: ["admin", "supervisor"],
           },
-          {
-            id: "committees-votings",
-            label: "Votaciones",
-            icon: <Poll />,
-            path: "/admin/committees/votings",
-            roles: ["admin", "supervisor"],
-          },
+
           {
             id: "committees-documents",
             label: "Documentos",
@@ -642,8 +636,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
                 user.role === "admin" || user.role === "supervisor",
               "committees-activities": () =>
                 user.role === "admin" || user.role === "supervisor",
-              "committees-votings": () =>
-                user.role === "admin" || user.role === "supervisor",
+
               "committees-documents": () =>
                 user.role === "admin" || user.role === "supervisor",
               "candidate-voting": () =>
