@@ -5,15 +5,10 @@ import {
   Visibility as ViewIcon,
   Assignment as ExamIcon,
   Person as PersonIcon,
-  Schedule as ScheduleIcon,
-  CheckCircle as PassIcon,
-  Cancel as FailIcon,
-  Pending as PendingIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
   Download as DownloadIcon,
   Print as PrintIcon,
-  Assessment as AssessmentIcon,
   Email as EmailIcon,
   PictureAsPdf as PdfIcon,
   CloudUpload as UploadIcon,
@@ -56,7 +51,6 @@ import {
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import jsPDF from "jspdf";
 import React, { useState, useEffect, useCallback } from "react";
 
 
@@ -109,8 +103,7 @@ interface OccupationalExamData {
   // Campos legacy para compatibilidad (se pueden eliminar gradualmente)
   doctor_name?: string;
   doctor_license?: string;
-  status?: "programado" | "realizado" | "aprobado" | "no_aprobado" | "vencido";
-  result?: "apto" | "no_apto" | "apto_con_restricciones" | "pendiente";
+
   restrictions?: string;
   certificate_url?: string;
   expires_at?: string;
@@ -162,8 +155,6 @@ const OccupationalExam: React.FC = () => {
   );
   const [filters, setFilters] = useState({
     exam_type: "",
-    status: "",
-    result: "",
     worker: "",
     search: "",
   });
@@ -190,17 +181,6 @@ const OccupationalExam: React.FC = () => {
     medical_center: "",
     supplier_id: "",
     doctor_id: "",
-    status: "programado" as
-      | "programado"
-      | "realizado"
-      | "aprobado"
-      | "no_aprobado"
-      | "vencido",
-    result: "pendiente" as
-      | "apto"
-      | "no_apto"
-      | "apto_con_restricciones"
-      | "pendiente",
     restrictions: "",
     next_exam_date: null as Date | null,
     pdf_file_path: null as string | null,
@@ -227,34 +207,9 @@ const OccupationalExam: React.FC = () => {
     { value: "no_apto", label: "No Apto", color: "error" },
   ];
 
-  const statusConfig = {
-    programado: {
-      label: "Programado",
-      color: "default",
-      icon: <ScheduleIcon />,
-    },
-    realizado: { label: "Realizado", color: "info", icon: <AssessmentIcon /> },
-    aprobado: { label: "Aprobado", color: "success", icon: <PassIcon /> },
-    no_aprobado: { label: "No Aprobado", color: "error", icon: <FailIcon /> },
-    vencido: { label: "Vencido", color: "warning", icon: <PendingIcon /> },
-  };
 
-  const resultConfig = {
-    apto: { label: "Apto", color: "success", icon: <PassIcon /> },
-    apto_con_recomendaciones: {
-      label: "Apto con Recomendaciones",
-      color: "warning",
-      icon: <PendingIcon />,
-    },
-    no_apto: { label: "No Apto", color: "error", icon: <FailIcon /> },
-    // Legacy support
-    apto_con_restricciones: {
-      label: "Apto con Restricciones",
-      color: "warning",
-      icon: <PendingIcon />,
-    },
-    pendiente: { label: "Pendiente", color: "default", icon: <PendingIcon /> },
-  };
+
+
 
   // Los datos del trabajador ya vienen del backend, no necesitamos enriquecerlos
 
@@ -266,8 +221,6 @@ const OccupationalExam: React.FC = () => {
       params.append("limit", "20");
 
       if (filters.exam_type) params.append("exam_type", filters.exam_type);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.result) params.append("result", filters.result);
       if (filters.worker) params.append("worker_id", filters.worker);
       if (filters.search) params.append("search", filters.search);
 
@@ -488,8 +441,6 @@ const OccupationalExam: React.FC = () => {
       medical_center: "",
       supplier_id: "",
       doctor_id: "",
-      status: "programado",
-      result: "pendiente",
       restrictions: "",
       next_exam_date: null,
       pdf_file_path: null,
@@ -585,9 +536,9 @@ const OccupationalExam: React.FC = () => {
 
       // Construir parámetros de filtro para el reporte
       const params = new URLSearchParams();
+      params.append("format", "pdf"); // Agregar parámetro format=pdf
+      params.append("download", "true"); // Agregar parámetro download=true
       if (filters.exam_type) params.append("exam_type", filters.exam_type);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.result) params.append("result", filters.result);
       if (filters.worker) params.append("worker_id", filters.worker);
       if (filters.search) params.append("search", filters.search);
 
@@ -670,8 +621,7 @@ const OccupationalExam: React.FC = () => {
       medical_center: exam.medical_center || "",
       supplier_id: exam.supplier_id?.toString() || "",
       doctor_id: exam.doctor_id?.toString() || "",
-        status: exam.status || "programado",
-        result: exam.result || "pendiente",
+
         restrictions: exam.restrictions || "",
         next_exam_date: exam.next_exam_date
           ? new Date(exam.next_exam_date)
@@ -704,8 +654,7 @@ const OccupationalExam: React.FC = () => {
         medical_center: "",
         supplier_id: "",
         doctor_id: "",
-        status: "programado",
-        result: "pendiente",
+
         restrictions: "",
         next_exam_date: null,
         pdf_file_path: null,
@@ -733,238 +682,32 @@ const OccupationalExam: React.FC = () => {
     try {
       setGeneratingIndividualReport(true);
 
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      // Configuración de colores y fuentes
-      const primaryColor = "#1976d2";
-      const secondaryColor = "#f5f5f5";
-      const textColor = "#333333";
-
-      // Header con logo y título
-      pdf.setFillColor(primaryColor);
-      pdf.rect(0, 0, pageWidth, 25, "F");
-
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(16);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("ROWL - Sistema de Gestión SST", 15, 15);
-
-      // Título del documento
-      pdf.setTextColor(textColor);
-      pdf.setFontSize(12);
-      pdf.setFont("helvetica", "bold");
-      const titleText =
-        "NOTIFICACIÓN DE RECOMENDACIONES DE EXÁMENES MÉDICOS OCUPACIONALES";
-      const titleLines = pdf.splitTextToSize(titleText, pageWidth - 30);
-      pdf.text(titleLines, 15, 35);
-
-      // Información del trabajador
-      const workerInfoY = 55;
-      pdf.setFillColor(secondaryColor);
-      pdf.rect(15, workerInfoY, pageWidth - 30, 35, "F");
-
-      pdf.setFontSize(12);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("INFORMACIÓN DEL TRABAJADOR", 20, workerInfoY + 10);
-
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      pdf.text(
-        `Nombre: ${exam.worker_name || "No especificado"}`,
-        20,
-        workerInfoY + 20
-      );
-      pdf.text(
-        `Documento: ${exam.worker_document || "No especificado"}`,
-        20,
-        workerInfoY + 25
-      );
-      pdf.text(
-        `Cargo: ${exam.worker_position || "No especificado"}`,
-        20,
-        workerInfoY + 30
-      );
-      if (exam.worker_hire_date) {
-        pdf.text(
-          `Fecha de Ingreso: ${new Date(
-            exam.worker_hire_date
-          ).toLocaleDateString()}`,
-          120,
-          workerInfoY + 20
-        );
-      }
-
-      // Información del examen
-      const examInfoY = workerInfoY + 45;
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(12);
-      pdf.text("INFORMACIÓN DEL EXAMEN MÉDICO OCUPACIONAL", 15, examInfoY);
-
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      const examTypeLabel =
-        examTypes.find((t) => t.value === exam.exam_type)?.label ||
-        exam.exam_type;
-      pdf.text(`Tipo de Examen: ${examTypeLabel}`, 20, examInfoY + 10);
-      pdf.text(
-        `Fecha del Examen: ${new Date(exam.exam_date).toLocaleDateString()}`,
-        20,
-        examInfoY + 15
+      // Llamar al endpoint del backend para generar el reporte
+      const response = await api.get(
+        `/occupational-exams/${exam.id}/medical-recommendation-report`,
+        {
+          responseType: "blob",
+        }
       );
 
-      const aptitudeLabel =
-        medicalAptitudeTypes.find(
-          (t) => t.value === exam.medical_aptitude_concept
-        )?.label || exam.medical_aptitude_concept;
-      pdf.text(
-        `Concepto de Aptitud Médica: ${aptitudeLabel}`,
-        20,
-        examInfoY + 20
+      // Crear y descargar el archivo PDF
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: "application/pdf" })
       );
-
-      if (exam.next_exam_date) {
-        pdf.text(
-          `Próximo Examen: ${new Date(
-            exam.next_exam_date
-          ).toLocaleDateString()}`,
-          20,
-          examInfoY + 25
-        );
-      }
-
-      if (exam.examining_doctor) {
-        pdf.text(
-          `Médico Examinador: ${exam.examining_doctor}`,
-          20,
-          examInfoY + 30
-        );
-      }
-
-      if (exam.medical_center) {
-        pdf.text(`Centro Médico: ${exam.medical_center}`, 20, examInfoY + 35);
-      }
-
-      // Conclusiones ocupacionales
-      let yPosition = examInfoY + 50;
-      if (exam.occupational_conclusions) {
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("CONCLUSIONES OCUPACIONALES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const conclusionLines = pdf.splitTextToSize(
-          exam.occupational_conclusions,
-          pageWidth - 40
-        );
-        pdf.text(conclusionLines, 20, yPosition);
-        yPosition += conclusionLines.length * 5 + 10;
-      }
-
-      // Comportamientos preventivos
-      if (exam.preventive_occupational_behaviors) {
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("COMPORTAMIENTOS PREVENTIVOS OCUPACIONALES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const behaviorLines = pdf.splitTextToSize(
-          exam.preventive_occupational_behaviors,
-          pageWidth - 40
-        );
-        pdf.text(behaviorLines, 20, yPosition);
-        yPosition += behaviorLines.length * 5 + 10;
-      }
-
-      // Recomendaciones generales
-      if (exam.general_recommendations) {
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("RECOMENDACIONES GENERALES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const recommendationLines = pdf.splitTextToSize(
-          exam.general_recommendations,
-          pageWidth - 40
-        );
-        pdf.text(recommendationLines, 20, yPosition);
-        yPosition += recommendationLines.length * 5 + 10;
-      } else {
-        // Recomendaciones por defecto si no hay específicas
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("RECOMENDACIONES GENERALES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const defaultRecommendations = [
-          "• Mantener adecuadas medidas de higiene postural durante la jornada laboral.",
-          "• Realizar pausas activas durante la jornada de trabajo según el programa de la empresa.",
-          "• Hacer uso permanente de la corrección visual indicada por el especialista.",
-          "• Gestionar de manera oportuna las citas médicas con especialistas.",
-          "• Informar oportunamente al Área de Seguridad y Salud en el Trabajo sobre cualquier diagnóstico.",
-          "• Adoptar las recomendaciones generales en su entorno laboral.",
-        ];
-
-        defaultRecommendations.forEach((rec) => {
-          const lines = pdf.splitTextToSize(rec, pageWidth - 40);
-          pdf.text(lines, 20, yPosition);
-          yPosition += lines.length * 5;
-        });
-        yPosition += 10;
-      }
-
-      // Observaciones
-      if (exam.observations) {
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("OBSERVACIONES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const observationLines = pdf.splitTextToSize(
-          exam.observations,
-          pageWidth - 40
-        );
-        pdf.text(observationLines, 20, yPosition);
-        yPosition += observationLines.length * 5 + 10;
-      }
-
-      // Firma y fecha
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.text("Profesional SST:", 20, pageHeight - 50);
-      pdf.text("Firma del Trabajador:", 120, pageHeight - 50);
-
-      pdf.setFont("helvetica", "normal");
-      pdf.text("_________________________", 20, pageHeight - 40);
-      pdf.text("_________________________", 120, pageHeight - 40);
-      pdf.text(new Date().toLocaleDateString(), 20, pageHeight - 35);
-      pdf.text(new Date().toLocaleDateString(), 120, pageHeight - 35);
-
-      // Footer
-      pdf.setFontSize(8);
-      pdf.setTextColor(128, 128, 128);
-      pdf.text(
-        "Documento generado automáticamente por el Sistema de Gestión SST - ROWL",
-        15,
-        pageHeight - 10
+      const link = document.createElement("a");
+      link.href = url;
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, "-");
+      link.setAttribute(
+        "download",
+        `notificacion_medica_${exam.worker_name || exam.id}_${timestamp}.pdf`
       );
-
-      // Guardar PDF
-      const fileName = `Notificacion_Medica_${
-        exam.worker_name?.replace(/\s+/g, "_") || "Trabajador"
-      }_${new Date().toISOString().split("T")[0]}.pdf`;
-      pdf.save(fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error generating individual report:", error);
     } finally {
@@ -1063,42 +806,8 @@ const OccupationalExam: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12, md: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Estado</InputLabel>
-                  <Select
-                    value={filters.status}
-                    onChange={(e) =>
-                      handleFilterChange("status", e.target.value)
-                    }
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {Object.entries(statusConfig).map(([key, config]) => (
-                      <MenuItem key={key} value={key}>
-                        {config.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid size={{ xs: 12, md: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Resultado</InputLabel>
-                  <Select
-                    value={filters.result}
-                    onChange={(e) =>
-                      handleFilterChange("result", e.target.value)
-                    }
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {Object.entries(resultConfig).map(([key, config]) => (
-                      <MenuItem key={key} value={key}>
-                        {config.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+
+
               <Grid size={{ xs: 12, md: 3 }}>
                 <Box display="flex" gap={1}>
                   <Tooltip title="Actualizar">
@@ -1113,21 +822,20 @@ const OccupationalExam: React.FC = () => {
                   >
                     Nuevo Examen
                   </Button>
-                  <Tooltip
+                  <Button
+                    variant="outlined"
+                    startIcon={generatingReport ? <RefreshIcon /> : <PdfIcon />}
+                    onClick={handleGenerateReport}
+                    disabled={generatingReport}
+                    color="primary"
                     title={
                       generatingReport
                         ? "Generando reporte..."
                         : "Generar reporte PDF"
                     }
                   >
-                    <IconButton
-                      onClick={handleGenerateReport}
-                      disabled={generatingReport}
-                      color="primary"
-                    >
-                      {generatingReport ? <RefreshIcon /> : <PdfIcon />}
-                    </IconButton>
-                  </Tooltip>
+                    {generatingReport ? "Generando..." : "Reporte"}
+                  </Button>
                 </Box>
               </Grid>
             </Grid>
@@ -1606,60 +1314,8 @@ const OccupationalExam: React.FC = () => {
                 </FormControl>
               </Grid>
 
-              <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Estado</InputLabel>
-                  <Select
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        status: e.target.value as any,
-                      })
-                    }
-                  >
-                    {Object.entries(statusConfig).map(([key, config]) => (
-                      <MenuItem key={key} value={key}>
-                        {config.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Resultado</InputLabel>
-                  <Select
-                    value={formData.result}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        result: e.target.value as any,
-                      })
-                    }
-                  >
-                    {Object.entries(resultConfig).map(([key, config]) => (
-                      <MenuItem key={key} value={key}>
-                        {config.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              {formData.result === "apto_con_restricciones" && (
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Restricciones"
-                    multiline
-                    rows={2}
-                    value={formData.restrictions}
-                    onChange={(e) =>
-                      setFormData({ ...formData, restrictions: e.target.value })
-                    }
-                  />
-                </Grid>
-              )}
+
+
               <Grid size={12}>
                 <TextField
                   fullWidth
@@ -1966,84 +1622,35 @@ const OccupationalExam: React.FC = () => {
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid size={12}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="h6" gutterBottom>
-                          Resultados
-                        </Typography>
-                        <Box display="flex" gap={2} mb={2}>
-                          <Chip
-                            label={
-                              statusConfig[
-                                viewingExam.status as keyof typeof statusConfig
-                              ]?.label
-                            }
-                            color={
-                              statusConfig[
-                                viewingExam.status as keyof typeof statusConfig
-                              ]?.color as any
-                            }
-                            icon={
-                              statusConfig[
-                                viewingExam.status as keyof typeof statusConfig
-                              ]?.icon
-                            }
-                          />
-                          <Chip
-                            label={
-                              resultConfig[
-                                viewingExam.result as keyof typeof resultConfig
-                              ]?.label
-                            }
-                            color={
-                              resultConfig[
-                                viewingExam.result as keyof typeof resultConfig
-                              ]?.color as any
-                            }
-                            icon={
-                              resultConfig[
-                                viewingExam.result as keyof typeof resultConfig
-                              ]?.icon
-                            }
-                          />
-                        </Box>
-                        {viewingExam.restrictions && (
-                          <Box mb={2}>
-                            <Typography
-                              variant="subtitle2"
-                              color="warning.main"
-                            >
-                              Restricciones:
-                            </Typography>
-                            <Typography variant="body2">
-                              {viewingExam.restrictions}
-                            </Typography>
-                          </Box>
-                        )}
-                        {viewingExam.observations && (
-                          <Box mb={2}>
-                            <Typography variant="subtitle2">
-                              Observaciones:
-                            </Typography>
-                            <Typography variant="body2">
-                              {viewingExam.observations}
-                            </Typography>
-                          </Box>
-                        )}
-                        {viewingExam.next_exam_date && (
-                          <Box>
-                            <Typography variant="subtitle2">
-                              Próximo Examen:
-                            </Typography>
-                            <Typography variant="body2">
-                              {formatDate(viewingExam.next_exam_date)}
-                            </Typography>
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
+
+                  {(viewingExam.observations || viewingExam.next_exam_date) && (
+                    <Grid size={12}>
+                      <Card variant="outlined">
+                        <CardContent>
+                          {viewingExam.observations && (
+                            <Box mb={2}>
+                              <Typography variant="subtitle2">
+                                Observaciones:
+                              </Typography>
+                              <Typography variant="body2">
+                                {viewingExam.observations}
+                              </Typography>
+                            </Box>
+                          )}
+                          {viewingExam.next_exam_date && (
+                            <Box>
+                              <Typography variant="subtitle2">
+                                Próximo Examen:
+                              </Typography>
+                              <Typography variant="body2">
+                                {formatDate(viewingExam.next_exam_date)}
+                              </Typography>
+                            </Box>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  )}
 
                   {/* Nuevos campos del backend */}
                   {(viewingExam.occupational_conclusions ||
