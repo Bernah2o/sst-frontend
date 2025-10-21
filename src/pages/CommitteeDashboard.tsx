@@ -222,7 +222,12 @@ const CommitteeDashboard: React.FC = () => {
             committee_id: committee.id,
             status: VotingStatus.ACTIVE 
           });
-          allVotings.push(...votingsData.items);
+          // Handle different response formats
+          if (votingsData && Array.isArray(votingsData.items)) {
+            allVotings.push(...votingsData.items);
+          } else if (Array.isArray(votingsData)) {
+            allVotings.push(...votingsData);
+          }
 
           // Load activities
           const activitiesData = await committeeActivityService.getActivities(committee.id, { 
@@ -280,9 +285,9 @@ const CommitteeDashboard: React.FC = () => {
         break;
       case 'create-voting':
         if (committeeId) {
-          navigate(`/admin/committees/${committeeId}/votings/new`);
+          navigate(`/admin/committees/${committeeId}`);
         } else {
-          navigate('/admin/committees/votings/new');
+          navigate('/admin/committees');
         }
         break;
       case 'manage-members':
@@ -648,18 +653,19 @@ const CommitteeDashboard: React.FC = () => {
                             </Box>
                           }
                           secondary={
-                            <Box>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               <Chip
                                 label={getCommitteeTypeLabel(committee.committee_type)}
                                 size="small"
                                 color={getCommitteeTypeColor(committee.committee_type)}
                                 sx={{ mr: 1 }}
                               />
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="caption" color="text.secondary" component="span">
                                 {committee.description}
                               </Typography>
-                            </Box>
+                            </span>
                           }
+                          secondaryTypographyProps={{ component: 'div' }}
                         />
                       </ListItem>
                       {index < filteredCommittees.length - 1 && <Divider />}
@@ -722,6 +728,7 @@ const CommitteeDashboard: React.FC = () => {
                               </Typography>
                             </Box>
                           }
+                          secondaryTypographyProps={{ component: 'div' }}
                         />
                       </ListItem>
                     );
@@ -740,12 +747,7 @@ const CommitteeDashboard: React.FC = () => {
                 <Typography variant="h6">
                   Votaciones Activas
                 </Typography>
-                <Button
-                  size="small"
-                  onClick={() => navigate('/admin/committees/votings')}
-                >
-                  Ver todas
-                </Button>
+
               </Box>
               <List>
                 {activeVotings.length === 0 ? (
@@ -770,6 +772,7 @@ const CommitteeDashboard: React.FC = () => {
                             </Typography>
                           </Box>
                         }
+                        secondaryTypographyProps={{ component: 'div' }}
                       />
                     </ListItem>
                   ))
@@ -837,6 +840,7 @@ const CommitteeDashboard: React.FC = () => {
                               </Typography>
                             </Box>
                           }
+                          secondaryTypographyProps={{ component: 'div' }}
                         />
                       </ListItem>
                     );

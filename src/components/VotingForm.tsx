@@ -27,7 +27,6 @@ import {
   VotingCreate,
   VotingUpdate,
   Voting,
-  Meeting,
   VotingStatus,
 } from '../types';
 
@@ -36,15 +35,11 @@ interface VotingFormProps {
   onClose: () => void;
   onSubmit: (data: VotingCreate | VotingUpdate) => Promise<void>;
   voting?: Voting;
-  meetings: Meeting[];
   loading?: boolean;
   error?: string | null;
 }
 
 const validationSchema = Yup.object({
-  meeting_id: Yup.number()
-    .required('La reunión es obligatoria')
-    .min(1, 'Debe seleccionar una reunión válida'),
   title: Yup.string()
     .required('El título es obligatorio')
     .max(200, 'El título no puede exceder 200 caracteres'),
@@ -75,7 +70,6 @@ const VotingForm: React.FC<VotingFormProps> = ({
   onClose,
   onSubmit,
   voting,
-  meetings,
   loading = false,
   error = null,
 }) => {
@@ -84,7 +78,6 @@ const VotingForm: React.FC<VotingFormProps> = ({
 
   const formik = useFormik({
     initialValues: {
-      meeting_id: voting?.meeting_id || 0,
       title: voting?.title || '',
       description: voting?.description || '',
       voting_type: voting?.voting_type || 'simple',
@@ -98,8 +91,8 @@ const VotingForm: React.FC<VotingFormProps> = ({
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values) => {
-      setSubmitLoading(true);
       try {
+        setSubmitLoading(true);
         const submitData = {
           ...values,
           start_time: values.start_time.toISOString(),
@@ -138,42 +131,17 @@ const VotingForm: React.FC<VotingFormProps> = ({
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>
-          {isEditing ? 'Editar Votación' : 'Nueva Votación'}
+          {voting ? 'Editar Votación' : 'Nueva Votación'}
         </DialogTitle>
         <form onSubmit={formik.handleSubmit}>
           <DialogContent>
-            {error && (
+    '"      {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
 
             <Grid container spacing={3}>
-              <Grid size={{ xs: 12 }}>
-                <FormControl fullWidth error={formik.touched.meeting_id && !!formik.errors.meeting_id}>
-                  <InputLabel>Reunión *</InputLabel>
-                  <Select
-                    name="meeting_id"
-                    value={formik.values.meeting_id || ''}
-                    label="Reunión *"
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                  >
-                    <MenuItem value="">Seleccionar reunión</MenuItem>
-                    {meetings.map((meeting) => (
-                      <MenuItem key={meeting.id} value={meeting.id}>
-                        {meeting.title} - {new Date(meeting.meeting_date).toLocaleDateString()}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formik.touched.meeting_id && formik.errors.meeting_id && (
-                    <Typography variant="caption" color="error" sx={{ mt: 1 }}>
-                      {formik.errors.meeting_id}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth

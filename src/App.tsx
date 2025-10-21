@@ -52,7 +52,6 @@ import CommitteeDetail from "./pages/CommitteeDetail";
 import CommitteeDashboard from "./pages/CommitteeDashboard";
 import CommitteeForm from "./pages/CommitteeForm";
 import ActivityManagement from "./pages/ActivityManagement";
-import VotingManagement from "./pages/VotingManagement";
 import DocumentManagement from "./pages/DocumentManagement";
 import MeetingManagement from "./pages/MeetingManagement";
 import MeetingAttendancePage from "./pages/MeetingAttendance";
@@ -422,14 +421,7 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
-                  <Route
-                    path="/admin/committees/:id/votings/new"
-                    element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
-                        <VotingManagement />
-                      </ProtectedRoute>
-                    }
-                  />
+
                   <Route
                     path="/admin/committees/:id/activities/new"
                     element={
@@ -471,14 +463,7 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
-                  <Route
-                    path="/admin/committees/votings"
-                    element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
-                        <VotingManagement />
-                      </ProtectedRoute>
-                    }
-                  />
+
                   <Route
                     path="/admin/committees/documents"
                     element={

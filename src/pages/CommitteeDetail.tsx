@@ -589,7 +589,7 @@ const CommitteeDetail: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate(`/admin/committees/${committee.id}/votings/new`)}
+            onClick={() => navigate(`/admin/committees/${committee.id}`)}
             disabled={!permissions.canManageVotings}
           >
             Nueva Votación
