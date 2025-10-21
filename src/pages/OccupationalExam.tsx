@@ -56,7 +56,6 @@ import {
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import jsPDF from "jspdf";
 import React, { useState, useEffect, useCallback } from "react";
 
 
@@ -733,238 +732,32 @@ const OccupationalExam: React.FC = () => {
     try {
       setGeneratingIndividualReport(true);
 
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      // Configuración de colores y fuentes
-      const primaryColor = "#1976d2";
-      const secondaryColor = "#f5f5f5";
-      const textColor = "#333333";
-
-      // Header con logo y título
-      pdf.setFillColor(primaryColor);
-      pdf.rect(0, 0, pageWidth, 25, "F");
-
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(16);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("ROWL - Sistema de Gestión SST", 15, 15);
-
-      // Título del documento
-      pdf.setTextColor(textColor);
-      pdf.setFontSize(12);
-      pdf.setFont("helvetica", "bold");
-      const titleText =
-        "NOTIFICACIÓN DE RECOMENDACIONES DE EXÁMENES MÉDICOS OCUPACIONALES";
-      const titleLines = pdf.splitTextToSize(titleText, pageWidth - 30);
-      pdf.text(titleLines, 15, 35);
-
-      // Información del trabajador
-      const workerInfoY = 55;
-      pdf.setFillColor(secondaryColor);
-      pdf.rect(15, workerInfoY, pageWidth - 30, 35, "F");
-
-      pdf.setFontSize(12);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("INFORMACIÓN DEL TRABAJADOR", 20, workerInfoY + 10);
-
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      pdf.text(
-        `Nombre: ${exam.worker_name || "No especificado"}`,
-        20,
-        workerInfoY + 20
-      );
-      pdf.text(
-        `Documento: ${exam.worker_document || "No especificado"}`,
-        20,
-        workerInfoY + 25
-      );
-      pdf.text(
-        `Cargo: ${exam.worker_position || "No especificado"}`,
-        20,
-        workerInfoY + 30
-      );
-      if (exam.worker_hire_date) {
-        pdf.text(
-          `Fecha de Ingreso: ${new Date(
-            exam.worker_hire_date
-          ).toLocaleDateString()}`,
-          120,
-          workerInfoY + 20
-        );
-      }
-
-      // Información del examen
-      const examInfoY = workerInfoY + 45;
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(12);
-      pdf.text("INFORMACIÓN DEL EXAMEN MÉDICO OCUPACIONAL", 15, examInfoY);
-
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      const examTypeLabel =
-        examTypes.find((t) => t.value === exam.exam_type)?.label ||
-        exam.exam_type;
-      pdf.text(`Tipo de Examen: ${examTypeLabel}`, 20, examInfoY + 10);
-      pdf.text(
-        `Fecha del Examen: ${new Date(exam.exam_date).toLocaleDateString()}`,
-        20,
-        examInfoY + 15
+      // Llamar al endpoint del backend para generar el reporte
+      const response = await api.get(
+        `/occupational-exams/${exam.id}/medical-recommendation-report`,
+        {
+          responseType: "blob",
+        }
       );
 
-      const aptitudeLabel =
-        medicalAptitudeTypes.find(
-          (t) => t.value === exam.medical_aptitude_concept
-        )?.label || exam.medical_aptitude_concept;
-      pdf.text(
-        `Concepto de Aptitud Médica: ${aptitudeLabel}`,
-        20,
-        examInfoY + 20
+      // Crear y descargar el archivo PDF
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: "application/pdf" })
       );
-
-      if (exam.next_exam_date) {
-        pdf.text(
-          `Próximo Examen: ${new Date(
-            exam.next_exam_date
-          ).toLocaleDateString()}`,
-          20,
-          examInfoY + 25
-        );
-      }
-
-      if (exam.examining_doctor) {
-        pdf.text(
-          `Médico Examinador: ${exam.examining_doctor}`,
-          20,
-          examInfoY + 30
-        );
-      }
-
-      if (exam.medical_center) {
-        pdf.text(`Centro Médico: ${exam.medical_center}`, 20, examInfoY + 35);
-      }
-
-      // Conclusiones ocupacionales
-      let yPosition = examInfoY + 50;
-      if (exam.occupational_conclusions) {
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("CONCLUSIONES OCUPACIONALES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const conclusionLines = pdf.splitTextToSize(
-          exam.occupational_conclusions,
-          pageWidth - 40
-        );
-        pdf.text(conclusionLines, 20, yPosition);
-        yPosition += conclusionLines.length * 5 + 10;
-      }
-
-      // Comportamientos preventivos
-      if (exam.preventive_occupational_behaviors) {
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("COMPORTAMIENTOS PREVENTIVOS OCUPACIONALES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const behaviorLines = pdf.splitTextToSize(
-          exam.preventive_occupational_behaviors,
-          pageWidth - 40
-        );
-        pdf.text(behaviorLines, 20, yPosition);
-        yPosition += behaviorLines.length * 5 + 10;
-      }
-
-      // Recomendaciones generales
-      if (exam.general_recommendations) {
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("RECOMENDACIONES GENERALES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const recommendationLines = pdf.splitTextToSize(
-          exam.general_recommendations,
-          pageWidth - 40
-        );
-        pdf.text(recommendationLines, 20, yPosition);
-        yPosition += recommendationLines.length * 5 + 10;
-      } else {
-        // Recomendaciones por defecto si no hay específicas
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("RECOMENDACIONES GENERALES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const defaultRecommendations = [
-          "• Mantener adecuadas medidas de higiene postural durante la jornada laboral.",
-          "• Realizar pausas activas durante la jornada de trabajo según el programa de la empresa.",
-          "• Hacer uso permanente de la corrección visual indicada por el especialista.",
-          "• Gestionar de manera oportuna las citas médicas con especialistas.",
-          "• Informar oportunamente al Área de Seguridad y Salud en el Trabajo sobre cualquier diagnóstico.",
-          "• Adoptar las recomendaciones generales en su entorno laboral.",
-        ];
-
-        defaultRecommendations.forEach((rec) => {
-          const lines = pdf.splitTextToSize(rec, pageWidth - 40);
-          pdf.text(lines, 20, yPosition);
-          yPosition += lines.length * 5;
-        });
-        yPosition += 10;
-      }
-
-      // Observaciones
-      if (exam.observations) {
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("OBSERVACIONES", 15, yPosition);
-        yPosition += 10;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        const observationLines = pdf.splitTextToSize(
-          exam.observations,
-          pageWidth - 40
-        );
-        pdf.text(observationLines, 20, yPosition);
-        yPosition += observationLines.length * 5 + 10;
-      }
-
-      // Firma y fecha
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.text("Profesional SST:", 20, pageHeight - 50);
-      pdf.text("Firma del Trabajador:", 120, pageHeight - 50);
-
-      pdf.setFont("helvetica", "normal");
-      pdf.text("_________________________", 20, pageHeight - 40);
-      pdf.text("_________________________", 120, pageHeight - 40);
-      pdf.text(new Date().toLocaleDateString(), 20, pageHeight - 35);
-      pdf.text(new Date().toLocaleDateString(), 120, pageHeight - 35);
-
-      // Footer
-      pdf.setFontSize(8);
-      pdf.setTextColor(128, 128, 128);
-      pdf.text(
-        "Documento generado automáticamente por el Sistema de Gestión SST - ROWL",
-        15,
-        pageHeight - 10
+      const link = document.createElement("a");
+      link.href = url;
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, "-");
+      link.setAttribute(
+        "download",
+        `notificacion_medica_${exam.worker_name || exam.id}_${timestamp}.pdf`
       );
-
-      // Guardar PDF
-      const fileName = `Notificacion_Medica_${
-        exam.worker_name?.replace(/\s+/g, "_") || "Trabajador"
-      }_${new Date().toISOString().split("T")[0]}.pdf`;
-      pdf.save(fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error generating individual report:", error);
     } finally {
