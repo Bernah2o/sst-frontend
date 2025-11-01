@@ -8,10 +8,8 @@ import {
   CheckCircle as CompleteIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
-
   Flag as FlagIcon,
-
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
 import {
   Box,
@@ -41,21 +39,23 @@ import {
   Pagination,
   Tooltip,
   Avatar,
-  Alert
-} from '@mui/material';
-import React, { useState, useEffect, useCallback } from 'react';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import SeguimientoActividadesModal from '../components/SeguimientoActividadesModal';
+  Alert,
+} from "@mui/material";
+import React, { useState, useEffect, useCallback } from "react";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import SeguimientoActividadesModal from "../components/SeguimientoActividadesModal";
 
+import {
+  adminConfigService,
+  ProgramaOption,
+} from "../services/adminConfigService";
+import api from "../services/api";
+import { workerService } from "../services/workerService";
 
-import { adminConfigService, ProgramaOption } from '../services/adminConfigService';
-import api from '../services/api';
-import { workerService } from '../services/workerService';
-
-import { WorkerList } from '../types/worker';
-import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { WorkerList } from "../types/worker";
+import { formatDate, formatDateTime } from "../utils/dateUtils";
 
 interface SeguimientoData {
   id: number;
@@ -65,8 +65,8 @@ interface SeguimientoData {
   cedula: string;
   cargo: string;
   fecha_ingreso?: string;
-  estado: 'iniciado' | 'terminado';
-  valoracion_riesgo?: 'bajo' | 'medio' | 'alto' | 'muy_alto';
+  estado: "iniciado" | "terminado";
+  valoracion_riesgo?: "bajo" | "medio" | "alto" | "muy_alto";
   fecha_inicio?: string;
   fecha_final?: string;
   observacion?: string;
@@ -80,8 +80,6 @@ interface SeguimientoData {
   updated_at: string;
 }
 
-
-
 const Seguimiento: React.FC = () => {
   const [seguimientos, setSeguimientos] = useState<SeguimientoData[]>([]);
   const [workers, setWorkers] = useState<WorkerList[]>([]);
@@ -90,34 +88,41 @@ const Seguimiento: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingSeguimiento, setEditingSeguimiento] = useState<SeguimientoData | null>(null);
-  const [viewingSeguimiento, setViewingSeguimiento] = useState<SeguimientoData | null>(null);
+  const [editingSeguimiento, setEditingSeguimiento] =
+    useState<SeguimientoData | null>(null);
+  const [viewingSeguimiento, setViewingSeguimiento] =
+    useState<SeguimientoData | null>(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   // const [openActionDialog, setOpenActionDialog] = useState(false); // Comentado - funcionalidad de acciones no incluida
-  const [confirmDialog, setConfirmDialog] = useState({ open: false, seguimientoId: null as number | null });
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    seguimientoId: null as number | null,
+  });
   const [actividadesModalOpen, setActividadesModalOpen] = useState(false);
-  const [selectedSeguimientoId, setSelectedSeguimientoId] = useState<number | null>(null);
+  const [selectedSeguimientoId, setSelectedSeguimientoId] = useState<
+    number | null
+  >(null);
   const [filters, setFilters] = useState({
-    programa: '',
-    estado: '',
-    valoracion_riesgo: '',
-    worker: '',
-    search: ''
+    programa: "",
+    estado: "",
+    valoracion_riesgo: "",
+    worker: "",
+    search: "",
   });
   const [formData, setFormData] = useState({
-    worker_id: '',
-    programa: '',
-    estado: 'iniciado' as 'iniciado' | 'terminado',
-    valoracion_riesgo: 'bajo' as 'bajo' | 'medio' | 'alto' | 'muy_alto',
+    worker_id: "",
+    programa: "",
+    estado: "iniciado" as "iniciado" | "terminado",
+    valoracion_riesgo: "bajo" as "bajo" | "medio" | "alto" | "muy_alto",
     fecha_inicio: null as Date | null,
     fecha_final: null as Date | null,
-    observacion: '',
-    motivo_inclusion: '',
-    conclusiones_ocupacionales: '',
-    conductas_ocupacionales_prevenir: '',
-    recomendaciones_generales: '',
-    observaciones_examen: '',
-    comentario: ''
+    observacion: "",
+    motivo_inclusion: "",
+    conclusiones_ocupacionales: "",
+    conductas_ocupacionales_prevenir: "",
+    recomendaciones_generales: "",
+    observaciones_examen: "",
+    comentario: "",
   });
   // const [actionFormData, setActionFormData] = useState({
   //   action_type: 'seguimiento' as 'evaluacion' | 'tratamiento' | 'seguimiento' | 'capacitacion' | 'otro',
@@ -130,36 +135,40 @@ const Seguimiento: React.FC = () => {
   // Los programas ahora se cargan dinámicamente desde el backend
 
   const valoracionesRiesgo = [
-    { value: 'bajo', label: 'Bajo', color: 'success' },
-    { value: 'medio', label: 'Medio', color: 'warning' },
-    { value: 'alto', label: 'Alto', color: 'error' },
-    { value: 'muy_alto', label: 'Muy Alto', color: 'error' }
+    { value: "bajo", label: "Bajo", color: "success" },
+    { value: "medio", label: "Medio", color: "warning" },
+    { value: "alto", label: "Alto", color: "error" },
+    { value: "muy_alto", label: "Muy Alto", color: "error" },
   ];
 
   const estadosConfig = {
-    iniciado: { label: 'Iniciado', color: 'default', icon: <FlagIcon /> },
-    terminado: { label: 'Terminado', color: 'success', icon: <CompleteIcon /> }
+    iniciado: { label: "Iniciado", color: "default", icon: <FlagIcon /> },
+    terminado: { label: "Terminado", color: "success", icon: <CompleteIcon /> },
   };
 
   const fetchSeguimientos = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      params.append('page', page.toString());
-      params.append('limit', '20');
-      
-      if (filters.programa) params.append('programa', filters.programa);
-      if (filters.estado) params.append('estado', filters.estado);
-      if (filters.valoracion_riesgo) params.append('valoracion_riesgo', filters.valoracion_riesgo);
-      if (filters.worker) params.append('worker_id', filters.worker);
-      if (filters.search) params.append('search', filters.search);
+      const skip = (page - 1) * 20; // Convert page to skip
+      params.append("skip", skip.toString());
+      params.append("limit", "20");
 
+      if (filters.programa) params.append("programa", filters.programa);
+      if (filters.estado) params.append("estado", filters.estado);
+      if (filters.valoracion_riesgo)
+        params.append("valoracion_riesgo", filters.valoracion_riesgo);
+      if (filters.worker) params.append("worker_id", filters.worker);
+      if (filters.search) params.append("search", filters.search);
+
+      console.log("Fetching seguimientos with params:", params.toString());
       const response = await api.get(`/seguimientos?${params.toString()}`);
+      console.log("Seguimientos response:", response.data);
       setSeguimientos(response.data || []);
       // Calculate total pages based on response length (assuming pagination is handled by backend)
       setTotalPages(Math.ceil((response.data?.length || 0) / 20));
     } catch (error) {
-      console.error('Error fetching seguimientos:', error);
+      console.error("Error fetching seguimientos:", error);
     } finally {
       setLoading(false);
     }
@@ -175,25 +184,22 @@ const Seguimiento: React.FC = () => {
     fetchProgramas();
   }, []);
 
-
-
   const fetchWorkers = async () => {
     try {
       const response = await workerService.getWorkers(1, 1000); // Get all workers
       setWorkers(response.items);
     } catch (error) {
-      console.error('Error fetching workers:', error);
+      console.error("Error fetching workers:", error);
     }
   };
 
-
-
   const fetchProgramas = async () => {
     try {
-      const programasOptions = await adminConfigService.getActiveProgramasAsOptions();
+      const programasOptions =
+        await adminConfigService.getActiveProgramasAsOptions();
       setProgramas(programasOptions);
     } catch (error) {
-      console.error('Error fetching programas:', error);
+      console.error("Error fetching programas:", error);
       // En caso de error, usar array vacío
       setProgramas([]);
     }
@@ -202,37 +208,72 @@ const Seguimiento: React.FC = () => {
   const handleSaveSeguimiento = async () => {
     try {
       // Obtener información completa del trabajador seleccionado
-      const selectedWorker = workers.find(w => w.id === parseInt(formData.worker_id));
+      const selectedWorker = workers.find(
+        (w) => w.id === parseInt(formData.worker_id)
+      );
       if (!selectedWorker) {
-        console.error('Trabajador no encontrado');
+        console.error("Trabajador no encontrado");
         return;
       }
 
+      // Convertir el value del programa de vuelta al nombre del programa para guardarlo en la BD
+      const programaOption = programas.find(
+        (p) => p.value === formData.programa
+      );
+      const programaNombre = programaOption?.label || formData.programa || "";
+
       const payload = {
-        ...formData,
         worker_id: parseInt(formData.worker_id),
+        programa: programaNombre, // Enviar el nombre del programa, no el value transformado
         nombre_trabajador: `${selectedWorker.first_name} ${selectedWorker.last_name}`,
         cedula: selectedWorker.document_number,
         cargo: selectedWorker.position,
-        fecha_inicio: formData.fecha_inicio?.toISOString().split('T')[0],
-        fecha_final: formData.fecha_final?.toISOString().split('T')[0]
+        estado: formData.estado,
+        valoracion_riesgo: formData.valoracion_riesgo || null,
+        fecha_inicio:
+          formData.fecha_inicio?.toISOString().split("T")[0] || null,
+        fecha_final: formData.fecha_final?.toISOString().split("T")[0] || null,
+        observacion: formData.observacion || null,
+        motivo_inclusion: formData.motivo_inclusion || null,
+        conclusiones_ocupacionales: formData.conclusiones_ocupacionales || null,
+        conductas_ocupacionales_prevenir:
+          formData.conductas_ocupacionales_prevenir || null,
+        recomendaciones_generales: formData.recomendaciones_generales || null,
+        observaciones_examen: formData.observaciones_examen || null,
+        comentario: formData.comentario || null,
       };
 
       if (editingSeguimiento) {
-        await api.put(`/seguimientos/${editingSeguimiento.id}`, payload);
+        // Para actualización, usar el endpoint PUT que solo actualiza los campos proporcionados
+        const updatePayload = {
+          estado: payload.estado,
+          valoracion_riesgo: payload.valoracion_riesgo,
+          fecha_inicio: payload.fecha_inicio,
+          fecha_final: payload.fecha_final,
+          observacion: payload.observacion,
+          motivo_inclusion: payload.motivo_inclusion,
+          conclusiones_ocupacionales: payload.conclusiones_ocupacionales,
+          conductas_ocupacionales_prevenir:
+            payload.conductas_ocupacionales_prevenir,
+          recomendaciones_generales: payload.recomendaciones_generales,
+          observaciones_examen: payload.observaciones_examen,
+          comentario: payload.comentario,
+        };
+        await api.put(`/seguimientos/${editingSeguimiento.id}`, updatePayload);
       } else {
-        await api.post('/seguimientos/', payload);
+        // Para creación, enviar todos los campos incluyendo programa
+        await api.post("/seguimientos/", payload);
       }
       fetchSeguimientos();
       handleCloseDialog();
     } catch (error) {
-      console.error('Error saving seguimiento:', error);
+      console.error("Error saving seguimiento:", error);
     }
   };
 
   // const handleAddAction = async () => {
   //   if (!viewingSeguimiento) return;
-  //   
+  //
   //   try {
   //     const payload = {
   //       ...actionFormData,
@@ -240,11 +281,11 @@ const Seguimiento: React.FC = () => {
   //     };
 
   //     await api.post(`/seguimientos/${viewingSeguimiento.id}/actions`, payload);
-  //     
+  //
   //     // Refresh the seguimiento data
   //     const response = await api.get(`/seguimientos/${viewingSeguimiento.id}`);
   //     setViewingSeguimiento(response.data);
-  //     
+  //
   //     setOpenActionDialog(false);
   //     setActionFormData({
   //       action_type: 'seguimiento',
@@ -268,7 +309,7 @@ const Seguimiento: React.FC = () => {
         await api.delete(`/seguimientos/${confirmDialog.seguimientoId}`);
         fetchSeguimientos();
       } catch (error) {
-        console.error('Error deleting seguimiento:', error);
+        console.error("Error deleting seguimiento:", error);
       }
     }
     setConfirmDialog({ open: false, seguimientoId: null });
@@ -278,47 +319,101 @@ const Seguimiento: React.FC = () => {
     setConfirmDialog({ open: false, seguimientoId: null });
   };
 
-
-
   const handleFilterChange = (field: string, value: any) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+    setFilters((prev) => ({ ...prev, [field]: value }));
     setPage(1);
   };
 
-  const handleOpenDialog = (seguimiento?: SeguimientoData) => {
+  const handleOpenDialog = async (seguimiento?: SeguimientoData) => {
     if (seguimiento) {
-      setEditingSeguimiento(seguimiento);
-      setFormData({
-        worker_id: seguimiento.worker_id.toString(),
-        programa: seguimiento.programa,
-        estado: seguimiento.estado,
-        valoracion_riesgo: seguimiento.valoracion_riesgo || 'bajo',
-        fecha_inicio: seguimiento.fecha_inicio ? new Date(seguimiento.fecha_inicio) : null,
-        fecha_final: seguimiento.fecha_final ? new Date(seguimiento.fecha_final) : null,
-        observacion: seguimiento.observacion || '',
-        motivo_inclusion: seguimiento.motivo_inclusion || '',
-        conclusiones_ocupacionales: seguimiento.conclusiones_ocupacionales || '',
-        conductas_ocupacionales_prevenir: seguimiento.conductas_ocupacionales_prevenir || '',
-        recomendaciones_generales: seguimiento.recomendaciones_generales || '',
-        observaciones_examen: seguimiento.observaciones_examen || '',
-        comentario: seguimiento.comentario || ''
-      });
+      try {
+        // Obtener los datos completos del seguimiento desde el API
+        const response = await api.get(`/seguimientos/${seguimiento.id}`);
+        const seguimientoCompleto = response.data;
+
+        setEditingSeguimiento(seguimientoCompleto);
+
+        // Buscar el programa en las opciones disponibles para obtener el value correcto
+        // El programa en la BD tiene el nombre completo, pero el Select usa values transformados
+        const programaEncontrado = programas.find(
+          (p) => p.label === seguimientoCompleto.programa
+        );
+        const programaValue =
+          programaEncontrado?.value || seguimientoCompleto.programa || "";
+
+        setFormData({
+          worker_id: seguimientoCompleto.worker_id?.toString() || "",
+          programa: programaValue,
+          estado: seguimientoCompleto.estado || "iniciado",
+          valoracion_riesgo: seguimientoCompleto.valoracion_riesgo || "bajo",
+          fecha_inicio: seguimientoCompleto.fecha_inicio
+            ? new Date(seguimientoCompleto.fecha_inicio)
+            : null,
+          fecha_final: seguimientoCompleto.fecha_final
+            ? new Date(seguimientoCompleto.fecha_final)
+            : null,
+          observacion: seguimientoCompleto.observacion || "",
+          motivo_inclusion: seguimientoCompleto.motivo_inclusion || "",
+          conclusiones_ocupacionales:
+            seguimientoCompleto.conclusiones_ocupacionales || "",
+          conductas_ocupacionales_prevenir:
+            seguimientoCompleto.conductas_ocupacionales_prevenir || "",
+          recomendaciones_generales:
+            seguimientoCompleto.recomendaciones_generales || "",
+          observaciones_examen: seguimientoCompleto.observaciones_examen || "",
+          comentario: seguimientoCompleto.comentario || "",
+        });
+      } catch (error) {
+        console.error("Error fetching seguimiento details:", error);
+        // Si falla, usar los datos de la lista como fallback
+        setEditingSeguimiento(seguimiento);
+
+        // Buscar el programa en las opciones disponibles para obtener el value correcto
+        const programaEncontrado = programas.find(
+          (p) => p.label === seguimiento.programa
+        );
+        const programaValue =
+          programaEncontrado?.value || seguimiento.programa || "";
+
+        setFormData({
+          worker_id: seguimiento.worker_id?.toString() || "",
+          programa: programaValue,
+          estado: seguimiento.estado || "iniciado",
+          valoracion_riesgo: seguimiento.valoracion_riesgo || "bajo",
+          fecha_inicio: seguimiento.fecha_inicio
+            ? new Date(seguimiento.fecha_inicio)
+            : null,
+          fecha_final: seguimiento.fecha_final
+            ? new Date(seguimiento.fecha_final)
+            : null,
+          observacion: seguimiento.observacion || "",
+          motivo_inclusion: seguimiento.motivo_inclusion || "",
+          conclusiones_ocupacionales:
+            seguimiento.conclusiones_ocupacionales || "",
+          conductas_ocupacionales_prevenir:
+            seguimiento.conductas_ocupacionales_prevenir || "",
+          recomendaciones_generales:
+            seguimiento.recomendaciones_generales || "",
+          observaciones_examen: seguimiento.observaciones_examen || "",
+          comentario: seguimiento.comentario || "",
+        });
+      }
     } else {
       setEditingSeguimiento(null);
       setFormData({
-        worker_id: '',
-        programa: '',
-        estado: 'iniciado',
-        valoracion_riesgo: 'bajo',
+        worker_id: "",
+        programa: "",
+        estado: "iniciado",
+        valoracion_riesgo: "bajo",
         fecha_inicio: null,
         fecha_final: null,
-        observacion: '',
-        motivo_inclusion: '',
-        conclusiones_ocupacionales: '',
-        conductas_ocupacionales_prevenir: '',
-        recomendaciones_generales: '',
-        observaciones_examen: '',
-        comentario: ''
+        observacion: "",
+        motivo_inclusion: "",
+        conclusiones_ocupacionales: "",
+        conductas_ocupacionales_prevenir: "",
+        recomendaciones_generales: "",
+        observaciones_examen: "",
+        comentario: "",
       });
     }
     setOpenDialog(true);
@@ -335,7 +430,7 @@ const Seguimiento: React.FC = () => {
       setViewingSeguimiento(response.data);
       setOpenViewDialog(true);
     } catch (error) {
-      console.error('Error fetching seguimiento details:', error);
+      console.error("Error fetching seguimiento details:", error);
     }
   };
 
@@ -349,12 +444,9 @@ const Seguimiento: React.FC = () => {
     setSelectedSeguimientoId(null);
   };
 
-
-
-
-
   const isOverdue = (seguimiento: SeguimientoData) => {
-    if (!seguimiento.fecha_final || seguimiento.estado === 'terminado') return false;
+    if (!seguimiento.fecha_final || seguimiento.estado === "terminado")
+      return false;
     return new Date(seguimiento.fecha_final) < new Date();
   };
 
@@ -369,10 +461,11 @@ const Seguimiento: React.FC = () => {
         </Typography>
 
         {/* Alertas de Seguimientos Vencidos */}
-        {seguimientos.some(s => isOverdue(s)) && (
+        {seguimientos.some((s) => isOverdue(s)) && (
           <Alert severity="warning" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              Hay {seguimientos.filter(s => isOverdue(s)).length} seguimiento(s) vencido(s) que requieren atención.
+              Hay {seguimientos.filter((s) => isOverdue(s)).length}{" "}
+              seguimiento(s) vencido(s) que requieren atención.
             </Typography>
           </Alert>
         )}
@@ -389,10 +482,12 @@ const Seguimiento: React.FC = () => {
                   fullWidth
                   label="Buscar"
                   value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  onChange={(e) => handleFilterChange("search", e.target.value)}
                   placeholder="Trabajador, programa..."
                   InputProps={{
-                    startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                    startAdornment: (
+                      <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
+                    ),
                   }}
                 />
               </Grid>
@@ -401,7 +496,9 @@ const Seguimiento: React.FC = () => {
                   <InputLabel>Programa</InputLabel>
                   <Select
                     value={filters.programa}
-                    onChange={(e) => handleFilterChange('programa', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("programa", e.target.value)
+                    }
                   >
                     <MenuItem value="">Todos</MenuItem>
                     {programas.map((programa) => (
@@ -417,7 +514,9 @@ const Seguimiento: React.FC = () => {
                   <InputLabel>Estado</InputLabel>
                   <Select
                     value={filters.estado}
-                    onChange={(e) => handleFilterChange('estado', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("estado", e.target.value)
+                    }
                   >
                     <MenuItem value="">Todos</MenuItem>
                     {Object.entries(estadosConfig).map(([key, config]) => (
@@ -433,7 +532,9 @@ const Seguimiento: React.FC = () => {
                   <InputLabel>Valoración de Riesgo</InputLabel>
                   <Select
                     value={filters.valoracion_riesgo}
-                    onChange={(e) => handleFilterChange('valoracion_riesgo', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("valoracion_riesgo", e.target.value)
+                    }
                   >
                     <MenuItem value="">Todas</MenuItem>
                     {valoracionesRiesgo.map((valoracion) => (
@@ -449,7 +550,9 @@ const Seguimiento: React.FC = () => {
                   <InputLabel>Trabajador</InputLabel>
                   <Select
                     value={filters.worker}
-                    onChange={(e) => handleFilterChange('worker', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("worker", e.target.value)
+                    }
                   >
                     <MenuItem value="">Todos</MenuItem>
                     {workers.map((worker) => (
@@ -513,10 +616,12 @@ const Seguimiento: React.FC = () => {
                     </TableRow>
                   ) : (
                     seguimientos.map((seguimiento) => (
-                      <TableRow 
+                      <TableRow
                         key={seguimiento.id}
                         sx={{
-                          backgroundColor: isOverdue(seguimiento) ? 'error.light' : 'inherit'
+                          backgroundColor: isOverdue(seguimiento)
+                            ? "error.light"
+                            : "inherit",
                         }}
                       >
                         <TableCell>
@@ -528,7 +633,10 @@ const Seguimiento: React.FC = () => {
                               <Typography variant="body2" fontWeight="medium">
                                 {seguimiento.nombre_trabajador}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {seguimiento.cedula}
                               </Typography>
                             </Box>
@@ -536,10 +644,22 @@ const Seguimiento: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Box display="flex" alignItems="center" gap={1}>
-                            {programas.find(p => p.value === seguimiento.programa)?.icon}
+                            {
+                              programas.find(
+                                (p) => p.value === seguimiento.programa
+                              )?.icon
+                            }
                             <Chip
-                              label={programas.find(p => p.value === seguimiento.programa)?.label || seguimiento.programa}
-                              color={programas.find(p => p.value === seguimiento.programa)?.color as any || 'default'}
+                              label={
+                                programas.find(
+                                  (p) => p.value === seguimiento.programa
+                                )?.label || seguimiento.programa
+                              }
+                              color={
+                                (programas.find(
+                                  (p) => p.value === seguimiento.programa
+                                )?.color as any) || "default"
+                              }
                               size="small"
                             />
                           </Box>
@@ -549,46 +669,73 @@ const Seguimiento: React.FC = () => {
                             {seguimiento.cargo}
                           </Typography>
                           {seguimiento.fecha_ingreso && (
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               Ingreso: {formatDate(seguimiento.fecha_ingreso)}
                             </Typography>
                           )}
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={valoracionesRiesgo.find(v => v.value === seguimiento.valoracion_riesgo)?.label || seguimiento.valoracion_riesgo}
-                            color={valoracionesRiesgo.find(v => v.value === seguimiento.valoracion_riesgo)?.color as any || 'default'}
+                            label={
+                              valoracionesRiesgo.find(
+                                (v) => v.value === seguimiento.valoracion_riesgo
+                              )?.label || seguimiento.valoracion_riesgo
+                            }
+                            color={
+                              (valoracionesRiesgo.find(
+                                (v) => v.value === seguimiento.valoracion_riesgo
+                              )?.color as any) || "default"
+                            }
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Box display="flex" alignItems="center" gap={1}>
-                            {estadosConfig[seguimiento.estado as keyof typeof estadosConfig]?.icon}
+                            {
+                              estadosConfig[
+                                seguimiento.estado as keyof typeof estadosConfig
+                              ]?.icon
+                            }
                             <Chip
-                              label={estadosConfig[seguimiento.estado as keyof typeof estadosConfig]?.label}
-                              color={estadosConfig[seguimiento.estado as keyof typeof estadosConfig]?.color as any}
+                              label={
+                                estadosConfig[
+                                  seguimiento.estado as keyof typeof estadosConfig
+                                ]?.label
+                              }
+                              color={
+                                estadosConfig[
+                                  seguimiento.estado as keyof typeof estadosConfig
+                                ]?.color as any
+                              }
                               size="small"
                             />
                           </Box>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {seguimiento.fecha_inicio ? formatDate(seguimiento.fecha_inicio) : 'No definida'}
+                            {seguimiento.fecha_inicio
+                              ? formatDate(seguimiento.fecha_inicio)
+                              : "No definida"}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {seguimiento.fecha_final ? formatDate(seguimiento.fecha_final) : 'No definida'}
+                            {seguimiento.fecha_final
+                              ? formatDate(seguimiento.fecha_final)
+                              : "No definida"}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" sx={{ maxWidth: 200 }}>
-                            {seguimiento.observacion ? 
-                              (seguimiento.observacion.length > 50 ? 
-                                seguimiento.observacion.substring(0, 50) + '...' : 
-                                seguimiento.observacion
-                              ) : 'Sin observaciones'
-                            }
+                            {seguimiento.observacion
+                              ? seguimiento.observacion.length > 50
+                                ? seguimiento.observacion.substring(0, 50) +
+                                  "..."
+                                : seguimiento.observacion
+                              : "Sin observaciones"}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -596,7 +743,9 @@ const Seguimiento: React.FC = () => {
                             <Tooltip title="Ver detalles">
                               <IconButton
                                 size="small"
-                                onClick={() => handleViewSeguimiento(seguimiento)}
+                                onClick={() =>
+                                  handleViewSeguimiento(seguimiento)
+                                }
                               >
                                 <ViewIcon />
                               </IconButton>
@@ -604,7 +753,9 @@ const Seguimiento: React.FC = () => {
                             <Tooltip title="Gestionar actividades">
                               <IconButton
                                 size="small"
-                                onClick={() => handleOpenActividades(seguimiento.id)}
+                                onClick={() =>
+                                  handleOpenActividades(seguimiento.id)
+                                }
                                 color="primary"
                               >
                                 <AssignmentIcon />
@@ -621,7 +772,9 @@ const Seguimiento: React.FC = () => {
                             <Tooltip title="Eliminar">
                               <IconButton
                                 size="small"
-                                onClick={() => handleDeleteSeguimiento(seguimiento.id)}
+                                onClick={() =>
+                                  handleDeleteSeguimiento(seguimiento.id)
+                                }
                               >
                                 <DeleteIcon />
                               </IconButton>
@@ -650,9 +803,14 @@ const Seguimiento: React.FC = () => {
         </Card>
 
         {/* Dialog para Crear/Editar Seguimiento */}
-        <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          maxWidth="md"
+          fullWidth
+        >
           <DialogTitle>
-            {editingSeguimiento ? 'Editar Seguimiento' : 'Nuevo Seguimiento'}
+            {editingSeguimiento ? "Editar Seguimiento" : "Nuevo Seguimiento"}
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -661,11 +819,14 @@ const Seguimiento: React.FC = () => {
                   <InputLabel>Trabajador</InputLabel>
                   <Select
                     value={formData.worker_id}
-                    onChange={(e) => setFormData({ ...formData, worker_id: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, worker_id: e.target.value })
+                    }
                   >
                     {workers.map((worker) => (
                       <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.first_name} {worker.last_name} - {worker.document_number}
+                        {worker.first_name} {worker.last_name} -{" "}
+                        {worker.document_number}
                       </MenuItem>
                     ))}
                   </Select>
@@ -676,7 +837,12 @@ const Seguimiento: React.FC = () => {
                   <InputLabel>Programa</InputLabel>
                   <Select
                     value={formData.programa}
-                    onChange={(e) => setFormData({ ...formData, programa: e.target.value as any })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        programa: e.target.value as any,
+                      })
+                    }
                   >
                     {programas.map((programa) => (
                       <MenuItem key={programa.value} value={programa.value}>
@@ -691,7 +857,12 @@ const Seguimiento: React.FC = () => {
                   <InputLabel>Estado</InputLabel>
                   <Select
                     value={formData.estado}
-                    onChange={(e) => setFormData({ ...formData, estado: e.target.value as any })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        estado: e.target.value as any,
+                      })
+                    }
                   >
                     {Object.entries(estadosConfig).map(([key, config]) => (
                       <MenuItem key={key} value={key}>
@@ -706,7 +877,12 @@ const Seguimiento: React.FC = () => {
                   <InputLabel>Valoración de Riesgo</InputLabel>
                   <Select
                     value={formData.valoracion_riesgo}
-                    onChange={(e) => setFormData({ ...formData, valoracion_riesgo: e.target.value as any })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        valoracion_riesgo: e.target.value as any,
+                      })
+                    }
                   >
                     {valoracionesRiesgo.map((valoracion) => (
                       <MenuItem key={valoracion.value} value={valoracion.value}>
@@ -720,7 +896,9 @@ const Seguimiento: React.FC = () => {
                 <DatePicker
                   label="Fecha de Inicio"
                   value={formData.fecha_inicio}
-                  onChange={(date) => setFormData({ ...formData, fecha_inicio: date })}
+                  onChange={(date) =>
+                    setFormData({ ...formData, fecha_inicio: date })
+                  }
                   slotProps={{ textField: { fullWidth: true } }}
                 />
               </Grid>
@@ -728,7 +906,9 @@ const Seguimiento: React.FC = () => {
                 <DatePicker
                   label="Fecha Final"
                   value={formData.fecha_final}
-                  onChange={(date) => setFormData({ ...formData, fecha_final: date })}
+                  onChange={(date) =>
+                    setFormData({ ...formData, fecha_final: date })
+                  }
                   slotProps={{ textField: { fullWidth: true } }}
                 />
               </Grid>
@@ -739,7 +919,12 @@ const Seguimiento: React.FC = () => {
                   multiline
                   rows={2}
                   value={formData.motivo_inclusion}
-                  onChange={(e) => setFormData({ ...formData, motivo_inclusion: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      motivo_inclusion: e.target.value,
+                    })
+                  }
                 />
               </Grid>
               <Grid size={12}>
@@ -749,7 +934,9 @@ const Seguimiento: React.FC = () => {
                   multiline
                   rows={3}
                   value={formData.observacion}
-                  onChange={(e) => setFormData({ ...formData, observacion: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, observacion: e.target.value })
+                  }
                 />
               </Grid>
               <Grid size={12}>
@@ -759,7 +946,12 @@ const Seguimiento: React.FC = () => {
                   multiline
                   rows={3}
                   value={formData.conclusiones_ocupacionales}
-                  onChange={(e) => setFormData({ ...formData, conclusiones_ocupacionales: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      conclusiones_ocupacionales: e.target.value,
+                    })
+                  }
                 />
               </Grid>
               <Grid size={12}>
@@ -769,7 +961,12 @@ const Seguimiento: React.FC = () => {
                   multiline
                   rows={3}
                   value={formData.conductas_ocupacionales_prevenir}
-                  onChange={(e) => setFormData({ ...formData, conductas_ocupacionales_prevenir: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      conductas_ocupacionales_prevenir: e.target.value,
+                    })
+                  }
                 />
               </Grid>
               <Grid size={12}>
@@ -779,7 +976,12 @@ const Seguimiento: React.FC = () => {
                   multiline
                   rows={3}
                   value={formData.recomendaciones_generales}
-                  onChange={(e) => setFormData({ ...formData, recomendaciones_generales: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      recomendaciones_generales: e.target.value,
+                    })
+                  }
                 />
               </Grid>
               <Grid size={12}>
@@ -789,7 +991,12 @@ const Seguimiento: React.FC = () => {
                   multiline
                   rows={3}
                   value={formData.observaciones_examen}
-                  onChange={(e) => setFormData({ ...formData, observaciones_examen: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      observaciones_examen: e.target.value,
+                    })
+                  }
                 />
               </Grid>
               <Grid size={12}>
@@ -799,28 +1006,35 @@ const Seguimiento: React.FC = () => {
                   multiline
                   rows={2}
                   value={formData.comentario}
-                  onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, comentario: e.target.value })
+                  }
                 />
               </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancelar</Button>
-            <Button 
-              onClick={handleSaveSeguimiento} 
+            <Button
+              onClick={handleSaveSeguimiento}
               variant="contained"
-              disabled={!formData.worker_id || !formData.programa || !formData.estado}
+              disabled={
+                !formData.worker_id || !formData.programa || !formData.estado
+              }
             >
-              {editingSeguimiento ? 'Actualizar' : 'Crear'}
+              {editingSeguimiento ? "Actualizar" : "Crear"}
             </Button>
           </DialogActions>
         </Dialog>
 
         {/* Dialog para Ver Detalles del Seguimiento */}
-        <Dialog open={openViewDialog} onClose={() => setOpenViewDialog(false)} maxWidth="lg" fullWidth>
-          <DialogTitle>
-            Detalles del Seguimiento
-          </DialogTitle>
+        <Dialog
+          open={openViewDialog}
+          onClose={() => setOpenViewDialog(false)}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle>Detalles del Seguimiento</DialogTitle>
           <DialogContent>
             {viewingSeguimiento && (
               <Box sx={{ mt: 2 }}>
@@ -833,67 +1047,113 @@ const Seguimiento: React.FC = () => {
                         </Typography>
                         <Grid container spacing={2}>
                           <Grid size={{ xs: 12, md: 6 }}>
-                            <Typography variant="subtitle2">Trabajador:</Typography>
-                            <Typography variant="body2">{viewingSeguimiento.nombre_trabajador}</Typography>
+                            <Typography variant="subtitle2">
+                              Trabajador:
+                            </Typography>
+                            <Typography variant="body2">
+                              {viewingSeguimiento.nombre_trabajador}
+                            </Typography>
                           </Grid>
                           <Grid size={{ xs: 12, md: 6 }}>
                             <Typography variant="subtitle2">Cédula:</Typography>
-                            <Typography variant="body2">{viewingSeguimiento.cedula}</Typography>
+                            <Typography variant="body2">
+                              {viewingSeguimiento.cedula}
+                            </Typography>
                           </Grid>
                           <Grid size={{ xs: 12, md: 6 }}>
                             <Typography variant="subtitle2">Cargo:</Typography>
-                            <Typography variant="body2">{viewingSeguimiento.cargo}</Typography>
+                            <Typography variant="body2">
+                              {viewingSeguimiento.cargo}
+                            </Typography>
                           </Grid>
                           <Grid size={{ xs: 12, md: 6 }}>
-                            <Typography variant="subtitle2">Programa:</Typography>
-                            <Typography variant="body2">{viewingSeguimiento.programa}</Typography>
+                            <Typography variant="subtitle2">
+                              Programa:
+                            </Typography>
+                            <Typography variant="body2">
+                              {viewingSeguimiento.programa}
+                            </Typography>
                           </Grid>
                           {viewingSeguimiento.fecha_ingreso && (
                             <Grid size={{ xs: 12, md: 6 }}>
-                              <Typography variant="subtitle2">Fecha de Ingreso:</Typography>
-                              <Typography variant="body2">{formatDate(viewingSeguimiento.fecha_ingreso)}</Typography>
+                              <Typography variant="subtitle2">
+                                Fecha de Ingreso:
+                              </Typography>
+                              <Typography variant="body2">
+                                {formatDate(viewingSeguimiento.fecha_ingreso)}
+                              </Typography>
                             </Grid>
                           )}
                           {viewingSeguimiento.motivo_inclusion && (
                             <Grid size={12}>
-                              <Typography variant="subtitle2">Motivo de Inclusión:</Typography>
-                              <Typography variant="body2">{viewingSeguimiento.motivo_inclusion}</Typography>
+                              <Typography variant="subtitle2">
+                                Motivo de Inclusión:
+                              </Typography>
+                              <Typography variant="body2">
+                                {viewingSeguimiento.motivo_inclusion}
+                              </Typography>
                             </Grid>
                           )}
                           {viewingSeguimiento.observacion && (
                             <Grid size={12}>
-                              <Typography variant="subtitle2">Observación:</Typography>
-                              <Typography variant="body2">{viewingSeguimiento.observacion}</Typography>
+                              <Typography variant="subtitle2">
+                                Observación:
+                              </Typography>
+                              <Typography variant="body2">
+                                {viewingSeguimiento.observacion}
+                              </Typography>
                             </Grid>
                           )}
                           {viewingSeguimiento.conclusiones_ocupacionales && (
                             <Grid size={12}>
-                              <Typography variant="subtitle2">Conclusiones Ocupacionales:</Typography>
-                              <Typography variant="body2">{viewingSeguimiento.conclusiones_ocupacionales}</Typography>
+                              <Typography variant="subtitle2">
+                                Conclusiones Ocupacionales:
+                              </Typography>
+                              <Typography variant="body2">
+                                {viewingSeguimiento.conclusiones_ocupacionales}
+                              </Typography>
                             </Grid>
                           )}
                           {viewingSeguimiento.conductas_ocupacionales_prevenir && (
                             <Grid size={12}>
-                              <Typography variant="subtitle2">Conductas Ocupacionales a Prevenir:</Typography>
-                              <Typography variant="body2">{viewingSeguimiento.conductas_ocupacionales_prevenir}</Typography>
+                              <Typography variant="subtitle2">
+                                Conductas Ocupacionales a Prevenir:
+                              </Typography>
+                              <Typography variant="body2">
+                                {
+                                  viewingSeguimiento.conductas_ocupacionales_prevenir
+                                }
+                              </Typography>
                             </Grid>
                           )}
                           {viewingSeguimiento.recomendaciones_generales && (
                             <Grid size={12}>
-                              <Typography variant="subtitle2">Recomendaciones Generales:</Typography>
-                              <Typography variant="body2">{viewingSeguimiento.recomendaciones_generales}</Typography>
+                              <Typography variant="subtitle2">
+                                Recomendaciones Generales:
+                              </Typography>
+                              <Typography variant="body2">
+                                {viewingSeguimiento.recomendaciones_generales}
+                              </Typography>
                             </Grid>
                           )}
                           {viewingSeguimiento.observaciones_examen && (
                             <Grid size={12}>
-                              <Typography variant="subtitle2">Observaciones del Examen:</Typography>
-                              <Typography variant="body2">{viewingSeguimiento.observaciones_examen}</Typography>
+                              <Typography variant="subtitle2">
+                                Observaciones del Examen:
+                              </Typography>
+                              <Typography variant="body2">
+                                {viewingSeguimiento.observaciones_examen}
+                              </Typography>
                             </Grid>
                           )}
                           {viewingSeguimiento.comentario && (
                             <Grid size={12}>
-                              <Typography variant="subtitle2">Comentario:</Typography>
-                              <Typography variant="body2">{viewingSeguimiento.comentario}</Typography>
+                              <Typography variant="subtitle2">
+                                Comentario:
+                              </Typography>
+                              <Typography variant="body2">
+                                {viewingSeguimiento.comentario}
+                              </Typography>
                             </Grid>
                           )}
                         </Grid>
@@ -909,44 +1169,91 @@ const Seguimiento: React.FC = () => {
                         <Box display="flex" flexDirection="column" gap={2}>
                           <Box display="flex" gap={1}>
                             <Chip
-                              label={programas.find(p => p.value === viewingSeguimiento.programa)?.label || viewingSeguimiento.programa}
-                              color={programas.find(p => p.value === viewingSeguimiento.programa)?.color as any || 'default'}
+                              label={
+                                programas.find(
+                                  (p) => p.value === viewingSeguimiento.programa
+                                )?.label || viewingSeguimiento.programa
+                              }
+                              color={
+                                (programas.find(
+                                  (p) => p.value === viewingSeguimiento.programa
+                                )?.color as any) || "default"
+                              }
                             />
                           </Box>
                           {viewingSeguimiento.valoracion_riesgo && (
                             <Box display="flex" gap={1}>
                               <Chip
-                                label={valoracionesRiesgo.find(v => v.value === viewingSeguimiento.valoracion_riesgo)?.label || viewingSeguimiento.valoracion_riesgo}
-                                color={valoracionesRiesgo.find(v => v.value === viewingSeguimiento.valoracion_riesgo)?.color as any || 'default'}
+                                label={
+                                  valoracionesRiesgo.find(
+                                    (v) =>
+                                      v.value ===
+                                      viewingSeguimiento.valoracion_riesgo
+                                  )?.label ||
+                                  viewingSeguimiento.valoracion_riesgo
+                                }
+                                color={
+                                  (valoracionesRiesgo.find(
+                                    (v) =>
+                                      v.value ===
+                                      viewingSeguimiento.valoracion_riesgo
+                                  )?.color as any) || "default"
+                                }
                               />
                             </Box>
                           )}
                           <Box display="flex" gap={1}>
                             <Chip
-                              label={estadosConfig[viewingSeguimiento.estado as keyof typeof estadosConfig]?.label}
-                              color={estadosConfig[viewingSeguimiento.estado as keyof typeof estadosConfig]?.color as any}
-                              icon={estadosConfig[viewingSeguimiento.estado as keyof typeof estadosConfig]?.icon}
+                              label={
+                                estadosConfig[
+                                  viewingSeguimiento.estado as keyof typeof estadosConfig
+                                ]?.label
+                              }
+                              color={
+                                estadosConfig[
+                                  viewingSeguimiento.estado as keyof typeof estadosConfig
+                                ]?.color as any
+                              }
+                              icon={
+                                estadosConfig[
+                                  viewingSeguimiento.estado as keyof typeof estadosConfig
+                                ]?.icon
+                              }
                             />
                           </Box>
                           {viewingSeguimiento.fecha_inicio && (
                             <Box>
-                              <Typography variant="subtitle2">Fecha de Inicio:</Typography>
-                              <Typography variant="body2">{formatDate(viewingSeguimiento.fecha_inicio)}</Typography>
+                              <Typography variant="subtitle2">
+                                Fecha de Inicio:
+                              </Typography>
+                              <Typography variant="body2">
+                                {formatDate(viewingSeguimiento.fecha_inicio)}
+                              </Typography>
                             </Box>
                           )}
                           {viewingSeguimiento.fecha_final && (
                             <Box>
-                              <Typography variant="subtitle2">Fecha Final:</Typography>
-                              <Typography variant="body2">{formatDate(viewingSeguimiento.fecha_final)}</Typography>
+                              <Typography variant="subtitle2">
+                                Fecha Final:
+                              </Typography>
+                              <Typography variant="body2">
+                                {formatDate(viewingSeguimiento.fecha_final)}
+                              </Typography>
                             </Box>
                           )}
                           <Box>
                             <Typography variant="subtitle2">Creado:</Typography>
-                            <Typography variant="body2">{formatDateTime(viewingSeguimiento.created_at)}</Typography>
+                            <Typography variant="body2">
+                              {formatDateTime(viewingSeguimiento.created_at)}
+                            </Typography>
                           </Box>
                           <Box>
-                            <Typography variant="subtitle2">Última Actualización:</Typography>
-                            <Typography variant="body2">{formatDateTime(viewingSeguimiento.updated_at)}</Typography>
+                            <Typography variant="subtitle2">
+                              Última Actualización:
+                            </Typography>
+                            <Typography variant="body2">
+                              {formatDateTime(viewingSeguimiento.updated_at)}
+                            </Typography>
                           </Box>
                         </Box>
                       </CardContent>
@@ -1073,14 +1380,19 @@ const Seguimiento: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Typography id="confirm-dialog-description">
-              ¿Está seguro de que desea eliminar este seguimiento? Esta acción no se puede deshacer.
+              ¿Está seguro de que desea eliminar este seguimiento? Esta acción
+              no se puede deshacer.
             </Typography>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCancelDelete} color="primary">
               Cancelar
             </Button>
-            <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            <Button
+              onClick={handleConfirmDelete}
+              color="error"
+              variant="contained"
+            >
               Eliminar
             </Button>
           </DialogActions>
