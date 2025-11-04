@@ -418,6 +418,16 @@ export interface AttendanceBase {
   ip_address?: string;
   device_info?: string;
   notes?: string;
+  // Virtual attendance fields
+  session_code?: string;
+  session_code_used_at?: string;
+  virtual_session_link?: string;
+  device_fingerprint?: string;
+  connection_quality?: string;
+  minimum_duration_met?: boolean;
+  facilitator_confirmed?: boolean;
+  virtual_evidence?: string;
+  browser_info?: string;
 }
 
 export interface AttendanceCreate extends AttendanceBase {}
@@ -545,6 +555,67 @@ export interface AttendanceStats {
   excused: number;
   partial: number;
   attendance_rate?: number;
+}
+
+// Virtual Attendance Interfaces
+export interface VirtualAttendanceCheckIn {
+  user_id: number;
+  course_name: string;
+  session_date: string;
+  session_code?: string;
+  virtual_session_link?: string;
+  device_fingerprint?: string;
+  browser_info?: string;
+  ip_address?: string;
+  // Employee system time fields
+  employee_system_time?: string;
+  employee_local_time?: string;
+  employee_timezone?: string;
+}
+
+export interface VirtualAttendanceCheckOut {
+  attendance_id: number;
+  virtual_evidence?: string;
+  connection_quality?: string;
+}
+
+export interface SessionCodeGenerate {
+  course_name: string;
+  session_date: string;
+  valid_duration_minutes: number;
+  facilitator_id: number;
+}
+
+export interface SessionCodeValidate {
+  session_code: string;
+  user_id: number;
+  course_name: string;
+  session_date: string;
+}
+
+export interface VirtualAttendanceResponse {
+  id: number;
+  user_id: number;
+  course_id: number;
+  session_date: string;
+  status: AttendanceStatus;
+  attendance_type: AttendanceType;
+  check_in_time?: string;
+  check_out_time?: string;
+  duration_minutes?: number;
+  scheduled_duration_minutes?: number;
+  completion_percentage: number;
+  session_code?: string;
+  session_code_used_at?: string;
+  virtual_session_link?: string;
+  device_fingerprint?: string;
+  connection_quality?: string;
+  minimum_duration_met?: boolean;
+  facilitator_confirmed?: boolean;
+  virtual_evidence?: string;
+  browser_info?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Tipos para notificaciones (alineados con schemas del backend)

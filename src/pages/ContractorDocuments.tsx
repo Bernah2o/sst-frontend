@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import {
   Box,
   Paper,
@@ -29,7 +30,7 @@ import {
   TablePagination,
   Snackbar,
   Grid,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Upload as UploadIcon,
   Download as DownloadIcon,
@@ -38,19 +39,22 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   Description as DocumentIcon,
-} from '@mui/icons-material';
-import contractorService from '../services/contractorService';
-import { useConfirmDialog } from '../hooks/useConfirmDialog';
-import ConfirmDialog from '../components/ConfirmDialog';
+} from "@mui/icons-material";
+import contractorService from "../services/contractorService";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import ConfirmDialog from "../components/ConfirmDialog";
 import {
   ContractorDocumentResponse,
   ContractorDocumentUpdate,
   ContractorDocumentType,
   ContractorResponse,
   CONTRACTOR_DOCUMENT_TYPES,
-} from '../types/contractor';
+} from "../types/contractor";
 
 const ContractorDocuments: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const contractorIdFromUrl = id ? parseInt(id, 10) : null;
+
   const [documents, setDocuments] = useState<ContractorDocumentResponse[]>([]);
   const [contractors, setContractors] = useState<ContractorResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,34 +67,38 @@ const ContractorDocuments: React.FC = () => {
   // Dialog states
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<ContractorDocumentResponse | null>(null);
-  const [selectedContractor, setSelectedContractor] = useState<number | ''>('');
+  const [selectedDocument, setSelectedDocument] =
+    useState<ContractorDocumentResponse | null>(null);
+  const [selectedContractor, setSelectedContractor] = useState<number | "">(
+    contractorIdFromUrl || ""
+  );
 
   // Form states
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [documentType, setDocumentType] = useState<ContractorDocumentType>('cedula');
-  const [documentName, setDocumentName] = useState('');
-  const [documentDescription, setDocumentDescription] = useState('');
+  const [documentType, setDocumentType] =
+    useState<ContractorDocumentType>("cedula");
+  const [documentName, setDocumentName] = useState("");
+  const [documentDescription, setDocumentDescription] = useState("");
 
-  // Filter states
-  const [filterContractor, setFilterContractor] = useState<number | ''>('');
-  const [filterType, setFilterType] = useState<ContractorDocumentType | ''>('');
-  const [searchTerm, setSearchTerm] = useState('');
+  // Filter states - si hay ID en la URL, usarlo automáticamente
+  const [filterContractor, setFilterContractor] = useState<number | "">(
+    contractorIdFromUrl || ""
+  );
+  const [filterType, setFilterType] = useState<ContractorDocumentType | "">("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { dialogState, showConfirmDialog } = useConfirmDialog();
 
   const documentTypeLabels: Record<ContractorDocumentType, string> = {
-    cedula: 'Cédula',
-    rut: 'RUT',
-    certificado_bancario: 'Certificado Bancario',
-    eps: 'EPS',
-    arl: 'ARL',
-    pension: 'Pensión',
-    contrato: 'Contrato',
-    otro: 'Otro',
+    cedula: "Cédula",
+    rut: "RUT",
+    certificado_bancario: "Certificado Bancario",
+    eps: "EPS",
+    arl: "ARL",
+    pension: "Pensión",
+    contrato: "Contrato",
+    otro: "Otro",
   };
-
-
 
   const loadDocuments = useCallback(async () => {
     try {
@@ -105,8 +113,8 @@ const ContractorDocuments: React.FC = () => {
       setDocuments(response.documents);
       setTotalCount(response.total);
     } catch (error) {
-      console.error('Error loading documents:', error);
-      setError('Error al cargar los documentos');
+      console.error("Error loading documents:", error);
+      setError("Error al cargar los documentos");
     } finally {
       setLoading(false);
     }
@@ -117,7 +125,7 @@ const ContractorDocuments: React.FC = () => {
       const response = await contractorService.getContractors({ size: 100 });
       setContractors(response?.contractors || []);
     } catch (err) {
-      console.error('Error loading contractors:', err);
+      console.error("Error loading contractors:", err);
       setContractors([]);
     }
   }, []);
@@ -125,11 +133,27 @@ const ContractorDocuments: React.FC = () => {
   useEffect(() => {
     loadDocuments();
     loadContractors();
-  }, [page, rowsPerPage, filterContractor, filterType, searchTerm, loadDocuments, loadContractors]);
+  }, [
+    page,
+    rowsPerPage,
+    filterContractor,
+    filterType,
+    searchTerm,
+    loadDocuments,
+    loadContractors,
+  ]);
+
+  // Efecto para actualizar el filtro cuando cambia el ID de la URL
+  useEffect(() => {
+    if (contractorIdFromUrl) {
+      setFilterContractor(contractorIdFromUrl);
+      setSelectedContractor(contractorIdFromUrl);
+    }
+  }, [contractorIdFromUrl]);
 
   const handleUploadDocument = async () => {
     if (!selectedContractor || !uploadFile || !documentType) {
-      setError('Todos los campos son obligatorios');
+      setError("Todos los campos son obligatorios");
       return;
     }
 
@@ -145,10 +169,10 @@ const ContractorDocuments: React.FC = () => {
       setUploadDialogOpen(false);
       resetUploadForm();
       loadDocuments();
-      setSuccess('Documento subido exitosamente');
+      setSuccess("Documento subido exitosamente");
     } catch (error) {
-      console.error('Error uploading document:', error);
-      setError('Error al subir el documento');
+      console.error("Error uploading document:", error);
+      setError("Error al subir el documento");
     } finally {
       setLoading(false);
     }
@@ -165,47 +189,64 @@ const ContractorDocuments: React.FC = () => {
         tipo_documento: documentType,
       };
 
-      await contractorService.updateContractorDocument(selectedDocument.id, updateData);
-      setSuccess('Documento actualizado exitosamente');
+      await contractorService.updateContractorDocument(
+        selectedDocument.id,
+        updateData
+      );
+      setSuccess("Documento actualizado exitosamente");
       setEditDialogOpen(false);
       resetEditForm();
       loadDocuments();
     } catch (err) {
-      setError('Error al actualizar el documento');
-      console.error('Error updating document:', err);
+      setError("Error al actualizar el documento");
+      console.error("Error updating document:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteDocument = async (contractorId: number, documentId: number) => {
+  const handleDeleteDocument = async (
+    contractorId: number,
+    documentId: number
+  ) => {
     const confirmed = await showConfirmDialog({
-      title: 'Eliminar Documento',
-      message: '¿Está seguro de que desea eliminar este documento? Esta acción no se puede deshacer.',
-      severity: 'warning'
+      title: "Eliminar Documento",
+      message:
+        "¿Está seguro de que desea eliminar este documento? Esta acción no se puede deshacer.",
+      severity: "warning",
     });
 
     if (confirmed) {
       try {
         setLoading(true);
-        await contractorService.deleteContractorDocument(contractorId, documentId);
-        setSuccess('Documento eliminado exitosamente');
+        await contractorService.deleteContractorDocument(
+          contractorId,
+          documentId
+        );
+        setSuccess("Documento eliminado exitosamente");
         loadDocuments();
       } catch (err) {
-        setError('Error al eliminar el documento');
-        console.error('Error deleting document:', err);
+        setError("Error al eliminar el documento");
+        console.error("Error deleting document:", err);
       } finally {
         setLoading(false);
       }
     }
   };
 
-  const handleDownloadDocument = async (contractorId: number, documentId: number, fileName: string) => {
+  const handleDownloadDocument = async (
+    contractorId: number,
+    documentId: number,
+    fileName: string
+  ) => {
     try {
       setLoading(true);
-      const blob = await contractorService.downloadContractorDocument(contractorId, documentId);
+      const blob = await contractorService.downloadContractorDocument(
+        contractorId,
+        documentId
+      );
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = fileName;
       document.body.appendChild(link);
@@ -213,8 +254,8 @@ const ContractorDocuments: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      setError('Error al descargar el documento');
-      console.error('Error downloading document:', err);
+      setError("Error al descargar el documento");
+      console.error("Error downloading document:", err);
     } finally {
       setLoading(false);
     }
@@ -222,50 +263,61 @@ const ContractorDocuments: React.FC = () => {
 
   const resetUploadForm = () => {
     setUploadFile(null);
-    setSelectedContractor('');
-    setDocumentType('cedula');
-    setDocumentName('');
-    setDocumentDescription('');
+    setSelectedContractor("");
+    setDocumentType("cedula");
+    setDocumentName("");
+    setDocumentDescription("");
   };
 
   const resetEditForm = () => {
     setSelectedDocument(null);
-    setDocumentName('');
-    setDocumentDescription('');
-    setDocumentType('cedula');
+    setDocumentName("");
+    setDocumentDescription("");
+    setDocumentType("cedula");
   };
 
   const openEditDialog = (document: ContractorDocumentResponse) => {
     setSelectedDocument(document);
     setDocumentName(document.nombre);
-    setDocumentDescription(document.descripcion || '');
+    setDocumentDescription(document.descripcion || "");
     setDocumentType(document.tipo_documento);
     setEditDialogOpen(true);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-CO');
+    return new Date(dateString).toLocaleDateString("es-CO");
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const getContractorName = (contractorId: number) => {
-    const contractor = contractors.find(c => c.id === contractorId);
-    if (!contractor) return 'Desconocido';
+    const contractor = contractors.find((c) => c.id === contractorId);
+    if (!contractor) return "Desconocido";
     return `${contractor.first_name} ${contractor.last_name}`;
   };
 
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+        >
           <DocumentIcon />
           Documentos de Contratistas
         </Typography>
@@ -287,14 +339,17 @@ const ContractorDocuments: React.FC = () => {
                 <InputLabel>Contratista</InputLabel>
                 <Select
                   value={filterContractor}
-                  onChange={(e) => setFilterContractor(e.target.value as number | '')}
+                  onChange={(e) =>
+                    setFilterContractor(e.target.value as number | "")
+                  }
                 >
                   <MenuItem value="">Todos</MenuItem>
-                  {contractors && contractors.map((contractor) => (
-                    <MenuItem key={contractor.id} value={contractor.id}>
-                      {getContractorName(contractor.id)}
-                    </MenuItem>
-                  ))}
+                  {contractors &&
+                    contractors.map((contractor) => (
+                      <MenuItem key={contractor.id} value={contractor.id}>
+                        {getContractorName(contractor.id)}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -303,7 +358,9 @@ const ContractorDocuments: React.FC = () => {
                 <InputLabel>Tipo de Documento</InputLabel>
                 <Select
                   value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as ContractorDocumentType | '')}
+                  onChange={(e) =>
+                    setFilterType(e.target.value as ContractorDocumentType | "")
+                  }
                 >
                   <MenuItem value="">Todos</MenuItem>
                   {CONTRACTOR_DOCUMENT_TYPES.map((type) => (
@@ -321,7 +378,9 @@ const ContractorDocuments: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                  startAdornment: (
+                    <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
+                  ),
                 }}
               />
             </Grid>
@@ -330,9 +389,9 @@ const ContractorDocuments: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 onClick={() => {
-                  setFilterContractor('');
-                  setFilterType('');
-                  setSearchTerm('');
+                  setFilterContractor("");
+                  setFilterType("");
+                  setSearchTerm("");
                 }}
               >
                 Limpiar
@@ -372,7 +431,9 @@ const ContractorDocuments: React.FC = () => {
               ) : (
                 documents.map((document) => (
                   <TableRow key={document.id}>
-                    <TableCell>{getContractorName(document.contractor_id)}</TableCell>
+                    <TableCell>
+                      {getContractorName(document.contractor_id)}
+                    </TableCell>
                     <TableCell>{document.nombre || document.archivo}</TableCell>
                     <TableCell>
                       <Chip
@@ -382,15 +443,21 @@ const ContractorDocuments: React.FC = () => {
                         variant="outlined"
                       />
                     </TableCell>
-                    <TableCell>{formatFileSize(document.tamano_archivo)}</TableCell>
                     <TableCell>
-                      {formatDate(document.fecha_subida)}
+                      {formatFileSize(document.tamano_archivo)}
                     </TableCell>
+                    <TableCell>{formatDate(document.fecha_subida)}</TableCell>
                     <TableCell>
                       <Tooltip title="Descargar">
                         <IconButton
                           size="small"
-                          onClick={() => handleDownloadDocument(document.contractor_id, document.id, document.archivo)}
+                          onClick={() =>
+                            handleDownloadDocument(
+                              document.contractor_id,
+                              document.id,
+                              document.archivo
+                            )
+                          }
                         >
                           <DownloadIcon />
                         </IconButton>
@@ -407,7 +474,12 @@ const ContractorDocuments: React.FC = () => {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => handleDeleteDocument(document.contractor_id, document.id)}
+                          onClick={() =>
+                            handleDeleteDocument(
+                              document.contractor_id,
+                              document.id
+                            )
+                          }
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -437,7 +509,12 @@ const ContractorDocuments: React.FC = () => {
       </Paper>
 
       {/* Dialog para subir documento */}
-      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Subir Documento</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
@@ -447,14 +524,17 @@ const ContractorDocuments: React.FC = () => {
                   <InputLabel>Contratista</InputLabel>
                   <Select
                     value={selectedContractor}
-                    onChange={(e) => setSelectedContractor(e.target.value as number)}
+                    onChange={(e) =>
+                      setSelectedContractor(e.target.value as number)
+                    }
                     label="Contratista"
                   >
-                    {contractors && contractors.map((contractor) => (
-                      <MenuItem key={contractor.id} value={contractor.id}>
-                        {getContractorName(contractor.id)}
-                      </MenuItem>
-                    ))}
+                    {contractors &&
+                      contractors.map((contractor) => (
+                        <MenuItem key={contractor.id} value={contractor.id}>
+                          {getContractorName(contractor.id)}
+                        </MenuItem>
+                      ))}
                   </Select>
                 </FormControl>
               </Grid>
@@ -463,14 +543,18 @@ const ContractorDocuments: React.FC = () => {
                   <InputLabel>Tipo de Documento</InputLabel>
                   <Select
                     value={documentType}
-                    onChange={(e) => setDocumentType(e.target.value as ContractorDocumentType)}
+                    onChange={(e) =>
+                      setDocumentType(e.target.value as ContractorDocumentType)
+                    }
                     label="Tipo de Documento"
                   >
-                    {Object.entries(documentTypeLabels).map(([value, label]) => (
-                      <MenuItem key={value} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
+                    {Object.entries(documentTypeLabels).map(
+                      ([value, label]) => (
+                        <MenuItem key={value} value={value}>
+                          {label}
+                        </MenuItem>
+                      )
+                    )}
                   </Select>
                 </FormControl>
               </Grid>
@@ -499,7 +583,7 @@ const ContractorDocuments: React.FC = () => {
                   fullWidth
                   startIcon={<UploadIcon />}
                 >
-                  {uploadFile ? uploadFile.name : 'Seleccionar Archivo'}
+                  {uploadFile ? uploadFile.name : "Seleccionar Archivo"}
                   <input
                     type="file"
                     hidden
@@ -513,7 +597,8 @@ const ContractorDocuments: React.FC = () => {
                 </Button>
                 {uploadFile && (
                   <Typography variant="body2" sx={{ mt: 1 }}>
-                    Archivo seleccionado: {uploadFile.name} ({formatFileSize(uploadFile.size)})
+                    Archivo seleccionado: {uploadFile.name} (
+                    {formatFileSize(uploadFile.size)})
                   </Typography>
                 )}
               </Grid>
@@ -529,7 +614,12 @@ const ContractorDocuments: React.FC = () => {
       </Dialog>
 
       {/* Dialog para editar documento */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Editar Documento</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
@@ -539,14 +629,18 @@ const ContractorDocuments: React.FC = () => {
                   <InputLabel>Tipo de Documento</InputLabel>
                   <Select
                     value={documentType}
-                    onChange={(e) => setDocumentType(e.target.value as ContractorDocumentType)}
+                    onChange={(e) =>
+                      setDocumentType(e.target.value as ContractorDocumentType)
+                    }
                     label="Tipo de Documento"
                   >
-                    {Object.entries(documentTypeLabels).map(([value, label]) => (
-                      <MenuItem key={value} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
+                    {Object.entries(documentTypeLabels).map(
+                      ([value, label]) => (
+                        <MenuItem key={value} value={value}>
+                          {label}
+                        </MenuItem>
+                      )
+                    )}
                   </Select>
                 </FormControl>
               </Grid>
@@ -584,9 +678,13 @@ const ContractorDocuments: React.FC = () => {
         open={!!error}
         autoHideDuration={6000}
         onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <Alert onClose={() => setError(null)} severity="error" sx={{ width: '100%' }}>
+        <Alert
+          onClose={() => setError(null)}
+          severity="error"
+          sx={{ width: "100%" }}
+        >
           {error}
         </Alert>
       </Snackbar>
@@ -595,9 +693,13 @@ const ContractorDocuments: React.FC = () => {
         open={!!success}
         autoHideDuration={6000}
         onClose={() => setSuccess(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <Alert onClose={() => setSuccess(null)} severity="success" sx={{ width: '100%' }}>
+        <Alert
+          onClose={() => setSuccess(null)}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
           {success}
         </Alert>
       </Snackbar>

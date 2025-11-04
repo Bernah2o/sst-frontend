@@ -118,8 +118,16 @@ interface AttendanceReportResponse {
   course_title: string;
   date: string;
   status: string;
+  attendance_type: string;
   check_in_time?: string;
   check_out_time?: string;
+  duration_minutes?: number;
+  completion_percentage?: number;
+  session_code?: string;
+  virtual_session_link?: string;
+  connection_quality?: string;
+  minimum_duration_met?: boolean;
+  facilitator_confirmed?: boolean;
   notes?: string;
 }
 
@@ -196,11 +204,24 @@ const ReportsManagement: React.FC = () => {
           limit: 50,
         },
       });
+
+      // Fetch attendance reports
+      const attendanceResponse = await api.get("/reports/attendance", {
+        params: {
+          course_id: selectedCourse !== "all" ? selectedCourse : undefined,
+          start_date: startDate
+            ? startDate.toISOString().split("T")[0]
+            : undefined,
+          end_date: endDate ? endDate.toISOString().split("T")[0] : undefined,
+          limit: 100,
+        },
+      });
       
       setReportData({
         dashboard: dashboardResponse.data,
         courses: coursesResponse.data.items || [],
         users: usersResponse.data.items || [],
+        attendance: attendanceResponse.data.items || [],
       });
     } catch (error) {
       console.error("Error fetching report data:", error);
@@ -710,6 +731,126 @@ const ReportsManagement: React.FC = () => {
               </Grid>
             </Grid>
           </>
+        )}
+
+        {/* Sección de Reportes de Asistencia Virtual */}
+        {reportData?.attendance && reportData.attendance.length > 0 && (
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid size={{ xs: 12 }}>
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography variant="h6">Reportes de Asistencia Virtual</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Usuario</TableCell>
+                          <TableCell>Curso</TableCell>
+                          <TableCell>Fecha</TableCell>
+                          <TableCell>Tipo</TableCell>
+                          <TableCell>Estado</TableCell>
+                          <TableCell>Duración</TableCell>
+                          <TableCell>Completitud</TableCell>
+                          <TableCell>Calidad Conexión</TableCell>
+                          <TableCell>Duración Mínima</TableCell>
+                          <TableCell>Confirmado</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {reportData.attendance
+                          .filter(record => record.attendance_type === 'Virtual')
+                          .map((record) => (
+                            <TableRow key={record.attendance_id}>
+                              <TableCell>{record.full_name}</TableCell>
+                              <TableCell>{record.course_title}</TableCell>
+                              <TableCell>
+                                {new Date(record.date).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={record.attendance_type}
+                                  color="info"
+                                  size="small"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={record.status}
+                                  color={
+                                    record.status === 'Present'
+                                      ? 'success'
+                                      : record.status === 'Absent'
+                                      ? 'error'
+                                      : 'warning'
+                                  }
+                                  size="small"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                {record.duration_minutes 
+                                  ? `${record.duration_minutes} min`
+                                  : 'N/A'
+                                }
+                              </TableCell>
+                              <TableCell>
+                                {record.completion_percentage !== undefined ? (
+                                  <Chip
+                                    label={`${record.completion_percentage}%`}
+                                    color={
+                                      record.completion_percentage >= 80
+                                        ? 'success'
+                                        : record.completion_percentage >= 60
+                                        ? 'warning'
+                                        : 'error'
+                                    }
+                                    size="small"
+                                  />
+                                ) : 'N/A'}
+                              </TableCell>
+                              <TableCell>
+                                {record.connection_quality ? (
+                                  <Chip
+                                    label={record.connection_quality}
+                                    color={
+                                      record.connection_quality === 'Excellent' || record.connection_quality === 'Good'
+                                        ? 'success'
+                                        : record.connection_quality === 'Fair'
+                                        ? 'warning'
+                                        : 'error'
+                                    }
+                                    size="small"
+                                  />
+                                ) : 'N/A'}
+                              </TableCell>
+                              <TableCell>
+                                {record.minimum_duration_met !== undefined ? (
+                                  <Chip
+                                    label={record.minimum_duration_met ? 'Sí' : 'No'}
+                                    color={record.minimum_duration_met ? 'success' : 'error'}
+                                    size="small"
+                                  />
+                                ) : 'N/A'}
+                              </TableCell>
+                              <TableCell>
+                                {record.facilitator_confirmed !== undefined ? (
+                                  <Chip
+                                    label={record.facilitator_confirmed ? 'Sí' : 'No'}
+                                    color={record.facilitator_confirmed ? 'success' : 'warning'}
+                                    size="small"
+                                  />
+                                ) : 'N/A'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </AccordionDetails>
+              </Accordion>
+            </Grid>
+          </Grid>
         )}
 
         {/* Sección de Reportes Médicos Ocupacionales */}

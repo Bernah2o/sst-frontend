@@ -8,6 +8,7 @@ import {
   GroupAdd,
   PictureAsPdf,
   Send,
+  Settings,
 } from "@mui/icons-material";
 import {
   Box,
@@ -48,6 +49,7 @@ import { formatDate } from "../utils/dateUtils";
 import { logger } from "../utils/logger";
 import BulkAttendanceDialog from "../components/BulkAttendanceDialog";
 import AutocompleteField, { AutocompleteOption } from "../components/AutocompleteField";
+import VirtualSessionManagement from "../components/VirtualSessionManagement";
 
 import api from "./../services/api";
 import { AttendanceStatus, AttendanceType, AttendanceStats } from "./../types";
@@ -154,6 +156,7 @@ const AttendanceManagement: React.FC = () => {
   const [deletingAttendance, setDeletingAttendance] =
     useState<Attendance | null>(null);
   const [openBulkDialog, setOpenBulkDialog] = useState(false);
+  const [openVirtualSessionManagement, setOpenVirtualSessionManagement] = useState(false);
   
   useEffect(() => {
     fetchAttendances();
@@ -912,6 +915,17 @@ const AttendanceManagement: React.FC = () => {
               </Button>
             </>
           )}
+
+          {user?.role !== "employee" && (
+            <Button
+              variant="contained"
+              color="warning"
+              startIcon={<Settings />}
+              onClick={() => setOpenVirtualSessionManagement(true)}
+            >
+              Gestionar Sesiones
+            </Button>
+          )}
           <Button
             variant="outlined"
             startIcon={<Refresh />}
@@ -1269,6 +1283,14 @@ const AttendanceManagement: React.FC = () => {
               severity: "error",
             });
           }}
+        />
+
+
+
+        {/* Virtual Session Management Dialog */}
+        <VirtualSessionManagement
+          open={openVirtualSessionManagement}
+          onClose={() => setOpenVirtualSessionManagement(false)}
         />
 
         {/* Snackbar para notificaciones */}

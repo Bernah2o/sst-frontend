@@ -13,6 +13,8 @@ import {
   PictureAsPdf as PdfIcon,
   CloudUpload as UploadIcon,
   Clear as ClearIcon,
+  PlaylistAdd as FollowUpIcon,
+  PlaylistAddCheck as FollowUpActiveIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -36,9 +38,11 @@ import {
   Paper,
   Chip,
   FormControl,
+  FormControlLabel,
   InputLabel,
   Select,
   MenuItem,
+  Checkbox,
   Pagination,
   Tooltip,
   LinearProgress,
@@ -89,6 +93,7 @@ interface OccupationalExamData {
   examining_doctor?: string;
   medical_center?: string;
   pdf_file_path?: string;
+  requires_follow_up?: boolean; // Nuevo campo para seguimiento
   
   // Nuevos campos para suppliers
   supplier_id?: number;
@@ -164,6 +169,7 @@ const OccupationalExam: React.FC = () => {
   const [sendingEmail, setSendingEmail] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [examSeguimientos, setExamSeguimientos] = useState<{[key: number]: boolean}>({});
   const [formData, setFormData] = useState({
     worker_id: "",
     worker_name: "",
@@ -184,6 +190,7 @@ const OccupationalExam: React.FC = () => {
     restrictions: "",
     next_exam_date: null as Date | null,
     pdf_file_path: null as string | null,
+    requires_follow_up: false,
   });
 
   const examTypes = [
@@ -211,6 +218,33 @@ const OccupationalExam: React.FC = () => {
 
 
 
+  // Función para verificar si existen seguimientos para los exámenes
+  const checkExamSeguimientos = useCallback(async (examIds: number[]) => {
+    try {
+      const seguimientosMap: {[key: number]: boolean} = {};
+      
+      // Verificar cada examen si tiene seguimiento asociado
+      for (const examId of examIds) {
+        try {
+          const response = await api.get(`/seguimientos?search=${examId}`);
+          const seguimientos = response.data || [];
+          // Verificar si algún seguimiento está asociado a este examen
+          const hasSeguimiento = seguimientos.some((seg: any) => 
+            seg.occupational_exam_id === examId
+          );
+          seguimientosMap[examId] = hasSeguimiento;
+        } catch (error) {
+          console.error(`Error checking seguimiento for exam ${examId}:`, error);
+          seguimientosMap[examId] = false;
+        }
+      }
+      
+      setExamSeguimientos(seguimientosMap);
+    } catch (error) {
+      console.error("Error checking exam seguimientos:", error);
+    }
+  }, []);
+
   // Los datos del trabajador ya vienen del backend, no necesitamos enriquecerlos
 
   const fetchExams = useCallback(async () => {
@@ -235,12 +269,18 @@ const OccupationalExam: React.FC = () => {
       setTotalPages(
         response.data.pages || Math.ceil((response.data.total || 0) / 20)
       );
+      
+      // Verificar seguimientos para los exámenes obtenidos
+      if (examsData.length > 0) {
+        const examIds = examsData.map((exam: OccupationalExamData) => exam.id);
+        await checkExamSeguimientos(examIds);
+      }
     } catch (error) {
       console.error("Error fetching exams:", error);
     } finally {
       setLoading(false);
     }
-  }, [page, filters]);
+  }, [page, filters, checkExamSeguimientos]);
 
   const fetchWorkers = useCallback(async () => {
     try {
@@ -441,9 +481,11 @@ const OccupationalExam: React.FC = () => {
       medical_center: "",
       supplier_id: "",
       doctor_id: "",
-      restrictions: "",
-      next_exam_date: null,
-      pdf_file_path: null,
+
+        restrictions: "",
+        next_exam_date: null,
+        pdf_file_path: null,
+        requires_follow_up: false,
     });
     setSelectedFile(null);
   };
@@ -627,6 +669,7 @@ const OccupationalExam: React.FC = () => {
           ? new Date(exam.next_exam_date)
           : null,
         pdf_file_path: exam.pdf_file_path ? exam.pdf_file_path.trim().replace(/`/g, '') : null,
+        requires_follow_up: exam.requires_follow_up || false,
       };
 
       setFormData(formDataToSet);
@@ -658,6 +701,7 @@ const OccupationalExam: React.FC = () => {
         restrictions: "",
         next_exam_date: null,
         pdf_file_path: null,
+        requires_follow_up: false,
       });
     }
     
@@ -712,6 +756,97 @@ const OccupationalExam: React.FC = () => {
       console.error("Error generating individual report:", error);
     } finally {
       setGeneratingIndividualReport(false);
+    }
+  };
+
+  // Función para marcar/desmarcar seguimiento
+  const handleToggleFollowUp = async (exam: OccupationalExamData) => {
+    try {
+      console.log("=== DEBUG: Toggle Follow-up ===");
+      console.log("Exam before toggle:", exam);
+      console.log("Current requires_follow_up:", exam.requires_follow_up);
+      console.log("New requires_follow_up will be:", !exam.requires_follow_up);
+      
+      // Enviar solo el campo que queremos actualizar
+      const updateData = {
+        requires_follow_up: !exam.requires_follow_up
+      };
+      
+      console.log("Simplified data being sent to API:", updateData);
+      console.log("API URL:", `/occupational-exams/${exam.id}`);
+      
+      const response = await api.put(
+        `/occupational-exams/${exam.id}`,
+        updateData
+      );
+      
+      console.log("API Response status:", response.status);
+      console.log("API Response data:", response.data);
+      
+      if (response.status === 200) {
+        // Actualizar el estado local del examen
+        setExams(prevExams => 
+          prevExams.map(e => 
+            e.id === exam.id 
+              ? { ...e, requires_follow_up: !e.requires_follow_up }
+              : e
+          )
+        );
+        
+        // Mostrar mensaje de éxito
+        console.log(
+          exam.requires_follow_up 
+            ? "Seguimiento desmarcado exitosamente" 
+            : "Examen marcado para seguimiento"
+        );
+        
+        console.log("Local state updated successfully");
+        
+        // Recargar los datos para verificar que se guardó correctamente
+        setTimeout(() => {
+          fetchExams();
+          // También actualizar el estado de seguimientos
+          checkExamSeguimientos([exam.id]);
+        }, 1000);
+      }
+    } catch (error: any) {
+      console.error("Error toggling follow-up:", error);
+      console.error("Error details:", error.response?.data);
+      alert("Error al actualizar el estado de seguimiento. Por favor, intente nuevamente.");
+    }
+  };
+
+  // Función para crear seguimiento médico desde examen ocupacional
+  const handleCreateFollowUp = async (exam: OccupationalExamData) => {
+    try {
+      const payload = {
+        worker_id: exam.worker_id,
+        programa: exam.programa,
+        estado: 'iniciado',
+        valoracion_riesgo: 'medio', // Valor por defecto, se puede ajustar
+        fecha_inicio: new Date().toISOString().split('T')[0],
+        motivo_inclusion: `Seguimiento requerido por examen ocupacional del ${formatDate(exam.exam_date)}`,
+        conclusiones_ocupacionales: exam.occupational_conclusions,
+        conductas_ocupacionales_prevenir: exam.preventive_occupational_behaviors,
+        recomendaciones_generales: exam.general_recommendations,
+        observaciones_examen: exam.observations,
+        comentario: `Seguimiento creado automáticamente desde examen ocupacional ID: ${exam.id}`
+      };
+
+      const response = await api.post('/seguimientos/', payload);
+      
+      if (response.status === 201) {
+        // Marcar el examen como que ya no requiere seguimiento
+        await handleToggleFollowUp(exam);
+        
+        console.log("Seguimiento médico creado exitosamente");
+        
+        // Opcional: Mostrar notificación de éxito
+        alert("Seguimiento médico creado exitosamente. El examen ha sido desmarcado del seguimiento.");
+      }
+    } catch (error) {
+      console.error("Error creating follow-up:", error);
+      alert("Error al crear el seguimiento médico. Por favor, intente nuevamente.");
     }
   };
 
@@ -856,19 +991,20 @@ const OccupationalExam: React.FC = () => {
                     <TableCell>Concepto de Aptitud Médica</TableCell>
                     <TableCell>Cargo</TableCell>
                     <TableCell>Próximo Examen</TableCell>
+                    <TableCell>Seguimiento</TableCell>
                     <TableCell>Acciones</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center">
+                      <TableCell colSpan={9} align="center">
                         Cargando exámenes...
                       </TableCell>
                     </TableRow>
                   ) : exams.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center">
+                      <TableCell colSpan={9} align="center">
                         No se encontraron exámenes
                       </TableCell>
                     </TableRow>
@@ -971,6 +1107,31 @@ const OccupationalExam: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            {examSeguimientos[exam.id] ? (
+                              <Chip
+                                icon={<FollowUpActiveIcon />}
+                                label="Con seguimiento"
+                                color="success"
+                                size="small"
+                              />
+                            ) : exam.requires_follow_up ? (
+                              <Chip
+                                icon={<FollowUpIcon />}
+                                label="Requiere seguimiento"
+                                color="warning"
+                                size="small"
+                              />
+                            ) : (
+                              <Chip
+                                label="Sin seguimiento"
+                                color="default"
+                                size="small"
+                              />
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
                           <Box display="flex" gap={1}>
                             <Tooltip title="Ver detalles">
                               <IconButton
@@ -1040,10 +1201,41 @@ const OccupationalExam: React.FC = () => {
                                 )}
                               </IconButton>
                             </Tooltip>
+                            <Tooltip 
+                              title={
+                                exam.requires_follow_up 
+                                  ? "Desmarcar seguimiento" 
+                                  : "Marcar para seguimiento"
+                              }
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={() => handleToggleFollowUp(exam)}
+                                color={exam.requires_follow_up ? "warning" : "default"}
+                              >
+                                {exam.requires_follow_up ? (
+                                  <FollowUpActiveIcon />
+                                ) : (
+                                  <FollowUpIcon />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                            {exam.requires_follow_up && (
+                              <Tooltip title="Crear seguimiento médico">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleCreateFollowUp(exam)}
+                                  color="success"
+                                >
+                                  <AddIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                             <Tooltip title="Eliminar">
                               <IconButton
                                 size="small"
                                 onClick={() => handleDeleteExam(exam)}
+                                color="error"
                               >
                                 <DeleteIcon />
                               </IconButton>
@@ -1375,6 +1567,30 @@ const OccupationalExam: React.FC = () => {
                     setFormData({ ...formData, observations: e.target.value })
                   }
                 />
+              </Grid>
+              
+              <Grid size={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.requires_follow_up}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          requires_follow_up: e.target.checked,
+                        })
+                      }
+                      color="warning"
+                      disabled={editingExam ? !!examSeguimientos[editingExam.id] : false}
+                    />
+                  }
+                  label="Requiere seguimiento médico"
+                />
+                {editingExam && !!examSeguimientos[editingExam.id] && (
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 4, display: 'block' }}>
+                    Este examen ya tiene un seguimiento médico asociado
+                  </Typography>
+                )}
               </Grid>
               
               {/* Componente de carga de archivos PDF */}
