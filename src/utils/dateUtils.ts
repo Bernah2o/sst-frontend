@@ -7,6 +7,8 @@ import { es } from 'date-fns/locale';
 export const DATE_FORMAT = 'dd/MM/yyyy';
 export const DATETIME_FORMAT = 'dd/MM/yyyy HH:mm';
 export const TIME_FORMAT = 'HH:mm';
+export const DATETIME_FORMAT_12H = 'dd/MM/yyyy hh:mm a';
+export const TIME_FORMAT_12H = 'hh:mm a';
 
 /**
  * Formatea una fecha al formato DD/MM/YYYY
@@ -65,6 +67,26 @@ export const formatDateTime = (date: string | Date | null | undefined): string =
 };
 
 /**
+ * Formatea una fecha y hora al formato DD/MM/YYYY hh:mm a (12 horas)
+ */
+export const formatDateTime12h = (date: string | Date | null | undefined): string => {
+  if (!date) return 'N/A';
+  try {
+    let dateObj: Date;
+    if (typeof date === 'string') {
+      dateObj = parseISO(date);
+    } else {
+      dateObj = date;
+    }
+    if (!isValid(dateObj)) return 'N/A';
+    return format(dateObj, DATETIME_FORMAT_12H, { locale: es });
+  } catch (error) {
+    console.error('Error formatting datetime 12h:', error);
+    return 'N/A';
+  }
+};
+
+/**
  * Formatea solo la hora al formato HH:mm
  * @param date - Fecha a formatear (string ISO, Date object, o null/undefined)
  * @returns Hora formateada como HH:mm o 'N/A' si la fecha es inválida
@@ -88,6 +110,26 @@ export const formatTime = (date: string | Date | null | undefined): string => {
     return format(dateObj, TIME_FORMAT, { locale: es });
   } catch (error) {
     console.error('Error formatting time:', error);
+    return 'N/A';
+  }
+};
+
+/**
+ * Formatea solo la hora al formato hh:mm a (12 horas)
+ */
+export const formatTime12h = (date: string | Date | null | undefined): string => {
+  if (!date) return 'N/A';
+  try {
+    let dateObj: Date;
+    if (typeof date === 'string') {
+      dateObj = parseISO(date);
+    } else {
+      dateObj = date;
+    }
+    if (!isValid(dateObj)) return 'N/A';
+    return format(dateObj, TIME_FORMAT_12H, { locale: es });
+  } catch (error) {
+    console.error('Error formatting time 12h:', error);
     return 'N/A';
   }
 };
