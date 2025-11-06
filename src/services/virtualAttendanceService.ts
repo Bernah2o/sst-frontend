@@ -1,4 +1,5 @@
 import api from './api';
+import { getApiUrl } from '../config/api';
 import {
   VirtualAttendanceCheckIn,
   VirtualAttendanceCheckOut,
@@ -15,7 +16,7 @@ export const virtualAttendanceService = {
   },
 
   // Validate session code
-  validateSessionCode: async (data: SessionCodeValidate): Promise<{ valid: boolean; course_id?: number; session_date?: string; course_name?: string; virtual_session_link?: string }> => {
+  validateSessionCode: async (data: SessionCodeValidate): Promise<{ valid: boolean; course_id?: number; session_date?: string; course_name?: string; virtual_session_link?: string; message?: string; is_session_active?: boolean; is_session_expired?: boolean; timezone?: string; now_utc?: string; now_colombia?: string; session_date_colombia?: string; end_date_colombia?: string; valid_until_colombia?: string }> => {
     const response = await api.post('/attendance/virtual/validate-code', data);
     return response.data;
   },
@@ -30,6 +31,26 @@ export const virtualAttendanceService = {
   checkOut: async (data: VirtualAttendanceCheckOut): Promise<VirtualAttendanceResponse> => {
     const response = await api.post('/attendance/virtual/check-out', data);
     return response.data;
+  },
+
+  // Virtual check-out with keepalive for page unload (more reliable)
+  checkOutKeepAlive: async (data: VirtualAttendanceCheckOut): Promise<void> => {
+    try {
+      const url = getApiUrl('/attendance/virtual/check-out');
+      const token = localStorage.getItem('token');
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(data),
+        keepalive: true,
+      });
+    } catch (err) {
+      // Silently ignore errors during unload; backend may still compute based on last request
+      console.warn('checkOutKeepAlive failed:', err);
+    }
   },
 
   // Get virtual attendance status

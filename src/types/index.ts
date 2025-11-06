@@ -589,8 +589,8 @@ export interface SessionCodeGenerate {
 export interface SessionCodeValidate {
   session_code: string;
   user_id: number;
-  course_name: string;
-  session_date: string;
+  course_name?: string;
+  session_date?: string;
 }
 
 export interface VirtualAttendanceResponse {

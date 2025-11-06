@@ -107,8 +107,6 @@ interface AttendanceFormData {
   verified_at?: string;
 }
 
-
-
 const AttendanceManagement: React.FC = () => {
   const { user } = useAuth();
   const [attendances, setAttendances] = useState<Attendance[]>([]);
@@ -916,7 +914,7 @@ const AttendanceManagement: React.FC = () => {
             </>
           )}
 
-          {user?.role !== "employee" && (
+          {(user?.role === "admin" || user?.role === "supervisor") && (
             <Button
               variant="contained"
               color="warning"
@@ -924,6 +922,17 @@ const AttendanceManagement: React.FC = () => {
               onClick={() => setOpenVirtualSessionManagement(true)}
             >
               Gestionar Sesiones
+            </Button>
+          )}
+          {user?.role === "employee" && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Send />}
+              onClick={() => setOpenVirtualSessionManagement(true)}
+              sx={{ ml: 2 }}
+            >
+              Ingresar Código de Sesión
             </Button>
           )}
           <Button
@@ -1292,6 +1301,8 @@ const AttendanceManagement: React.FC = () => {
           open={openVirtualSessionManagement}
           onClose={() => setOpenVirtualSessionManagement(false)}
         />
+
+        
 
         {/* Snackbar para notificaciones */}
         <Snackbar
