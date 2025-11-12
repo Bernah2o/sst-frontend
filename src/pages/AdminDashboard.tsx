@@ -71,6 +71,23 @@ interface AlertItem {
   timestamp: string;
 }
 
+interface WorkerStats {
+  total_workers: number;
+  active_workers: number;
+  inactive_workers: number;
+  by_modality: Record<string, number>;
+  percent_by_modality: Record<string, number>;
+}
+
+const MODALITY_LABELS: Record<string, string> = {
+  ON_SITE: 'Presencial',
+  REMOTE: 'Remoto',
+  TELEWORK: 'Teletrabajo',
+  HOME_OFFICE: 'Home Office',
+  MOBILE: 'Móvil/Itinerante',
+  UNKNOWN: 'Desconocida'
+};
+
 const AdminDashboard: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -88,43 +105,47 @@ const AdminDashboard: React.FC = () => {
   const [recentActivities, setRecentActivities] = useState<AuditActivity[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [error, setError] = useState<string | null>(null);
+  
+  const [workerStats, setWorkerStats] = useState<WorkerStats | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    const dashboardResponse = await api.get('/reports/dashboard');
+    setStats(dashboardResponse.data);
+
+    const auditResponse = await api.get('/audit/?limit=10');
+    setRecentActivities(auditResponse.data.items || []);
+
+    generateAlerts(dashboardResponse.data);
+
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Obtener estadísticas del dashboard
-      const dashboardResponse = await api.get('/reports/dashboard');
-      setStats(dashboardResponse.data);
-      
-      // Obtener actividad reciente de auditoría
-      const auditResponse = await api.get('/audit/?limit=10');
-      setRecentActivities(auditResponse.data.items || []);
-      
-      // Generar alertas basadas en los datos
-      generateAlerts(dashboardResponse.data);
-      
-    } catch (error: any) {
-      logger.error('Error fetching dashboard data:', error);
-      setError('No se pudieron cargar los datos del dashboard. Verifique su conexión e intente nuevamente.');
-      
-      // Datos de fallback en caso de error
-      setStats({
-        total_users: 0,
-        total_courses: 0,
-        total_enrollments: 0,
-        active_enrollments: 0,
-        total_certificates: 0,
-        recent_enrollments: 0,
-        completion_rate: 0,
-        monthly_enrollments: []
-      });
-    } finally {
-      setLoading(false);
+      const workerStatsResponse = await api.get('/workers/stats');
+      setWorkerStats(workerStatsResponse.data);
+    } catch (wsErr) {
+      logger.warn('No se pudieron cargar estadísticas de trabajadores:', wsErr);
     }
-  }, []);
+  } catch (error: any) {
+    logger.error('Error fetching dashboard data:', error);
+    setError('No se pudieron cargar los datos del dashboard. Verifique su conexión e intente nuevamente.');
+    setStats({
+      total_users: 0,
+      total_courses: 0,
+      total_enrollments: 0,
+      active_enrollments: 0,
+      total_certificates: 0,
+      recent_enrollments: 0,
+      completion_rate: 0,
+      monthly_enrollments: []
+    });
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     // Solo proceder cuando el contexto de autenticación haya terminado de cargar
@@ -456,6 +477,70 @@ const AdminDashboard: React.FC = () => {
         </Grid>
       </Grid>
 
+      {/* Trabajadores activos e inactivos */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Card sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, background: 'linear-gradient(135deg, #43cea2 0%, #185a9d 100%)', color: 'white' }}>
+            <CheckCircleIcon sx={{ fontSize: 40, color: 'white' }} />
+            <Box>
+              <Typography variant="h5" fontWeight="bold" sx={{ color: 'white' }}>
+                {workerStats?.active_workers ?? 0}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
+                Trabajadores Activos
+              </Typography>
+            </Box>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Card sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, background: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)', color: 'white' }}>
+            <WarningIcon sx={{ fontSize: 40, color: 'white' }} />
+            <Box>
+              <Typography variant="h5" fontWeight="bold" sx={{ color: 'white' }}>
+                {workerStats?.inactive_workers ?? 0}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
+                Trabajadores Inactivos
+              </Typography>
+            </Box>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Modalidad de Trabajo */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Modalidad de Trabajo
+              </Typography>
+              {workerStats?.by_modality && Object.keys(workerStats.by_modality).length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {Object.entries(workerStats.by_modality).map(([key, count]) => {
+                    const label = MODALITY_LABELS[key] || key;
+                    const percent = workerStats?.percent_by_modality?.[key] ?? (
+                      stats.total_users > 0 ? Math.round((count / stats.total_users) * 100) : 0
+                    );
+                    return (
+                      <Box key={key}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                          <Typography variant="body2">{label}</Typography>
+                          <Typography variant="body2" fontWeight="bold">{percent}%</Typography>
+                        </Box>
+                        <LinearProgress variant="determinate" value={percent} />
+                      </Box>
+                    );
+                  })}
+                </Box>
+              ) : (
+                <Alert severity="info">No hay datos de modalidades disponibles.</Alert>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       {/* Accesos rápidos */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12 }}>
@@ -683,3 +768,8 @@ const AdminDashboard: React.FC = () => {
 };
 
 export default AdminDashboard;
+
+
+
+
+

@@ -222,12 +222,19 @@ const WorkersManagement: React.FC = () => {
       });
 
       const allWorkers = response.data || [];
+      // Ordenar: activos primero, inactivos al final
+      const sortByActiveStatus = (a: Worker, b: Worker) => {
+        if (a.is_active === b.is_active) return 0;
+        return a.is_active ? -1 : 1;
+      };
+      const orderedWorkers = [...allWorkers].sort(sortByActiveStatus);
 
       if (isFirstPageNoSearch) {
-        setWorkers(allWorkers.slice(0, rowsPerPage));
-        setTotalWorkers(allWorkers.length);
+        setWorkers(orderedWorkers.slice(0, rowsPerPage));
+        setTotalWorkers(orderedWorkers.length);
       } else {
-        setWorkers(allWorkers);
+        // Mantener la paginación del backend, pero ordenar el segmento recibido
+        setWorkers(orderedWorkers);
         if (allWorkers.length === rowsPerPage) {
           setTotalWorkers((page + 1) * rowsPerPage + 1);
         } else {
