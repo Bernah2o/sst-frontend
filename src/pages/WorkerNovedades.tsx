@@ -113,6 +113,7 @@ const NOVEDAD_TYPES = {
   horas_extras: "Horas Extras",
   recargos: "Recargos",
   capacitacion: "Capacitación",
+  trabajo_en_casa: "Trabajo en casa",
 };
 
 const NOVEDAD_STATUS = {
@@ -548,6 +549,7 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
       "permiso_dia_no_remunerado",
       "licencia_maternidad",
       "capacitacion",
+      "trabajo_en_casa",
     ].includes(tipo);
   };
 
