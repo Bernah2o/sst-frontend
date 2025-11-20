@@ -114,6 +114,7 @@ const NOVEDAD_TYPES = {
   recargos: "Recargos",
   capacitacion: "Capacitación",
   trabajo_en_casa: "Trabajo en casa",
+  cobertura_en_el_exterior: "Cobertura en el exterior",
 };
 
 const NOVEDAD_STATUS = {
@@ -550,6 +551,7 @@ const WorkerNovedades: React.FC<WorkerNovedadesProps> = ({ workerId }) => {
       "licencia_maternidad",
       "capacitacion",
       "trabajo_en_casa",
+      "cobertura_en_el_exterior",
     ].includes(tipo);
   };
 
