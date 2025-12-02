@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import {
   Box,
   Card,
@@ -55,6 +61,7 @@ import {
   eachDayOfInterval,
 } from "date-fns";
 import { useParams } from "react-router-dom";
+import { parseDateOnlyToLocal } from "../utils/dateUtils";
 
 // Services and types
 import vacationService from "../services/vacationService";
@@ -97,9 +104,59 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
   );
   const [vacationBalance, setVacationBalance] =
     useState<VacationBalance | null>(null);
+  const [workerHireDate, setWorkerHireDate] = useState<Date | null>(null);
   // Eliminado estado no utilizado para estadísticas de vacaciones
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
+  // Filtro por año (visible para admin/supervisor)
+  const [selectedYear, setSelectedYear] = useState<number>(
+    new Date().getFullYear()
+  );
+
+  // Años disponibles en base a las solicitudes y el año actual
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set<number>();
+    yearsSet.add(new Date().getFullYear());
+    yearsSet.add(new Date().getFullYear() - 1);
+    yearsSet.add(new Date().getFullYear() + 1);
+    vacationRequests.forEach((req) => {
+      yearsSet.add(new Date(req.start_date).getFullYear());
+      yearsSet.add(new Date(req.end_date).getFullYear());
+    });
+    return Array.from(yearsSet).sort((a, b) => a - b);
+  }, [vacationRequests]);
+
+  // Cálculo local de días pendientes dentro del año seleccionado
+  const countWorkingDaysInYear = useCallback(
+    (startStr: string, endStr: string, year: number): number => {
+      const s = parseDateOnlyToLocal(startStr) || new Date(startStr);
+      const e = parseDateOnlyToLocal(endStr) || new Date(endStr);
+      const yearStart = new Date(year, 0, 1);
+      const yearEnd = new Date(year, 11, 31);
+      const start = s < yearStart ? yearStart : s;
+      const end = e > yearEnd ? yearEnd : e;
+      if (end < yearStart || start > yearEnd) return 0;
+      const days = eachDayOfInterval({ start, end });
+      return days.filter((d) => !isWeekend(d)).length;
+    },
+    []
+  );
+
+  const pendingDaysInSelectedYear = useMemo(() => {
+    return vacationRequests
+      .filter((r) => r.status === "pending")
+      .reduce(
+        (sum, r) =>
+          sum + countWorkingDaysInYear(r.start_date, r.end_date, selectedYear),
+        0
+      );
+  }, [vacationRequests, selectedYear, countWorkingDaysInYear]);
+
+  const availableDaysDisplay = useMemo(() => {
+    const total = vacationBalance?.total_days ?? 0;
+    const used = vacationBalance?.used_days ?? 0;
+    return Math.max(0, total - used - pendingDaysInSelectedYear);
+  }, [vacationBalance, pendingDaysInSelectedYear]);
 
   // Guardia para evitar múltiples fetch simultáneos o repetidos
   const fetchInProgressRef = useRef(false);
@@ -161,11 +218,20 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
       const workerIdNum = parseInt(workerId);
       const [requests, balance, worker] = await Promise.all([
         vacationService.getWorkerVacations(workerIdNum),
-        vacationService.getVacationBalance(workerIdNum),
+        vacationService.getVacationBalance(workerIdNum, selectedYear),
         workerService.getWorker(workerIdNum),
       ]);
       setVacationRequests(requests);
       setVacationBalance(balance);
+      if (worker?.fecha_de_ingreso) {
+        try {
+          setWorkerHireDate(new Date(worker.fecha_de_ingreso));
+        } catch (_) {
+          setWorkerHireDate(null);
+        }
+      } else {
+        setWorkerHireDate(null);
+      }
       if (worker?.first_name || worker?.last_name) {
         setWorkerFullName(
           `${worker.first_name ?? ""} ${worker.last_name ?? ""}`.trim()
@@ -194,7 +260,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
       setLoading(false);
       fetchInProgressRef.current = false;
     }
-  }, [workerId]);
+  }, [workerId, selectedYear]);
 
   const generateCalendarDays = useCallback(() => {
     const start = startOfMonth(currentDate);
@@ -214,14 +280,17 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
           dateStr >= req.start_date &&
           dateStr <= req.end_date
       );
+      // Aplicar filtro por año: solo marcar ocupado/pendiente si la fecha del día pertenece al año seleccionado
+      const dayYear = date.getFullYear();
+      const isInSelectedYear = dayYear === selectedYear;
       return {
         date,
         isCurrentMonth: true,
         isToday:
           format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd"),
         isWeekend: isWeekend(date),
-        isOccupied: !!occupiedRequest,
-        isPending: !!pendingRequest,
+        isOccupied: isInSelectedYear ? !!occupiedRequest : false,
+        isPending: isInSelectedYear ? !!pendingRequest : false,
         isSelected:
           selectedRange.start && selectedRange.end
             ? date >= selectedRange.start && date <= selectedRange.end
@@ -232,7 +301,7 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
       };
     });
     setCalendarDays(calendarDays);
-  }, [currentDate, vacationRequests, selectedRange]);
+  }, [currentDate, vacationRequests, selectedRange, selectedYear]);
 
   // Efecto para cargar datos iniciales y cuando cambie el trabajador
   useEffect(() => {
@@ -243,6 +312,11 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
   useEffect(() => {
     generateCalendarDays();
   }, [generateCalendarDays]);
+
+  // Ajustar el mes mostrado cuando cambia el año seleccionado
+  useEffect(() => {
+    setCurrentDate((prev) => new Date(selectedYear, prev.getMonth(), 1));
+  }, [selectedYear]);
 
   const handleDateClick = (date: Date) => {
     if (isWeekend(date) || date < new Date()) return;
@@ -266,9 +340,69 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
     setOpenDialog(true);
   };
 
+  const addYearsSafe = (d: Date, years: number): Date => {
+    const next = new Date(d);
+    next.setFullYear(d.getFullYear() + years);
+    // Ajuste para 29/02 en años no bisiestos
+    if (d.getMonth() === 1 && d.getDate() === 29 && next.getMonth() !== 1) {
+      next.setMonth(1);
+      next.setDate(28);
+    }
+    return next;
+  };
+
+  const getAnniversaryPeriod = (
+    hireDate: Date,
+    refStart: Date
+  ): { start: Date; end: Date } => {
+    // calcular años completos transcurridos al inicio solicitado
+    let yearsSince = refStart.getFullYear() - hireDate.getFullYear();
+    const refMonthDay = refStart.getMonth() * 100 + refStart.getDate();
+    const hireMonthDay = hireDate.getMonth() * 100 + hireDate.getDate();
+    if (refMonthDay < hireMonthDay) yearsSince -= 1;
+    const periodStart = addYearsSafe(hireDate, Math.max(1, yearsSince));
+    const periodEnd = addYearsSafe(periodStart, 1);
+    periodEnd.setDate(periodEnd.getDate() - 1);
+    return { start: periodStart, end: periodEnd };
+  };
+
   const handleSubmitRequest = async () => {
     if (!startDate || !endDate || !comments.trim() || !workerId) {
       showSnackbar("Por favor completa todos los campos", "warning");
+      return;
+    }
+
+    // Validación de periodo por aniversario
+    if (!workerHireDate) {
+      showSnackbar(
+        "Falta la fecha de ingreso del trabajador. Actualice la ficha antes de solicitar vacaciones.",
+        "error"
+      );
+      return;
+    }
+    const firstEligible = addYearsSafe(workerHireDate, 1);
+    if (startDate < firstEligible) {
+      showSnackbar(
+        `Aún no cumple un (1) año desde el ingreso (${format(
+          workerHireDate,
+          "yyyy-MM-dd"
+        )}). Podrá solicitar a partir de ${format(
+          firstEligible,
+          "yyyy-MM-dd"
+        )}.`,
+        "error"
+      );
+      return;
+    }
+    const period = getAnniversaryPeriod(workerHireDate, startDate);
+    if (startDate < period.start || endDate > period.end) {
+      showSnackbar(
+        `Las fechas deben estar dentro del periodo anual por aniversario: ${format(
+          period.start,
+          "yyyy-MM-dd"
+        )} a ${format(period.end, "yyyy-MM-dd")}.`,
+        "error"
+      );
       return;
     }
 
@@ -509,8 +643,12 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
   // Nuevas funciones para edición y eliminación
   const handleEditRequest = (request: WorkerVacation) => {
     setEditingRequest(request);
-    setEditStartDate(new Date(request.start_date));
-    setEditEndDate(new Date(request.end_date));
+    setEditStartDate(
+      parseDateOnlyToLocal(request.start_date) || new Date(request.start_date)
+    );
+    setEditEndDate(
+      parseDateOnlyToLocal(request.end_date) || new Date(request.end_date)
+    );
     setEditComments(request.comments || "");
     setOpenEditDialog(true);
     handleCloseMenu();
@@ -680,9 +818,20 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
     }
   };
 
-  const filteredRequests = vacationRequests.filter(
-    (req) => statusFilter === "all" || req.status === statusFilter
-  );
+  // Helper: una solicitud intersecta el año seleccionado si cualquier parte del rango cae en ese año
+  const intersectsYear = (req: WorkerVacation, year: number): boolean => {
+    const startDate =
+      parseDateOnlyToLocal(req.start_date) || new Date(req.start_date);
+    const endDate =
+      parseDateOnlyToLocal(req.end_date) || new Date(req.end_date);
+    const startYear = startDate.getFullYear();
+    const endYear = endDate.getFullYear();
+    return startYear <= year && endYear >= year;
+  };
+
+  const filteredRequests = vacationRequests
+    .filter((req) => intersectsYear(req, selectedYear))
+    .filter((req) => statusFilter === "all" || req.status === statusFilter);
 
   if (loading) {
     return (
@@ -762,9 +911,19 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
                   <Typography
                     variant="h3"
                     fontWeight="bold"
+                    color="warning.light"
+                  >
+                    {pendingDaysInSelectedYear}
+                  </Typography>
+                  <Typography variant="body2">Pendientes</Typography>
+                </Box>
+                <Box textAlign="center" flex={1}>
+                  <Typography
+                    variant="h3"
+                    fontWeight="bold"
                     color="success.light"
                   >
-                    {vacationBalance.available_days}
+                    {availableDaysDisplay}
                   </Typography>
                   <Typography variant="body2">Disponibles</Typography>
                 </Box>
@@ -796,7 +955,24 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
                     <Calendar sx={{ mr: 1, verticalAlign: "middle" }} />
                     Calendario de Vacaciones
                   </Typography>
-                  <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    {/* Selector de Año (visible para admin/supervisor y empleados, no es intrusivo) */}
+                    <FormControl size="small" sx={{ minWidth: 100 }}>
+                      <InputLabel>Año</InputLabel>
+                      <Select
+                        value={selectedYear}
+                        label="Año"
+                        onChange={(e) =>
+                          setSelectedYear(Number(e.target.value))
+                        }
+                      >
+                        {availableYears.map((year) => (
+                          <MenuItem key={year} value={year}>
+                            {year}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                     <Button
                       onClick={() => setCurrentDate(addDays(currentDate, -30))}
                     >
@@ -936,6 +1112,21 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
                       <MenuItem value="rejected">Rechazadas</MenuItem>
                     </Select>
                   </FormControl>
+                  {/* Selector de Año también en la lista para consistencia */}
+                  <FormControl size="small" sx={{ minWidth: 100 }}>
+                    <InputLabel>Año</InputLabel>
+                    <Select
+                      value={selectedYear}
+                      label="Año"
+                      onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    >
+                      {availableYears.map((year) => (
+                        <MenuItem key={year} value={year}>
+                          {year}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Box>
 
                 <List>
@@ -965,8 +1156,17 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
                                   workerFullName ||
                                   `Trabajador #${request.worker_id}`}{" "}
                                 —{" "}
-                                {format(new Date(request.start_date), "dd/MM")}{" "}
-                                - {format(new Date(request.end_date), "dd/MM")}
+                                {format(
+                                  parseDateOnlyToLocal(request.start_date) ||
+                                    new Date(request.start_date),
+                                  "dd/MM"
+                                )}{" "}
+                                -{" "}
+                                {format(
+                                  parseDateOnlyToLocal(request.end_date) ||
+                                    new Date(request.end_date),
+                                  "dd/MM"
+                                )}
                               </Typography>
                               <Box
                                 sx={{
@@ -1301,8 +1501,17 @@ const WorkerVacations: React.FC<WorkerVacationsProps> = ({
               <Box sx={{ mt: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
                 <Typography variant="body2" fontWeight="bold">
                   Fechas:{" "}
-                  {format(new Date(requestToDelete.start_date), "dd/MM/yyyy")} -{" "}
-                  {format(new Date(requestToDelete.end_date), "dd/MM/yyyy")}
+                  {format(
+                    parseDateOnlyToLocal(requestToDelete.start_date) ||
+                      new Date(requestToDelete.start_date),
+                    "dd/MM/yyyy"
+                  )}{" "}
+                  -{" "}
+                  {format(
+                    parseDateOnlyToLocal(requestToDelete.end_date) ||
+                      new Date(requestToDelete.end_date),
+                    "dd/MM/yyyy"
+                  )}
                 </Typography>
                 <Typography variant="body2">
                   Motivo: {requestToDelete.comments}

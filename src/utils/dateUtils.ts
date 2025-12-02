@@ -197,3 +197,26 @@ export const getLocalizationConfig = () => ({
     year: 'yyyy'
   }
 });
+
+/**
+ * Parsea una fecha de tipo 'YYYY-MM-DD' como fecha local sin desfase de huso horario.
+ * Si la cadena incluye tiempo o zona (p.ej. ISO completo), usa parseISO.
+ */
+export const parseDateOnlyToLocal = (date: string | Date | null | undefined): Date | null => {
+  if (!date) return null;
+  if (date instanceof Date) return isValid(date) ? date : null;
+  const s = String(date).trim();
+  // Maneja exclusivamente fecha sin hora: 'YYYY-MM-DD'
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-').map(Number);
+    const local = new Date(y, m - 1, d);
+    return isValid(local) ? local : null;
+  }
+  // Para ISO con hora/zona, delegar a parseISO
+  try {
+    const dt = parseISO(s);
+    return isValid(dt) ? dt : null;
+  } catch {
+    return null;
+  }
+};
