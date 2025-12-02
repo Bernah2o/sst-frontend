@@ -118,8 +118,10 @@ class VacationService {
   }
 
   // Obtener balance de vacaciones
-  async getVacationBalance(workerId: number): Promise<VacationBalance> {
-    const response = await this.api.get(`/workers/${workerId}/vacation-balance`);
+  async getVacationBalance(workerId: number, year?: number): Promise<VacationBalance> {
+    const response = await this.api.get(`/workers/${workerId}/vacation-balance`, {
+      params: year ? { year } : undefined,
+    });
     return response.data;
   }
 
@@ -149,9 +151,11 @@ class VacationService {
     return response.data;
   }
 
-  async getEmployeeVacationBalance(): Promise<VacationBalance> {
+  async getEmployeeVacationBalance(year?: number): Promise<VacationBalance> {
     const worker = await this.getCurrentWorker();
-    const response = await this.api.get(`/workers/${worker.id}/vacation-balance`);
+    const response = await this.api.get(`/workers/${worker.id}/vacation-balance`, {
+      params: year ? { year } : undefined,
+    });
     return response.data;
   }
 
@@ -202,14 +206,21 @@ class VacationService {
     return response.data;
   }
 
-  // Obtener fechas ocupadas filtradas (solo APPROVED y PENDING activas)
-  async getFilteredOccupiedDates(startDate: string, endDate: string): Promise<OccupiedDatesResponse> {
-    // El backend ya filtra correctamente por is_active=True y estados APPROVED/PENDING
+  // Obtener fechas ocupadas filtradas por área (APPROVED y PENDING activas)
+  async getFilteredOccupiedDates(
+    startDate: string,
+    endDate: string,
+    workerId?: number
+  ): Promise<OccupiedDatesResponse> {
+    const params: Record<string, any> = {
+      start_date: startDate,
+      end_date: endDate,
+    };
+    if (typeof workerId === 'number') {
+      params.worker_id = workerId;
+    }
     const response = await this.api.get('/workers/vacations/occupied-dates', {
-      params: {
-        start_date: startDate,
-        end_date: endDate
-      }
+      params,
     });
     return response.data;
   }

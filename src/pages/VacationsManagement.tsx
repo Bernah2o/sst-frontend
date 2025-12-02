@@ -45,6 +45,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
+import { parseDateOnlyToLocal } from '../utils/dateUtils';
 import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -150,8 +151,14 @@ const VacationsManagement: React.FC = () => {
   const handleEditRequest = (request: VacationRequestWithWorker) => {
     setEditingRequest(request);
     setEditForm({
-      start_date: format(new Date(request.start_date), 'yyyy-MM-dd'),
-      end_date: format(new Date(request.end_date), 'yyyy-MM-dd'),
+      start_date: format(
+        parseDateOnlyToLocal(request.start_date) || new Date(request.start_date),
+        'yyyy-MM-dd'
+      ),
+      end_date: format(
+        parseDateOnlyToLocal(request.end_date) || new Date(request.end_date),
+        'yyyy-MM-dd'
+      ),
       comments: request.comments || '',
       status: request.status
     });
@@ -460,10 +467,18 @@ const VacationsManagement: React.FC = () => {
                         <TableRow key={request.id}>
                           <TableCell>{request.worker_name}</TableCell>
                           <TableCell>
-                            {format(new Date(request.start_date), 'dd/MM/yyyy', { locale: es })}
+                            {format(
+                              parseDateOnlyToLocal(request.start_date) || new Date(request.start_date),
+                              'dd/MM/yyyy',
+                              { locale: es }
+                            )}
                           </TableCell>
                           <TableCell>
-                            {format(new Date(request.end_date), 'dd/MM/yyyy', { locale: es })}
+                            {format(
+                              parseDateOnlyToLocal(request.end_date) || new Date(request.end_date),
+                              'dd/MM/yyyy',
+                              { locale: es }
+                            )}
                           </TableCell>
                           <TableCell>{request.days_requested}</TableCell>
                           <TableCell>
@@ -649,8 +664,18 @@ const VacationsManagement: React.FC = () => {
             <Typography>
               ¿Estás seguro de que deseas eliminar la solicitud de vacaciones de{' '}
               <strong>{requestToDelete?.worker_name}</strong> del{' '}
-              {requestToDelete && format(new Date(requestToDelete.start_date), 'dd/MM/yyyy', { locale: es })}{' '}
-              al {requestToDelete && format(new Date(requestToDelete.end_date), 'dd/MM/yyyy', { locale: es })}?
+              {requestToDelete &&
+                format(
+                  parseDateOnlyToLocal(requestToDelete.start_date) || new Date(requestToDelete.start_date),
+                  'dd/MM/yyyy',
+                  { locale: es }
+                )}{' '}
+              al {requestToDelete &&
+                format(
+                  parseDateOnlyToLocal(requestToDelete.end_date) || new Date(requestToDelete.end_date),
+                  'dd/MM/yyyy',
+                  { locale: es }
+                )}?
             </Typography>
             
             {/* Información sobre el estado actual */}
