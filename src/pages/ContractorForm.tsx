@@ -36,10 +36,18 @@ import { areaService, Area } from "../services/areaService";
 import { DOCUMENT_TYPES, CONTRACT_TYPES } from "../types/contractor";
 import { COLOMBIAN_DEPARTMENTS } from "../data/colombianDepartments";
 import { COLOMBIAN_CITIES } from "../data/colombianCities";
-import seguridadSocialService, { SeguridadSocialOption } from "../services/seguridadSocialService";
+import seguridadSocialService, {
+  SeguridadSocialOption,
+} from "../services/seguridadSocialService";
 
 // Opciones adicionales
-const RISK_LEVELS = ["nivel_1", "nivel_2", "nivel_3", "nivel_4", "nivel_5"] as const;
+const RISK_LEVELS = [
+  "nivel_1",
+  "nivel_2",
+  "nivel_3",
+  "nivel_4",
+  "nivel_5",
+] as const;
 const BLOOD_TYPES = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"] as const;
 
 // Mapeo de tipo_contrato (frontend) a enum esperado por backend (valores de la BD)
@@ -60,7 +68,7 @@ const CONTRACT_TYPE_REVERSE_MAP: Record<string, string> = {
 
 const RISK_LEVEL_REVERSE_MAP: Record<string, string> = {
   LEVEL_I: "nivel_1",
-  LEVEL_II: "nivel_2", 
+  LEVEL_II: "nivel_2",
   LEVEL_III: "nivel_3",
   LEVEL_IV: "nivel_4",
   LEVEL_V: "nivel_5",
@@ -79,9 +87,7 @@ const validationSchema = Yup.object({
   departamento: Yup.string().required("Departamento es requerido"),
   ciudad: Yup.string().required("Ciudad es requerida"),
   telefono: Yup.string().required("Teléfono es requerido"),
-  email: Yup.string()
-    .email("Email inválido")
-    .required("Email es requerido"),
+  email: Yup.string().email("Email inválido").required("Email es requerido"),
   profesion: Yup.string().required("Profesión es requerida"),
   cargo: Yup.string().required("Cargo es requerido"),
   area: Yup.string().required("Área es requerida"),
@@ -107,17 +113,21 @@ const ContractorForm = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: AlertColor }>({
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: AlertColor;
+  }>({
     open: false,
     message: "",
     severity: "success",
   });
-const [cargos, setCargos] = useState<Cargo[]>([]);
-const [areas, setAreas] = useState<Area[]>([]);
-const [cities, setCities] = useState<string[]>([]);
-const [epsOptions, setEpsOptions] = useState<SeguridadSocialOption[]>([]);
-const [afpOptions, setAfpOptions] = useState<SeguridadSocialOption[]>([]);
-const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
+  const [cargos, setCargos] = useState<Cargo[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [epsOptions, setEpsOptions] = useState<SeguridadSocialOption[]>([]);
+  const [afpOptions, setAfpOptions] = useState<SeguridadSocialOption[]>([]);
+  const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
 
   const formik = useFormik({
     initialValues: {
@@ -155,13 +165,13 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting }) => {
-      
       // Prevent submission if cargos are not loaded
       if (cargos.length === 0) {
-        console.error('SUBMISSION BLOCKED: Cargos not loaded');
+        console.error("SUBMISSION BLOCKED: Cargos not loaded");
         setSnackbar({
           open: true,
-          message: "Error: Los cargos no se han cargado correctamente. Por favor, recarga la página.",
+          message:
+            "Error: Los cargos no se han cargado correctamente. Por favor, recarga la página.",
           severity: "error",
         });
         return;
@@ -169,7 +179,7 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
 
       // Additional validation: ensure cargo is selected and exists
       if (!values.cargo) {
-        console.error('SUBMISSION BLOCKED: No cargo selected');
+        console.error("SUBMISSION BLOCKED: No cargo selected");
         setSnackbar({
           open: true,
           message: "Error: Debe seleccionar un cargo.",
@@ -178,12 +188,17 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
         return;
       }
 
-      const selectedCargo = cargos.find(c => c.id.toString() === values.cargo);
+      const selectedCargo = cargos.find(
+        (c) => c.id.toString() === values.cargo
+      );
       if (!selectedCargo) {
-        console.error('SUBMISSION BLOCKED: Selected cargo not found in cargos array');
+        console.error(
+          "SUBMISSION BLOCKED: Selected cargo not found in cargos array"
+        );
         setSnackbar({
           open: true,
-          message: "Error: El cargo seleccionado no es válido. Por favor, seleccione un cargo de la lista.",
+          message:
+            "Error: El cargo seleccionado no es válido. Por favor, seleccione un cargo de la lista.",
           severity: "error",
         });
         return;
@@ -191,9 +206,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
 
       try {
         setLoading(true);
-      
+
         const formattedValues = {
-          // Alinear con el esquema que exige el backend (inglés)
+          // Columnas del modelo (inglés) y fechas requeridas
           document_type: values.tipo_documento?.toLowerCase(),
           document_number: values.numero_documento,
           first_name: values.primer_nombre,
@@ -206,32 +221,48 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
           gender: values.genero?.toLowerCase(),
           email: values.email,
           phone: values.telefono,
-          profesion: values.profesion,
-          cargo: selectedCargo.nombre_cargo,
-          contract_type: values.tipo_contrato ? CONTRACT_TYPE_MAP[values.tipo_contrato] : undefined,
-          // Ubicación: el modelo usa 'direccion' pero department/city/country en inglés
+
+          // Laboral (usar nombres de columna del modelo)
+          profession: values.profesion || undefined,
+          position: selectedCargo.nombre_cargo,
+          contract_type: values.tipo_contrato
+            ? CONTRACT_TYPE_MAP[values.tipo_contrato]
+            : undefined,
+          risk_level: values.nivel_riesgo || undefined,
+          work_modality: values.work_modality || undefined,
+          occupation: values.occupation || undefined,
+          contract_value: values.contract_value || undefined,
+
+          // Fechas del contrato (nombres exactos del modelo)
+          fecha_de_inicio: values.fecha_inicio
+            ? format(new Date(values.fecha_inicio), "yyyy-MM-dd")
+            : undefined,
+          fecha_de_finalizacion: values.fecha_fin
+            ? format(new Date(values.fecha_fin), "yyyy-MM-dd")
+            : undefined,
+
+          // Ubicación
           direccion: values.direccion,
           department: values.departamento,
           city: values.ciudad,
           country: values.pais,
+
           // Relaciones
           area_id: values.area !== "" ? Number(values.area) : undefined,
-          is_active: true,
-          // Campos adicionales que están en el modelo del backend - CORREGIDOS para coincidir con el modelo
-          work_modality: values.work_modality || undefined,
-          contract_value: values.contract_value || undefined,
-          occupation: values.occupation || undefined,
-          risk_level: values.nivel_riesgo || undefined, // CORREGIDO: nivel_riesgo -> risk_level
+          is_active: values.activo,
+
+          // Seguridad social y salud
           eps: values.eps || undefined,
           afp: values.afp || undefined,
           arl: values.arl || undefined,
           blood_type: values.grupo_sanguineo || undefined,
-          activo: values.activo,
         };
 
-        
         if (id) {
-          await contractorService.updateContractor(Number(id), formattedValues as any);
+          await contractorService.updateContractor(
+            Number(id),
+            formattedValues as any
+          );
           setSnackbar({
             open: true,
             message: "Contratista actualizado exitosamente",
@@ -260,15 +291,12 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
       } finally {
         setLoading(false);
         setSubmitting(false);
-        
       }
     },
   });
 
   // Estabiliza el método de Formik para evitar falsas dependencias en hooks
   const setFormValues = formik.setValues;
-
-
 
   // Cargar opciones de Seguridad Social (EPS/AFP/ARL)
   useEffect(() => {
@@ -290,91 +318,101 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
   }, []);
 
   // Función para cargar contratista (ahora recibe cargos como parámetro)
-  const loadContractor = useCallback(async (cargosData: Cargo[]) => {
-    try {
-      setInitialLoading(true);
-      const contractor = await contractorService.getContractor(Number(id));
-      
-      // Format dates for form - Mapeo corregido basado en el modelo del backend
-      const mappedValues = {
-        // Información personal
-        tipo_documento: contractor.document_type || "cedula",
-        numero_documento: contractor.document_number || "",
-        primer_nombre: contractor.first_name || "",
-        segundo_nombre: contractor.second_name || "",
-        primer_apellido: contractor.last_name || "",
-        segundo_apellido: contractor.second_last_name || "",
-        fecha_nacimiento: contractor.birth_date
-          ? parse(contractor.birth_date, "yyyy-MM-dd", new Date())
-          : null,
-        genero: contractor.gender ? contractor.gender.toUpperCase() : "",
-        
-        // Información de contacto
-        direccion: contractor.direccion || "",
-        departamento: contractor.departamento || "",
-        ciudad: contractor.ciudad || "",
-        telefono: contractor.phone || "",
-        email: contractor.email || "",
-        
-        // Información laboral
-        profesion: contractor.profesion || "",
-        cargo: (() => {
-          const positionName = contractor.cargo || "";
-          const foundCargo = cargosData.find(c => c.nombre_cargo === positionName);
-          return foundCargo ? foundCargo.id.toString() : "";
-        })(),
-        area: contractor.area_id ? contractor.area_id.toString() : "",
-        tipo_contrato: contractor.tipo_contrato ? CONTRACT_TYPE_REVERSE_MAP[contractor.tipo_contrato] || contractor.tipo_contrato : "",
-        
-        // Fechas de contrato
-        fecha_inicio: contractor.fecha_de_inicio
-          ? parse(contractor.fecha_de_inicio, "yyyy-MM-dd", new Date())
-          : null,
-        fecha_fin: contractor.fecha_de_finalizacion
-          ? parse(contractor.fecha_de_finalizacion, "yyyy-MM-dd", new Date())
-          : null,
-        
-        pais: contractor.pais || "COLOMBIA",
-        
-        // Campos adicionales - usar nombres correctos del backend
-        work_modality: contractor.modalidad_trabajo || "",
-        contract_value: contractor.valor_contrato || 0,
-        occupation: contractor.ocupacion || "",
-        nivel_riesgo: contractor.nivel_riesgo ? RISK_LEVEL_REVERSE_MAP[contractor.nivel_riesgo] || contractor.nivel_riesgo : "",
-        
-        // Seguridad social
-        eps: contractor.eps || "",
-        afp: contractor.afp || "",
-        arl: contractor.arl || "",
-        
-        // Información médica
-        grupo_sanguineo: contractor.grupo_sanguineo || "",
-        
-        // Estado
-        activo: contractor.activo !== undefined ? contractor.activo : true,
-      };
+  const loadContractor = useCallback(
+    async (cargosData: Cargo[]) => {
+      try {
+        setInitialLoading(true);
+        const contractor = await contractorService.getContractor(Number(id));
 
-      
-      setFormValues(mappedValues as any);
+        // Format dates for form - Mapeo corregido basado en el modelo del backend
+        const mappedValues = {
+          // Información personal
+          tipo_documento: contractor.document_type || "cedula",
+          numero_documento: contractor.document_number || "",
+          primer_nombre: contractor.first_name || "",
+          segundo_nombre: contractor.second_name || "",
+          primer_apellido: contractor.last_name || "",
+          segundo_apellido: contractor.second_last_name || "",
+          fecha_nacimiento: contractor.birth_date
+            ? parse(contractor.birth_date, "yyyy-MM-dd", new Date())
+            : null,
+          genero: contractor.gender ? contractor.gender.toUpperCase() : "",
 
-      // Load cities for the selected department
-      const department = contractor.departamento;
-      if (department) {
-        const departmentCities = COLOMBIAN_CITIES[department] || [];
-        setCities(departmentCities);
+          // Información de contacto
+          direccion: contractor.direccion || "",
+          departamento: contractor.departamento || "",
+          ciudad: contractor.ciudad || "",
+          telefono: contractor.phone || "",
+          email: contractor.email || "",
+
+          // Información laboral
+          profesion: contractor.profesion || "",
+          cargo: (() => {
+            const positionName = contractor.cargo || "";
+            const foundCargo = cargosData.find(
+              (c) => c.nombre_cargo === positionName
+            );
+            return foundCargo ? foundCargo.id.toString() : "";
+          })(),
+          area: contractor.area_id ? contractor.area_id.toString() : "",
+          tipo_contrato: contractor.tipo_contrato
+            ? CONTRACT_TYPE_REVERSE_MAP[contractor.tipo_contrato] ||
+              contractor.tipo_contrato
+            : "",
+
+          // Fechas de contrato
+          fecha_inicio: contractor.fecha_de_inicio
+            ? parse(contractor.fecha_de_inicio, "yyyy-MM-dd", new Date())
+            : null,
+          fecha_fin: contractor.fecha_de_finalizacion
+            ? parse(contractor.fecha_de_finalizacion, "yyyy-MM-dd", new Date())
+            : null,
+
+          pais: contractor.pais || "COLOMBIA",
+
+          // Campos adicionales - usar nombres correctos del backend
+          work_modality: contractor.modalidad_trabajo || "",
+          contract_value: contractor.valor_contrato || 0,
+          occupation: contractor.ocupacion || "",
+          nivel_riesgo: contractor.nivel_riesgo
+            ? RISK_LEVEL_REVERSE_MAP[contractor.nivel_riesgo] ||
+              contractor.nivel_riesgo
+            : "",
+
+          // Seguridad social
+          eps: contractor.eps || "",
+          afp: contractor.afp || "",
+          arl: contractor.arl || "",
+
+          // Información médica
+          grupo_sanguineo: contractor.grupo_sanguineo || "",
+
+          // Estado
+          activo: contractor.activo !== undefined ? contractor.activo : true,
+        };
+
+        setFormValues(mappedValues as any);
+
+        // Load cities for the selected department
+        const department = contractor.departamento;
+        if (department) {
+          const departmentCities = COLOMBIAN_CITIES[department] || [];
+          setCities(departmentCities);
+        }
+      } catch (error) {
+        console.error("Error al cargar contratista:", error);
+        setSnackbar({
+          open: true,
+          message:
+            "Error al cargar datos del contratista. Por favor intente de nuevo.",
+          severity: "error",
+        });
+      } finally {
+        setInitialLoading(false);
       }
-    } catch (error) {
-      console.error("Error al cargar contratista:", error);
-      setSnackbar({
-        open: true,
-        message:
-          "Error al cargar datos del contratista. Por favor intente de nuevo.",
-        severity: "error",
-      });
-    } finally {
-      setInitialLoading(false);
-    }
-  }, [id, setFormValues]);
+    },
+    [id, setFormValues]
+  );
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -382,7 +420,7 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
         // Cargar cargos y áreas primero
         const [cargosData, areasData] = await Promise.all([
           cargoService.getActiveCargos(),
-          areaService.getActiveAreas()
+          areaService.getActiveAreas(),
         ]);
         setCargos(cargosData);
         setAreas(areasData);
@@ -471,7 +509,10 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       ))}
                     </Select>
                     <FormHelperText>
-                      {formik.touched.tipo_documento && formik.errors.tipo_documento ? String(formik.errors.tipo_documento) : ""}
+                      {formik.touched.tipo_documento &&
+                      formik.errors.tipo_documento
+                        ? String(formik.errors.tipo_documento)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
@@ -490,14 +531,25 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       onChange={formik.handleChange}
                       label="Modalidad de Trabajo"
                     >
-                      <MenuItem value={WorkModality.ON_SITE}>Presencial</MenuItem>
+                      <MenuItem value={WorkModality.ON_SITE}>
+                        Presencial
+                      </MenuItem>
                       <MenuItem value={WorkModality.REMOTE}>Remoto</MenuItem>
-                      <MenuItem value={WorkModality.TELEWORK}>Teletrabajo</MenuItem>
-                      <MenuItem value={WorkModality.HOME_OFFICE}>Home Office</MenuItem>
-                      <MenuItem value={WorkModality.MOBILE}>Móvil/Itinerante</MenuItem>
+                      <MenuItem value={WorkModality.TELEWORK}>
+                        Teletrabajo
+                      </MenuItem>
+                      <MenuItem value={WorkModality.HOME_OFFICE}>
+                        Home Office
+                      </MenuItem>
+                      <MenuItem value={WorkModality.MOBILE}>
+                        Móvil/Itinerante
+                      </MenuItem>
                     </Select>
                     <FormHelperText>
-                      {formik.touched.work_modality && formik.errors.work_modality ? String(formik.errors.work_modality) : ""}
+                      {formik.touched.work_modality &&
+                      formik.errors.work_modality
+                        ? String(formik.errors.work_modality)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
@@ -513,7 +565,12 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       formik.touched.numero_documento &&
                       Boolean(formik.errors.numero_documento)
                     }
-                    helperText={formik.touched.numero_documento && formik.errors.numero_documento ? String(formik.errors.numero_documento) : ""}
+                    helperText={
+                      formik.touched.numero_documento &&
+                      formik.errors.numero_documento
+                        ? String(formik.errors.numero_documento)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -527,7 +584,12 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       formik.touched.primer_nombre &&
                       Boolean(formik.errors.primer_nombre)
                     }
-                    helperText={formik.touched.primer_nombre && formik.errors.primer_nombre ? String(formik.errors.primer_nombre) : ""}
+                    helperText={
+                      formik.touched.primer_nombre &&
+                      formik.errors.primer_nombre
+                        ? String(formik.errors.primer_nombre)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -541,7 +603,12 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       formik.touched.segundo_nombre &&
                       Boolean(formik.errors.segundo_nombre)
                     }
-                    helperText={formik.touched.segundo_nombre && formik.errors.segundo_nombre ? String(formik.errors.segundo_nombre) : ""}
+                    helperText={
+                      formik.touched.segundo_nombre &&
+                      formik.errors.segundo_nombre
+                        ? String(formik.errors.segundo_nombre)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -555,7 +622,12 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       formik.touched.primer_apellido &&
                       Boolean(formik.errors.primer_apellido)
                     }
-                    helperText={formik.touched.primer_apellido && formik.errors.primer_apellido ? String(formik.errors.primer_apellido) : ""}
+                    helperText={
+                      formik.touched.primer_apellido &&
+                      formik.errors.primer_apellido
+                        ? String(formik.errors.primer_apellido)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -569,7 +641,12 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       formik.touched.segundo_apellido &&
                       Boolean(formik.errors.segundo_apellido)
                     }
-                    helperText={formik.touched.segundo_apellido && formik.errors.segundo_apellido ? String(formik.errors.segundo_apellido) : ""}
+                    helperText={
+                      formik.touched.segundo_apellido &&
+                      formik.errors.segundo_apellido
+                        ? String(formik.errors.segundo_apellido)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -590,7 +667,8 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                             formik.touched.fecha_nacimiento &&
                             Boolean(formik.errors.fecha_nacimiento),
                           helperText:
-                            formik.touched.fecha_nacimiento && formik.errors.fecha_nacimiento
+                            formik.touched.fecha_nacimiento &&
+                            formik.errors.fecha_nacimiento
                               ? String(formik.errors.fecha_nacimiento)
                               : "",
                         },
@@ -617,12 +695,12 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       <MenuItem value="OTRO">Otro</MenuItem>
                     </Select>
                     <FormHelperText>
-                      {formik.touched.genero && formik.errors.genero ? String(formik.errors.genero) : ""}
+                      {formik.touched.genero && formik.errors.genero
+                        ? String(formik.errors.genero)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
-
-
               </Grid>
             </Box>
           </Box>
@@ -644,7 +722,11 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       formik.touched.direccion &&
                       Boolean(formik.errors.direccion)
                     }
-                    helperText={formik.touched.direccion && formik.errors.direccion ? String(formik.errors.direccion) : ""}
+                    helperText={
+                      formik.touched.direccion && formik.errors.direccion
+                        ? String(formik.errors.direccion)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
@@ -669,7 +751,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       ))}
                     </Select>
                     <FormHelperText>
-                      {formik.touched.departamento && formik.errors.departamento ? String(formik.errors.departamento) : ""}
+                      {formik.touched.departamento && formik.errors.departamento
+                        ? String(formik.errors.departamento)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
@@ -695,7 +779,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       ))}
                     </Select>
                     <FormHelperText>
-                      {formik.touched.ciudad && formik.errors.ciudad ? String(formik.errors.ciudad) : ""}
+                      {formik.touched.ciudad && formik.errors.ciudad
+                        ? String(formik.errors.ciudad)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
@@ -714,7 +800,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       <MenuItem value="COLOMBIA">Colombia</MenuItem>
                     </Select>
                     <FormHelperText>
-                      {formik.touched.pais && formik.errors.pais ? String(formik.errors.pais) : ""}
+                      {formik.touched.pais && formik.errors.pais
+                        ? String(formik.errors.pais)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
@@ -726,10 +814,13 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                     value={formik.values.telefono}
                     onChange={formik.handleChange}
                     error={
-                      formik.touched.telefono &&
-                      Boolean(formik.errors.telefono)
+                      formik.touched.telefono && Boolean(formik.errors.telefono)
                     }
-                    helperText={formik.touched.telefono && formik.errors.telefono ? String(formik.errors.telefono) : ""}
+                    helperText={
+                      formik.touched.telefono && formik.errors.telefono
+                        ? String(formik.errors.telefono)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -739,10 +830,12 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                     label="Email"
                     value={formik.values.email}
                     onChange={formik.handleChange}
-                    error={
-                      formik.touched.email && Boolean(formik.errors.email)
+                    error={formik.touched.email && Boolean(formik.errors.email)}
+                    helperText={
+                      formik.touched.email && formik.errors.email
+                        ? String(formik.errors.email)
+                        : ""
                     }
-                    helperText={formik.touched.email && formik.errors.email ? String(formik.errors.email) : ""}
                   />
                 </Grid>
               </Grid>
@@ -766,7 +859,11 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       formik.touched.profesion &&
                       Boolean(formik.errors.profesion)
                     }
-                    helperText={formik.touched.profesion && formik.errors.profesion ? String(formik.errors.profesion) : ""}
+                    helperText={
+                      formik.touched.profesion && formik.errors.profesion
+                        ? String(formik.errors.profesion)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -798,7 +895,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       )}
                     </Select>
                     <FormHelperText>
-                      {formik.touched.cargo && formik.errors.cargo ? String(formik.errors.cargo) : ""}
+                      {formik.touched.cargo && formik.errors.cargo
+                        ? String(formik.errors.cargo)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
@@ -821,7 +920,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       ))}
                     </Select>
                     <FormHelperText>
-                      {formik.touched.area && formik.errors.area ? String(formik.errors.area) : ""}
+                      {formik.touched.area && formik.errors.area
+                        ? String(formik.errors.area)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
@@ -836,7 +937,11 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       formik.touched.occupation &&
                       Boolean(formik.errors.occupation)
                     }
-                    helperText={formik.touched.occupation && formik.errors.occupation ? String(formik.errors.occupation) : ""}
+                    helperText={
+                      formik.touched.occupation && formik.errors.occupation
+                        ? String(formik.errors.occupation)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -851,7 +956,12 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       formik.touched.contract_value &&
                       Boolean(formik.errors.contract_value)
                     }
-                    helperText={formik.touched.contract_value && formik.errors.contract_value ? String(formik.errors.contract_value) : ""}
+                    helperText={
+                      formik.touched.contract_value &&
+                      formik.errors.contract_value
+                        ? String(formik.errors.contract_value)
+                        : ""
+                    }
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -876,7 +986,10 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       ))}
                     </Select>
                     <FormHelperText>
-                      {formik.touched.tipo_contrato && formik.errors.tipo_contrato ? String(formik.errors.tipo_contrato) : ""}
+                      {formik.touched.tipo_contrato &&
+                      formik.errors.tipo_contrato
+                        ? String(formik.errors.tipo_contrato)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
@@ -898,7 +1011,8 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                             formik.touched.fecha_inicio &&
                             Boolean(formik.errors.fecha_inicio),
                           helperText:
-                            formik.touched.fecha_inicio && formik.errors.fecha_inicio
+                            formik.touched.fecha_inicio &&
+                            formik.errors.fecha_inicio
                               ? String(formik.errors.fecha_inicio)
                               : "",
                         },
@@ -917,7 +1031,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       onChange={(value) => {
                         formik.setFieldValue("fecha_fin", value);
                       }}
-                      disabled={formik.values.tipo_contrato === "termino_indefinido"}
+                      disabled={
+                        formik.values.tipo_contrato === "termino_indefinido"
+                      }
                       slotProps={{
                         textField: {
                           fullWidth: true,
@@ -945,7 +1061,13 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
             <Box sx={{ flexGrow: 1 }}>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <FormControl fullWidth error={formik.touched.nivel_riesgo && Boolean(formik.errors.nivel_riesgo)}>
+                  <FormControl
+                    fullWidth
+                    error={
+                      formik.touched.nivel_riesgo &&
+                      Boolean(formik.errors.nivel_riesgo)
+                    }
+                  >
                     <InputLabel>Nivel de Riesgo</InputLabel>
                     <Select
                       name="nivel_riesgo"
@@ -954,11 +1076,15 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       label="Nivel de Riesgo"
                     >
                       {RISK_LEVELS.map((level) => (
-                        <MenuItem key={level} value={level}>{level}</MenuItem>
+                        <MenuItem key={level} value={level}>
+                          {level}
+                        </MenuItem>
                       ))}
                     </Select>
                     <FormHelperText>
-                      {formik.touched.nivel_riesgo && formik.errors.nivel_riesgo ? String(formik.errors.nivel_riesgo) : ""}
+                      {formik.touched.nivel_riesgo && formik.errors.nivel_riesgo
+                        ? String(formik.errors.nivel_riesgo)
+                        : ""}
                     </FormHelperText>
                   </FormControl>
                 </Grid>
@@ -975,7 +1101,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       label="EPS"
                     >
                       {epsOptions.map((opt) => (
-                        <MenuItem key={opt.value} value={opt.label}>{opt.label}</MenuItem>
+                        <MenuItem key={opt.value} value={opt.label}>
+                          {opt.label}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -993,7 +1121,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       label="AFP"
                     >
                       {afpOptions.map((opt) => (
-                        <MenuItem key={opt.value} value={opt.label}>{opt.label}</MenuItem>
+                        <MenuItem key={opt.value} value={opt.label}>
+                          {opt.label}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -1011,12 +1141,13 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       label="ARL"
                     >
                       {arlOptions.map((opt) => (
-                        <MenuItem key={opt.value} value={opt.label}>{opt.label}</MenuItem>
+                        <MenuItem key={opt.value} value={opt.label}>
+                          {opt.label}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                 </Grid>
-
               </Grid>
             </Box>
           </Box>
@@ -1038,18 +1169,16 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                       label="Grupo Sanguíneo"
                     >
                       {BLOOD_TYPES.map((bt) => (
-                        <MenuItem key={bt} value={bt}>{bt}</MenuItem>
+                        <MenuItem key={bt} value={bt}>
+                          {bt}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                 </Grid>
-
-
               </Grid>
             </Box>
           </Box>
-
-
 
           <Box mb={4}>
             <Typography variant="h6" gutterBottom>
@@ -1062,7 +1191,9 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
                     control={
                       <Switch
                         checked={formik.values.activo}
-                        onChange={(e) => formik.setFieldValue('activo', e.target.checked)}
+                        onChange={(e) =>
+                          formik.setFieldValue("activo", e.target.checked)
+                        }
                         name="activo"
                         color="primary"
                       />
@@ -1115,4 +1246,3 @@ const [arlOptions, setArlOptions] = useState<SeguridadSocialOption[]>([]);
 };
 
 export default ContractorForm;
-
