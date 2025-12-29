@@ -33,6 +33,11 @@ import {
   Grid,
   Card,
   CardContent,
+  TextField,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
 import { useSnackbar } from "notistack";
@@ -107,12 +112,32 @@ const UserProgress: React.FC = () => {
     new Set()
   );
 
-  const [filters] = useState({
+  const [filters, setFilters] = useState({
     status: "",
     course_id: "",
     user_id: "",
     search: "",
+    course_type: "",
   });
+
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters((prev) => {
+        if (prev.search === searchTerm) return prev;
+        return { ...prev, search: searchTerm };
+      });
+      if (filters.search !== searchTerm) setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm, filters.search]);
+
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
+  };
 
   const statusConfig = {
     not_started: { label: "No Iniciado", color: "default" },
@@ -133,6 +158,8 @@ const UserProgress: React.FC = () => {
       if (filters.course_id) params.append("course_id", filters.course_id);
       if (filters.user_id) params.append("user_id", filters.user_id);
       if (filters.search) params.append("search", filters.search);
+      if (filters.course_type)
+        params.append("course_type", filters.course_type);
 
       const response = await api.get(`/user-progress/?${params.toString()}`);
       setUserProgresses(response.data.items || []);
@@ -428,6 +455,79 @@ const UserProgress: React.FC = () => {
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
         Seguimiento del progreso de capacitación y desarrollo
       </Typography>
+
+      {/* Filtros */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              fullWidth
+              label="Buscar trabajador"
+              variant="outlined"
+              size="small"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Nombre, documento..."
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Estado</InputLabel>
+              <Select
+                value={filters.status}
+                label="Estado"
+                onChange={(e) => handleFilterChange("status", e.target.value)}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                {Object.entries(statusConfig).map(([key, config]) => (
+                  <MenuItem key={key} value={key}>
+                    {config.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Tipo de Curso</InputLabel>
+              <Select
+                value={filters.course_type}
+                label="Tipo de Curso"
+                onChange={(e) =>
+                  handleFilterChange("course_type", e.target.value)
+                }
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="induction">Inducción</MenuItem>
+                <MenuItem value="reinduction">Reinducción</MenuItem>
+                <MenuItem value="specialized">Especializado</MenuItem>
+                <MenuItem value="mandatory">Obligatorio</MenuItem>
+                <MenuItem value="optional">Opcional</MenuItem>
+                <MenuItem value="training">Entrenamiento</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, md: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setSearchTerm("");
+                setFilters({
+                  status: "",
+                  course_id: "",
+                  user_id: "",
+                  search: "",
+                  course_type: "",
+                });
+                setPage(1);
+              }}
+              fullWidth
+            >
+              Limpiar
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
 
       {/* Tabla de Progreso */}
       <TableContainer component={Paper}>
