@@ -1,5 +1,6 @@
 import { CssBaseline, Box } from "@mui/material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { SnackbarProvider } from "notistack";
 import React from "react";
 import {
   BrowserRouter as Router,
@@ -915,9 +916,11 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <SnackbarProvider maxSnack={3}>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </SnackbarProvider>
     </ThemeProvider>
   );
 }

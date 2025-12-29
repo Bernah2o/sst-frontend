@@ -311,6 +311,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             roles: ["admin", "trainer", "supervisor"],
           },
           {
+            id: "user-progress",
+            label: "Progreso Cursos",
+            icon: <TrendingUp />,
+            path: "/admin/user-progress",
+            roles: ["admin", "trainer", "supervisor"],
+          },
+          {
             id: "reinduction",
             label: "Reinducciones",
             icon: <Refresh />,
@@ -593,6 +600,11 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
                 user.role !== "employee" && canViewCoursesPage(),
               reinduction: () =>
                 user.role !== "employee" && canViewReinductionPage(),
+              "user-progress": () =>
+                user.role !== "employee" &&
+                (user.role === "admin" ||
+                  user.role === "trainer" ||
+                  user.role === "supervisor"),
 
               // Evaluation management
               evaluations: canViewEvaluationsPage,

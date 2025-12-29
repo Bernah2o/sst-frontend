@@ -1,12 +1,13 @@
 import {
+  Email as EmailIcon,
   School as CourseIcon,
   Poll as SurveyIcon,
   Quiz as EvaluationIcon,
-  WorkspacePremium as CertificateIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
-  CheckCircleOutline as CheckIcon
-} from '@mui/icons-material';
+  CheckCircleOutline as CheckIcon,
+  Warning as WarningIcon,
+} from "@mui/icons-material";
 import {
   Box,
   Typography,
@@ -21,15 +22,22 @@ import {
   Pagination,
   LinearProgress,
   Alert,
-  AlertTitle,
   Collapse,
   IconButton,
-  CircularProgress
-} from '@mui/material';
-import React, { useState, useEffect, useCallback } from 'react';
+  CircularProgress,
+  Button,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Grid,
+  Card,
+  CardContent,
+} from "@mui/material";
+import React, { useState, useEffect, useCallback } from "react";
+import { useSnackbar } from "notistack";
 
-import api from '../services/api';
- 
+import api from "../services/api";
 
 interface UserProgressData {
   id: number;
@@ -39,45 +47,28 @@ interface UserProgressData {
   user_position: string;
   user_area: string;
   course_id: number;
-  course_title: string;
+  course_name: string;
   course_type: string;
-  enrollment_date: string;
-  completion_date?: string;
-  status: 'no_iniciado' | 'en_progreso' | 'completado' | 'vencido' | 'suspendido';
+  enrolled_at: string;
+  completed_at?: string;
+  status: "not_started" | "in_progress" | "completed" | "expired" | "blocked";
   progress_percentage: number;
   time_spent_minutes: number;
   modules_completed: number;
   total_modules: number;
 }
 
-interface CourseProgressDetail {
-  course_id: number;
-  enrollment_id: number;
-  overall_progress: number;
-  status: string;
-  can_take_survey: boolean;
-  can_take_evaluation: boolean;
-  pending_surveys: Array<{
-    id: number;
-    title: string;
-    description: string;
-  }>;
-  course_completed: boolean;
-  evaluation_completed: boolean;
-  evaluation_score?: number;
-  evaluation_status: 'not_started' | 'in_progress' | 'completed';
-  survey_status: 'not_started' | 'available' | 'in_progress' | 'completed';
-  completed_surveys_count: number;
-  total_surveys_count: number;
-  passing_score: number;
+interface PendingItem {
+  id?: number;
+  title: string;
 }
 
-interface Certificate {
-  id: number;
-  certificate_number: string;
-  course_title: string;
-  issued_date: string;
-  status: 'active' | 'revoked';
+interface PendingItemsResponse {
+  surveys: PendingItem[];
+  evaluations: PendingItem[];
+  modules: PendingItem[];
+  materials: PendingItem[];
+  is_pending: boolean;
 }
 
 interface Course {
@@ -98,6 +89,7 @@ interface User {
 }
 
 const UserProgress: React.FC = () => {
+  const { enqueueSnackbar } = useSnackbar();
   const [userProgresses, setUserProgresses] = useState<UserProgressData[]>([]);
   const [, setCourses] = useState<Course[]>([]);
   const [, setUsers] = useState<User[]>([]);
@@ -105,62 +97,73 @@ const UserProgress: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  const [courseDetails, setCourseDetails] = useState<Map<number, CourseProgressDetail>>(new Map());
-  const [certificates, setCertificates] = useState<Map<number, Certificate[]>>(new Map());
+
+  // Replaced courseDetails with pendingItemsMap since the old detail view was for "my progress"
+  const [pendingItemsMap, setPendingItemsMap] = useState<
+    Map<number, PendingItemsResponse>
+  >(new Map());
   const [loadingDetails, setLoadingDetails] = useState<Set<number>>(new Set());
+  const [sendingReminder, setSendingReminder] = useState<Set<number>>(
+    new Set()
+  );
+
   const [filters] = useState({
-    status: '',
-    course_id: '',
-    user_id: '',
-    search: ''
+    status: "",
+    course_id: "",
+    user_id: "",
+    search: "",
   });
 
   const statusConfig = {
-    no_iniciado: { label: 'No Iniciado', color: 'default' },
-    en_progreso: { label: 'En Progreso', color: 'info' },
-    completado: { label: 'Completado', color: 'success' },
-    vencido: { label: 'Vencido', color: 'error' },
-    suspendido: { label: 'Suspendido', color: 'warning' }
+    not_started: { label: "No Iniciado", color: "default" },
+    in_progress: { label: "En Progreso", color: "info" },
+    completed: { label: "Completado", color: "success" },
+    expired: { label: "Vencido", color: "error" },
+    blocked: { label: "Suspendido", color: "warning" },
   };
 
   const fetchUserProgresses = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      params.append('page', page.toString());
-      params.append('limit', '20');
-      
-      if (filters.status) params.append('status', filters.status);
-      if (filters.course_id) params.append('course_id', filters.course_id);
-      if (filters.user_id) params.append('user_id', filters.user_id);
-      if (filters.search) params.append('search', filters.search);
+      params.append("page", page.toString());
+      params.append("limit", "20");
+
+      if (filters.status) params.append("status", filters.status);
+      if (filters.course_id) params.append("course_id", filters.course_id);
+      if (filters.user_id) params.append("user_id", filters.user_id);
+      if (filters.search) params.append("search", filters.search);
 
       const response = await api.get(`/user-progress/?${params.toString()}`);
       setUserProgresses(response.data.items || []);
-      // Use the 'pages' field directly from API response instead of calculating
-      setTotalPages(response.data.pages || Math.ceil((response.data.total || 0) / 20));
+      setTotalPages(
+        response.data.pages || Math.ceil((response.data.total || 0) / 20)
+      );
     } catch (error) {
-      console.error('Error fetching user progresses:', error);
+      console.error("Error fetching user progresses:", error);
+      enqueueSnackbar("Error al cargar el progreso de usuarios", {
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
-  }, [page, filters]);
+  }, [page, filters, enqueueSnackbar]);
 
   const fetchCourses = useCallback(async () => {
     try {
-      const response = await api.get('/courses/');
+      const response = await api.get("/courses/");
       setCourses(response.data);
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      console.error("Error fetching courses:", error);
     }
   }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await api.get('/users/');
+      const response = await api.get("/users/");
       setUsers(response.data);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error("Error fetching users:", error);
     }
   }, []);
 
@@ -170,55 +173,62 @@ const UserProgress: React.FC = () => {
     fetchUsers();
   }, [page, filters, fetchUserProgresses, fetchCourses, fetchUsers]);
 
-  const fetchCourseDetails = async (courseId: number, userId: number) => {
-    if (loadingDetails.has(courseId)) return;
-    
-    setLoadingDetails(prev => new Set(prev).add(courseId));
+  const fetchPendingItems = async (enrollmentId: number) => {
+    if (loadingDetails.has(enrollmentId)) return;
+
+    setLoadingDetails((prev) => new Set(prev).add(enrollmentId));
     try {
-      const response = await api.get(`/progress/course/${courseId}`);
-      setCourseDetails(prev => new Map(prev).set(courseId, response.data));
-      
-      // Fetch certificates for this user and course
-      await fetchUserCertificates(userId, courseId);
+      const response = await api.get(`/user-progress/${enrollmentId}/details`);
+      setPendingItemsMap((prev) =>
+        new Map(prev).set(enrollmentId, response.data)
+      );
     } catch (error) {
-      console.error('Error fetching course details:', error);
+      console.error("Error fetching pending items:", error);
+      enqueueSnackbar("Error al cargar detalles pendientes", {
+        variant: "error",
+      });
     } finally {
-      setLoadingDetails(prev => {
+      setLoadingDetails((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(courseId);
+        newSet.delete(enrollmentId);
         return newSet;
       });
     }
   };
 
-  const fetchUserCertificates = async (userId: number, courseId: number) => {
-    try {
-      const response = await api.get(`/certificates/user/${userId}?course_id=${courseId}`);
-      setCertificates(prev => new Map(prev).set(courseId, response.data || []));
-    } catch (error) {
-      console.error('Error fetching certificates:', error);
-      setCertificates(prev => new Map(prev).set(courseId, []));
-    }
-  };
-
-  const handleRowExpand = async (progressId: number, courseId: number, userId: number) => {
+  const handleRowExpand = async (progressId: number) => {
     const newExpandedRows = new Set(expandedRows);
-    
+
     if (expandedRows.has(progressId)) {
       newExpandedRows.delete(progressId);
     } else {
       newExpandedRows.add(progressId);
-      if (!courseDetails.has(courseId)) {
-        await fetchCourseDetails(courseId, userId);
+      if (!pendingItemsMap.has(progressId)) {
+        await fetchPendingItems(progressId);
       }
     }
-    
+
     setExpandedRows(newExpandedRows);
   };
 
-  
-
-
+  const handleSendReminder = async (enrollmentId: number) => {
+    setSendingReminder((prev) => new Set(prev).add(enrollmentId));
+    try {
+      await api.post(`/user-progress/remind/${enrollmentId}`);
+      enqueueSnackbar("Recordatorio enviado exitosamente", {
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error sending reminder:", error);
+      enqueueSnackbar("Error al enviar el recordatorio", { variant: "error" });
+    } finally {
+      setSendingReminder((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(enrollmentId);
+        return newSet;
+      });
+    }
+  };
 
   const formatDuration = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
@@ -227,124 +237,186 @@ const UserProgress: React.FC = () => {
   };
 
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return 'success';
-    if (percentage >= 50) return 'warning';
-    return 'error';
+    if (percentage >= 80) return "success";
+    if (percentage >= 50) return "warning";
+    return "error";
   };
 
   const getStatusColor = (status: string) => {
     const config = statusConfig[status as keyof typeof statusConfig];
-    return config ? config.color : 'default';
+    return config ? config.color : "default";
   };
 
-  
+  const renderPendingItems = (enrollmentId: number) => {
+    const details = pendingItemsMap.get(enrollmentId);
+    const isLoading = loadingDetails.has(enrollmentId);
 
-  const renderProgressStep = (icon: React.ReactNode, title: string, status: 'completed' | 'current' | 'pending', description?: string) => {
-    const getStepColor = () => {
-      switch (status) {
-        case 'completed': return '#4caf50';
-        case 'current': return '#2196f3';
-        case 'pending': return '#9e9e9e';
-        default: return '#9e9e9e';
-      }
-    };
+    if (isLoading) {
+      return (
+        <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+          <CircularProgress size={24} />
+          <Typography sx={{ ml: 2 }}>Cargando detalles...</Typography>
+        </Box>
+      );
+    }
+
+    if (!details) {
+      return (
+        <Alert severity="info" sx={{ m: 2 }}>
+          No se pudieron cargar los detalles.
+        </Alert>
+      );
+    }
+
+    const hasPending = details.is_pending;
 
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Box
-          sx={{
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            backgroundColor: getStepColor(),
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            mr: 2
-          }}
-        >
-          {status === 'completed' ? <CheckIcon /> : icon}
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle2" sx={{ color: getStepColor(), fontWeight: 'bold' }}>
-            {title}
-          </Typography>
-          {description && (
-            <Typography variant="body2" color="text.secondary">
-              {description}
+      <Box sx={{ p: 2, bgcolor: "#f8f9fa" }}>
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 8 }}>
+            <Typography variant="h6" gutterBottom>
+              Detalle de Actividades Pendientes
             </Typography>
-          )}
-        </Box>
+
+            {!hasPending ? (
+              <Alert severity="success" icon={<CheckIcon fontSize="inherit" />}>
+                ¡El usuario está al día con todas las actividades!
+              </Alert>
+            ) : (
+              <Grid container spacing={2}>
+                {/* Pending Modules */}
+                {details.modules.length > 0 && (
+                  <Grid size={{ xs: 12 }}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography
+                          variant="subtitle1"
+                          color="primary"
+                          sx={{ display: "flex", alignItems: "center" }}
+                        >
+                          <CourseIcon sx={{ mr: 1 }} /> Contenido / Módulos
+                        </Typography>
+                        <List dense>
+                          {details.modules.map((item, idx) => (
+                            <ListItem key={idx}>
+                              <ListItemIcon>
+                                <WarningIcon color="warning" fontSize="small" />
+                              </ListItemIcon>
+                              <ListItemText primary={item.title} />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                )}
+
+                {/* Pending Surveys */}
+                {details.surveys.length > 0 && (
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography
+                          variant="subtitle1"
+                          color="secondary"
+                          sx={{ display: "flex", alignItems: "center" }}
+                        >
+                          <SurveyIcon sx={{ mr: 1 }} /> Encuestas Pendientes
+                        </Typography>
+                        <List dense>
+                          {details.surveys.map((item, idx) => (
+                            <ListItem key={idx}>
+                              <ListItemIcon>
+                                <WarningIcon color="warning" fontSize="small" />
+                              </ListItemIcon>
+                              <ListItemText primary={item.title} />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                )}
+
+                {/* Pending Evaluations */}
+                {details.evaluations.length > 0 && (
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography
+                          variant="subtitle1"
+                          color="error"
+                          sx={{ display: "flex", alignItems: "center" }}
+                        >
+                          <EvaluationIcon sx={{ mr: 1 }} /> Evaluaciones
+                          Pendientes
+                        </Typography>
+                        <List dense>
+                          {details.evaluations.map((item, idx) => (
+                            <ListItem key={idx}>
+                              <ListItemIcon>
+                                <WarningIcon color="warning" fontSize="small" />
+                              </ListItemIcon>
+                              <ListItemText primary={item.title} />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                )}
+              </Grid>
+            )}
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Card
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                p: 2,
+              }}
+            >
+              <EmailIcon
+                sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+              />
+              <Typography variant="h6" align="center" gutterBottom>
+                Acciones
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                align="center"
+                paragraph
+              >
+                Si el usuario tiene actividades pendientes, puedes enviarle un
+                recordatorio por correo electrónico.
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={
+                  sendingReminder.has(enrollmentId) ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <EmailIcon />
+                  )
+                }
+                onClick={() => handleSendReminder(enrollmentId)}
+                disabled={!hasPending || sendingReminder.has(enrollmentId)}
+                fullWidth
+              >
+                {sendingReminder.has(enrollmentId)
+                  ? "Enviando..."
+                  : "Enviar Recordatorio"}
+              </Button>
+            </Card>
+          </Grid>
+        </Grid>
       </Box>
-    );
-  };
-
-  const renderSurveyProgress = (detail: CourseProgressDetail) => {
-    const getSurveyStatus = () => {
-      if (detail.survey_status === 'completed') return 'completed';
-      if (detail.can_take_survey || detail.survey_status === 'available') return 'current';
-      return 'pending';
-    };
-
-    const description = detail.survey_status === 'completed' 
-      ? `Completadas: ${detail.completed_surveys_count}/${detail.total_surveys_count}`
-      : detail.can_take_survey 
-        ? 'Encuestas disponibles para completar'
-        : 'Completa el curso para habilitar las encuestas';
-
-    return renderProgressStep(
-      <SurveyIcon />,
-      'Encuestas',
-      getSurveyStatus(),
-      description
-    );
-  };
-
-  const renderEvaluationProgress = (detail: CourseProgressDetail, courseTitle?: string) => {
-    const getEvaluationStatus = () => {
-      if (detail.evaluation_completed) return 'completed';
-      if (detail.can_take_evaluation) return 'current';
-      return 'pending';
-    };
-
-    const description = detail.evaluation_completed
-      ? `Completada - ${courseTitle ? `Curso: ${courseTitle} - ` : ''}Puntuación: ${detail.evaluation_score}/${detail.passing_score}`
-      : detail.can_take_evaluation
-        ? 'Evaluación disponible'
-        : 'Completa las encuestas para habilitar la evaluación';
-
-    const title = detail.evaluation_completed ? 'Evaluación Completada' : 'Evaluación';
-
-    return renderProgressStep(
-      <EvaluationIcon />,
-      title,
-      getEvaluationStatus(),
-      description
-    );
-  };
-
-  const renderCertificateProgress = (courseId: number, detail: CourseProgressDetail) => {
-    const courseCertificates = certificates.get(courseId) || [];
-    const hasCertificate = courseCertificates.length > 0;
-    
-    const getCertificateStatus = () => {
-      if (hasCertificate) return 'completed';
-      if (detail.evaluation_completed) return 'current';
-      return 'pending';
-    };
-
-    const description = hasCertificate
-      ? `Certificado generado: ${courseCertificates[0]?.certificate_number}`
-      : detail.evaluation_completed
-        ? 'Certificado en proceso de generación'
-        : 'Completa la evaluación para generar el certificado';
-
-    return renderProgressStep(
-      <CertificateIcon />,
-      'Certificado',
-      getCertificateStatus(),
-      description
     );
   };
 
@@ -363,7 +435,7 @@ const UserProgress: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell width="50"></TableCell>
-              <TableCell>Usuario</TableCell>
+              <TableCell>Trabajador</TableCell>
               <TableCell>Curso</TableCell>
               <TableCell>Tipo</TableCell>
               <TableCell>Estado</TableCell>
@@ -392,9 +464,13 @@ const UserProgress: React.FC = () => {
                     <TableCell>
                       <IconButton
                         size="small"
-                        onClick={() => handleRowExpand(progress.id, progress.course_id, progress.user_id)}
+                        onClick={() => handleRowExpand(progress.id)}
                       >
-                        {expandedRows.has(progress.id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        {expandedRows.has(progress.id) ? (
+                          <ExpandLessIcon />
+                        ) : (
+                          <ExpandMoreIcon />
+                        )}
                       </IconButton>
                     </TableCell>
                     <TableCell>
@@ -405,7 +481,11 @@ const UserProgress: React.FC = () => {
                         <Typography variant="caption" color="text.secondary">
                           {progress.user_document} • {progress.user_position}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
                           {progress.user_area}
                         </Typography>
                       </Box>
@@ -413,14 +493,22 @@ const UserProgress: React.FC = () => {
                     <TableCell>
                       <Box>
                         <Typography variant="body2" fontWeight="bold">
-                          {progress.course_title}
+                          {progress.course_name}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Inscrito: {new Date(progress.enrollment_date).toLocaleDateString()}
+                          Inscrito:{" "}
+                          {new Date(progress.enrolled_at).toLocaleDateString()}
                         </Typography>
-                        {progress.completion_date && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Completado: {new Date(progress.completion_date).toLocaleDateString()}
+                        {progress.completed_at && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                          >
+                            Completado:{" "}
+                            {new Date(
+                              progress.completed_at
+                            ).toLocaleDateString()}
                           </Typography>
                         )}
                       </Box>
@@ -434,13 +522,27 @@ const UserProgress: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={statusConfig[progress.status]?.label || progress.status}
-                        color={getStatusColor(progress.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                        label={
+                          statusConfig[progress.status]?.label ||
+                          progress.status
+                        }
+                        color={
+                          getStatusColor(progress.status) as
+                            | "default"
+                            | "primary"
+                            | "secondary"
+                            | "error"
+                            | "info"
+                            | "success"
+                            | "warning"
+                        }
                         size="small"
                       />
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <LinearProgress
                           variant="determinate"
                           value={progress.progress_percentage}
@@ -448,9 +550,11 @@ const UserProgress: React.FC = () => {
                             width: 100,
                             height: 8,
                             borderRadius: 4,
-                            backgroundColor: '#f0f0f0',
-                            '& .MuiLinearProgress-bar': {
-                              backgroundColor: getProgressColor(progress.progress_percentage),
+                            backgroundColor: "#f0f0f0",
+                            "& .MuiLinearProgress-bar": {
+                              backgroundColor: getProgressColor(
+                                progress.progress_percentage
+                              ),
                               borderRadius: 4,
                             },
                           }}
@@ -471,93 +575,17 @@ const UserProgress: React.FC = () => {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                  
+
                   {/* Fila expandida con detalles del progreso */}
                   {expandedRows.has(progress.id) && (
                     <TableRow>
                       <TableCell colSpan={8} sx={{ py: 0 }}>
-                        <Collapse in={expandedRows.has(progress.id)} timeout="auto" unmountOnExit>
-                          <Box sx={{ p: 3, backgroundColor: '#f8f9fa', borderRadius: 1, m: 1 }}>
-                            {loadingDetails.has(progress.course_id) ? (
-                              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                                <CircularProgress size={40} />
-                              </Box>
-                            ) : (
-                              <>
-                                <Typography variant="h6" gutterBottom sx={{ color: '#1976d2', mb: 3 }}>
-                                  Progreso del Flujo de Certificación
-                                </Typography>
-                                
-                                <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
-                                    <Box sx={{ flex: 1 }}>
-                                      <Paper sx={{ p: 2, height: '100%' }}>
-                                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                                          Estado del Curso
-                                        </Typography>
-                                        {renderProgressStep(
-                                          <CourseIcon />,
-                                          'Curso',
-                                          progress.progress_percentage === 100 ? 'completed' : 'current',
-                                          `Progreso: ${progress.progress_percentage}% - ${progress.modules_completed}/${progress.total_modules} módulos`
-                                        )}
-                                        
-                                        {courseDetails.has(progress.course_id) && (
-                                          <>
-                                            {renderSurveyProgress(courseDetails.get(progress.course_id)!)}
-                                            {renderEvaluationProgress(courseDetails.get(progress.course_id)!, progress.course_title)}
-                                            {renderCertificateProgress(progress.course_id, courseDetails.get(progress.course_id)!)}
-                                          </>
-                                        )}
-                                      </Paper>
-                                    </Box>
-                                    
-                                    <Box sx={{ flex: 1 }}>
-                                      <Paper sx={{ p: 2, height: '100%' }}>
-                                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                                          Información Adicional
-                                        </Typography>
-                                      
-                                      {courseDetails.has(progress.course_id) && (
-                                        <>
-                                          {courseDetails.get(progress.course_id)!.pending_surveys.length > 0 && (
-                                            <Alert severity="info" sx={{ mb: 2 }}>
-                                              <AlertTitle>Encuestas Pendientes</AlertTitle>
-                                              {courseDetails.get(progress.course_id)!.pending_surveys.map((survey) => (
-                                                <Typography key={survey.id} variant="body2">
-                                                  • {survey.title}
-                                                </Typography>
-                                              ))}
-                                            </Alert>
-                                          )}
-                                          
-                                          {courseDetails.get(progress.course_id)!.can_take_survey && (
-                                            <Alert severity="success" sx={{ mb: 2 }}>
-                                              <AlertTitle>¡Encuesta Habilitada!</AlertTitle>
-                                              Has completado el curso. Ahora puedes realizar las encuestas disponibles.
-                                            </Alert>
-                                          )}
-                                          
-                                          {courseDetails.get(progress.course_id)!.can_take_evaluation && (
-                                            <Alert severity="warning" sx={{ mb: 2 }}>
-                                              <AlertTitle>¡Evaluación Disponible!</AlertTitle>
-                                              Has completado las encuestas. Ahora puedes realizar la evaluación.
-                                            </Alert>
-                                          )}
-                                          
-                                          {certificates.has(progress.course_id) && certificates.get(progress.course_id)!.length > 0 && (
-                                            <Alert severity="success" sx={{ mb: 2 }}>
-                                              <AlertTitle>¡Certificado Generado!</AlertTitle>
-                                              Tu certificado ha sido generado automáticamente tras completar la evaluación.
-                                            </Alert>
-                                          )}
-                                        </>
-                                       )}
-                                     </Paper>
-                                   </Box>
-                                 </Box>
-                              </>
-                            )}
-                          </Box>
+                        <Collapse
+                          in={expandedRows.has(progress.id)}
+                          timeout="auto"
+                          unmountOnExit
+                        >
+                          {renderPendingItems(progress.id)}
                         </Collapse>
                       </TableCell>
                     </TableRow>
@@ -567,7 +595,6 @@ const UserProgress: React.FC = () => {
             )}
           </TableBody>
         </Table>
-
       </TableContainer>
 
       {/* Paginación */}
