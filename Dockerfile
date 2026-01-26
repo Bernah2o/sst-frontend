@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (including dev dependencies for build)
-RUN npm ci --only=production --silent
+RUN npm ci --silent
 
 # Copy source code (excluding unnecessary files)
 COPY public/ ./public/
