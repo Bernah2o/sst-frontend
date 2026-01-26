@@ -13,6 +13,7 @@ export interface Worker {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  age?: number;
 }
 
 export interface WorkerList {

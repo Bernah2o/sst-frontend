@@ -55,6 +55,7 @@ import {
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { es } from "date-fns/locale";
 import React, { useState, useEffect, useCallback } from "react";
 
 
@@ -62,15 +63,14 @@ import { adminConfigService } from "../services/adminConfigService";
 import api, { apiService } from "../services/api";
 import { formatDate } from "../utils/dateUtils";
 import { suppliersService, Supplier, Doctor } from "../services/suppliersService";
+import profesiogramaService, { TipoExamen } from "../services/profesiogramaService";
 import AutocompleteField, { AutocompleteOption } from "../components/AutocompleteField";
+import { COLOMBIAN_DEPARTMENTS } from "../data/colombianDepartments";
+import { COLOMBIAN_CITIES } from "../data/colombianCities";
 
 
 // Enums que coinciden con el backend
-type ExamType =
-  | "examen_ingreso"
-  | "examen_periodico"
-  | "examen_reintegro"
-  | "examen_retiro";
+
 type MedicalAptitude = "apto" | "apto_con_recomendaciones" | "no_apto";
 
 interface OccupationalExamData {
@@ -82,8 +82,14 @@ interface OccupationalExamData {
   worker_hire_date?: string; // Fecha de ingreso del trabajador
 
   // Campos del modelo backend
-  exam_type: ExamType;
+  tipo_examen_id: number;
+  tipo_examen?: TipoExamen;
   exam_date: string;
+  departamento?: string;
+  ciudad?: string;
+  duracion_cargo_actual_meses?: number;
+  factores_riesgo_evaluados?: any;
+  cargo_id_momento_examen?: number;
   programa?: string;
   occupational_conclusions?: string;
   preventive_occupational_behaviors?: string;
@@ -146,6 +152,7 @@ const OccupationalExam: React.FC = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [tiposExamen, setTiposExamen] = useState<TipoExamen[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -159,7 +166,7 @@ const OccupationalExam: React.FC = () => {
     null
   );
   const [filters, setFilters] = useState({
-    exam_type: "",
+    tipo_examen_id: "",
     worker: "",
     search: "",
   });
@@ -175,7 +182,7 @@ const OccupationalExam: React.FC = () => {
     worker_name: "",
     worker_position: "",
     worker_hire_date: "",
-    exam_type: "examen_periodico" as ExamType,
+    tipo_examen_id: "" as string | number,
     exam_date: null as Date | null,
     programa: "",
     occupational_conclusions: "",
@@ -191,18 +198,13 @@ const OccupationalExam: React.FC = () => {
     next_exam_date: null as Date | null,
     pdf_file_path: null as string | null,
     requires_follow_up: false,
+    duracion_cargo_actual_meses: '',
+    factores_riesgo_evaluados: [],
+    departamento: '',
+    ciudad: '',
   });
 
-  const examTypes = [
-    { value: "examen_ingreso", label: "Examen de Ingreso", color: "primary" },
-    { value: "examen_periodico", label: "Examen Periódico", color: "info" },
-    { value: "examen_retiro", label: "Examen de Retiro", color: "warning" },
-    {
-      value: "examen_reintegro",
-      label: "Examen de Reintegro",
-      color: "secondary",
-    },
-  ];
+
 
   const medicalAptitudeTypes = [
     { value: "apto", label: "Apto", color: "success" },
@@ -254,7 +256,7 @@ const OccupationalExam: React.FC = () => {
       params.append("page", page.toString());
       params.append("limit", "20");
 
-      if (filters.exam_type) params.append("exam_type", filters.exam_type);
+      if (filters.tipo_examen_id) params.append("tipo_examen_id", filters.tipo_examen_id.toString());
       if (filters.worker) params.append("worker_id", filters.worker);
       if (filters.search) params.append("search", filters.search);
 
@@ -469,7 +471,7 @@ const OccupationalExam: React.FC = () => {
       worker_name: "",
       worker_position: "",
       worker_hire_date: "",
-      exam_type: "examen_periodico",
+      tipo_examen_id: "",
       exam_date: null,
       programa: "",
       occupational_conclusions: "",
@@ -486,12 +488,28 @@ const OccupationalExam: React.FC = () => {
         next_exam_date: null,
         pdf_file_path: null,
         requires_follow_up: false,
+    duracion_cargo_actual_meses: '',
+    factores_riesgo_evaluados: [],
+    departamento: '',
+    ciudad: '',
     });
     setSelectedFile(null);
   };
 
   const handleSaveExam = async () => {
     try {
+      const durValue = formData.duracion_cargo_actual_meses;
+      if (durValue === null || durValue === undefined || durValue === '') {
+        alert("Duración del cargo actual (meses) es obligatoria (Art. 15)");
+        return;
+      }
+
+      const factores = formData.factores_riesgo_evaluados as any[];
+      if (!Array.isArray(factores) || factores.length === 0) {
+        alert('Debe incluir al menos un factor de riesgo evaluado (Art. 15)');
+        return;
+      }
+
       let pdfFilePath = null;
 
       // Si hay un archivo PDF seleccionado, subirlo primero
@@ -508,12 +526,15 @@ const OccupationalExam: React.FC = () => {
         }
       }
 
-      const payload = {
+      const payload: any = {
         ...formData,
         worker_id: parseInt(formData.worker_id),
         exam_date: formData.exam_date?.toISOString().split("T")[0],
         next_exam_date: formData.next_exam_date?.toISOString().split("T")[0],
-        pdf_file_path: pdfFilePath || formData.pdf_file_path, // Usar el nuevo archivo o mantener el existente
+        pdf_file_path: pdfFilePath || formData.pdf_file_path,
+        duracion_cargo_actual_meses: formData.duracion_cargo_actual_meses ? Number(formData.duracion_cargo_actual_meses) : undefined,
+
+        factores_riesgo_evaluados: formData.factores_riesgo_evaluados || [],
       };
 
       let examResponse;
@@ -572,6 +593,46 @@ const OccupationalExam: React.FC = () => {
     }
   };
 
+  const fetchAndSetExamCalculations = async (workerId: string, hireDateStr: string, examDate: Date | null) => {
+    if (!examDate) return;
+
+    // Calcular duración si hay fecha de ingreso
+    let duracionMesesStr = '';
+    if (hireDateStr) {
+      const ingreso = new Date(hireDateStr);
+      let months = (examDate.getFullYear() - ingreso.getFullYear()) * 12;
+      months -= ingreso.getMonth();
+      months += examDate.getMonth();
+      if (examDate.getDate() < ingreso.getDate()) {
+          months--;
+      }
+      duracionMesesStr = Math.max(0, months).toString();
+    }
+
+    try {
+      const examDateStr = examDate.toISOString().split('T')[0];
+      const response = await api.get(
+        `/occupational-exams/calculate-next-exam-date/${workerId}?exam_date=${examDateStr}`
+      );
+      
+      setFormData(prev => ({
+        ...prev,
+        duracion_cargo_actual_meses: duracionMesesStr ? (duracionMesesStr as any) : prev.duracion_cargo_actual_meses,
+        ...(response.data.next_exam_date ? { next_exam_date: new Date(response.data.next_exam_date) } : {}),
+        ...(response.data.risk_factors ? { factores_riesgo_evaluados: response.data.risk_factors } : {})
+      }));
+    } catch (error) {
+      console.error('Error calculando info del examen:', error);
+      // Aun si falla la API, actualizar la duración calculada
+      if (duracionMesesStr) {
+        setFormData(prev => ({
+          ...prev,
+          duracion_cargo_actual_meses: duracionMesesStr as any
+        }));
+      }
+    }
+  };
+
   const handleGenerateReport = async () => {
     try {
       setGeneratingReport(true);
@@ -580,7 +641,7 @@ const OccupationalExam: React.FC = () => {
       const params = new URLSearchParams();
       params.append("format", "pdf"); // Agregar parámetro format=pdf
       params.append("download", "true"); // Agregar parámetro download=true
-      if (filters.exam_type) params.append("exam_type", filters.exam_type);
+      if (filters.tipo_examen_id) params.append("tipo_examen_id", filters.tipo_examen_id.toString());
       if (filters.worker) params.append("worker_id", filters.worker);
       if (filters.search) params.append("search", filters.search);
 
@@ -650,7 +711,7 @@ const OccupationalExam: React.FC = () => {
         worker_name: exam.worker_name || "",
         worker_position: exam.worker_position || "",
         worker_hire_date: exam.worker_hire_date || "",
-        exam_type: exam.exam_type || "examen_periodico",
+        tipo_examen_id: exam.tipo_examen_id || "",
         exam_date: exam.exam_date ? new Date(exam.exam_date) : null,
         programa: exam.programa || "",
         occupational_conclusions: exam.occupational_conclusions || "",
@@ -663,6 +724,10 @@ const OccupationalExam: React.FC = () => {
       medical_center: exam.medical_center || "",
       supplier_id: exam.supplier_id?.toString() || "",
       doctor_id: exam.doctor_id?.toString() || "",
+      duracion_cargo_actual_meses: (exam as any).duracion_cargo_actual_meses ? String((exam as any).duracion_cargo_actual_meses) : '',
+      factores_riesgo_evaluados: (exam as any).factores_riesgo_evaluados || [],
+      departamento: (exam as any).departamento || '',
+      ciudad: (exam as any).ciudad || '',
 
         restrictions: exam.restrictions || "",
         next_exam_date: exam.next_exam_date
@@ -685,7 +750,7 @@ const OccupationalExam: React.FC = () => {
         worker_name: "",
         worker_position: "",
         worker_hire_date: "",
-        exam_type: "examen_periodico",
+        tipo_examen_id: "",
         exam_date: null,
         programa: "",
         occupational_conclusions: "",
@@ -702,6 +767,11 @@ const OccupationalExam: React.FC = () => {
         next_exam_date: null,
         pdf_file_path: null,
         requires_follow_up: false,
+    duracion_cargo_actual_meses: '',
+    factores_riesgo_evaluados: [],
+
+    departamento: '',
+    ciudad: '',
       });
     }
     
@@ -865,23 +935,45 @@ const OccupationalExam: React.FC = () => {
     return new Date(exam.expires_at) < new Date();
   };
 
+
+  const fetchTiposExamen = useCallback(async () => {
+    try {
+      const tipos = await profesiogramaService.listTiposExamen({ activo: true });
+      setTiposExamen(tipos);
+    } catch (error) {
+      console.error("Error fetching tipos examen:", error);
+    }
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       await fetchWorkers();
       await fetchProgramas();
       await fetchSuppliers();
+    fetchTiposExamen();
       await fetchExams();
     };
     loadData();
-  }, [page, filters, fetchWorkers, fetchProgramas, fetchSuppliers, fetchExams]);
+  }, [page, filters, fetchWorkers, fetchProgramas, fetchSuppliers, fetchExams, fetchTiposExamen]);
 
   useEffect(() => {
     fetchProgramas();
     fetchSuppliers();
-  }, [fetchProgramas, fetchSuppliers]);
+    fetchTiposExamen();
+  }, [fetchProgramas, fetchSuppliers, fetchTiposExamen]);
+
+  const tiposExamenFiltrados = tiposExamen.filter((type) =>
+    [
+      "Examen de Ingreso",
+      "Examen Periódico",
+      "Examen de Reintegro",
+      "Examen de Retiro",
+      "Examen Médico Ocupacional",
+    ].includes(type.nombre)
+  );
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
       <Box sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom>
           Exámenes Ocupacionales
@@ -927,21 +1019,20 @@ const OccupationalExam: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>Tipo de Examen</InputLabel>
                   <Select
-                    value={filters.exam_type}
+                    value={filters.tipo_examen_id}
                     onChange={(e) =>
-                      handleFilterChange("exam_type", e.target.value)
+                      handleFilterChange("tipo_examen_id", e.target.value)
                     }
                   >
                     <MenuItem value="">Todos</MenuItem>
-                    {examTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
+                    {tiposExamenFiltrados.map((type) => (
+                      <MenuItem key={type.id} value={type.id}>
+                        {type.nombre}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </Grid>
-
 
               <Grid size={{ xs: 12, md: 3 }}>
                 <Box display="flex" gap={1}>
@@ -1016,8 +1107,8 @@ const OccupationalExam: React.FC = () => {
                           backgroundColor: isExamExpired(exam)
                             ? "error.light"
                             : isExamExpiring(exam)
-                            ? "warning.light"
-                            : "inherit",
+                              ? "warning.light"
+                              : "inherit",
                         }}
                       >
                         <TableCell>
@@ -1035,14 +1126,8 @@ const OccupationalExam: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={
-                              examTypes.find((t) => t.value === exam.exam_type)
-                                ?.label
-                            }
-                            color={
-                              examTypes.find((t) => t.value === exam.exam_type)
-                                ?.color as any
-                            }
+                            label={exam.tipo_examen?.nombre || "N/A"}
+                            color="primary"
                             size="small"
                           />
                         </TableCell>
@@ -1065,17 +1150,17 @@ const OccupationalExam: React.FC = () => {
                               exam.medical_aptitude_concept === "apto"
                                 ? "Apto"
                                 : exam.medical_aptitude_concept ===
-                                  "apto_con_recomendaciones"
-                                ? "Apto con Recomendaciones"
-                                : "No Apto"
+                                    "apto_con_recomendaciones"
+                                  ? "Apto con Recomendaciones"
+                                  : "No Apto"
                             }
                             color={
                               exam.medical_aptitude_concept === "apto"
                                 ? "success"
                                 : exam.medical_aptitude_concept ===
-                                  "apto_con_recomendaciones"
-                                ? "warning"
-                                : "error"
+                                    "apto_con_recomendaciones"
+                                  ? "warning"
+                                  : "error"
                             }
                             size="small"
                           />
@@ -1098,8 +1183,8 @@ const OccupationalExam: React.FC = () => {
                                 isExamExpired(exam)
                                   ? "error"
                                   : isExamExpiring(exam)
-                                  ? "warning.main"
-                                  : "text.secondary"
+                                    ? "warning.main"
+                                    : "text.secondary"
                               }
                             >
                               Vence: {formatDate(exam.expires_at)}
@@ -1161,26 +1246,32 @@ const OccupationalExam: React.FC = () => {
                                 </IconButton>
                               </Tooltip>
                             )}
-                            {exam.pdf_file_path && exam.pdf_file_path.trim() && (
-                              <>
-                                <Tooltip title="Previsualizar PDF">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handlePreviewPdf(exam.id)}
-                                  >
-                                    <ViewIcon />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Descargar PDF">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleDownloadPdf(exam.id, exam.worker_name)}
-                                  >
-                                    <DownloadIcon />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
-                            )}
+                            {exam.pdf_file_path &&
+                              exam.pdf_file_path.trim() && (
+                                <>
+                                  <Tooltip title="Previsualizar PDF">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handlePreviewPdf(exam.id)}
+                                    >
+                                      <ViewIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Descargar PDF">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
+                                        handleDownloadPdf(
+                                          exam.id,
+                                          exam.worker_name,
+                                        )
+                                      }
+                                    >
+                                      <DownloadIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
+                              )}
                             <Tooltip
                               title={
                                 sendingEmail === exam.id
@@ -1201,17 +1292,21 @@ const OccupationalExam: React.FC = () => {
                                 )}
                               </IconButton>
                             </Tooltip>
-                            <Tooltip 
+                            <Tooltip
                               title={
-                                exam.requires_follow_up 
-                                  ? "Desmarcar seguimiento" 
+                                exam.requires_follow_up
+                                  ? "Desmarcar seguimiento"
                                   : "Marcar para seguimiento"
                               }
                             >
                               <IconButton
                                 size="small"
                                 onClick={() => handleToggleFollowUp(exam)}
-                                color={exam.requires_follow_up ? "warning" : "default"}
+                                color={
+                                  exam.requires_follow_up
+                                    ? "warning"
+                                    : "default"
+                                }
                               >
                                 {exam.requires_follow_up ? (
                                   <FollowUpActiveIcon />
@@ -1282,38 +1377,43 @@ const OccupationalExam: React.FC = () => {
                   label="Trabajador *"
                   placeholder="Buscar trabajador por nombre o documento..."
                   required
-                  value={formData.worker_id ? {
-                    id: formData.worker_id,
-                    label: formData.worker_name || '',
-                    value: workers.find(w => w.id.toString() === formData.worker_id)
-                  } : null}
-                  onChange={async (selectedOption: AutocompleteOption | AutocompleteOption[] | null) => {
+                  value={
+                    formData.worker_id
+                      ? {
+                          id: formData.worker_id,
+                          label: formData.worker_name || "",
+                          value: workers.find(
+                            (w) => w.id.toString() === formData.worker_id,
+                          ),
+                        }
+                      : null
+                  }
+                  onChange={async (
+                    selectedOption:
+                      | AutocompleteOption
+                      | AutocompleteOption[]
+                      | null,
+                  ) => {
                     if (selectedOption && !Array.isArray(selectedOption)) {
                       const selectedWorker = selectedOption.value;
+
                       setFormData({
                         ...formData,
                         worker_id: selectedWorker.id.toString(),
                         worker_name: `${selectedWorker.first_name} ${selectedWorker.last_name}`,
                         worker_position: selectedWorker.position || "",
                         worker_hire_date: selectedWorker.fecha_de_ingreso || "",
+                        // Limpiar campos calculados antes de recalcular
+                        duracion_cargo_actual_meses: "",
+                        next_exam_date: null,
                       });
-                      
-                      // Calcular automáticamente la fecha del próximo examen si hay fecha de examen
+
                       if (formData.exam_date) {
-                        try {
-                          const examDateStr = formData.exam_date.toISOString().split('T')[0];
-                          const response = await api.get(
-                            `/occupational-exams/calculate-next-exam-date/${selectedWorker.id}?exam_date=${examDateStr}`
-                          );
-                          if (response.data.next_exam_date) {
-                            setFormData(prev => ({
-                              ...prev,
-                              next_exam_date: new Date(response.data.next_exam_date)
-                            }));
-                          }
-                        } catch (error) {
-                          console.error('Error calculando fecha del próximo examen:', error);
-                        }
+                        await fetchAndSetExamCalculations(
+                          selectedWorker.id.toString(),
+                          selectedWorker.fecha_de_ingreso || "",
+                          formData.exam_date,
+                        );
                       }
                     } else {
                       setFormData({
@@ -1322,19 +1422,22 @@ const OccupationalExam: React.FC = () => {
                         worker_name: "",
                         worker_position: "",
                         worker_hire_date: "",
+                        duracion_cargo_actual_meses: "",
+                        next_exam_date: null,
+                        factores_riesgo_evaluados: [],
                       });
                     }
                   }}
                   autocompleteOptions={{
-                    staticOptions: workers.map(worker => ({
+                    staticOptions: workers.map((worker) => ({
                       id: worker.id,
                       label: `${worker.first_name} ${worker.last_name}`,
                       value: worker,
-                      description: `${worker.document_number} - ${worker.position || 'Sin cargo'}`,
-                      category: worker.position || 'Sin cargo'
+                      description: `${worker.document_number} - ${worker.position || "Sin cargo"}`,
+                      category: worker.position || "Sin cargo",
                     })),
                     minSearchLength: 0,
-                    searchDelay: 200
+                    searchDelay: 200,
                   }}
                 />
               </Grid>
@@ -1376,20 +1479,20 @@ const OccupationalExam: React.FC = () => {
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth>
+                <FormControl fullWidth required>
                   <InputLabel>Tipo de Examen</InputLabel>
                   <Select
-                    value={formData.exam_type}
+                    value={formData.tipo_examen_id}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        exam_type: e.target.value as any,
+                        tipo_examen_id: e.target.value,
                       })
                     }
                   >
-                    {examTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
+                    {tiposExamenFiltrados.map((type) => (
+                      <MenuItem key={type.id} value={type.id}>
+                        {type.nombre}
                       </MenuItem>
                     ))}
                   </Select>
@@ -1400,28 +1503,64 @@ const OccupationalExam: React.FC = () => {
                   label="Fecha del Examen *"
                   value={formData.exam_date}
                   onChange={async (date) => {
-                    setFormData({ ...formData, exam_date: date });
-                    
-                    // Calcular automáticamente la fecha del próximo examen si hay trabajador seleccionado
+                    setFormData((prev) => ({ ...prev, exam_date: date }));
+
                     if (date && formData.worker_id) {
-                      try {
-                        const examDateStr = date.toISOString().split('T')[0];
-                        const response = await api.get(
-                          `/occupational-exams/calculate-next-exam-date/${formData.worker_id}?exam_date=${examDateStr}`
-                        );
-                        if (response.data.next_exam_date) {
-                          setFormData(prev => ({
-                            ...prev,
-                            next_exam_date: new Date(response.data.next_exam_date)
-                          }));
-                        }
-                      } catch (error) {
-                        console.error('Error calculando fecha del próximo examen:', error);
-                      }
+                      await fetchAndSetExamCalculations(
+                        formData.worker_id,
+                        formData.worker_hire_date,
+                        date,
+                      );
                     }
                   }}
                   slotProps={{ textField: { fullWidth: true, required: true } }}
                 />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Departamento</InputLabel>
+                  <Select
+                    value={(formData as any).departamento || ""}
+                    label="Departamento"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        departamento: e.target.value,
+                        ciudad: "", // Reset city when department changes
+                      })
+                    }
+                  >
+                    {COLOMBIAN_DEPARTMENTS.map((dep) => (
+                      <MenuItem key={dep} value={dep}>
+                        {dep}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Ciudad</InputLabel>
+                  <Select
+                    value={(formData as any).ciudad || ""}
+                    label="Ciudad"
+                    onChange={(e) =>
+                      setFormData({ ...formData, ciudad: e.target.value })
+                    }
+                    disabled={!(formData as any).departamento}
+                  >
+                    {(
+                      ((formData as any).departamento &&
+                        COLOMBIAN_CITIES[(formData as any).departamento]) ||
+                      []
+                    ).map((city: string) => (
+                      <MenuItem key={city} value={city}>
+                        {city}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth required>
@@ -1434,7 +1573,10 @@ const OccupationalExam: React.FC = () => {
                       <em>Seleccionar centro médico</em>
                     </MenuItem>
                     {suppliers.map((supplier) => (
-                      <MenuItem key={supplier.id} value={supplier.id.toString()}>
+                      <MenuItem
+                        key={supplier.id}
+                        value={supplier.id.toString()}
+                      >
                         {supplier.name}
                       </MenuItem>
                     ))}
@@ -1505,8 +1647,75 @@ const OccupationalExam: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  fullWidth
+                  required
+                  label="Duración Cargo Actual (Meses) *"
+                  type="number"
+                  value={(formData as any).duracion_cargo_actual_meses || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      duracion_cargo_actual_meses: e.target.value,
+                    })
+                  }
+                  InputProps={{
+                    readOnly: true,
+                    style: { backgroundColor: "#f5f5f5" },
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Factores de Riesgo (Según Profesiograma)
+                </Typography>
 
-
+                {(formData as any).factores_riesgo_evaluados &&
+                (formData as any).factores_riesgo_evaluados.length > 0 ? (
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead sx={{ bgcolor: "#f5f5f5" }}>
+                        <TableRow>
+                          <TableCell>
+                            <strong>Factor de Riesgo</strong>
+                          </TableCell>
+                          <TableCell>
+                            <strong>Categoría</strong>
+                          </TableCell>
+                          <TableCell align="center">
+                            <strong>Nivel Exp.</strong>
+                          </TableCell>
+                          <TableCell align="center">
+                            <strong>Horas</strong>
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {(formData as any).factores_riesgo_evaluados.map(
+                          (factor: any, index: number) => (
+                            <TableRow key={index}>
+                              <TableCell>{factor.nombre}</TableCell>
+                              <TableCell>{factor.categoria}</TableCell>
+                              <TableCell align="center">
+                                {factor.nivel_exposicion}
+                              </TableCell>
+                              <TableCell align="center">
+                                {factor.tiempo_exposicion_horas}
+                              </TableCell>
+                            </TableRow>
+                          ),
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <Alert severity="info" variant="outlined">
+                    No se encontraron factores de riesgo asociados al
+                    profesiograma de este cargo.
+                  </Alert>
+                )}
+              </Grid>
 
               <Grid size={12}>
                 <TextField
@@ -1568,7 +1777,7 @@ const OccupationalExam: React.FC = () => {
                   }
                 />
               </Grid>
-              
+
               <Grid size={12}>
                 <FormControlLabel
                   control={
@@ -1581,70 +1790,86 @@ const OccupationalExam: React.FC = () => {
                         })
                       }
                       color="warning"
-                      disabled={editingExam ? !!examSeguimientos[editingExam.id] : false}
+                      disabled={
+                        editingExam ? !!examSeguimientos[editingExam.id] : false
+                      }
                     />
                   }
                   label="Requiere seguimiento médico"
                 />
                 {editingExam && !!examSeguimientos[editingExam.id] && (
-                  <Typography variant="caption" color="text.secondary" sx={{ ml: 4, display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ ml: 4, display: "block" }}
+                  >
                     Este examen ya tiene un seguimiento médico asociado
                   </Typography>
                 )}
               </Grid>
-              
+
               {/* Componente de carga de archivos PDF */}
               <Grid size={12}>
-                <Box sx={{ border: '1px dashed #ccc', borderRadius: 1, p: 2 }}>
+                <Box sx={{ border: "1px dashed #ccc", borderRadius: 1, p: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     Archivo PDF del Examen
                   </Typography>
-                  
+
                   {/* Mostrar PDF existente si hay uno */}
-                  {formData.pdf_file_path && formData.pdf_file_path.trim() && !selectedFile && (
-                    <Box sx={{ mb: 2 }}>
-                      <Alert severity="info" sx={{ mb: 2 }}>
-                        <Typography variant="body2">
-                          Este examen ya tiene un archivo PDF asociado.
+                  {formData.pdf_file_path &&
+                    formData.pdf_file_path.trim() &&
+                    !selectedFile && (
+                      <Box sx={{ mb: 2 }}>
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                          <Typography variant="body2">
+                            Este examen ya tiene un archivo PDF asociado.
+                          </Typography>
+                        </Alert>
+                        <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+                          <Button
+                            variant="outlined"
+                            startIcon={<ViewIcon />}
+                            onClick={() => {
+                              if (editingExam) {
+                                handlePreviewPdf(editingExam.id);
+                              }
+                            }}
+                            size="small"
+                          >
+                            Previsualizar PDF
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            startIcon={<DownloadIcon />}
+                            onClick={() => {
+                              if (editingExam) {
+                                handleDownloadPdf(
+                                  editingExam.id,
+                                  editingExam.worker_name,
+                                );
+                              }
+                            }}
+                            size="small"
+                          >
+                            Descargar PDF
+                          </Button>
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mb: 2 }}
+                        >
+                          Puede seleccionar un nuevo archivo para reemplazar el
+                          existente.
                         </Typography>
-                      </Alert>
-                      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                        <Button
-                          variant="outlined"
-                          startIcon={<ViewIcon />}
-                          onClick={() => {
-                            if (editingExam) {
-                              handlePreviewPdf(editingExam.id);
-                            }
-                          }}
-                          size="small"
-                        >
-                          Previsualizar PDF
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          startIcon={<DownloadIcon />}
-                          onClick={() => {
-                            if (editingExam) {
-                              handleDownloadPdf(editingExam.id, editingExam.worker_name);
-                            }
-                          }}
-                          size="small"
-                        >
-                          Descargar PDF
-                        </Button>
                       </Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Puede seleccionar un nuevo archivo para reemplazar el existente.
-                      </Typography>
-                    </Box>
-                  )}
-                  
+                    )}
+
                   {!selectedFile ? (
-                    <Box sx={{ textAlign: 'center' }}>
+                    <Box sx={{ textAlign: "center" }}>
                       <input
                         accept="application/pdf"
-                        style={{ display: 'none' }}
+                        style={{ display: "none" }}
                         id="pdf-upload-button"
                         type="file"
                         onChange={handleFileSelect}
@@ -1656,7 +1881,9 @@ const OccupationalExam: React.FC = () => {
                           startIcon={<UploadIcon />}
                           sx={{ mb: 1 }}
                         >
-                          {formData.pdf_file_path ? 'Reemplazar archivo PDF' : 'Seleccionar archivo PDF'}
+                          {formData.pdf_file_path
+                            ? "Reemplazar archivo PDF"
+                            : "Seleccionar archivo PDF"}
                         </Button>
                       </label>
                       <Typography variant="body2" color="text.secondary">
@@ -1664,7 +1891,7 @@ const OccupationalExam: React.FC = () => {
                       </Typography>
                     </Box>
                   ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <PdfIcon color="error" />
                       <Typography variant="body2" sx={{ flex: 1 }}>
                         {selectedFile.name}
@@ -1681,7 +1908,7 @@ const OccupationalExam: React.FC = () => {
                       </IconButton>
                     </Box>
                   )}
-                  
+
                   {uploadingPdf && (
                     <Box sx={{ mt: 1 }}>
                       <LinearProgress />
@@ -1700,11 +1927,12 @@ const OccupationalExam: React.FC = () => {
                   onChange={(date) =>
                     setFormData({ ...formData, next_exam_date: date })
                   }
-                  slotProps={{ 
-                    textField: { 
+                  slotProps={{
+                    textField: {
                       fullWidth: true,
-                      helperText: "Se calcula automáticamente basado en la periodicidad del cargo del trabajador"
-                    } 
+                      helperText:
+                        "Se calcula automáticamente basado en la periodicidad del cargo del trabajador",
+                    },
                   }}
                 />
               </Grid>
@@ -1778,9 +2006,7 @@ const OccupationalExam: React.FC = () => {
                             <ListItemText
                               primary="Tipo"
                               secondary={
-                                examTypes.find(
-                                  (t) => t.value === viewingExam.exam_type
-                                )?.label
+                                viewingExam.tipo_examen?.nombre || "N/A"
                               }
                             />
                           </ListItem>
@@ -1820,7 +2046,7 @@ const OccupationalExam: React.FC = () => {
                                 medicalAptitudeTypes.find(
                                   (t) =>
                                     t.value ===
-                                    viewingExam.medical_aptitude_concept
+                                    viewingExam.medical_aptitude_concept,
                                 )?.label || viewingExam.medical_aptitude_concept
                               }
                             />
@@ -1981,10 +2207,7 @@ const OccupationalExam: React.FC = () => {
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Tipo de examen:</strong>{" "}
-                  {
-                    examTypes.find((t) => t.value === deletingExam.exam_type)
-                      ?.label
-                  }
+                  {deletingExam.tipo_examen?.nombre || "N/A"}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Fecha:</strong> {formatDate(deletingExam.exam_date)}
