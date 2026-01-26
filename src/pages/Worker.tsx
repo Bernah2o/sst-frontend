@@ -12,6 +12,8 @@ import {
   CheckCircle,
   Cancel,
   Close as CloseIcon,
+  Download,
+  AssignmentTurnedIn,
 } from "@mui/icons-material";
 import {
   Box,
@@ -42,6 +44,7 @@ import {
   Snackbar,
   Grid,
   CircularProgress,
+  Checkbox,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
 
@@ -141,6 +144,10 @@ const WorkersManagement: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalWorkers, setTotalWorkers] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [selectedWorkers, setSelectedWorkers] = useState<number[]>([]);
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkAssignDate, setBulkAssignDate] = useState(new Date().toISOString().split("T")[0]);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
   
@@ -190,6 +197,9 @@ const WorkersManagement: React.FC = () => {
     severity: "success" as "success" | "error",
   });
 
+  const [ocupacionOption, setOcupacionOption] = useState<AutocompleteOption | null>(null);
+
+
   // Estados para funcionalidades administrativas
   const [linkUserDialog, setLinkUserDialog] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<WorkerList | null>(null);
@@ -218,6 +228,7 @@ const WorkersManagement: React.FC = () => {
           skip: page * rowsPerPage,
           limit: limitForTotal,
           search: searchTerm || undefined,
+          is_active: filterStatus === "all" ? undefined : filterStatus === "active",
         },
       });
 
@@ -249,7 +260,7 @@ const WorkersManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchTerm]);
+  }, [page, rowsPerPage, searchTerm, filterStatus]);
 
   useEffect(() => {
     fetchWorkers();
@@ -417,6 +428,7 @@ const WorkersManagement: React.FC = () => {
       is_active: true,
       assigned_role: UserRole.EMPLOYEE,
     });
+    setOcupacionOption(null);
     setAvailableCities([]);
     setOpenDialog(true);
   };
@@ -466,6 +478,17 @@ const WorkersManagement: React.FC = () => {
         is_active: fullWorker.is_active ?? true,
         assigned_role: fullWorker.assigned_role || UserRole.EMPLOYEE,
       });
+
+      setOcupacionOption(
+        fullWorker.occupation
+          ? {
+              id: fullWorker.occupation,
+              label: fullWorker.occupation,
+              value: { name: fullWorker.occupation },
+            }
+          : null
+      );
+
       
       // Cargar ciudades disponibles si hay departamento seleccionado
       if (fullWorker.department) {
@@ -539,6 +562,44 @@ const WorkersManagement: React.FC = () => {
     } catch (error) {
       logger.error("Error saving worker:", error);
       showSnackbar("Error al guardar trabajador", "error");
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    try {
+      await api.post("/assessments/homework/bulk-assign", {
+        worker_ids: selectedWorkers,
+        evaluation_date: bulkAssignDate
+      });
+      showSnackbar("Evaluaciones asignadas exitosamente", "success");
+      setBulkAssignOpen(false);
+      setSelectedWorkers([]);
+    } catch (error) {
+      logger.error("Error bulk assigning assessments:", error);
+      showSnackbar("Error al asignar evaluaciones", "error");
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const response = await api.get("/workers/export/excel", {
+        params: {
+          search: searchTerm || undefined,
+          is_active: filterStatus === "all" ? undefined : filterStatus === "active",
+        },
+        responseType: "blob",
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `trabajadores_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      logger.error("Error exporting workers:", error);
+      showSnackbar("Error al exportar trabajadores", "error");
     }
   };
 
@@ -709,6 +770,38 @@ const WorkersManagement: React.FC = () => {
           }}
           sx={{ minWidth: 300 }}
         />
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Estado</InputLabel>
+          <Select
+            value={filterStatus}
+            label="Estado"
+            onChange={(e) => {
+              setFilterStatus(e.target.value);
+              setPage(0);
+            }}
+          >
+            <MenuItem value="all">Todos</MenuItem>
+            <MenuItem value="active">Activos</MenuItem>
+            <MenuItem value="inactive">Inactivos</MenuItem>
+          </Select>
+        </FormControl>
+        <Button
+          variant="outlined"
+          startIcon={<Download />}
+          onClick={handleExportExcel}
+        >
+          Exportar
+        </Button>
+        {selectedWorkers.length > 0 && (
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<AssignmentTurnedIn />}
+            onClick={() => setBulkAssignOpen(true)}
+          >
+            Asignar ({selectedWorkers.length})
+          </Button>
+        )}
         <Button
           variant="contained"
           startIcon={<Add />}
@@ -730,6 +823,19 @@ const WorkersManagement: React.FC = () => {
         <Table className="responsive-table">
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  indeterminate={selectedWorkers.length > 0 && selectedWorkers.length < workers.length}
+                  checked={workers.length > 0 && selectedWorkers.length === workers.length}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    if (e.target.checked) {
+                      setSelectedWorkers(workers.map((w) => w.id));
+                    } else {
+                      setSelectedWorkers([]);
+                    }
+                  }}
+                />
+              </TableCell>
               <TableCell>Documento</TableCell>
               <TableCell>Nombre Completo</TableCell>
               <TableCell>Email</TableCell>
@@ -757,7 +863,29 @@ const WorkersManagement: React.FC = () => {
               </TableRow>
             ) : (
               workers.map((worker) => (
-                <TableRow key={worker.id}>
+                <TableRow key={worker.id} selected={selectedWorkers.includes(worker.id)}>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedWorkers.includes(worker.id)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const selectedIndex = selectedWorkers.indexOf(worker.id);
+                        let newSelected: number[] = [];
+                        if (selectedIndex === -1) {
+                          newSelected = newSelected.concat(selectedWorkers, worker.id);
+                        } else if (selectedIndex === 0) {
+                          newSelected = newSelected.concat(selectedWorkers.slice(1));
+                        } else if (selectedIndex === selectedWorkers.length - 1) {
+                          newSelected = newSelected.concat(selectedWorkers.slice(0, -1));
+                        } else if (selectedIndex > 0) {
+                          newSelected = newSelected.concat(
+                            selectedWorkers.slice(0, selectedIndex),
+                            selectedWorkers.slice(selectedIndex + 1)
+                          );
+                        }
+                        setSelectedWorkers(newSelected);
+                      }}
+                    />
+                  </TableCell>
                   <TableCell>{worker.document_number}</TableCell>
                   <TableCell>{worker.full_name}</TableCell>
                   <TableCell>{worker.email}</TableCell>
@@ -882,16 +1010,7 @@ const WorkersManagement: React.FC = () => {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }} className="responsive-form">
             {/* Personal Information */}
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Foto (URL)"
-                value={formData.photo || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, photo: e.target.value })
-                }
-                fullWidth
-              />
-            </Grid>
+
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth required>
                 <InputLabel>Género</InputLabel>
@@ -998,6 +1117,15 @@ const WorkersManagement: React.FC = () => {
                 fullWidth
                 required
                 InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Edad (años)"
+                value={editingWorker?.age ?? ""}
+                fullWidth
+                InputProps={{ readOnly: true }}
+                disabled
               />
             </Grid>
             
@@ -1161,13 +1289,38 @@ const WorkersManagement: React.FC = () => {
             
             {/* Additional Information */}
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
+              <AutocompleteField
                 label="Ocupación"
-                value={formData.occupation}
-                onChange={(e) =>
-                  setFormData({ ...formData, occupation: e.target.value })
+                placeholder="Buscar ocupación"
+                value={
+                  ocupacionOption ||
+                  (formData.occupation
+                    ? {
+                        id: formData.occupation,
+                        label: formData.occupation,
+                        value: { name: formData.occupation },
+                      }
+                    : null)
                 }
-                fullWidth
+                onChange={(value) => {
+                  const option = (value as AutocompleteOption | null) || null;
+                  setOcupacionOption(option);
+                  setFormData((prev) => ({
+                    ...prev,
+                    occupation: option ? option.label : "",
+                  }));
+                }}
+                autocompleteOptions={{
+                  apiEndpoint: "/admin/config/ocupaciones/search",
+                  minSearchLength: 0,
+                  transformResponse: (data: any[]) =>
+                    (data || []).map((item: any) => ({
+                      id: item.id ?? item.nombre ?? item.name,
+                      label: item.name ?? item.nombre ?? String(item),
+                      value: item,
+                      description: item.description ?? item.descripcion ?? undefined,
+                    })),
+                }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -1362,6 +1515,31 @@ const WorkersManagement: React.FC = () => {
           <Button onClick={handleCloseDialog}>Cancelar</Button>
           <Button onClick={handleSaveWorker} variant="contained">
             {editingWorker ? "Actualizar" : "Crear"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialogo de Asignación Masiva */}
+      <Dialog open={bulkAssignOpen} onClose={() => setBulkAssignOpen(false)}>
+        <DialogTitle>Asignar Autoevaluación Trabajo en Casa</DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>
+            Se asignará la autoevaluación a <strong>{selectedWorkers.length}</strong> trabajadores seleccionados.
+          </Typography>
+          <TextField
+            label="Fecha de Asignación"
+            type="date"
+            fullWidth
+            margin="normal"
+            value={bulkAssignDate}
+            onChange={(e) => setBulkAssignDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkAssignOpen(false)}>Cancelar</Button>
+          <Button onClick={handleBulkAssign} color="primary" variant="contained">
+            Asignar
           </Button>
         </DialogActions>
       </Dialog>

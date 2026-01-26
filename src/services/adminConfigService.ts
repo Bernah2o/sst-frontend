@@ -9,6 +9,15 @@ export interface ProgramaOption {
   icon?: string;
 }
 
+export interface Ocupacion {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  activo: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 class AdminConfigService {
   /**
    * Obtiene todos los programas activos desde el backend
@@ -95,6 +104,32 @@ class AdminConfigService {
       return [];
     }
   }
+  /**
+   * Obtiene todas las ocupaciones activas desde el backend
+   */
+  async getActiveOcupaciones(): Promise<Ocupacion[]> {
+    try {
+      const response = await apiService.get('/admin/config/ocupaciones/active');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching active ocupaciones:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene todas las ocupaciones (activas e inactivas) desde el backend
+   */
+  async fetchAllOcupaciones(): Promise<Ocupacion[]> {
+    try {
+      const response = await apiService.get('/admin/config/ocupaciones');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all ocupaciones:', error);
+      throw error;
+    }
+  }
+
 }
 
 export const adminConfigService = new AdminConfigService();

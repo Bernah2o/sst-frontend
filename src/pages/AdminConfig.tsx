@@ -124,6 +124,27 @@ interface CargoUpdate {
   activo?: boolean;
 }
 
+// Interfaces para Ocupaciones
+interface OcupacionBase {
+  nombre: string;
+  descripcion?: string | null;
+  activo: boolean;
+}
+
+interface Ocupacion extends OcupacionBase {
+  id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface OcupacionCreate extends OcupacionBase {}
+
+interface OcupacionUpdate {
+  nombre?: string;
+  descripcion?: string | null;
+  activo?: boolean;
+}
+
 interface ProgramasBase {
   nombre_programa: string;
   activo: boolean;
@@ -193,6 +214,7 @@ const AdminConfigPage: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
 
   const [cargos, setCargos] = useState<Cargo[]>([]);
+  const [ocupaciones, setOcupaciones] = useState<Ocupacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [openSeguridadSocialDialog, setOpenSeguridadSocialDialog] =
@@ -202,6 +224,7 @@ const AdminConfigPage: React.FC = () => {
   const [openAreaDialog, setOpenAreaDialog] = useState(false);
 
   const [openCargoDialog, setOpenCargoDialog] = useState(false);
+  const [openOcupacionDialog, setOpenOcupacionDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openDeleteSeguridadSocialDialog, setOpenDeleteSeguridadSocialDialog] =
     useState(false);
@@ -210,6 +233,7 @@ const AdminConfigPage: React.FC = () => {
   const [openDeleteAreaDialog, setOpenDeleteAreaDialog] = useState(false);
 
   const [openDeleteCargoDialog, setOpenDeleteCargoDialog] = useState(false);
+  const [openDeleteOcupacionDialog, setOpenDeleteOcupacionDialog] = useState(false);
   const [editingConfig, setEditingConfig] = useState<AdminConfig | null>(null);
   const [editingSeguridadSocial, setEditingSeguridadSocial] =
     useState<SeguridadSocial | null>(null);
@@ -218,6 +242,7 @@ const AdminConfigPage: React.FC = () => {
   const [editingArea, setEditingArea] = useState<Area | null>(null);
 
   const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
+  const [editingOcupacion, setEditingOcupacion] = useState<Ocupacion | null>(null);
   const [deletingConfig, setDeletingConfig] = useState<AdminConfig | null>(
     null
   );
@@ -228,6 +253,7 @@ const AdminConfigPage: React.FC = () => {
   const [deletingArea, setDeletingArea] = useState<Area | null>(null);
 
   const [deletingCargo, setDeletingCargo] = useState<Cargo | null>(null);
+  const [deletingOcupacion, setDeletingOcupacion] = useState<Ocupacion | null>(null);
   const [formData, setFormData] = useState<AdminConfigCreate>({
     category: "",
     display_name: "",
@@ -259,6 +285,11 @@ const AdminConfigPage: React.FC = () => {
     periodicidad_emo: null,
     activo: true,
   });
+  const [ocupacionFormData, setOcupacionFormData] = useState<OcupacionCreate>({
+    nombre: "",
+    descripcion: "",
+    activo: true,
+  });
 
   // Estados de paginación
   const [seguridadSocialPage, setSeguridadSocialPage] = useState(0);
@@ -271,6 +302,8 @@ const AdminConfigPage: React.FC = () => {
   const [areasRowsPerPage, setAreasRowsPerPage] = useState(5);
   const [cargosPage, setCargosPage] = useState(0);
   const [cargosRowsPerPage, setCargosRowsPerPage] = useState(5);
+  const [ocupacionesPage, setOcupacionesPage] = useState(0);
+  const [ocupacionesRowsPerPage, setOcupacionesRowsPerPage] = useState(5);
 
   const fetchData = useCallback(async () => {
     try {
@@ -278,6 +311,7 @@ const AdminConfigPage: React.FC = () => {
         fetchSeguridadSocial(),
         fetchProgramas(),
         fetchCargos(),
+        fetchOcupaciones(),
         fetchCommitteeTypes(),
         fetchAreas(),
       ]);
@@ -346,6 +380,16 @@ const AdminConfigPage: React.FC = () => {
       setCargos(response.data);
     } catch (error) {
       console.error("Error fetching cargos:", error);
+    }
+  };
+
+  const fetchOcupaciones = async () => {
+    try {
+      const response = await api.get("/admin/config/ocupaciones");
+      setOcupaciones(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Error fetching ocupaciones:", error);
+      setOcupaciones([]);
     }
   };
 
@@ -497,6 +541,35 @@ const AdminConfigPage: React.FC = () => {
     });
   };
 
+  const handleOpenOcupacionDialog = (ocupacion?: Ocupacion) => {
+    if (ocupacion) {
+      setEditingOcupacion(ocupacion);
+      setOcupacionFormData({
+        nombre: ocupacion.nombre,
+        descripcion: ocupacion.descripcion || "",
+        activo: ocupacion.activo,
+      });
+    } else {
+      setEditingOcupacion(null);
+      setOcupacionFormData({
+        nombre: "",
+        descripcion: "",
+        activo: true,
+      });
+    }
+    setOpenOcupacionDialog(true);
+  };
+
+  const handleCloseOcupacionDialog = () => {
+    setOpenOcupacionDialog(false);
+    setEditingOcupacion(null);
+    setOcupacionFormData({
+      nombre: "",
+      descripcion: "",
+      activo: true,
+    });
+  };
+
   const handleSaveCargo = async () => {
     try {
       if (editingCargo) {
@@ -535,6 +608,52 @@ const AdminConfigPage: React.FC = () => {
         setDeletingCargo(null);
       } catch (error) {
         console.error("Error deleting cargo:", error);
+      }
+    }
+  };
+
+  const handleSaveOcupacion = async () => {
+    try {
+      if (editingOcupacion) {
+        const updateData: OcupacionUpdate = {};
+        if (ocupacionFormData.nombre !== editingOcupacion.nombre) {
+          updateData.nombre = ocupacionFormData.nombre;
+        }
+        if ((ocupacionFormData.descripcion || "") !== (editingOcupacion.descripcion || "")) {
+          updateData.descripcion = ocupacionFormData.descripcion || null;
+        }
+        if (ocupacionFormData.activo !== editingOcupacion.activo) {
+          updateData.activo = ocupacionFormData.activo;
+        }
+        await api.put(`/admin/config/ocupaciones/${editingOcupacion.id}`, updateData);
+      } else {
+        await api.post("/admin/config/ocupaciones", {
+          nombre: ocupacionFormData.nombre,
+          descripcion: ocupacionFormData.descripcion || null,
+          activo: ocupacionFormData.activo,
+        });
+      }
+      fetchOcupaciones();
+      handleCloseOcupacionDialog();
+    } catch (error) {
+      console.error("Error saving ocupacion:", error);
+    }
+  };
+
+  const handleDeleteOcupacion = (ocupacion: Ocupacion) => {
+    setDeletingOcupacion(ocupacion);
+    setOpenDeleteOcupacionDialog(true);
+  };
+
+  const confirmDeleteOcupacion = async () => {
+    if (deletingOcupacion) {
+      try {
+        await api.delete(`/admin/config/ocupaciones/${deletingOcupacion.id}`);
+        fetchOcupaciones();
+        setOpenDeleteOcupacionDialog(false);
+        setDeletingOcupacion(null);
+      } catch (error) {
+        console.error("Error deleting ocupacion:", error);
       }
     }
   };
@@ -1002,6 +1121,108 @@ const AdminConfigPage: React.FC = () => {
         </CardContent>
       </Card>
 
+
+      {/* Ocupaciones */}
+      <Card sx={{ mb: 3, boxShadow: 3 }}>
+        <CardContent>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+          >
+            <Typography
+              variant="h6"
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            >
+              <SettingsIcon color="primary" />
+              Ocupaciones
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenOcupacionDialog()}
+              sx={{ borderRadius: 2 }}
+            >
+              Nueva Ocupación
+            </Button>
+          </Box>
+
+          <Paper sx={{ borderRadius: 2 }}>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "grey.50" }}>
+                    <TableCell sx={{ fontWeight: "bold" }}>Nombre</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Descripción</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Estado</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {ocupaciones
+                    .slice(
+                      ocupacionesPage * ocupacionesRowsPerPage,
+                      ocupacionesPage * ocupacionesRowsPerPage + ocupacionesRowsPerPage
+                    )
+                    .map((ocupacion) => (
+                      <TableRow key={ocupacion.id} hover>
+                        <TableCell sx={{ fontWeight: "medium" }}>
+                          {ocupacion.nombre}
+                        </TableCell>
+                        <TableCell>
+                          {ocupacion.descripcion || "Sin descripción"}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={ocupacion.activo ? "Activo" : "Inactivo"}
+                            color={ocupacion.activo ? "success" : "default"}
+                            size="small"
+                            sx={{ fontWeight: "bold" }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenOcupacionDialog(ocupacion)}
+                            sx={{ mr: 1, color: "primary.main" }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteOcupacion(ocupacion)}
+                            sx={{ color: "error.main" }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={ocupaciones.length}
+              rowsPerPage={ocupacionesRowsPerPage}
+              page={ocupacionesPage}
+              onPageChange={(event: unknown, newPage: number) => {
+                setOcupacionesPage(newPage);
+              }}
+              onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                setOcupacionesRowsPerPage(parseInt(event.target.value, 10));
+                setOcupacionesPage(0);
+              }}
+              labelRowsPerPage="Filas por página:"
+              labelDisplayedRows={({ from, to, count }) =>
+                `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+              }
+            />
+          </Paper>
+        </CardContent>
+      </Card>
       {/* Sección: Programas y Categorías */}
       <Typography
         variant="h5"
@@ -1736,6 +1957,101 @@ const AdminConfigPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+
+      {/* Dialog para Ocupaciones */}
+      <Dialog
+        open={openOcupacionDialog}
+        onClose={handleCloseOcupacionDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingOcupacion ? "Editar Ocupación" : "Nueva Ocupación"}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid size={12}>
+              <UppercaseTextField
+                fullWidth
+                label="Nombre"
+                value={ocupacionFormData.nombre}
+                onChange={(e) =>
+                  setOcupacionFormData({
+                    ...ocupacionFormData,
+                    nombre: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Descripción"
+                value={ocupacionFormData.descripcion || ""}
+                onChange={(e) =>
+                  setOcupacionFormData({
+                    ...ocupacionFormData,
+                    descripcion: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+            <Grid size={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={ocupacionFormData.activo}
+                    onChange={(e) =>
+                      setOcupacionFormData({
+                        ...ocupacionFormData,
+                        activo: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Activo"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseOcupacionDialog}>Cancelar</Button>
+          <Button onClick={handleSaveOcupacion} variant="contained">
+            {editingOcupacion ? "Actualizar" : "Crear"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de confirmación para eliminar ocupación */}
+      <Dialog
+        open={openDeleteOcupacionDialog}
+        onClose={() => setOpenDeleteOcupacionDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Confirmar Eliminación</DialogTitle>
+        <DialogContent>
+          <Typography>
+            ¿Está seguro de que desea eliminar la ocupación "
+            {deletingOcupacion?.nombre}"?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Esta acción no se puede deshacer.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDeleteOcupacionDialog(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDeleteOcupacion}
+            variant="contained"
+            color="error"
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* Dialog para Tipos de Comité */}
       <Dialog
         open={openCommitteeTypeDialog}

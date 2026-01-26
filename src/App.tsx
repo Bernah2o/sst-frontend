@@ -41,6 +41,8 @@ import EmployeeCourseSurveys from "./pages/EmployeeCourseSurveys";
 import OccupationalExam from "./pages/OccupationalExam";
 import Seguimiento from "./pages/Seguimiento";
 import Reinduction from "./pages/Reinduction";
+import HomeworkAssessment from "./pages/HomeworkAssessment";
+import HomeworkAssessmentAdmin from "./pages/HomeworkAssessmentAdmin";
 import Suppliers from "./pages/Suppliers";
 import Contractors from "./pages/Contractors";
 import ContractorDetail from "./pages/ContractorDetail";
@@ -79,6 +81,12 @@ import WorkerDetail from "./pages/WorkerDetail";
 import WorkerSearch from "./pages/WorkerSearch";
 import WorkerVacations from "./pages/WorkerVacations";
 import VacationsManagement from "./pages/VacationsManagement";
+
+import ProfesiogramaCatalogos from "./pages/ProfesiogramaCatalogos";
+import ProfesiogramasCargo from "./pages/ProfesiogramasCargo";
+import WorkerProfesiograma from "./pages/WorkerProfesiograma";
+import WorkerProfesiogramaSearch from "./pages/WorkerProfesiogramaSearch";
+import RestriccionesMedicas from "./pages/RestriccionesMedicas";
 import { UserRole } from "./types";
 import { checkPagePermission } from "./utils/pagePermissions";
 
@@ -526,7 +534,49 @@ const AppContent: React.FC = () => {
                     }
                   />
 
-                  {/* Rutas de ausentismo */}
+                  
+                  {/* Rutas de Profesiograma */}
+                  <Route
+                    path="/profesiogramas/catalogos"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin"]}>
+                        <ProfesiogramaCatalogos />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profesiogramas/cargo"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <ProfesiogramasCargo />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profesiogramas/trabajador"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <WorkerProfesiogramaSearch />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/worker/:workerId/profesiograma"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor", "employee"]}>
+                        <WorkerProfesiograma />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profesiogramas/restricciones"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <RestriccionesMedicas />
+                      </ProtectedRoute>
+                    }
+                  />
+{/* Rutas de ausentismo */}
                   <Route
                     path="/admin/absenteeism"
                     element={
@@ -648,6 +698,22 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/reinduction">
                         <Reinduction />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/homework-assessments"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <HomeworkAssessmentAdmin />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/homework-assessments/:id"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <HomeworkAssessment />
                       </ProtectedRoute>
                     }
                   />
@@ -822,6 +888,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["employee"]}>
                         <EmployeeVotings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/employee/homework-assessments"
+                    element={
+                      <ProtectedRoute allowedRoles={["employee"]}>
+                        <HomeworkAssessment />
                       </ProtectedRoute>
                     }
                   />

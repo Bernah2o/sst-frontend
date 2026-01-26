@@ -218,6 +218,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         path: "/employee/attendance",
         roles: ["employee"],
       },
+      {
+        id: "employee-homework-assessments",
+        label: "Autoevaluación Trabajo en Casa",
+        icon: <Assessment />,
+        path: "/employee/homework-assessments",
+        roles: ["employee"],
+      },
 
       {
         id: "employee-certificates",
@@ -439,6 +446,42 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             path: "/admin/absenteeism",
             roles: ["admin", "supervisor"],
           },
+          {
+            id: "profesiogramas",
+            label: "Profesiogramas",
+            icon: <Assignment />,
+            children: [
+              {
+                id: "profesiogramas-catalogos",
+                label: "Catálogos",
+                icon: <Description />,
+                path: "/profesiogramas/catalogos",
+                roles: ["admin"],
+              },
+              {
+                id: "profesiogramas-cargo",
+                label: "Por Cargo",
+                icon: <Work />,
+                path: "/profesiogramas/cargo",
+                roles: ["admin", "supervisor"],
+              },
+              {
+                id: "profesiogramas-trabajador",
+                label: "Por Trabajador",
+                icon: <PersonSearch />,
+                path: "/profesiogramas/trabajador",
+                roles: ["admin", "supervisor"],
+              },
+            ],
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "homework-assessments",
+            label: "Autoevaluaciones",
+            icon: <Assessment />,
+            path: "/admin/homework-assessments",
+            roles: ["admin", "supervisor"],
+          },
         ],
         roles: ["admin", "supervisor"],
       },
@@ -572,6 +615,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
                 user.role === "employee" && canViewEvaluationsPage(),
               "employee-attendance": () =>
                 user.role === "employee" && canViewAttendancePage(),
+              "employee-homework-assessments": () => user.role === "employee",
               "employee-certificates": () =>
                 user.role === "employee" && canViewCertificatesPage(),
               "employee-vacations": () => user.role === "employee",
@@ -620,10 +664,19 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
 
               // Health/Medical
               health: () =>
-                canViewOccupationalExamPage() || canViewSeguimientoPage(),
+                canViewOccupationalExamPage() ||
+                canViewSeguimientoPage() ||
+                user.role === "admin" ||
+                user.role === "supervisor",
               "occupational-exams": () => canViewOccupationalExamPage(),
               "admin-notifications": () => user.role === "admin",
               seguimientos: () => canViewSeguimientoPage(),
+              // Profesiogramas
+              profesiogramas: () => user.role === "admin" || user.role === "supervisor",
+              "profesiogramas-catalogos": () => user.role === "admin",
+              "profesiogramas-cargo": () => user.role === "admin" || user.role === "supervisor",
+              "profesiogramas-trabajador": () => user.role === "admin" || user.role === "supervisor",
+              "homework-assessments": () => user.role === "admin" || user.role === "supervisor",
 
               // Certificates - Solo para roles administrativos, no para employees
               certificates: () =>
