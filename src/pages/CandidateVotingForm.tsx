@@ -152,11 +152,13 @@ const CandidateVotingForm: React.FC = () => {
     } finally {
       setInitialLoading(false);
     }
-  }, [isEdit, id, formik]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, id]);
 
   useEffect(() => {
     loadInitialData();
-  }, [loadInitialData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectedWorkers = workers.filter(worker => 
     formik.values.candidate_worker_ids.includes(worker.id)
