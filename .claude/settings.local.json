@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(alembic heads:*)",
+      "Bash(alembic merge:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

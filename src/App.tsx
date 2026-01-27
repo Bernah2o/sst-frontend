@@ -44,6 +44,7 @@ import Reinduction from "./pages/Reinduction";
 import HomeworkAssessment from "./pages/HomeworkAssessment";
 import HomeworkAssessmentAdmin from "./pages/HomeworkAssessmentAdmin";
 import Suppliers from "./pages/Suppliers";
+import SystemSettings from "./pages/SystemSettings";
 import Contractors from "./pages/Contractors";
 import ContractorDetail from "./pages/ContractorDetail";
 import ContractorDocuments from "./pages/ContractorDocuments";
@@ -383,6 +384,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
                         <Suppliers />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/system-settings"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin"]}>
+                        <SystemSettings />
                       </ProtectedRoute>
                     }
                   />

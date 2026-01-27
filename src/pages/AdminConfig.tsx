@@ -3,6 +3,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Settings as SettingsIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -32,6 +33,7 @@ import {
   Switch,
   FormControlLabel,
   TablePagination,
+  InputAdornment,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
 
@@ -304,6 +306,14 @@ const AdminConfigPage: React.FC = () => {
   const [cargosRowsPerPage, setCargosRowsPerPage] = useState(5);
   const [ocupacionesPage, setOcupacionesPage] = useState(0);
   const [ocupacionesRowsPerPage, setOcupacionesRowsPerPage] = useState(5);
+
+  // Estados de búsqueda
+  const [cargosSearch, setCargosSearch] = useState("");
+  const [ocupacionesSearch, setOcupacionesSearch] = useState("");
+  const [programasSearch, setProgramasSearch] = useState("");
+  const [seguridadSocialSearch, setSeguridadSocialSearch] = useState("");
+  const [committeeTypesSearch, setCommitteeTypesSearch] = useState("");
+  const [areasSearch, setAreasSearch] = useState("");
 
   const fetchData = useCallback(async () => {
     try {
@@ -922,10 +932,14 @@ const AdminConfigPage: React.FC = () => {
   // Filtrar configuraciones por categoría (ya no incluye seguridad social)
 
   const renderSeguridadSocialTable = () => {
+    // Filtrar por búsqueda
+    const filteredSeguridadSocial = seguridadSocial.filter((entity) =>
+      entity.nombre.toLowerCase().includes(seguridadSocialSearch.toLowerCase())
+    );
     // Calcular datos paginados
     const startIndex = seguridadSocialPage * seguridadSocialRowsPerPage;
     const endIndex = startIndex + seguridadSocialRowsPerPage;
-    const paginatedSeguridadSocial = seguridadSocial.slice(startIndex, endIndex);
+    const paginatedSeguridadSocial = filteredSeguridadSocial.slice(startIndex, endIndex);
 
     const handleChangePage = (event: unknown, newPage: number) => {
       setSeguridadSocialPage(newPage);
@@ -987,7 +1001,7 @@ const AdminConfigPage: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={seguridadSocial.length}
+          count={filteredSeguridadSocial.length}
           rowsPerPage={seguridadSocialRowsPerPage}
           page={seguridadSocialPage}
           onPageChange={handleChangePage}
@@ -1041,6 +1055,26 @@ const AdminConfigPage: React.FC = () => {
             </Button>
           </Box>
 
+          <TextField
+            size="small"
+            placeholder="Buscar cargo..."
+            value={cargosSearch}
+            onChange={(e) => {
+              setCargosSearch(e.target.value);
+              setCargosPage(0);
+            }}
+            sx={{ mb: 2, width: 300 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
           <Paper sx={{ borderRadius: 2 }}>
             <TableContainer>
               <Table>
@@ -1058,6 +1092,9 @@ const AdminConfigPage: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {cargos
+                    .filter((cargo) =>
+                      cargo.nombre_cargo.toLowerCase().includes(cargosSearch.toLowerCase())
+                    )
                     .slice(
                       cargosPage * cargosRowsPerPage,
                       cargosPage * cargosRowsPerPage + cargosRowsPerPage
@@ -1102,7 +1139,9 @@ const AdminConfigPage: React.FC = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={cargos.length}
+              count={cargos.filter((cargo) =>
+                cargo.nombre_cargo.toLowerCase().includes(cargosSearch.toLowerCase())
+              ).length}
               rowsPerPage={cargosRowsPerPage}
               page={cargosPage}
               onPageChange={(event: unknown, newPage: number) => {
@@ -1148,6 +1187,26 @@ const AdminConfigPage: React.FC = () => {
             </Button>
           </Box>
 
+          <TextField
+            size="small"
+            placeholder="Buscar ocupación..."
+            value={ocupacionesSearch}
+            onChange={(e) => {
+              setOcupacionesSearch(e.target.value);
+              setOcupacionesPage(0);
+            }}
+            sx={{ mb: 2, width: 300 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
           <Paper sx={{ borderRadius: 2 }}>
             <TableContainer>
               <Table>
@@ -1161,6 +1220,9 @@ const AdminConfigPage: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {ocupaciones
+                    .filter((ocupacion) =>
+                      ocupacion.nombre.toLowerCase().includes(ocupacionesSearch.toLowerCase())
+                    )
                     .slice(
                       ocupacionesPage * ocupacionesRowsPerPage,
                       ocupacionesPage * ocupacionesRowsPerPage + ocupacionesRowsPerPage
@@ -1205,7 +1267,9 @@ const AdminConfigPage: React.FC = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={ocupaciones.length}
+              count={ocupaciones.filter((ocupacion) =>
+                ocupacion.nombre.toLowerCase().includes(ocupacionesSearch.toLowerCase())
+              ).length}
               rowsPerPage={ocupacionesRowsPerPage}
               page={ocupacionesPage}
               onPageChange={(event: unknown, newPage: number) => {
@@ -1257,6 +1321,26 @@ const AdminConfigPage: React.FC = () => {
             </Button>
           </Box>
 
+          <TextField
+            size="small"
+            placeholder="Buscar programa..."
+            value={programasSearch}
+            onChange={(e) => {
+              setProgramasSearch(e.target.value);
+              setProgramasPage(0);
+            }}
+            sx={{ mb: 2, width: 300 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
           <Paper sx={{ borderRadius: 2 }}>
             <TableContainer>
               <Table>
@@ -1271,6 +1355,9 @@ const AdminConfigPage: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {programas
+                    .filter((programa) =>
+                      programa.nombre_programa.toLowerCase().includes(programasSearch.toLowerCase())
+                    )
                     .slice(
                       programasPage * programasRowsPerPage,
                       programasPage * programasRowsPerPage + programasRowsPerPage
@@ -1312,7 +1399,9 @@ const AdminConfigPage: React.FC = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={programas.length}
+              count={programas.filter((programa) =>
+                programa.nombre_programa.toLowerCase().includes(programasSearch.toLowerCase())
+              ).length}
               rowsPerPage={programasRowsPerPage}
               page={programasPage}
               onPageChange={(event: unknown, newPage: number) => {
@@ -1364,6 +1453,27 @@ const AdminConfigPage: React.FC = () => {
               Nueva Configuración
             </Button>
           </Box>
+
+          <TextField
+            size="small"
+            placeholder="Buscar entidad..."
+            value={seguridadSocialSearch}
+            onChange={(e) => {
+              setSeguridadSocialSearch(e.target.value);
+              setSeguridadSocialPage(0);
+            }}
+            sx={{ mb: 2, width: 300 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
           {renderSeguridadSocialTable()}
         </CardContent>
       </Card>
@@ -1401,6 +1511,26 @@ const AdminConfigPage: React.FC = () => {
             </Button>
           </Box>
 
+          <TextField
+            size="small"
+            placeholder="Buscar tipo de comité..."
+            value={committeeTypesSearch}
+            onChange={(e) => {
+              setCommitteeTypesSearch(e.target.value);
+              setCommitteeTypesPage(0);
+            }}
+            sx={{ mb: 2, width: 300 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
           <Paper sx={{ borderRadius: 2 }}>
             <TableContainer>
               <Table>
@@ -1414,6 +1544,9 @@ const AdminConfigPage: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {committeeTypes
+                    .filter((committeeType) =>
+                      committeeType.name.toLowerCase().includes(committeeTypesSearch.toLowerCase())
+                    )
                     .slice(
                       committeeTypesPage * committeeTypesRowsPerPage,
                       committeeTypesPage * committeeTypesRowsPerPage + committeeTypesRowsPerPage
@@ -1458,7 +1591,9 @@ const AdminConfigPage: React.FC = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={committeeTypes.length}
+              count={committeeTypes.filter((committeeType) =>
+                committeeType.name.toLowerCase().includes(committeeTypesSearch.toLowerCase())
+              ).length}
               rowsPerPage={committeeTypesRowsPerPage}
               page={committeeTypesPage}
               onPageChange={(event: unknown, newPage: number) => {
@@ -1503,6 +1638,26 @@ const AdminConfigPage: React.FC = () => {
             </Button>
           </Box>
 
+          <TextField
+            size="small"
+            placeholder="Buscar área..."
+            value={areasSearch}
+            onChange={(e) => {
+              setAreasSearch(e.target.value);
+              setAreasPage(0);
+            }}
+            sx={{ mb: 2, width: 300 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
           <Paper sx={{ borderRadius: 2 }}>
             <TableContainer>
               <Table>
@@ -1516,6 +1671,9 @@ const AdminConfigPage: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {areas
+                    .filter((area) =>
+                      area.name.toLowerCase().includes(areasSearch.toLowerCase())
+                    )
                     .slice(
                       areasPage * areasRowsPerPage,
                       areasPage * areasRowsPerPage + areasRowsPerPage
@@ -1560,7 +1718,9 @@ const AdminConfigPage: React.FC = () => {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={areas.length}
+              count={areas.filter((area) =>
+                area.name.toLowerCase().includes(areasSearch.toLowerCase())
+              ).length}
               rowsPerPage={areasRowsPerPage}
               page={areasPage}
               onPageChange={(event: unknown, newPage: number) => {
