@@ -34,6 +34,7 @@ import {
   BeachAccess,
   HowToVote,
   Business,
+  Tune,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -576,6 +577,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             path: "/admin/suppliers",
             roles: ["admin", "supervisor"],
           },
+          {
+            id: "system-settings",
+            label: "Configuración del Notificaciones",
+            icon: <Tune />,
+            path: "/admin/system-settings",
+            roles: ["admin"],
+          },
         ],
         roles: ["admin", "supervisor"],
       },
@@ -715,6 +723,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
               config: () => canViewAdminConfigPage(),
               roles: () => user.role === "admin", // Solo admins pueden gestionar roles
               users: canUpdateUsers,
+              "system-settings": () => user.role === "admin", // Solo admins pueden configurar el sistema
             };
 
             const permissionCheck = permissionMap[newItem.id];
