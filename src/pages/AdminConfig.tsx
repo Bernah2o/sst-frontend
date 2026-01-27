@@ -4,6 +4,7 @@ import {
   Delete as DeleteIcon,
   Settings as SettingsIcon,
   Search as SearchIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -622,6 +623,24 @@ const AdminConfigPage: React.FC = () => {
     }
   };
 
+  const handleExportCargos = async () => {
+    try {
+      const response = await api.get("/admin/config/cargos/export/excel", {
+        responseType: "blob",
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `cargos_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Error exporting cargos:", error);
+    }
+  };
+
   const handleSaveOcupacion = async () => {
     try {
       if (editingOcupacion) {
@@ -1045,14 +1064,24 @@ const AdminConfigPage: React.FC = () => {
               <SettingsIcon color="primary" />
               Cargos
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenCargoDialog()}
-              sx={{ borderRadius: 2 }}
-            >
-              Nuevo Cargo
-            </Button>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={handleExportCargos}
+                sx={{ borderRadius: 2 }}
+              >
+                Exportar
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenCargoDialog()}
+                sx={{ borderRadius: 2 }}
+              >
+                Nuevo Cargo
+              </Button>
+            </Box>
           </Box>
 
           <TextField
