@@ -35,6 +35,8 @@ import {
   FormControlLabel,
   TablePagination,
   InputAdornment,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
 
@@ -315,6 +317,13 @@ const AdminConfigPage: React.FC = () => {
   const [seguridadSocialSearch, setSeguridadSocialSearch] = useState("");
   const [committeeTypesSearch, setCommitteeTypesSearch] = useState("");
   const [areasSearch, setAreasSearch] = useState("");
+
+  // Estado para notificaciones
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "warning" | "info";
+  }>({ open: false, message: "", severity: "info" });
 
   const fetchData = useCallback(async () => {
     try {
@@ -617,8 +626,20 @@ const AdminConfigPage: React.FC = () => {
         fetchCargos();
         setOpenDeleteCargoDialog(false);
         setDeletingCargo(null);
-      } catch (error) {
+        setSnackbar({
+          open: true,
+          message: "Cargo eliminado correctamente",
+          severity: "success",
+        });
+      } catch (error: any) {
         console.error("Error deleting cargo:", error);
+        const errorMessage = error.response?.data?.detail || "Error al eliminar el cargo";
+        setSnackbar({
+          open: true,
+          message: errorMessage,
+          severity: "error",
+        });
+        setOpenDeleteCargoDialog(false);
       }
     }
   };
@@ -2434,6 +2455,22 @@ const AdminConfigPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar para notificaciones */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
