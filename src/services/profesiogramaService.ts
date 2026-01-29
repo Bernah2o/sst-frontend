@@ -201,6 +201,51 @@ export interface ProfesiogramaDuplicateResult {
   message: string;
 }
 
+// Admin interfaces
+export interface ProfesiogramaAdminItem {
+  id: number;
+  cargo_id: number;
+  cargo_nombre: string;
+  version: string;
+  estado: "activo" | "inactivo" | "borrador";
+  fecha_creacion: string | null;
+  fecha_ultima_revision: string | null;
+  nivel_riesgo_cargo: string | null;
+  trabajadores_count: number;
+  factores_count: number;
+}
+
+export interface ProfesiogramaAdminListResponse {
+  items: ProfesiogramaAdminItem[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface ProfesiogramaBulkResult {
+  total: number;
+  success: number;
+  failed: number;
+  results: Array<{ id: number; success: boolean; message: string }>;
+}
+
+export interface ProfesiogramaStats {
+  total: number;
+  por_estado: {
+    activo: number;
+    inactivo: number;
+    borrador: number;
+  };
+  cargos: {
+    total: number;
+    con_profesiograma_activo: number;
+    sin_profesiograma_activo: number;
+  };
+}
+
 class ProfesiogramaService {
   // --- Factores de Riesgo ---
   async listFactoresRiesgo(params?: { activo?: boolean; q?: string }) {
@@ -375,6 +420,55 @@ class ProfesiogramaService {
       data
     );
     return res.data as ProfesiogramaDuplicateResult[];
+  }
+
+  // --- Admin Panel Methods ---
+  async getAdminList(params?: {
+    page?: number;
+    size?: number;
+    estado?: string;
+    cargo_id?: number;
+    search?: string;
+  }): Promise<ProfesiogramaAdminListResponse> {
+    const res = await api.get("/profesiogramas/admin/list", { params });
+    return res.data as ProfesiogramaAdminListResponse;
+  }
+
+  async updateStatus(
+    profesiogramaId: number,
+    estado: "activo" | "inactivo" | "borrador"
+  ): Promise<{ message: string }> {
+    const res = await api.patch(`/profesiogramas/admin/${profesiogramaId}/status`, {
+      estado,
+    });
+    return res.data;
+  }
+
+  async bulkAction(
+    action: "activar" | "inactivar" | "eliminar",
+    profesiogramaIds: number[]
+  ): Promise<ProfesiogramaBulkResult> {
+    const res = await api.post("/profesiogramas/admin/bulk-action", {
+      action,
+      profesiograma_ids: profesiogramaIds,
+    });
+    return res.data as ProfesiogramaBulkResult;
+  }
+
+  async getStats(): Promise<ProfesiogramaStats> {
+    const res = await api.get("/profesiogramas/admin/stats");
+    return res.data as ProfesiogramaStats;
+  }
+
+  async exportAdminList(params?: {
+    estado?: string;
+    cargo_id?: number;
+  }): Promise<Blob> {
+    const res = await api.get("/profesiogramas/admin/export", {
+      params,
+      responseType: "blob",
+    });
+    return res.data as Blob;
   }
 
   async exportMatrizExcel(profesiogramaId: number) {

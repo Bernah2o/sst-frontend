@@ -84,6 +84,7 @@ import WorkerVacations from "./pages/WorkerVacations";
 import VacationsManagement from "./pages/VacationsManagement";
 
 import ProfesiogramaCatalogos from "./pages/ProfesiogramaCatalogos";
+import ProfesiogramasAdmin from "./pages/ProfesiogramasAdmin";
 import ProfesiogramasCargo from "./pages/ProfesiogramasCargo";
 import WorkerProfesiograma from "./pages/WorkerProfesiograma";
 import WorkerProfesiogramaSearch from "./pages/WorkerProfesiogramaSearch";
@@ -558,6 +559,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
                         <ProfesiogramasCargo />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profesiogramas/admin"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin"]}>
+                        <ProfesiogramasAdmin />
                       </ProtectedRoute>
                     }
                   />
