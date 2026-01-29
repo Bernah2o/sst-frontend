@@ -187,6 +187,20 @@ export interface ProfesiogramaCreate {
   observaciones?: string;
 }
 
+export interface ProfesiogramaDuplicateRequest {
+  cargo_ids: number[];
+  estado?: "activo" | "inactivo" | "borrador";
+}
+
+export interface ProfesiogramaDuplicateResult {
+  cargo_id: number;
+  cargo_nombre: string;
+  profesiograma_id: number;
+  version: string;
+  success: boolean;
+  message: string;
+}
+
 class ProfesiogramaService {
   // --- Factores de Riesgo ---
   async listFactoresRiesgo(params?: { activo?: boolean; q?: string }) {
@@ -350,6 +364,17 @@ class ProfesiogramaService {
   async deleteProfesiograma(profesiogramaId: number) {
     const res = await api.delete(`/profesiogramas/${profesiogramaId}`);
     return res.data;
+  }
+
+  async duplicateProfesiograma(
+    profesiogramaId: number,
+    data: ProfesiogramaDuplicateRequest
+  ): Promise<ProfesiogramaDuplicateResult[]> {
+    const res = await api.post(
+      `/profesiogramas/${profesiogramaId}/duplicate`,
+      data
+    );
+    return res.data as ProfesiogramaDuplicateResult[];
   }
 
   async exportMatrizExcel(profesiogramaId: number) {
