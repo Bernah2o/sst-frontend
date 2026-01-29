@@ -473,6 +473,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
                 path: "/profesiogramas/trabajador",
                 roles: ["admin", "supervisor"],
               },
+              {
+                id: "profesiogramas-admin",
+                label: "Administrar",
+                icon: <AdminPanelSettings />,
+                path: "/profesiogramas/admin",
+                roles: ["admin"],
+              },
             ],
             roles: ["admin", "supervisor"],
           },
@@ -684,6 +691,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
               "profesiogramas-catalogos": () => user.role === "admin",
               "profesiogramas-cargo": () => user.role === "admin" || user.role === "supervisor",
               "profesiogramas-trabajador": () => user.role === "admin" || user.role === "supervisor",
+              "profesiogramas-admin": () => user.role === "admin",
               "homework-assessments": () => user.role === "admin" || user.role === "supervisor",
 
               // Certificates - Solo para roles administrativos, no para employees
