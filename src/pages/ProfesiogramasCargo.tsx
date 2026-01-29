@@ -24,6 +24,7 @@ import {
   Autocomplete,
   Alert,
   InputAdornment,
+  Switch,
 } from "@mui/material";
 import { CheckCircle, ContentCopy } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
@@ -64,8 +65,8 @@ type FactorMatrizConfig = {
   ne?: Gtc45NE;
   nc?: Gtc45NC;
   tiempo_exposicion_horas?: number;
-  valor_medido?: number;
-  valor_limite_permisible?: number;
+  valor_medido?: string;  // Puede ser numérico o texto descriptivo (ej: "No aplica", "Contacto directo con agua")
+  valor_limite_permisible?: string;  // Puede ser numérico o texto (ej: "No aplica (evaluación cualitativa)")
   unidad_medida?: string;
   // Controles existentes
   controles_existentes?: string;
@@ -421,11 +422,32 @@ type ValorMedidoSugerido = {
 };
 
 type ValorMedidoOption = {
-  tipo: 'valor' | 'rango';
-  valor: number;
+  tipo: 'valor' | 'rango' | 'texto';
+  valor: string;  // Puede ser numérico (como string) o texto descriptivo
   label: string;
   descripcion: string;
 };
+
+// Opciones de texto descriptivo para valor medido (cuando no aplica medición numérica)
+const OPCIONES_VALOR_MEDIDO_TEXTO: ValorMedidoOption[] = [
+  { tipo: 'texto', valor: 'No aplica', label: 'No aplica', descripcion: 'No requiere medición cuantitativa' },
+  { tipo: 'texto', valor: 'No definido', label: 'No definido', descripcion: 'Pendiente de medición' },
+  { tipo: 'texto', valor: 'Evaluación cualitativa', label: 'Evaluación cualitativa', descripcion: 'Se evalúa cualitativamente' },
+  { tipo: 'texto', valor: 'Contacto directo con agua durante las labores de aseo', label: 'Contacto directo con agua (aseo)', descripcion: 'Exposición por contacto' },
+  { tipo: 'texto', valor: 'Superficies húmedas durante labores de aseo', label: 'Superficies húmedas (aseo)', descripcion: 'Condición ambiental' },
+  { tipo: 'texto', valor: 'Presencia confirmada', label: 'Presencia confirmada', descripcion: 'Se confirma presencia del peligro' },
+  { tipo: 'texto', valor: 'Presencia ocasional', label: 'Presencia ocasional', descripcion: 'Presencia intermitente del peligro' },
+];
+
+// Opciones de texto descriptivo para valor límite permisible
+const OPCIONES_VLP_TEXTO: string[] = [
+  'No aplica',
+  'No aplica (evaluación cualitativa)',
+  'No definido',
+  'No definido por normativa',
+  'Según criterio técnico',
+  'Ver ficha de seguridad',
+];
 
 // Valores medidos sugeridos y rangos de referencia por clasificación
 const VALORES_MEDIDOS_SUGERIDOS: Record<string, ValorMedidoSugerido> = {
@@ -609,30 +631,35 @@ const VALORES_MEDIDOS_SUGERIDOS: Record<string, ValorMedidoSugerido> = {
 
 // Función helper para generar opciones de valor medido
 const getValorMedidoOptions = (clasificacion: string | undefined): ValorMedidoOption[] => {
-  if (!clasificacion || !VALORES_MEDIDOS_SUGERIDOS[clasificacion]) return [];
-
-  const data = VALORES_MEDIDOS_SUGERIDOS[clasificacion];
   const options: ValorMedidoOption[] = [];
 
-  // Agregar valores típicos
-  data.valores_tipicos.forEach(v => {
-    options.push({
-      tipo: 'valor',
-      valor: v,
-      label: `${v} ${data.unidad}`,
-      descripcion: ''
-    });
-  });
+  // Siempre incluir opciones de texto descriptivo al inicio
+  options.push(...OPCIONES_VALOR_MEDIDO_TEXTO);
 
-  // Agregar rangos de referencia
-  data.rangos.forEach(r => {
-    options.push({
-      tipo: 'rango',
-      valor: r.min ?? r.max ?? 0,
-      label: r.descripcion,
-      descripcion: `Nivel ${r.nivel}`
+  // Si hay clasificación con valores sugeridos, agregar opciones numéricas
+  if (clasificacion && VALORES_MEDIDOS_SUGERIDOS[clasificacion]) {
+    const data = VALORES_MEDIDOS_SUGERIDOS[clasificacion];
+
+    // Agregar valores típicos
+    data.valores_tipicos.forEach(v => {
+      options.push({
+        tipo: 'valor',
+        valor: String(v),
+        label: `${v} ${data.unidad}`,
+        descripcion: ''
+      });
     });
-  });
+
+    // Agregar rangos de referencia
+    data.rangos.forEach(r => {
+      options.push({
+        tipo: 'rango',
+        valor: String(r.min ?? r.max ?? 0),
+        label: r.descripcion,
+        descripcion: `Nivel ${r.nivel}`
+      });
+    });
+  }
 
   return options;
 };
@@ -923,6 +950,7 @@ const ProfesiogramasCargo: React.FC = () => {
   const [duplicating, setDuplicating] = useState(false);
   const [duplicateTargetCargos, setDuplicateTargetCargos] = useState<number[]>([]);
   const [duplicateResults, setDuplicateResults] = useState<ProfesiogramaDuplicateResult[]>([]);
+  const [duplicateAsActive, setDuplicateAsActive] = useState(true);
 
   // Form state
   const [selectedFactores, setSelectedFactores] = useState<number[]>([]);
@@ -1376,10 +1404,10 @@ const ProfesiogramasCargo: React.FC = () => {
                   ? Number(pf.tiempo_exposicion_horas)
                   : 8,
               valor_medido:
-                pf.valor_medido != null ? Number(pf.valor_medido) : undefined,
+                pf.valor_medido != null ? String(pf.valor_medido) : undefined,
               valor_limite_permisible:
                 pf.valor_limite_permisible != null
-                  ? Number(pf.valor_limite_permisible)
+                  ? String(pf.valor_limite_permisible)
                   : undefined,
               unidad_medida: pf.unidad_medida ?? "",
               // Controles existentes
@@ -1524,6 +1552,7 @@ const ProfesiogramasCargo: React.FC = () => {
     if (!currentProfesiogramaId) return;
     setDuplicateTargetCargos([]);
     setDuplicateResults([]);
+    setDuplicateAsActive(true);
     setDuplicateDialogOpen(true);
   };
 
@@ -1531,6 +1560,7 @@ const ProfesiogramasCargo: React.FC = () => {
     setDuplicateDialogOpen(false);
     setDuplicateTargetCargos([]);
     setDuplicateResults([]);
+    setDuplicateAsActive(true);
   };
 
   const handleConfirmDuplicate = async () => {
@@ -1541,7 +1571,7 @@ const ProfesiogramasCargo: React.FC = () => {
         currentProfesiogramaId,
         {
           cargo_ids: duplicateTargetCargos,
-          estado: "borrador",
+          estado: duplicateAsActive ? "activo" : "borrador",
         }
       );
       setDuplicateResults(results);
@@ -1706,21 +1736,22 @@ const ProfesiogramasCargo: React.FC = () => {
       }
     }
 
-    // Validación de VLP - verificar valores que exceden el límite permisible
+    // Validación de VLP - verificar valores que exceden el límite permisible (solo si ambos son numéricos)
     const factoresExcedenVLP: string[] = [];
     for (const factorId of selectedFactores) {
       const cfg = factoresConfig[factorId] || {};
-      if (
-        cfg.valor_medido != null &&
-        cfg.valor_limite_permisible != null &&
-        cfg.valor_medido > cfg.valor_limite_permisible
-      ) {
-        const factorNombre =
-          factoresList.find((f: FactorRiesgo) => f.id === factorId)?.nombre ||
-          `Factor ${factorId}`;
-        factoresExcedenVLP.push(
-          `${factorNombre} (${cfg.valor_medido} > ${cfg.valor_limite_permisible} ${cfg.unidad_medida || ''})`
-        );
+      if (cfg.valor_medido != null && cfg.valor_limite_permisible != null) {
+        const numValorMedido = parseFloat(cfg.valor_medido);
+        const numVLP = parseFloat(cfg.valor_limite_permisible);
+        // Solo comparar si ambos valores son numéricos
+        if (!isNaN(numValorMedido) && !isNaN(numVLP) && numValorMedido > numVLP) {
+          const factorNombre =
+            factoresList.find((f: FactorRiesgo) => f.id === factorId)?.nombre ||
+            `Factor ${factorId}`;
+          factoresExcedenVLP.push(
+            `${factorNombre} (${cfg.valor_medido} > ${cfg.valor_limite_permisible} ${cfg.unidad_medida || ''})`
+          );
+        }
       }
     }
 
@@ -1760,12 +1791,8 @@ const ProfesiogramasCargo: React.FC = () => {
             factor_riesgo_id: id,
             nivel_exposicion: mapNivelExposicionFromNR(nr),
             tiempo_exposicion_horas: Number(cfg.tiempo_exposicion_horas ?? 8),
-            valor_medido:
-              cfg.valor_medido != null ? Number(cfg.valor_medido) : undefined,
-            valor_limite_permisible:
-              cfg.valor_limite_permisible != null
-                ? Number(cfg.valor_limite_permisible)
-                : undefined,
+            valor_medido: clean(cfg.valor_medido),
+            valor_limite_permisible: clean(cfg.valor_limite_permisible),
             unidad_medida: clean(cfg.unidad_medida),
             proceso: clean(cfg.proceso),
             actividad: clean(cfg.actividad),
@@ -2252,25 +2279,29 @@ const ProfesiogramasCargo: React.FC = () => {
                               <Autocomplete<ValorMedidoOption, false, false, true>
                                 freeSolo
                                 options={getValorMedidoOptions(cfg.clasificacion_peligro)}
-                                groupBy={(option) => option.tipo === 'valor' ? 'Valores típicos' : 'Rangos de referencia'}
+                                groupBy={(option) => {
+                                  if (option.tipo === 'texto') return 'Opciones descriptivas';
+                                  if (option.tipo === 'valor') return 'Valores típicos';
+                                  return 'Rangos de referencia';
+                                }}
                                 getOptionLabel={(option) => {
                                   if (typeof option === 'string') return option;
                                   return option.label;
                                 }}
-                                inputValue={cfg.valor_medido?.toString() || ''}
+                                inputValue={cfg.valor_medido || ''}
                                 onInputChange={(_, newInputValue) => {
                                   if (newInputValue === '') {
                                     upsertFactorConfig(factorId, { valor_medido: undefined });
                                   } else {
-                                    const numValue = parseFloat(newInputValue);
-                                    if (!isNaN(numValue)) {
-                                      upsertFactorConfig(factorId, { valor_medido: numValue });
-                                    }
+                                    // Guardar como string (puede ser número o texto)
+                                    upsertFactorConfig(factorId, { valor_medido: newInputValue });
                                   }
                                 }}
                                 onChange={(_, newValue) => {
                                   if (typeof newValue === 'object' && newValue !== null && 'valor' in newValue) {
                                     upsertFactorConfig(factorId, { valor_medido: newValue.valor });
+                                  } else if (typeof newValue === 'string') {
+                                    upsertFactorConfig(factorId, { valor_medido: newValue });
                                   }
                                 }}
                                 renderInput={(params) => (
@@ -2279,19 +2310,27 @@ const ProfesiogramasCargo: React.FC = () => {
                                     label="Valor medido"
                                     error={
                                       (() => {
-                                        if (cfg.valor_medido == null) return false;
+                                        if (cfg.valor_medido == null || cfg.valor_medido === '') return false;
+
+                                        // Intentar convertir a número para validación
+                                        const numValorMedido = parseFloat(cfg.valor_medido);
+                                        if (isNaN(numValorMedido)) return false; // Es texto, no validar numéricamente
 
                                         const vlpData = cfg.clasificacion_peligro
                                           ? VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
                                           : null;
 
                                         if (vlpData?.valor_limite_min != null && vlpData?.valor_limite_max != null) {
-                                          return cfg.valor_medido < vlpData.valor_limite_min ||
-                                                 cfg.valor_medido > vlpData.valor_limite_max;
+                                          return numValorMedido < vlpData.valor_limite_min ||
+                                                 numValorMedido > vlpData.valor_limite_max;
                                         }
 
+                                        // Validar contra VLP personalizado si es numérico
                                         if (cfg.valor_limite_permisible != null) {
-                                          return cfg.valor_medido > cfg.valor_limite_permisible;
+                                          const numVLP = parseFloat(cfg.valor_limite_permisible);
+                                          if (!isNaN(numVLP)) {
+                                            return numValorMedido > numVLP;
+                                          }
                                         }
 
                                         return false;
@@ -2299,11 +2338,14 @@ const ProfesiogramasCargo: React.FC = () => {
                                     }
                                     helperText={
                                       (() => {
-                                        if (cfg.valor_medido == null) {
-                                          const hasOptions = cfg.clasificacion_peligro && VALORES_MEDIDOS_SUGERIDOS[cfg.clasificacion_peligro];
-                                          return hasOptions
-                                            ? "Seleccione valor sugerido o digite"
-                                            : "Valor obtenido en medición";
+                                        if (cfg.valor_medido == null || cfg.valor_medido === '') {
+                                          return "Valor numérico o texto descriptivo";
+                                        }
+
+                                        // Intentar convertir a número para validación
+                                        const numValorMedido = parseFloat(cfg.valor_medido);
+                                        if (isNaN(numValorMedido)) {
+                                          return "Valor descriptivo (sin validación numérica)";
                                         }
 
                                         const vlpData = cfg.clasificacion_peligro
@@ -2311,20 +2353,23 @@ const ProfesiogramasCargo: React.FC = () => {
                                           : null;
 
                                         if (vlpData?.valor_limite_min != null && vlpData?.valor_limite_max != null) {
-                                          if (cfg.valor_medido < vlpData.valor_limite_min) {
+                                          if (numValorMedido < vlpData.valor_limite_min) {
                                             return "⚠️ Por debajo del mínimo permisible";
                                           }
-                                          if (cfg.valor_medido > vlpData.valor_limite_max) {
+                                          if (numValorMedido > vlpData.valor_limite_max) {
                                             return "⚠️ Excede el máximo permisible";
                                           }
                                           return "✓ Dentro del rango permisible";
                                         }
 
                                         if (cfg.valor_limite_permisible != null) {
-                                          if (cfg.valor_medido > cfg.valor_limite_permisible) {
-                                            return "⚠️ Excede el VLP";
+                                          const numVLP = parseFloat(cfg.valor_limite_permisible);
+                                          if (!isNaN(numVLP)) {
+                                            if (numValorMedido > numVLP) {
+                                              return "⚠️ Excede el VLP";
+                                            }
+                                            return "✓ Dentro del límite";
                                           }
-                                          return "✓ Dentro del límite";
                                         }
 
                                         return "Valor obtenido en medición";
@@ -2350,45 +2395,64 @@ const ProfesiogramasCargo: React.FC = () => {
                               />
                             </Grid>
                             <Grid size={{ xs: 12, md: 4 }}>
-                              <TextField
-                                fullWidth
-                                label="Valor límite permisible"
-                                value={
-                                  (() => {
+                              <Autocomplete
+                                freeSolo
+                                options={OPCIONES_VLP_TEXTO}
+                                value={cfg.valor_limite_permisible || ''}
+                                onChange={(_, newValue) => {
+                                  upsertFactorConfig(factorId, {
+                                    valor_limite_permisible: newValue || undefined
+                                  });
+                                }}
+                                onInputChange={(_, newInputValue) => {
+                                  if (newInputValue === '') {
+                                    // Si se borra, intentar auto-poblar desde VLP
                                     const vlpData = cfg.clasificacion_peligro
                                       ? VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
                                       : null;
-
-                                    if (cfg.valor_limite_permisible != null) {
-                                      return `${cfg.valor_limite_permisible} ${cfg.unidad_medida || ''}`.trim();
-                                    }
-
-                                    if (vlpData?.valor_limite_min != null && vlpData?.valor_limite_max != null) {
-                                      return `${vlpData.valor_limite_min}-${vlpData.valor_limite_max} ${vlpData.unidad_medida}`;
-                                    }
-
                                     if (vlpData?.valor_limite_permisible != null) {
-                                      return `${vlpData.valor_limite_permisible} ${vlpData.unidad_medida}`;
+                                      upsertFactorConfig(factorId, {
+                                        valor_limite_permisible: String(vlpData.valor_limite_permisible)
+                                      });
+                                    } else if (vlpData?.valor_limite_max != null) {
+                                      upsertFactorConfig(factorId, {
+                                        valor_limite_permisible: `${vlpData.valor_limite_min}-${vlpData.valor_limite_max}`
+                                      });
+                                    } else {
+                                      upsertFactorConfig(factorId, { valor_limite_permisible: undefined });
                                     }
-
-                                    return '';
-                                  })()
-                                }
-                                disabled
-                                helperText={
-                                  cfg.clasificacion_peligro && VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
-                                    ? `${VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro].normativa}`
-                                    : "Seleccione clasificación del peligro para auto-poblar"
-                                }
-                                slotProps={{
-                                  input: {
-                                    startAdornment: cfg.valor_limite_permisible != null ? (
-                                      <InputAdornment position="start">
-                                        <CheckCircle color="success" fontSize="small" />
-                                      </InputAdornment>
-                                    ) : null
+                                  } else {
+                                    upsertFactorConfig(factorId, { valor_limite_permisible: newInputValue });
                                   }
                                 }}
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    fullWidth
+                                    label="Valor límite permisible"
+                                    helperText={
+                                      (() => {
+                                        const vlpData = cfg.clasificacion_peligro
+                                          ? VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
+                                          : null;
+                                        if (vlpData) {
+                                          return `Ref: ${vlpData.normativa}`;
+                                        }
+                                        return "Ingrese valor o seleccione opción";
+                                      })()
+                                    }
+                                    slotProps={{
+                                      input: {
+                                        ...params.InputProps,
+                                        startAdornment: cfg.valor_limite_permisible ? (
+                                          <InputAdornment position="start">
+                                            <CheckCircle color="success" fontSize="small" />
+                                          </InputAdornment>
+                                        ) : null
+                                      }
+                                    }}
+                                  />
+                                )}
                               />
                             </Grid>
                             <Grid size={{ xs: 12, md: 4 }}>
@@ -2409,9 +2473,31 @@ const ProfesiogramasCargo: React.FC = () => {
                               />
                             </Grid>
 
-                            {/* Alerta de VLP - maneja rangos y valores únicos */}
+                            {/* Alerta de VLP - maneja rangos y valores únicos (solo para valores numéricos) */}
                             {(() => {
-                              if (cfg.valor_medido == null) return null;
+                              if (cfg.valor_medido == null || cfg.valor_medido === '') return null;
+
+                              // Intentar convertir a número - si no es numérico, mostrar info descriptiva
+                              const numValorMedido = parseFloat(cfg.valor_medido);
+                              if (isNaN(numValorMedido)) {
+                                // Valor descriptivo (texto), mostrar información sin validación numérica
+                                return (
+                                  <Grid size={{ xs: 12 }}>
+                                    <Alert severity="info" sx={{ mt: 1 }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        ℹ️ Valor descriptivo registrado
+                                      </Typography>
+                                      <Typography variant="body2">
+                                        Valor medido: {cfg.valor_medido}
+                                        {cfg.valor_limite_permisible && ` | VLP: ${cfg.valor_limite_permisible}`}
+                                      </Typography>
+                                      <Typography variant="caption" display="block" sx={{ mt: 0.5, fontStyle: 'italic' }}>
+                                        Este valor no requiere validación numérica contra el VLP.
+                                      </Typography>
+                                    </Alert>
+                                  </Grid>
+                                );
+                              }
 
                               const vlpData = cfg.clasificacion_peligro
                                 ? VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
@@ -2420,8 +2506,8 @@ const ProfesiogramasCargo: React.FC = () => {
                               // Manejo de rangos (min/max)
                               if (vlpData?.valor_limite_min != null && vlpData?.valor_limite_max != null) {
                                 const dentroRango =
-                                  cfg.valor_medido >= vlpData.valor_limite_min &&
-                                  cfg.valor_medido <= vlpData.valor_limite_max;
+                                  numValorMedido >= vlpData.valor_limite_min &&
+                                  numValorMedido <= vlpData.valor_limite_max;
 
                                 if (!dentroRango) {
                                   return (
@@ -2471,9 +2557,27 @@ const ProfesiogramasCargo: React.FC = () => {
                                 }
                               }
 
-                              // Manejo de VLP simple
-                              if (cfg.valor_limite_permisible != null) {
-                                const excedeVLP = cfg.valor_medido > cfg.valor_limite_permisible;
+                              // Manejo de VLP simple (solo si el VLP también es numérico)
+                              if (cfg.valor_limite_permisible != null && cfg.valor_limite_permisible !== '') {
+                                const numVLP = parseFloat(cfg.valor_limite_permisible);
+
+                                // Si el VLP es texto, mostrar info sin validación
+                                if (isNaN(numVLP)) {
+                                  return (
+                                    <Grid size={{ xs: 12 }}>
+                                      <Alert severity="info" sx={{ mt: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                          ℹ️ VLP descriptivo
+                                        </Typography>
+                                        <Typography variant="body2">
+                                          Valor medido: {cfg.valor_medido} {cfg.unidad_medida || ''} | VLP: {cfg.valor_limite_permisible}
+                                        </Typography>
+                                      </Alert>
+                                    </Grid>
+                                  );
+                                }
+
+                                const excedeVLP = numValorMedido > numVLP;
 
                                 if (excedeVLP) {
                                   return (
@@ -3337,15 +3441,15 @@ const ProfesiogramasCargo: React.FC = () => {
               </Grid>
 
               <Grid size={{ xs: 12 }}>
-                {/* Alerta de factores que exceden VLP antes de guardar */}
+                {/* Alerta de factores que exceden VLP antes de guardar (solo valores numéricos) */}
                 {(() => {
                   const factoresConExcesoVLP = selectedFactores.filter((factorId) => {
                     const cfg = factoresConfig[factorId] || {};
-                    return (
-                      cfg.valor_medido != null &&
-                      cfg.valor_limite_permisible != null &&
-                      cfg.valor_medido > cfg.valor_limite_permisible
-                    );
+                    if (cfg.valor_medido == null || cfg.valor_limite_permisible == null) return false;
+                    const numValorMedido = parseFloat(cfg.valor_medido);
+                    const numVLP = parseFloat(cfg.valor_limite_permisible);
+                    // Solo comparar si ambos valores son numéricos
+                    return !isNaN(numValorMedido) && !isNaN(numVLP) && numValorMedido > numVLP;
                   });
 
                   if (factoresConExcesoVLP.length > 0) {
@@ -3490,8 +3594,7 @@ const ProfesiogramasCargo: React.FC = () => {
                       <>
                         <DialogContentText sx={{ mb: 2 }}>
                           Seleccione los cargos a los cuales desea copiar este
-                          profesiograma. Se creará una copia en estado "borrador"
-                          para cada cargo seleccionado.
+                          profesiograma.
                         </DialogContentText>
                         <Autocomplete
                           multiple
@@ -3523,6 +3626,29 @@ const ProfesiogramasCargo: React.FC = () => {
                             );
                           }}
                         />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={duplicateAsActive}
+                              onChange={(e) => setDuplicateAsActive(e.target.checked)}
+                              color="primary"
+                            />
+                          }
+                          label="Activar inmediatamente (visible para trabajadores)"
+                          sx={{ mt: 2 }}
+                        />
+                        {duplicateAsActive && (
+                          <Alert severity="info" sx={{ mt: 1 }}>
+                            Los profesiogramas se crearán como <strong>activos</strong> y serán
+                            visibles inmediatamente para los trabajadores de los cargos seleccionados.
+                          </Alert>
+                        )}
+                        {!duplicateAsActive && (
+                          <Alert severity="warning" sx={{ mt: 1 }}>
+                            Los profesiogramas se crearán como <strong>borrador</strong> y deberán
+                            activarse manualmente para que sean visibles a los trabajadores.
+                          </Alert>
+                        )}
                       </>
                     ) : (
                       <>
