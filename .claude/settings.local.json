@@ -4,7 +4,15 @@
       "Bash(alembic heads:*)",
       "Bash(alembic merge:*)",
       "Bash(alembic upgrade:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(git reset:*)",
+      "Bash(del \"\\\\?\\\\e:\\\\DH2OCOL\\\\python\\\\sst-app\\\\sst-frontend\\\\nul\")",
+      "Bash(cmd /c \"del /f /q \"\"\\\\?\\\\e:\\\\DH2OCOL\\\\python\\\\sst-app\\\\sst-frontend\\\\nul\"\"\")"
+    ],
+    "additionalDirectories": [
+      "e:\\DH2OCOL\\python\\sst-app\\sst-backend\\app\\api"
     ]
   }
 }

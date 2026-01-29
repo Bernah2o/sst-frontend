@@ -23,7 +23,9 @@ import {
   DialogActions,
   Autocomplete,
   Alert,
+  InputAdornment,
 } from "@mui/material";
+import { CheckCircle, ContentCopy } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import cargoService, { CargoOption, Cargo } from "../services/cargoService";
 import profesiogramaService, {
@@ -31,6 +33,7 @@ import profesiogramaService, {
   TipoExamen,
   CriterioExclusion,
   Inmunizacion,
+  ProfesiogramaDuplicateResult,
 } from "../services/profesiogramaService";
 
 type TipoEvaluacionExamen =
@@ -269,13 +272,6 @@ type VLPData = {
   observaciones?: string;
 };
 
-type VLPOption = {
-  label: string;  // Texto mostrado en el dropdown
-  valor: number;  // Valor numérico del VLP
-  unidad: string; // Unidad de medida
-  clasificacion?: string; // Clasificación del peligro asociada
-};
-
 const VALORES_LIMITE_PERMISIBLE: Record<string, VLPData> = {
   // Peligros Físicos
   "Ruido": {
@@ -410,28 +406,236 @@ const VALORES_LIMITE_PERMISIBLE: Record<string, VLPData> = {
   }
 };
 
-// Generar opciones de VLP para el Autocomplete
-const VLP_OPCIONES: VLPOption[] = Object.entries(VALORES_LIMITE_PERMISIBLE)
-  .filter(([_, data]) => data.valor_limite_permisible != null || (data.valor_limite_min != null && data.valor_limite_max != null))
-  .map(([clasificacion, data]) => {
-    if (data.valor_limite_min != null && data.valor_limite_max != null) {
-      // Rangos
-      return {
-        label: `${clasificacion}: ${data.valor_limite_min}-${data.valor_limite_max} ${data.unidad_medida} ${data.observaciones ? `(${data.observaciones})` : ''}`,
-        valor: data.valor_limite_max, // Usamos el máximo como referencia
-        unidad: data.unidad_medida,
-        clasificacion: clasificacion,
-      };
-    } else {
-      // Valores únicos
-      return {
-        label: `${clasificacion}: ${data.valor_limite_permisible} ${data.unidad_medida} ${data.observaciones ? `(${data.observaciones})` : ''}`,
-        valor: data.valor_limite_permisible!,
-        unidad: data.unidad_medida,
-        clasificacion: clasificacion,
-      };
-    }
+// Tipo para valores medidos sugeridos
+type ValorMedidoRango = {
+  nivel: string;
+  min?: number;
+  max?: number;
+  descripcion: string;
+};
+
+type ValorMedidoSugerido = {
+  valores_tipicos: number[];
+  rangos: ValorMedidoRango[];
+  unidad: string;
+};
+
+type ValorMedidoOption = {
+  tipo: 'valor' | 'rango';
+  valor: number;
+  label: string;
+  descripcion: string;
+};
+
+// Valores medidos sugeridos y rangos de referencia por clasificación
+const VALORES_MEDIDOS_SUGERIDOS: Record<string, ValorMedidoSugerido> = {
+  // Peligros Físicos
+  "Ruido": {
+    valores_tipicos: [70, 75, 80, 85, 90, 95],
+    rangos: [
+      { nivel: "Bajo", max: 70, descripcion: "< 70 dB - Nivel aceptable" },
+      { nivel: "Medio", min: 70, max: 80, descripcion: "70-80 dB - Moderado" },
+      { nivel: "Alto", min: 80, max: 85, descripcion: "80-85 dB - Precaución" },
+      { nivel: "Muy Alto", min: 85, descripcion: "> 85 dB - Excede VLP" }
+    ],
+    unidad: "dB"
+  },
+  "Vibraciones": {
+    valores_tipicos: [0.5, 1, 2, 2.5, 5, 10],
+    rangos: [
+      { nivel: "Bajo", max: 0.5, descripcion: "< 0.5 m/s² - Aceptable" },
+      { nivel: "Medio", min: 0.5, max: 2.5, descripcion: "0.5-2.5 m/s² - Moderado" },
+      { nivel: "Alto", min: 2.5, max: 5, descripcion: "2.5-5 m/s² - Precaución" },
+      { nivel: "Muy Alto", min: 5, descripcion: "> 5 m/s² - Alto riesgo" }
+    ],
+    unidad: "m/s²"
+  },
+  "Iluminación inadecuada": {
+    valores_tipicos: [100, 200, 300, 400, 500, 600, 750, 1000],
+    rangos: [
+      { nivel: "Muy Alto", max: 200, descripcion: "< 200 lux - Muy bajo" },
+      { nivel: "Alto", min: 200, max: 300, descripcion: "200-300 lux - Bajo" },
+      { nivel: "Medio", min: 300, max: 500, descripcion: "300-500 lux - Aceptable (oficinas)" },
+      { nivel: "Bajo", min: 500, descripcion: "> 500 lux - Óptimo" }
+    ],
+    unidad: "lux"
+  },
+  "Temperaturas extremas (calor o frío)": {
+    valores_tipicos: [15, 17, 20, 22, 24, 27, 30, 35],
+    rangos: [
+      { nivel: "Alto", max: 17, descripcion: "< 17°C - Frío" },
+      { nivel: "Bajo", min: 17, max: 27, descripcion: "17-27°C - Rango aceptable" },
+      { nivel: "Alto", min: 27, descripcion: "> 27°C - Calor" }
+    ],
+    unidad: "°C"
+  },
+  "Radiaciones ionizantes y no ionizantes": {
+    valores_tipicos: [0.1, 0.5, 1, 5, 10, 20],
+    rangos: [
+      { nivel: "Bajo", max: 1, descripcion: "< 1 mSv/año - Público general" },
+      { nivel: "Medio", min: 1, max: 6, descripcion: "1-6 mSv/año - Moderado" },
+      { nivel: "Alto", min: 6, max: 20, descripcion: "6-20 mSv/año - Ocupacional" },
+      { nivel: "Muy Alto", min: 20, descripcion: "> 20 mSv/año - Excede límite" }
+    ],
+    unidad: "mSv/año"
+  },
+  // Peligros Químicos
+  "Polvos": {
+    valores_tipicos: [2, 5, 8, 10, 15, 20],
+    rangos: [
+      { nivel: "Bajo", max: 5, descripcion: "< 5 mg/m³ - Aceptable" },
+      { nivel: "Medio", min: 5, max: 8, descripcion: "5-8 mg/m³ - Moderado" },
+      { nivel: "Alto", min: 8, max: 10, descripcion: "8-10 mg/m³ - Precaución" },
+      { nivel: "Muy Alto", min: 10, descripcion: "> 10 mg/m³ - Excede VLP" }
+    ],
+    unidad: "mg/m³"
+  },
+  "Vapores": {
+    valores_tipicos: [25, 50, 100, 200, 500],
+    rangos: [
+      { nivel: "Bajo", max: 50, descripcion: "< 50 ppm - Bajo" },
+      { nivel: "Medio", min: 50, max: 200, descripcion: "50-200 ppm - Moderado" },
+      { nivel: "Alto", min: 200, descripcion: "> 200 ppm - Verificar MSDS" }
+    ],
+    unidad: "ppm"
+  },
+  "Gases": {
+    valores_tipicos: [25, 50, 100, 200, 500],
+    rangos: [
+      { nivel: "Bajo", max: 50, descripcion: "< 50 ppm - Bajo" },
+      { nivel: "Medio", min: 50, max: 200, descripcion: "50-200 ppm - Moderado" },
+      { nivel: "Alto", min: 200, descripcion: "> 200 ppm - Verificar MSDS" }
+    ],
+    unidad: "ppm"
+  },
+  "Humos metálicos": {
+    valores_tipicos: [1, 2, 5, 10],
+    rangos: [
+      { nivel: "Bajo", max: 2, descripcion: "< 2 mg/m³ - Aceptable" },
+      { nivel: "Medio", min: 2, max: 5, descripcion: "2-5 mg/m³ - Moderado" },
+      { nivel: "Alto", min: 5, descripcion: "> 5 mg/m³ - Alto" }
+    ],
+    unidad: "mg/m³"
+  },
+  // Peligros Biomecánicos/Ergonómicos
+  "Posturas forzadas": {
+    valores_tipicos: [1, 2, 3, 4, 6, 8],
+    rangos: [
+      { nivel: "Bajo", max: 2, descripcion: "< 2 h/día - Aceptable" },
+      { nivel: "Medio", min: 2, max: 4, descripcion: "2-4 h/día - Moderado" },
+      { nivel: "Alto", min: 4, max: 6, descripcion: "4-6 h/día - Alto" },
+      { nivel: "Muy Alto", min: 6, descripcion: "> 6 h/día - Muy alto" }
+    ],
+    unidad: "horas/día"
+  },
+  "Movimientos repetitivos": {
+    valores_tipicos: [10, 15, 20, 25, 30, 40],
+    rangos: [
+      { nivel: "Bajo", max: 15, descripcion: "< 15 rep/min - Aceptable" },
+      { nivel: "Medio", min: 15, max: 25, descripcion: "15-25 rep/min - Moderado" },
+      { nivel: "Alto", min: 25, descripcion: "> 25 rep/min - Alto riesgo" }
+    ],
+    unidad: "repeticiones/min"
+  },
+  "Manipulación manual de cargas": {
+    valores_tipicos: [5, 10, 15, 20, 25, 30],
+    rangos: [
+      { nivel: "Bajo", max: 15, descripcion: "< 15 kg - Aceptable" },
+      { nivel: "Medio", min: 15, max: 20, descripcion: "15-20 kg - Moderado" },
+      { nivel: "Alto", min: 20, max: 25, descripcion: "20-25 kg - Precaución" },
+      { nivel: "Muy Alto", min: 25, descripcion: "> 25 kg - Excede VLP" }
+    ],
+    unidad: "kg"
+  },
+  "Sobreesfuerzo": {
+    valores_tipicos: [5, 10, 15, 20, 25],
+    rangos: [
+      { nivel: "Bajo", max: 10, descripcion: "< 10 kg - Aceptable" },
+      { nivel: "Medio", min: 10, max: 20, descripcion: "10-20 kg - Moderado" },
+      { nivel: "Alto", min: 20, descripcion: "> 20 kg - Alto" }
+    ],
+    unidad: "kg"
+  },
+  "Trabajo prolongado en posición de pie o sentado": {
+    valores_tipicos: [2, 3, 4, 5, 6, 8],
+    rangos: [
+      { nivel: "Bajo", max: 2, descripcion: "< 2 h continuas - Aceptable" },
+      { nivel: "Medio", min: 2, max: 4, descripcion: "2-4 h continuas - Moderado" },
+      { nivel: "Alto", min: 4, descripcion: "> 4 h continuas - Excede VLP" }
+    ],
+    unidad: "horas/día"
+  },
+  // Peligros Psicosociales
+  "Estrés laboral": {
+    valores_tipicos: [10, 20, 30, 40, 50, 60, 70, 80],
+    rangos: [
+      { nivel: "Bajo", max: 25, descripcion: "< 25 - Sin riesgo" },
+      { nivel: "Medio", min: 25, max: 50, descripcion: "25-50 - Riesgo bajo" },
+      { nivel: "Alto", min: 50, max: 75, descripcion: "50-75 - Riesgo medio" },
+      { nivel: "Muy Alto", min: 75, descripcion: "> 75 - Riesgo alto" }
+    ],
+    unidad: "puntaje batería"
+  },
+  "Carga mental": {
+    valores_tipicos: [10, 20, 30, 40, 50, 60, 70, 80],
+    rangos: [
+      { nivel: "Bajo", max: 25, descripcion: "< 25 - Sin riesgo" },
+      { nivel: "Medio", min: 25, max: 50, descripcion: "25-50 - Riesgo bajo" },
+      { nivel: "Alto", min: 50, max: 75, descripcion: "50-75 - Riesgo medio" },
+      { nivel: "Muy Alto", min: 75, descripcion: "> 75 - Riesgo alto" }
+    ],
+    unidad: "puntaje batería"
+  },
+  "Turnos extensos o rotativos": {
+    valores_tipicos: [6, 8, 10, 12],
+    rangos: [
+      { nivel: "Bajo", max: 8, descripcion: "<= 8 h/día - Jornada normal" },
+      { nivel: "Medio", min: 8, max: 10, descripcion: "8-10 h/día - Extendida" },
+      { nivel: "Alto", min: 10, descripcion: "> 10 h/día - Excede límite" }
+    ],
+    unidad: "horas/día"
+  },
+  "Trabajo bajo presión": {
+    valores_tipicos: [10, 20, 30, 40, 50, 60, 70, 80],
+    rangos: [
+      { nivel: "Bajo", max: 25, descripcion: "< 25 - Sin riesgo" },
+      { nivel: "Medio", min: 25, max: 50, descripcion: "25-50 - Riesgo bajo" },
+      { nivel: "Alto", min: 50, max: 75, descripcion: "50-75 - Riesgo medio" },
+      { nivel: "Muy Alto", min: 75, descripcion: "> 75 - Riesgo alto" }
+    ],
+    unidad: "puntaje batería"
+  }
+};
+
+// Función helper para generar opciones de valor medido
+const getValorMedidoOptions = (clasificacion: string | undefined): ValorMedidoOption[] => {
+  if (!clasificacion || !VALORES_MEDIDOS_SUGERIDOS[clasificacion]) return [];
+
+  const data = VALORES_MEDIDOS_SUGERIDOS[clasificacion];
+  const options: ValorMedidoOption[] = [];
+
+  // Agregar valores típicos
+  data.valores_tipicos.forEach(v => {
+    options.push({
+      tipo: 'valor',
+      valor: v,
+      label: `${v} ${data.unidad}`,
+      descripcion: ''
+    });
   });
+
+  // Agregar rangos de referencia
+  data.rangos.forEach(r => {
+    options.push({
+      tipo: 'rango',
+      valor: r.min ?? r.max ?? 0,
+      label: r.descripcion,
+      descripcion: `Nivel ${r.nivel}`
+    });
+  });
+
+  return options;
+};
 
 // Descripciones de peligros y efectos posibles por clasificación
 const DESCRIPCIONES_PELIGROS: Record<string, { descripciones: string[], efectos: string[] }> = {
@@ -711,7 +915,14 @@ const ProfesiogramasCargo: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  // Duplicate dialog state
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateTargetCargos, setDuplicateTargetCargos] = useState<number[]>([]);
+  const [duplicateResults, setDuplicateResults] = useState<ProfesiogramaDuplicateResult[]>([]);
 
   // Form state
   const [selectedFactores, setSelectedFactores] = useState<number[]>([]);
@@ -1309,9 +1520,59 @@ const ProfesiogramasCargo: React.FC = () => {
     }
   };
 
+  const handleOpenDuplicateDialog = () => {
+    if (!currentProfesiogramaId) return;
+    setDuplicateTargetCargos([]);
+    setDuplicateResults([]);
+    setDuplicateDialogOpen(true);
+  };
+
+  const handleCloseDuplicateDialog = () => {
+    setDuplicateDialogOpen(false);
+    setDuplicateTargetCargos([]);
+    setDuplicateResults([]);
+  };
+
+  const handleConfirmDuplicate = async () => {
+    if (!currentProfesiogramaId || duplicateTargetCargos.length === 0) return;
+    setDuplicating(true);
+    try {
+      const results = await profesiogramaService.duplicateProfesiograma(
+        currentProfesiogramaId,
+        {
+          cargo_ids: duplicateTargetCargos,
+          estado: "borrador",
+        }
+      );
+      setDuplicateResults(results);
+
+      const successCount = results.filter((r) => r.success).length;
+      const failCount = results.filter((r) => !r.success).length;
+
+      if (successCount > 0 && failCount === 0) {
+        enqueueSnackbar(
+          `Profesiograma duplicado exitosamente a ${successCount} cargo(s)`,
+          { variant: "success" }
+        );
+      } else if (successCount > 0 && failCount > 0) {
+        enqueueSnackbar(
+          `${successCount} exitoso(s), ${failCount} con errores`,
+          { variant: "warning" }
+        );
+      } else {
+        enqueueSnackbar("Error al duplicar profesiograma", { variant: "error" });
+      }
+    } catch (error) {
+      console.error(error);
+      enqueueSnackbar("Error al duplicar profesiograma", { variant: "error" });
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
   const handleExportMatriz = async () => {
     if (!currentProfesiogramaId) return;
-    setExporting(true);
+    setExportingExcel(true);
     try {
       const blob = await profesiogramaService.exportMatrizExcel(
         currentProfesiogramaId,
@@ -1330,13 +1591,13 @@ const ProfesiogramasCargo: React.FC = () => {
         variant: "error",
       });
     } finally {
-      setExporting(false);
+      setExportingExcel(false);
     }
   };
 
   const handleExportPdf = async () => {
     if (!selectedCargoId) return;
-    setExporting(true);
+    setExportingPdf(true);
     try {
       const cargoId = selectedCargoId as number;
       const blob = await profesiogramaService.exportProfesiogramaPdfByCargo(
@@ -1357,7 +1618,7 @@ const ProfesiogramasCargo: React.FC = () => {
         variant: "error",
       });
     } finally {
-      setExporting(false);
+      setExportingPdf(false);
     }
   };
 
@@ -1988,146 +2249,145 @@ const ProfesiogramasCargo: React.FC = () => {
                               />
                             </Grid>
                             <Grid size={{ xs: 12, md: 4 }}>
-                              <TextField
-                                fullWidth
-                                type="number"
-                                label="Valor medido"
-                                value={cfg.valor_medido ?? ""}
-                                onChange={(e) =>
-                                  upsertFactorConfig(factorId, {
-                                    valor_medido:
-                                      e.target.value === ""
-                                        ? undefined
-                                        : Number(e.target.value),
-                                  })
-                                }
-                                error={
-                                  (() => {
-                                    if (cfg.valor_medido == null) return false;
-
-                                    // Verificar si hay datos de VLP para esta clasificación
-                                    const vlpData = cfg.clasificacion_peligro
-                                      ? VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
-                                      : null;
-
-                                    // Si tiene rango (min/max), verificar que esté fuera del rango
-                                    if (vlpData?.valor_limite_min != null && vlpData?.valor_limite_max != null) {
-                                      return cfg.valor_medido < vlpData.valor_limite_min ||
-                                             cfg.valor_medido > vlpData.valor_limite_max;
-                                    }
-
-                                    // Si tiene VLP simple, verificar que no exceda
-                                    if (cfg.valor_limite_permisible != null) {
-                                      return cfg.valor_medido > cfg.valor_limite_permisible;
-                                    }
-
-                                    return false;
-                                  })()
-                                }
-                                helperText={
-                                  (() => {
-                                    if (cfg.valor_medido == null) return "Valor obtenido en medición";
-
-                                    const vlpData = cfg.clasificacion_peligro
-                                      ? VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
-                                      : null;
-
-                                    // Rangos (min/max)
-                                    if (vlpData?.valor_limite_min != null && vlpData?.valor_limite_max != null) {
-                                      if (cfg.valor_medido < vlpData.valor_limite_min) {
-                                        return "⚠️ Por debajo del mínimo permisible";
-                                      }
-                                      if (cfg.valor_medido > vlpData.valor_limite_max) {
-                                        return "⚠️ Excede el máximo permisible";
-                                      }
-                                      return "✓ Dentro del rango permisible";
-                                    }
-
-                                    // VLP simple
-                                    if (cfg.valor_limite_permisible != null) {
-                                      if (cfg.valor_medido > cfg.valor_limite_permisible) {
-                                        return "⚠️ Excede el VLP";
-                                      }
-                                      return "✓ Dentro del límite";
-                                    }
-
-                                    return "Valor obtenido en medición";
-                                  })()
-                                }
-                              />
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 4 }}>
-                              <Autocomplete
+                              <Autocomplete<ValorMedidoOption, false, false, true>
                                 freeSolo
-                                options={VLP_OPCIONES}
+                                options={getValorMedidoOptions(cfg.clasificacion_peligro)}
+                                groupBy={(option) => option.tipo === 'valor' ? 'Valores típicos' : 'Rangos de referencia'}
                                 getOptionLabel={(option) => {
                                   if (typeof option === 'string') return option;
                                   return option.label;
                                 }}
-                                inputValue={cfg.valor_limite_permisible?.toString() || ''}
-                                onChange={(_, newValue) => {
-                                  if (typeof newValue === 'object' && newValue !== null) {
-                                    // Opción seleccionada del dropdown
-                                    upsertFactorConfig(factorId, {
-                                      valor_limite_permisible: newValue.valor,
-                                      unidad_medida: newValue.unidad,
-                                    });
-                                  }
-                                }}
+                                inputValue={cfg.valor_medido?.toString() || ''}
                                 onInputChange={(_, newInputValue) => {
-                                  // Permitir escritura manual de números
                                   if (newInputValue === '') {
-                                    upsertFactorConfig(factorId, {
-                                      valor_limite_permisible: undefined,
-                                    });
+                                    upsertFactorConfig(factorId, { valor_medido: undefined });
                                   } else {
                                     const numValue = parseFloat(newInputValue);
                                     if (!isNaN(numValue)) {
-                                      upsertFactorConfig(factorId, {
-                                        valor_limite_permisible: numValue,
-                                      });
+                                      upsertFactorConfig(factorId, { valor_medido: numValue });
                                     }
                                   }
                                 }}
-                                filterOptions={(options, state) => {
-                                  // Filtrar por clasificación si existe
-                                  let filtered = options;
-                                  if (cfg.clasificacion_peligro) {
-                                    filtered = options.filter(opt =>
-                                      opt.clasificacion === cfg.clasificacion_peligro
-                                    );
+                                onChange={(_, newValue) => {
+                                  if (typeof newValue === 'object' && newValue !== null && 'valor' in newValue) {
+                                    upsertFactorConfig(factorId, { valor_medido: newValue.valor });
                                   }
-                                  // Filtrar por texto de búsqueda
-                                  const inputValue = state.inputValue.toLowerCase();
-                                  if (inputValue) {
-                                    filtered = filtered.filter(opt =>
-                                      opt.label.toLowerCase().includes(inputValue)
-                                    );
-                                  }
-                                  return filtered;
                                 }}
                                 renderInput={(params) => (
                                   <TextField
                                     {...params}
-                                    label="Valor límite permisible"
+                                    label="Valor medido"
+                                    error={
+                                      (() => {
+                                        if (cfg.valor_medido == null) return false;
+
+                                        const vlpData = cfg.clasificacion_peligro
+                                          ? VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
+                                          : null;
+
+                                        if (vlpData?.valor_limite_min != null && vlpData?.valor_limite_max != null) {
+                                          return cfg.valor_medido < vlpData.valor_limite_min ||
+                                                 cfg.valor_medido > vlpData.valor_limite_max;
+                                        }
+
+                                        if (cfg.valor_limite_permisible != null) {
+                                          return cfg.valor_medido > cfg.valor_limite_permisible;
+                                        }
+
+                                        return false;
+                                      })()
+                                    }
                                     helperText={
-                                      cfg.clasificacion_peligro && VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
-                                        ? "✓ Seleccione de la lista o digite el valor"
-                                        : "Seleccione VLP normativo o digite el valor"
+                                      (() => {
+                                        if (cfg.valor_medido == null) {
+                                          const hasOptions = cfg.clasificacion_peligro && VALORES_MEDIDOS_SUGERIDOS[cfg.clasificacion_peligro];
+                                          return hasOptions
+                                            ? "Seleccione valor sugerido o digite"
+                                            : "Valor obtenido en medición";
+                                        }
+
+                                        const vlpData = cfg.clasificacion_peligro
+                                          ? VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
+                                          : null;
+
+                                        if (vlpData?.valor_limite_min != null && vlpData?.valor_limite_max != null) {
+                                          if (cfg.valor_medido < vlpData.valor_limite_min) {
+                                            return "⚠️ Por debajo del mínimo permisible";
+                                          }
+                                          if (cfg.valor_medido > vlpData.valor_limite_max) {
+                                            return "⚠️ Excede el máximo permisible";
+                                          }
+                                          return "✓ Dentro del rango permisible";
+                                        }
+
+                                        if (cfg.valor_limite_permisible != null) {
+                                          if (cfg.valor_medido > cfg.valor_limite_permisible) {
+                                            return "⚠️ Excede el VLP";
+                                          }
+                                          return "✓ Dentro del límite";
+                                        }
+
+                                        return "Valor obtenido en medición";
+                                      })()
                                     }
                                   />
                                 )}
                                 renderOption={(props, option) => {
                                   const { key, ...otherProps } = props as any;
                                   return (
-                                    <li key={option.label} {...otherProps}>
+                                    <li key={`${option.tipo}-${option.valor}-${option.label}`} {...otherProps}>
                                       <Box sx={{ width: '100%' }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                          {option.label}
-                                        </Typography>
+                                        <Typography variant="body2">{option.label}</Typography>
+                                        {option.descripcion && (
+                                          <Typography variant="caption" color="text.secondary">
+                                            {option.descripcion}
+                                          </Typography>
+                                        )}
                                       </Box>
                                     </li>
                                   );
+                                }}
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                              <TextField
+                                fullWidth
+                                label="Valor límite permisible"
+                                value={
+                                  (() => {
+                                    const vlpData = cfg.clasificacion_peligro
+                                      ? VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
+                                      : null;
+
+                                    if (cfg.valor_limite_permisible != null) {
+                                      return `${cfg.valor_limite_permisible} ${cfg.unidad_medida || ''}`.trim();
+                                    }
+
+                                    if (vlpData?.valor_limite_min != null && vlpData?.valor_limite_max != null) {
+                                      return `${vlpData.valor_limite_min}-${vlpData.valor_limite_max} ${vlpData.unidad_medida}`;
+                                    }
+
+                                    if (vlpData?.valor_limite_permisible != null) {
+                                      return `${vlpData.valor_limite_permisible} ${vlpData.unidad_medida}`;
+                                    }
+
+                                    return '';
+                                  })()
+                                }
+                                disabled
+                                helperText={
+                                  cfg.clasificacion_peligro && VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro]
+                                    ? `${VALORES_LIMITE_PERMISIBLE[cfg.clasificacion_peligro].normativa}`
+                                    : "Seleccione clasificación del peligro para auto-poblar"
+                                }
+                                slotProps={{
+                                  input: {
+                                    startAdornment: cfg.valor_limite_permisible != null ? (
+                                      <InputAdornment position="start">
+                                        <CheckCircle color="success" fontSize="small" />
+                                      </InputAdornment>
+                                    ) : null
+                                  }
                                 }}
                               />
                             </Grid>
@@ -3133,10 +3393,10 @@ const ProfesiogramasCargo: React.FC = () => {
                         color="primary"
                         size="large"
                         onClick={handleExportMatriz}
-                        disabled={exporting || !currentProfesiogramaId}
+                        disabled={exportingExcel || !currentProfesiogramaId}
                         fullWidth
                       >
-                        {exporting ? (
+                        {exportingExcel ? (
                           <CircularProgress size={24} />
                         ) : (
                           "Exportar Matriz (Excel)"
@@ -3149,17 +3409,32 @@ const ProfesiogramasCargo: React.FC = () => {
                         color="primary"
                         size="large"
                         onClick={handleExportPdf}
-                        disabled={exporting || !selectedCargoId}
+                        disabled={exportingPdf || !selectedCargoId}
                         fullWidth
                       >
-                        {exporting ? (
+                        {exportingPdf ? (
                           <CircularProgress size={24} />
                         ) : (
                           "Descargar Profesiograma (PDF)"
                         )}
                       </Button>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 3 }}>
+                  </Grid>
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        size="large"
+                        onClick={handleOpenDuplicateDialog}
+                        disabled={saving || !currentProfesiogramaId}
+                        fullWidth
+                        startIcon={<ContentCopy />}
+                      >
+                        Duplicar a otros cargos
+                      </Button>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Button
                         variant="outlined"
                         color="error"
@@ -3199,6 +3474,106 @@ const ProfesiogramasCargo: React.FC = () => {
                     >
                       {deleting ? <CircularProgress size={20} /> : "Eliminar"}
                     </Button>
+                  </DialogActions>
+                </Dialog>
+
+                {/* Dialog para duplicar profesiograma */}
+                <Dialog
+                  open={duplicateDialogOpen}
+                  onClose={handleCloseDuplicateDialog}
+                  maxWidth="sm"
+                  fullWidth
+                >
+                  <DialogTitle>Duplicar profesiograma a otros cargos</DialogTitle>
+                  <DialogContent>
+                    {duplicateResults.length === 0 ? (
+                      <>
+                        <DialogContentText sx={{ mb: 2 }}>
+                          Seleccione los cargos a los cuales desea copiar este
+                          profesiograma. Se creará una copia en estado "borrador"
+                          para cada cargo seleccionado.
+                        </DialogContentText>
+                        <Autocomplete
+                          multiple
+                          options={cargos.filter(
+                            (c) => c.value !== selectedCargoId
+                          )}
+                          getOptionLabel={(option) => option.label}
+                          value={cargos.filter((c) =>
+                            duplicateTargetCargos.includes(c.value)
+                          )}
+                          onChange={(_, newValue) => {
+                            setDuplicateTargetCargos(
+                              newValue.map((c) => c.value)
+                            );
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Cargos destino"
+                              placeholder="Seleccione cargos..."
+                            />
+                          )}
+                          renderOption={(props, option) => {
+                            const { key, ...otherProps } = props as any;
+                            return (
+                              <li key={option.value} {...otherProps}>
+                                {option.label}
+                              </li>
+                            );
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <DialogContentText sx={{ mb: 2 }}>
+                          Resultados de la duplicación:
+                        </DialogContentText>
+                        {duplicateResults.map((result) => (
+                          <Alert
+                            key={result.cargo_id}
+                            severity={result.success ? "success" : "error"}
+                            sx={{ mb: 1 }}
+                          >
+                            <Typography variant="body2" fontWeight="bold">
+                              {result.cargo_nombre}
+                            </Typography>
+                            <Typography variant="body2">
+                              {result.success
+                                ? `Versión ${result.version} creada exitosamente`
+                                : result.message}
+                            </Typography>
+                          </Alert>
+                        ))}
+                      </>
+                    )}
+                  </DialogContent>
+                  <DialogActions>
+                    <Button
+                      onClick={handleCloseDuplicateDialog}
+                      disabled={duplicating}
+                    >
+                      {duplicateResults.length > 0 ? "Cerrar" : "Cancelar"}
+                    </Button>
+                    {duplicateResults.length === 0 && (
+                      <Button
+                        onClick={handleConfirmDuplicate}
+                        color="primary"
+                        variant="contained"
+                        disabled={
+                          duplicating || duplicateTargetCargos.length === 0
+                        }
+                        startIcon={
+                          duplicating ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <ContentCopy />
+                          )
+                        }
+                      >
+                        {duplicating ? "Duplicando..." : "Duplicar"}
+                      </Button>
+                    )}
                   </DialogActions>
                 </Dialog>
               </Grid>
