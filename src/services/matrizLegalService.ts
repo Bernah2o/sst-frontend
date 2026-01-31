@@ -223,6 +223,18 @@ export interface PaginatedResponse<T> {
   has_prev: boolean;
 }
 
+export interface SugerenciasIA {
+  evidencia: string;
+  observaciones: string;
+  plan_accion: string;
+}
+
+export interface SugerenciasIAResponse {
+  success: boolean;
+  norma_id: number;
+  sugerencias: SugerenciasIA;
+}
+
 // ==================== SERVICIO ====================
 
 class MatrizLegalService {
@@ -454,6 +466,16 @@ class MatrizLegalService {
       responseType: "blob",
     });
     return res.data as Blob;
+  }
+
+  // ==================== SUGERENCIAS IA ====================
+
+  /**
+   * Genera sugerencias de cumplimiento usando IA.
+   */
+  async getSugerenciasIA(normaId: number): Promise<SugerenciasIAResponse> {
+    const res = await api.post(`/matriz-legal/normas/${normaId}/sugerencias-ia`);
+    return res.data as SugerenciasIAResponse;
   }
 
   // ==================== HELPERS ====================
