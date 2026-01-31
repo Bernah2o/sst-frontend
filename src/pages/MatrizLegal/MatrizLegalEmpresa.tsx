@@ -52,6 +52,7 @@ import {
   HourglassEmpty as ProcessIcon,
   Block as BlockIcon,
   Sync as SyncIcon,
+  AutoAwesome as AIIcon,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSnackbar } from "notistack";
@@ -194,6 +195,8 @@ const MatrizLegalEmpresa: React.FC = () => {
   const [editingNorma, setEditingNorma] = useState<MatrizLegalNormaConCumplimiento | null>(null);
   const [formData, setFormData] = useState<CumplimientoFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
+  const [loadingIAField, setLoadingIAField] = useState<string | null>(null);
+  const [sugerenciasCache, setSugerenciasCache] = useState<{evidencia: string; observaciones: string; plan_accion: string} | null>(null);
 
   const numEmpresaId = Number(empresaId);
 
@@ -348,6 +351,60 @@ const MatrizLegalEmpresa: React.FC = () => {
       enqueueSnackbar("Error al guardar", { variant: "error" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSolicitarSugerenciaIA = async (campo: "evidencia" | "observaciones" | "plan_accion") => {
+    if (!editingNorma) return;
+
+    try {
+      setLoadingIAField(campo);
+
+      // Si ya tenemos sugerencias en caché, usarlas
+      if (sugerenciasCache) {
+        const valor = sugerenciasCache[campo];
+        if (valor) {
+          const fieldMap = {
+            evidencia: "evidencia_cumplimiento",
+            observaciones: "observaciones",
+            plan_accion: "plan_accion",
+          };
+          setFormData({ ...formData, [fieldMap[campo]]: valor });
+          enqueueSnackbar("Sugerencia aplicada", { variant: "success" });
+        }
+        setLoadingIAField(null);
+        return;
+      }
+
+      // Solicitar nuevas sugerencias
+      const response = await matrizLegalService.getSugerenciasIA(editingNorma.id);
+
+      if (response.success && response.sugerencias) {
+        // Guardar en caché
+        setSugerenciasCache(response.sugerencias);
+
+        // Aplicar solo el campo solicitado
+        const fieldMap = {
+          evidencia: "evidencia_cumplimiento",
+          observaciones: "observaciones",
+          plan_accion: "plan_accion",
+        };
+        const valor = response.sugerencias[campo];
+        if (valor) {
+          setFormData({ ...formData, [fieldMap[campo]]: valor });
+          enqueueSnackbar("Sugerencia de IA aplicada", { variant: "success" });
+        }
+      }
+    } catch (error: unknown) {
+      console.error("Error obteniendo sugerencias IA:", error);
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+      if (errorMessage.includes("503") || errorMessage.includes("no configurado")) {
+        enqueueSnackbar("Servicio de IA no configurado", { variant: "warning" });
+      } else {
+        enqueueSnackbar("Error al obtener sugerencia", { variant: "error" });
+      }
+    } finally {
+      setLoadingIAField(null);
     }
   };
 
@@ -850,15 +907,33 @@ const MatrizLegalEmpresa: React.FC = () => {
                   )}
 
                   <Grid size={{ xs: 12 }}>
-                    <TextField
-                      label="Evidencia de Cumplimiento"
-                      fullWidth
-                      multiline
-                      rows={3}
-                      value={formData.evidencia_cumplimiento}
-                      onChange={(e) => setFormData({ ...formData, evidencia_cumplimiento: e.target.value })}
-                      helperText="Describa las evidencias que demuestran el cumplimiento"
-                    />
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                      <TextField
+                        label="Evidencia de Cumplimiento"
+                        fullWidth
+                        multiline
+                        rows={3}
+                        value={formData.evidencia_cumplimiento}
+                        onChange={(e) => setFormData({ ...formData, evidencia_cumplimiento: e.target.value })}
+                        helperText="Describa las evidencias que demuestran el cumplimiento"
+                      />
+                      <Tooltip title="Generar sugerencia con IA">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSolicitarSugerenciaIA("evidencia")}
+                          disabled={loadingIAField === "evidencia"}
+                          sx={{
+                            mt: 1,
+                            bgcolor: "secondary.main",
+                            color: "white",
+                            "&:hover": { bgcolor: "secondary.dark" },
+                            "&:disabled": { bgcolor: "grey.300" },
+                          }}
+                        >
+                          {loadingIAField === "evidencia" ? <CircularProgress size={18} color="inherit" /> : <AIIcon fontSize="small" />}
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                     <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                       <Typography variant="caption" color="textSecondary" sx={{ width: "100%", mb: 0.5 }}>
                         Sugerencias (clic para agregar):
@@ -884,14 +959,32 @@ const MatrizLegalEmpresa: React.FC = () => {
                   </Grid>
 
                   <Grid size={{ xs: 12 }}>
-                    <TextField
-                      label="Observaciones"
-                      fullWidth
-                      multiline
-                      rows={2}
-                      value={formData.observaciones}
-                      onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
-                    />
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                      <TextField
+                        label="Observaciones"
+                        fullWidth
+                        multiline
+                        rows={2}
+                        value={formData.observaciones}
+                        onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
+                      />
+                      <Tooltip title="Generar sugerencia con IA">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSolicitarSugerenciaIA("observaciones")}
+                          disabled={loadingIAField === "observaciones"}
+                          sx={{
+                            mt: 1,
+                            bgcolor: "secondary.main",
+                            color: "white",
+                            "&:hover": { bgcolor: "secondary.dark" },
+                            "&:disabled": { bgcolor: "grey.300" },
+                          }}
+                        >
+                          {loadingIAField === "observaciones" ? <CircularProgress size={18} color="inherit" /> : <AIIcon fontSize="small" />}
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                     <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                       <Typography variant="caption" color="textSecondary" sx={{ width: "100%", mb: 0.5 }}>
                         Sugerencias (clic para agregar):
@@ -924,15 +1017,33 @@ const MatrizLegalEmpresa: React.FC = () => {
                         </Alert>
                       </Grid>
                       <Grid size={{ xs: 12 }}>
-                        <TextField
-                          label="Plan de Acción"
-                          fullWidth
-                          multiline
-                          rows={3}
-                          value={formData.plan_accion}
-                          onChange={(e) => setFormData({ ...formData, plan_accion: e.target.value })}
-                          helperText="Describa las acciones a implementar para lograr el cumplimiento"
-                        />
+                        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                          <TextField
+                            label="Plan de Acción"
+                            fullWidth
+                            multiline
+                            rows={3}
+                            value={formData.plan_accion}
+                            onChange={(e) => setFormData({ ...formData, plan_accion: e.target.value })}
+                            helperText="Describa las acciones a implementar para lograr el cumplimiento"
+                          />
+                          <Tooltip title="Generar sugerencia con IA">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleSolicitarSugerenciaIA("plan_accion")}
+                              disabled={loadingIAField === "plan_accion"}
+                              sx={{
+                                mt: 1,
+                                bgcolor: "secondary.main",
+                                color: "white",
+                                "&:hover": { bgcolor: "secondary.dark" },
+                                "&:disabled": { bgcolor: "grey.300" },
+                              }}
+                            >
+                              {loadingIAField === "plan_accion" ? <CircularProgress size={18} color="inherit" /> : <AIIcon fontSize="small" />}
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
                         <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                           <Typography variant="caption" color="textSecondary" sx={{ width: "100%", mb: 0.5 }}>
                             Sugerencias (clic para agregar):
