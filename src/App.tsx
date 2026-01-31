@@ -89,6 +89,12 @@ import ProfesiogramasCargo from "./pages/ProfesiogramasCargo";
 import WorkerProfesiograma from "./pages/WorkerProfesiograma";
 import WorkerProfesiogramaSearch from "./pages/WorkerProfesiogramaSearch";
 import RestriccionesMedicas from "./pages/RestriccionesMedicas";
+import MatrizLegalDashboard from "./pages/MatrizLegal/MatrizLegalDashboard";
+import EmpresaList from "./pages/MatrizLegal/EmpresaList";
+import SectorEconomicoList from "./pages/MatrizLegal/SectorEconomicoList";
+import MatrizLegalImport from "./pages/MatrizLegal/MatrizLegalImport";
+import MatrizLegalNormas from "./pages/MatrizLegal/MatrizLegalNormas";
+import MatrizLegalEmpresa from "./pages/MatrizLegal/MatrizLegalEmpresa";
 import { UserRole } from "./types";
 import { checkPagePermission } from "./utils/pagePermissions";
 
@@ -594,6 +600,57 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
+
+                  {/* Rutas de Matriz Legal */}
+                  <Route
+                    path="/admin/matriz-legal"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <MatrizLegalDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                   <Route
+                    path="/admin/matriz-legal/normas"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <MatrizLegalNormas />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/matriz-legal/empresas/:empresaId"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <MatrizLegalEmpresa />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/matriz-legal/empresas"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <EmpresaList />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/matriz-legal/sectores"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin"]}>
+                        <SectorEconomicoList />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/matriz-legal/importar"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <MatrizLegalImport />
+                      </ProtectedRoute>
+                    }
+                  />
+
 {/* Rutas de ausentismo */}
                   <Route
                     path="/admin/absenteeism"

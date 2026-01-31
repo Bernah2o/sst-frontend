@@ -35,6 +35,9 @@ import {
   HowToVote,
   Business,
   Tune,
+  Gavel,
+  Category,
+  Apartment,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -545,6 +548,42 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         roles: ["admin", "trainer", "supervisor"],
       },
       {
+        id: "matriz-legal",
+        label: "Matriz Legal",
+        icon: <Gavel />,
+        children: [
+          {
+            id: "matriz-dashboard",
+            label: "Dashboard",
+            icon: <Dashboard />,
+            path: "/admin/matriz-legal",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "matriz-normas",
+            label: "Normas",
+            icon: <Gavel />,
+            path: "/admin/matriz-legal/normas",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "matriz-empresas",
+            label: "Empresas",
+            icon: <Apartment />,
+            path: "/admin/matriz-legal/empresas",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "matriz-sectores",
+            label: "Sectores Económicos",
+            icon: <Category />,
+            path: "/admin/matriz-legal/sectores",
+            roles: ["admin"],
+          },
+        ],
+        roles: ["admin", "supervisor"],
+      },
+      {
         id: "administration",
         label: "Administración",
         icon: <AdminPanelSettings />,
@@ -724,6 +763,17 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
                 user.role === "admin" ||
                 user.role === "trainer" ||
                 user.role === "supervisor",
+
+              // Matriz Legal
+              "matriz-legal": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "matriz-dashboard": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "matriz-normas": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "matriz-empresas": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "matriz-sectores": () => user.role === "admin",
 
               // Administration (always check individual permissions)
               administration: () => true, // Will be filtered by children
