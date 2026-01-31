@@ -36,6 +36,7 @@ import {
   Alert,
   LinearProgress,
   Divider,
+  Autocomplete,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -134,6 +135,26 @@ const sugerenciasPlanAccion = [
   "Contratar asesoría externa especializada",
   "Asignar presupuesto para implementación",
   "Revisar y actualizar indicadores de gestión",
+];
+
+// Sugerencias predefinidas para responsables
+const sugerenciasResponsables = [
+  "Responsable del SG-SST",
+  "Coordinador de SST",
+  "Jefe de Talento Humano",
+  "Gerente General",
+  "Jefe de Operaciones",
+  "Médico Ocupacional",
+  "COPASST",
+  "Vigía de SST",
+  "Jefe de Mantenimiento",
+  "Coordinador de Calidad",
+  "ARL",
+  "Asesor Externo SST",
+  "Brigada de Emergencias",
+  "Jefe de Producción",
+  "Jefe de Almacén",
+  "Supervisor de Área",
 ];
 
 const MatrizLegalEmpresa: React.FC = () => {
@@ -936,11 +957,25 @@ const MatrizLegalEmpresa: React.FC = () => {
                         </Box>
                       </Grid>
                       <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                          label="Responsable"
-                          fullWidth
+                        <Autocomplete
+                          freeSolo
+                          options={sugerenciasResponsables}
                           value={formData.responsable}
-                          onChange={(e) => setFormData({ ...formData, responsable: e.target.value })}
+                          onChange={(_event, newValue) => {
+                            setFormData({ ...formData, responsable: newValue || "" });
+                          }}
+                          onInputChange={(_event, newInputValue) => {
+                            setFormData({ ...formData, responsable: newInputValue });
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Responsable"
+                              fullWidth
+                              placeholder="Seleccione o escriba el responsable"
+                              helperText="Puede seleccionar de la lista o escribir un nombre"
+                            />
+                          )}
                         />
                       </Grid>
                       <Grid size={{ xs: 12, md: 6 }}>
