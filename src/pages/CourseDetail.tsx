@@ -122,14 +122,6 @@ const CourseDetail: React.FC = () => {
       // Cargar estado de progreso/encuestas/evaluación
       const progressResp = await api.get(`/progress/course/${id}`);
       setProgressInfo(progressResp.data);
-      
-      // Forzar actualización del activeStep después de cargar los datos
-      setTimeout(() => {
-        if (progressResp.data.overall_progress >= 95) {
-          // Resetear estados para forzar re-evaluación
-          setActiveStep(0);
-        }
-      }, 50);
     } catch (error: any) {
       console.error("Error fetching course detail:", error);
       setError("No se pudo cargar el curso. Verifique su conexión e intente nuevamente.");
@@ -179,86 +171,72 @@ const CourseDetail: React.FC = () => {
 
   // Determinar el paso activo en el flujo de progresión
   useEffect(() => {
-    if (course && progressInfo) {
-      // Paso 1: Curso en progreso (menos del 95%)
+    const determineStep = async () => {
+      if (!course || !progressInfo) return;
+
+      // Paso 1: Materiales del curso (Step 0)
       if (progressInfo.overall_progress < 95) {
         setActiveStep(0);
         return;
       }
-      
-      // Verificar si el curso está realmente completado
-      if (course.completed) {
-        // Curso completado, mostrar paso final
-        setActiveStep(4);
-        
-        // Verificar si el certificado está disponible
-        const checkCertificate = async () => {
-          try {
-            const certificateResponse = await api.get(`/certificates/course/${id}/check`);
-            if (certificateResponse.data && certificateResponse.data.available) {
-              setHasCertificate(true);
-            }
-          } catch (error) {
-            // Certificate not available yet
+
+      // De aquí en adelante, al menos los materiales están listos
+      let currentStep = 1;
+
+      try {
+        // Verificar encuestas
+        const surveysResponse = await api.get(`/surveys/?course_id=${id}`);
+        const availableSurveys = surveysResponse.data.items || [];
+        const hasAvailableSurveys = availableSurveys.length > 0;
+        setHasSurveys(hasAvailableSurveys);
+
+        if (hasAvailableSurveys) {
+          if (progressInfo.survey_status === 'completed') {
+            currentStep = 2;
           }
-        };
-        
-        checkCertificate();
-        return;
-      }
-      
-      // Paso 2: Materiales completados pero curso no terminado, verificar encuestas
-      setActiveStep(1);
-      
-      // Verificar progreso completo de forma secuencial
-      const checkCompleteProgress = async () => {
-        if (!id) return;
-        
-        let currentStep = 1; // Materiales completados
-        
-        try {
-          // Verificar encuestas
-          const surveysResponse = await api.get(`/surveys/?course_id=${id}`);
-          const availableSurveys = surveysResponse.data.items || [];
-          setHasSurveys(availableSurveys.length > 0);
-          
-          if (availableSurveys.length > 0) {
-            // Usar el estado de encuestas del endpoint de progreso
-            if (progressInfo.survey_status === 'completed') {
-              currentStep = 2; // Encuestas completadas
-            }
-          } else {
-            currentStep = 2; // No hay encuestas, pasar a evaluación
-          }
-          
-          // Verificar evaluación solo si las encuestas están completadas
-          if (currentStep >= 2) {
-            const evaluationResponse = await api.get(`/evaluations/?course_id=${id}`);
-            const availableEvaluations = evaluationResponse.data.items || [];
-            
-            if (availableEvaluations.length > 0) {
-              setHasEvaluation(true);
-              setEvaluationId(availableEvaluations[0].id);
-              
-              // Usar el estado de evaluación del endpoint de progreso
-              if (progressInfo.evaluation_status === 'completed' || progressInfo.evaluation_completed) {
-                currentStep = 3; // Evaluación completada
-              }
-            } else {
-              // No hay evaluación, pasar al siguiente paso
+        } else {
+          currentStep = 2; // Si no hay encuestas, saltar al paso de evaluación
+        }
+
+        // Verificar evaluación
+        if (currentStep >= 2) {
+          const evaluationResponse = await api.get(`/evaluations/?course_id=${id}`);
+          const availableEvaluations = evaluationResponse.data.items || [];
+          const hasAvailableEvaluation = availableEvaluations.length > 0;
+          setHasEvaluation(hasAvailableEvaluation);
+
+          if (hasAvailableEvaluation) {
+            setEvaluationId(availableEvaluations[0].id);
+            if (progressInfo.evaluation_status === 'completed' || progressInfo.evaluation_completed) {
               currentStep = 3;
             }
+          } else {
+            currentStep = 3; // Si no hay evaluación, saltar al paso de certificado
           }
-          
-          setActiveStep(currentStep);
-          
-        } catch (error) {
-          console.error("Error verificando progreso completo:", error);
         }
-      };
-      
-      checkCompleteProgress();
-    }
+
+        // Verificar certificado (Step 3/4)
+        if (currentStep >= 3) {
+          try {
+            const certCheck = await api.get(`/certificates/course/${id}/check`);
+            if (certCheck.data && certCheck.data.available) {
+              setHasCertificate(true);
+              currentStep = 4; // Curso completado y certificado disponible
+            } else if (course.completed) {
+              currentStep = 4;
+            }
+          } catch (e) {
+            if (course.completed) currentStep = 4;
+          }
+        }
+
+        setActiveStep(currentStep);
+      } catch (error) {
+        console.error("Error determining progress step:", error);
+      }
+    };
+
+    determineStep();
   }, [course, progressInfo, id]);
 
   // Helper function to check if a material is completed
@@ -577,14 +555,17 @@ const CourseDetail: React.FC = () => {
                   </StepLabel>
                   <StepContent>
                     <Typography>
-                      Completa todos los materiales del curso para avanzar al siguiente paso.
-                      Progreso actual: {progressInfo?.overall_progress || 0}%
+                      {activeStep > 0 
+                        ? "¡Materiales completados! Puedes avanzar al siguiente paso." 
+                        : `Completa todos los materiales del curso para avanzar al siguiente paso. Progreso actual: ${Math.round(progressInfo?.overall_progress || 0)}%`}
                     </Typography>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={progressInfo?.overall_progress || 0} 
-                      sx={{ mt: 1, mb: 1 }}
-                    />
+                    {activeStep === 0 && (
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={progressInfo?.overall_progress || 0} 
+                        sx={{ mt: 1, mb: 1 }}
+                      />
+                    )}
                   </StepContent>
                 </Step>
                 
@@ -600,11 +581,13 @@ const CourseDetail: React.FC = () => {
                   </StepLabel>
                   <StepContent>
                     <Typography>
-                      {hasSurveys 
-                        ? "Completa las encuestas para evaluar el curso." 
-                        : "No hay encuestas disponibles para este curso."}
+                      {activeStep > 1 
+                        ? "Encuestas completadas exitosamente." 
+                        : hasSurveys 
+                          ? "Completa las encuestas para evaluar el curso." 
+                          : "No hay encuestas disponibles para este curso."}
                     </Typography>
-                    {hasSurveys && (
+                    {hasSurveys && activeStep === 1 && (
                       <Button 
                         variant="contained" 
                         color="primary" 
@@ -629,18 +612,20 @@ const CourseDetail: React.FC = () => {
                   </StepLabel>
                   <StepContent>
                     <Typography>
-                      {hasEvaluation 
-                        ? "Completa la evaluación final para demostrar tus conocimientos." 
-                        : "No hay evaluación disponible para este curso."}
+                      {activeStep > 2 
+                        ? "Evaluación final completada." 
+                        : hasEvaluation 
+                          ? "Completa la evaluación final para demostrar tus conocimientos." 
+                          : "No hay evaluación disponible para este curso."}
                     </Typography>
-                    {hasEvaluation && evaluationId && (
+                    {hasEvaluation && evaluationId && (activeStep === 2 || (activeStep === 3 && progressInfo?.evaluation_status === 'failed')) && (
                       <Button 
                         variant="contained" 
                         color="primary" 
                         onClick={goToEvaluation} 
                         sx={{ mt: 2 }}
                       >
-                        Ir a Evaluación
+                        {progressInfo?.evaluation_status === 'failed' ? "Reintentar Evaluación" : "Ir a Evaluación"}
                       </Button>
                     )}
                     {(progressInfo?.evaluation_status === 'completed' || progressInfo?.evaluation_completed) && (

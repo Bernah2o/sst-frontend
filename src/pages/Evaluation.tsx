@@ -47,6 +47,7 @@ import {
   useTheme,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 import UppercaseTextField from "../components/UppercaseTextField";
 import { useAuth } from '../contexts/AuthContext';
@@ -154,6 +155,7 @@ interface Stats {
 }
 
 const EvaluationsManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { canUpdateEvaluations, canDeleteEvaluations } = usePermissions();
   const theme = useTheme();
@@ -181,7 +183,7 @@ const EvaluationsManagement: React.FC = () => {
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
-    severity: "success" as "success" | "error",
+    severity: "success" as "success" | "error" | "info" | "warning",
   });
   const [viewingEvaluation, setViewingEvaluation] = useState<Evaluation | null>(null);
 
@@ -276,7 +278,7 @@ const EvaluationsManagement: React.FC = () => {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const showSnackbar = useCallback((message: string, severity: "success" | "error") => {
+  const showSnackbar = useCallback((message: string, severity: "success" | "error" | "info" | "warning") => {
     setSnackbar({ open: true, message, severity });
   }, []);
 
@@ -453,28 +455,35 @@ const EvaluationsManagement: React.FC = () => {
             });
             
             if (certificateResponse.data.success) {
-              showSnackbar('¡Felicidades! Has aprobado la evaluación y se ha generado tu certificado', 'success');
+               // Ya no mostramos este mensaje aquí para evitar doble snackbar, el mensaje principal lo manejará
             }
           } catch (certError: any) {
             console.error('Error generando certificado:', certError);
             // No mostrar error al usuario para no afectar la experiencia
           }
-        } else if (!response.data.passed && user.rol === 'employee') {
-          showSnackbar('Has completado la evaluación pero no has alcanzado el puntaje mínimo para aprobar', 'error');
+        } 
+        
+        if (response.data.passed) {
+             showSnackbar('¡Felicitaciones! Ha aprobado la evaluación', 'success');
+        } else {
+             showSnackbar('Has completado la evaluación. Sigue estudiando para mejorar tu puntaje.', 'info');
         }
         
-        // Return to evaluation list
-        setIsEmployeeResponseMode(false);
-        setEvaluationToRespond(null);
-        setEmployeeAnswers({});
-        
-        // Refresh data - Update employee responses to reflect completed status
-        if (user.role === 'employee') {
-          await fetchEmployeeResponses();
-        }
-        
-        // Always refresh evaluations list to show updated status
-        await fetchEvaluations();
+        // Return to evaluation list after delay
+        setTimeout(async () => {
+          setIsEmployeeResponseMode(false);
+          setEvaluationToRespond(null);
+          setEmployeeAnswers({});
+          
+          // Redirect to evaluations menu
+          navigate("/employee/evaluations");
+          
+          // Refresh data
+          if (user.role === 'employee') {
+            await fetchEmployeeResponses();
+          }
+          await fetchEvaluations();
+        }, 2000);
       } else {
         showSnackbar('Debe completar todo el material del curso y las encuestas antes de realizar la evaluación', 'error');
       }

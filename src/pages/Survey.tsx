@@ -64,6 +64,7 @@ import {
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect, useCallback } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
@@ -171,6 +172,7 @@ interface EmployeeSurvey {
 }
 
 const Survey: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { canCreateSurveys, canDeleteSurveys, canReadSurveys } =
     usePermissions();
@@ -453,8 +455,7 @@ useEffect(() => {
             // Si no hay encuestas pendientes, habilitar la evaluación
             setSnackbar({
               open: true,
-              message:
-                "¡Todas las encuestas completadas! Ahora puedes acceder a la evaluación",
+              message: "Su encuesta ha sido guardada ya pueden realizar la evaluación",
               severity: "success",
             });
 
@@ -472,8 +473,10 @@ useEffect(() => {
         }
       }
 
-      // Redirect to courses or surveys list
-      window.location.href = "/employee/courses";
+      // Redirect to courses or surveys list after a short delay to show the message
+      setTimeout(() => {
+        navigate("/employee/courses");
+      }, 2000);
     } catch (error: any) {
       console.error("Error submitting survey response:", error);
 
