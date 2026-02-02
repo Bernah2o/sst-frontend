@@ -347,9 +347,9 @@ const CourseDetail: React.FC = () => {
       return;
     }
     
-    // Validar que el curso esté completado al 100%
-    if (!progressInfo || progressInfo.overall_progress < 100) {
-      setError("Debe completar el curso al 100% antes de poder contestar las encuestas.");
+    // Validar si puede tomar encuestas (>= 95% o completado)
+    if (!progressInfo || !progressInfo.can_take_survey) {
+      setError("Debe completar los materiales del curso antes de poder contestar las encuestas.");
       return;
     }
     
@@ -362,9 +362,9 @@ const CourseDetail: React.FC = () => {
       return;
     }
     
-    // Validar que el curso esté completado al 100%
-    if (!progressInfo || progressInfo.overall_progress < 100) {
-      setError("Debe completar el curso al 100% antes de poder realizar la evaluación.");
+    // Validar si puede tomar evaluación (>= 95% y encuestas completas)
+    if (!progressInfo || !progressInfo.can_take_evaluation) {
+      setError("Debe completar los materiales y encuestas del curso antes de poder realizar la evaluación.");
       return;
     }
     
