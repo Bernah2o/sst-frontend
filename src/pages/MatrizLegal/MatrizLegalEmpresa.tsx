@@ -306,6 +306,7 @@ const MatrizLegalEmpresa: React.FC = () => {
 
   const handleOpenDialog = (norma: MatrizLegalNormaConCumplimiento) => {
     setEditingNorma(norma);
+    setSugerenciasCache(null); // Limpiar cache de sugerencias para la nueva norma
     setFormData({
       estado: norma.estado_cumplimiento || "pendiente",
       evidencia_cumplimiento: norma.evidencia_cumplimiento || "",
@@ -322,6 +323,7 @@ const MatrizLegalEmpresa: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingNorma(null);
+    setSugerenciasCache(null); // Limpiar cache al cerrar
     setFormData(initialFormData);
   };
 
