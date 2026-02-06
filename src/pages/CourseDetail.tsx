@@ -9,6 +9,7 @@ import {
   Description,
   ArrowBack,
   Close,
+  School,
 } from "@mui/icons-material";
 import {
   Box,
@@ -62,6 +63,19 @@ interface ICourseDetail {
   completed: boolean;
 }
 
+interface InteractiveLessonSummary {
+  id: number;
+  title: string;
+  description?: string;
+  order_index: number;
+  status: string;
+  is_required: boolean;
+  estimated_duration_minutes?: number;
+  slides_count?: number;
+  progress_percentage?: number;
+  completed?: boolean;
+}
+
 interface CourseModule {
   id: number;
   title: string;
@@ -70,6 +84,7 @@ interface CourseModule {
   duration_minutes: number;
   is_required: boolean;
   materials: CourseMaterial[];
+  interactive_lessons?: InteractiveLessonSummary[];
   progress?: number;
   completed?: boolean;
 }
@@ -756,16 +771,17 @@ const CourseDetail: React.FC = () => {
               </AccordionSummary>
 
               <AccordionDetails>
-                {module.materials.length === 0 ? (
+                {module.materials.length === 0 && (!module.interactive_lessons || module.interactive_lessons.length === 0) ? (
                   <Alert severity="info">
-                    Este módulo aún no tiene materiales configurados.
+                    Este módulo aún no tiene contenido configurado.
                   </Alert>
                 ) : (
                   <List>
+                    {/* Materiales tradicionales */}
                     {module.materials
                       .sort((a, b) => a.order_index - b.order_index)
                       .map((material) => (
-                        <ListItem key={material.id} disablePadding>
+                        <ListItem key={`material-${material.id}`} disablePadding>
                           <ListItemButton
                             onClick={() => handleMaterialClick(material)}
                             disabled={isMaterialCompleted(material.id)}
@@ -824,6 +840,79 @@ const CourseDetail: React.FC = () => {
                                   variant="outlined"
                                 >
                                   {getMaterialProgress(material.id) > 0 ? "Continuar" : "Iniciar"}
+                                </Button>
+                              )}
+                            </Box>
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+
+                    {/* Lecciones interactivas */}
+                    {module.interactive_lessons && module.interactive_lessons
+                      .filter((lesson) => lesson.status === 'published')
+                      .sort((a, b) => a.order_index - b.order_index)
+                      .map((lesson) => (
+                        <ListItem key={`lesson-${lesson.id}`} disablePadding>
+                          <ListItemButton
+                            onClick={() => navigate(`/employee/lesson/${lesson.id}`)}
+                          >
+                            <ListItemIcon>
+                              {lesson.completed ? (
+                                <CheckCircle color="success" />
+                              ) : (
+                                <School color="primary" />
+                              )}
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={lesson.title}
+                              secondary={
+                                <Box>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    {lesson.description}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                    <Chip
+                                      label="Interactivo"
+                                      size="small"
+                                      color="secondary"
+                                      variant="outlined"
+                                    />
+                                    {lesson.estimated_duration_minutes && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {lesson.estimated_duration_minutes} min
+                                      </Typography>
+                                    )}
+                                    {lesson.is_required && (
+                                      <Chip
+                                        label="Requerido"
+                                        size="small"
+                                        color="error"
+                                      />
+                                    )}
+                                  </Box>
+                                </Box>
+                              }
+                            />
+                            <Box sx={{ ml: 2 }}>
+                              {lesson.completed ? (
+                                <Chip
+                                  label="Completado"
+                                  color="success"
+                                  size="small"
+                                />
+                              ) : (
+                                <Button
+                                  size="small"
+                                  startIcon={<PlayArrow />}
+                                  variant="outlined"
+                                >
+                                  {(lesson.progress_percentage || 0) > 0 ? "Continuar" : "Iniciar"}
                                 </Button>
                               )}
                             </Box>

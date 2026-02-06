@@ -16,6 +16,7 @@ import {
   PlayArrow,
   Warning,
   Error,
+  Slideshow,
 } from "@mui/icons-material";
 import {
   Box,
@@ -52,6 +53,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
 import PDFViewer from '../components/PDFViewerNew';
 import UppercaseTextField from "../components/UppercaseTextField";
@@ -91,6 +93,10 @@ interface Course extends CourseResponse {
 }
 
 // Interfaces de formularios que extienden las interfaces base
+interface ExtendedCourseModuleResponse extends CourseModuleResponse {
+  interactive_lessons?: any[];
+}
+
 interface ModuleFormData extends CourseModuleBase {
   // Todos los campos ya están definidos en CourseModuleBase
 }
@@ -112,6 +118,7 @@ interface CourseFormData extends CourseBase {
 }
 
 const CoursesManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const {
     canCreateCourses,
@@ -166,8 +173,8 @@ const CoursesManagement: React.FC = () => {
   const [openModuleDialog, setOpenModuleDialog] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [editingModule, setEditingModule] =
-    useState<CourseModuleResponse | null>(null);
-  const [courseModules, setCourseModules] = useState<CourseModuleResponse[]>(
+    useState<ExtendedCourseModuleResponse | null>(null);
+  const [courseModules, setCourseModules] = useState<ExtendedCourseModuleResponse[]>(
     []
   );
   const [moduleFormData, setModuleFormData] = useState<ModuleFormData>({
@@ -181,7 +188,7 @@ const CoursesManagement: React.FC = () => {
   // Estados para gestión de materiales
   const [openMaterialDialog, setOpenMaterialDialog] = useState(false);
   const [selectedModule, setSelectedModule] =
-    useState<CourseModuleResponse | null>(null);
+    useState<ExtendedCourseModuleResponse | null>(null);
   const [editingMaterial, setEditingMaterial] =
     useState<CourseMaterialResponse | null>(null);
   const [moduleMaterials, setModuleMaterials] = useState<
@@ -249,6 +256,9 @@ const CoursesManagement: React.FC = () => {
     message: "",
     onConfirm: () => {},
   });
+
+  // Estados para lecciones interactivas
+  const [moduleLessons, setModuleLessons] = useState<any[]>([]);
 
   // Función helper para construir URLs de previsualización
   const getPreviewUrl = (content: string): string => {
@@ -706,6 +716,38 @@ const CoursesManagement: React.FC = () => {
       setCourseModules([]);
     }
     setOpenModuleDialog(true);
+  };
+
+  const fetchModuleLessons = async (moduleId: number) => {
+    try {
+      const response = await api.get(`/interactive-lessons`, {
+        params: { module_id: moduleId }
+      });
+      setModuleLessons(response.data.items || []);
+    } catch (error) {
+      console.error("Error fetching module lessons:", error);
+      setModuleLessons([]);
+    }
+  };
+
+  const handleCreateLesson = (moduleId: number) => {
+    navigate(`/admin/module/${moduleId}/lesson/new`);
+  };
+
+  const handleDeleteLesson = async (lessonId: number, moduleId: number) => {
+    showConfirmDialog(
+      "Confirmar Eliminación",
+      "¿Está seguro de que desea eliminar esta lección interactiva? Esta acción no se puede deshacer.",
+      async () => {
+        try {
+          await api.delete(`/interactive-lessons/${lessonId}`);
+          showSnackbar("Lección eliminada exitosamente", "success");
+          fetchModuleLessons(moduleId);
+        } catch (error) {
+          showSnackbar("Error al eliminar la lección", "error");
+        }
+      }
+    );
   };
 
   const handleCreateModule = () => {
@@ -2297,6 +2339,74 @@ const CoursesManagement: React.FC = () => {
                           <Edit />
                         </IconButton>
                       )}
+                      
+                      {/* Sub-tabla de Lecciones Interactivas */}
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ py: 0, px: 4 }}>
+                          <Box sx={{ my: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                              <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Slideshow fontSize="small" color="primary" />
+                                Lecciones Interactivas
+                              </Typography>
+                              <Button
+                                size="small"
+                                startIcon={<Add />}
+                                onClick={() => handleCreateLesson(module.id)}
+                              >
+                                Nueva Lección
+                              </Button>
+                            </Box>
+                            
+                            {module.interactive_lessons && module.interactive_lessons.length > 0 ? (
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell>Título</TableCell>
+                                    <TableCell>Estado</TableCell>
+                                    <TableCell align="center">Acciones</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {module.interactive_lessons.map((lesson: any) => (
+                                    <TableRow key={lesson.id}>
+                                      <TableCell>{lesson.title}</TableCell>
+                                      <TableCell>
+                                        <Chip 
+                                          label={lesson.status === 'published' ? 'Publicado' : 'Borrador'} 
+                                          size="small"
+                                          color={lesson.status === 'published' ? 'success' : 'warning'}
+                                        />
+                                      </TableCell>
+                                      <TableCell align="center">
+                                        <IconButton
+                                          size="small"
+                                          color="primary"
+                                          onClick={() => navigate(`/admin/lesson/${lesson.id}/edit`)}
+                                        >
+                                          <Edit fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          color="error"
+                                          onClick={() => handleDeleteLesson(lesson.id, module.id)}
+                                        >
+                                          <Delete fontSize="small" />
+                                        </IconButton>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <Typography variant="caption" color="text.secondary">
+                                No hay lecciones interactivas en este módulo.
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+
                       {canDeleteModules() && (
                         <IconButton
                           color="error"
