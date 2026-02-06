@@ -1687,6 +1687,7 @@ export interface CourseModuleResponse extends CourseModuleBase {
   id: number;
   course_id: number;
   materials: CourseMaterialResponse[]; // List of materials
+  interactive_lessons?: any[]; // List of interactive lessons
   created_at: string; // datetime
   updated_at: string; // datetime
 }

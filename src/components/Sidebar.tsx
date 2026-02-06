@@ -38,6 +38,7 @@ import {
   Gavel,
   Category,
   Apartment,
+  Slideshow,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -334,6 +335,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             icon: <Refresh />,
             path: "/admin/reinduction",
             roles: ["admin"],
+          },
+          {
+            id: "interactive-lessons",
+            label: "Lecciones Interactivas",
+            icon: <Slideshow />,
+            path: "/admin/interactive-lessons",
+            roles: ["admin", "trainer"],
           },
         ],
         roles: ["admin", "trainer", "supervisor"],
@@ -703,6 +711,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
                 (user.role === "admin" ||
                   user.role === "trainer" ||
                   user.role === "supervisor"),
+              "interactive-lessons": () =>
+                user.role === "admin" || user.role === "trainer",
 
               // Evaluation management
               evaluations: canViewEvaluationsPage,

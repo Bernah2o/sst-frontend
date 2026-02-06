@@ -95,6 +95,8 @@ import SectorEconomicoList from "./pages/MatrizLegal/SectorEconomicoList";
 import MatrizLegalImport from "./pages/MatrizLegal/MatrizLegalImport";
 import MatrizLegalNormas from "./pages/MatrizLegal/MatrizLegalNormas";
 import MatrizLegalEmpresa from "./pages/MatrizLegal/MatrizLegalEmpresa";
+import InteractiveLessons from "./pages/InteractiveLessons";
+import { LessonBuilder, LessonViewer } from "./components/interactive-lessons";
 import { UserRole } from "./types";
 import { checkPagePermission } from "./utils/pagePermissions";
 
@@ -676,6 +678,40 @@ const AppContent: React.FC = () => {
                     }
                   />
                   <Route
+                    path="/admin/interactive-lessons"
+                    element={
+                      <ProtectedRoute route="/admin/interactive-lessons">
+                        <InteractiveLessons />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Rutas de lecciones interactivas - Builder */}
+                  <Route
+                    path="/admin/module/:moduleId/lesson/new"
+                    element={
+                      <ProtectedRoute route="/admin/module/:moduleId/lesson/new">
+                        <LessonBuilder />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/lesson/:lessonId/edit"
+                    element={
+                      <ProtectedRoute route="/admin/lesson/:lessonId/edit">
+                        <LessonBuilder />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Admin/Trainer preview route for interactive lessons */}
+                  <Route
+                    path="/admin/lesson/:lessonId/preview"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "trainer"]}>
+                        <LessonViewer isPreview={true} />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/admin/enrollments"
                     element={
                       <ProtectedRoute
@@ -923,6 +959,15 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["employee"]}>
                         <Evaluation />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Ruta de lecciones interactivas - Viewer */}
+                  <Route
+                    path="/employee/lesson/:lessonId"
+                    element={
+                      <ProtectedRoute allowedRoles={["employee"]}>
+                        <LessonViewer />
                       </ProtectedRoute>
                     }
                   />
