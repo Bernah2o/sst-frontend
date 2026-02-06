@@ -527,13 +527,24 @@ const OccupationalExam: React.FC = () => {
       }
 
       const payload: any = {
-        ...formData,
         worker_id: parseInt(formData.worker_id),
+        tipo_examen_id: formData.tipo_examen_id ? Number(formData.tipo_examen_id) : null,
         exam_date: formData.exam_date?.toISOString().split("T")[0],
-        next_exam_date: formData.next_exam_date?.toISOString().split("T")[0],
-        pdf_file_path: pdfFilePath || formData.pdf_file_path,
-        duracion_cargo_actual_meses: formData.duracion_cargo_actual_meses ? Number(formData.duracion_cargo_actual_meses) : undefined,
-
+        departamento: formData.departamento || null,
+        ciudad: formData.ciudad || null,
+        programa: formData.programa || null,
+        occupational_conclusions: formData.occupational_conclusions || null,
+        preventive_occupational_behaviors: formData.preventive_occupational_behaviors || null,
+        general_recommendations: formData.general_recommendations || null,
+        medical_aptitude_concept: formData.medical_aptitude_concept,
+        observations: formData.observations || null,
+        examining_doctor: formData.examining_doctor || null,
+        medical_center: formData.medical_center || null,
+        pdf_file_path: pdfFilePath || formData.pdf_file_path || null,
+        requires_follow_up: formData.requires_follow_up,
+        supplier_id: formData.supplier_id ? Number(formData.supplier_id) : null,
+        doctor_id: formData.doctor_id ? Number(formData.doctor_id) : null,
+        duracion_cargo_actual_meses: formData.duracion_cargo_actual_meses ? Number(formData.duracion_cargo_actual_meses) : null,
         factores_riesgo_evaluados: formData.factores_riesgo_evaluados || [],
       };
 
@@ -547,8 +558,15 @@ const OccupationalExam: React.FC = () => {
 
       fetchExams();
       handleCloseDialog();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving exam:", error);
+      const detail = error.response?.data?.detail;
+      if (detail) {
+        const msg = typeof detail === 'string' ? detail : JSON.stringify(detail);
+        alert(`Error al guardar el examen: ${msg}`);
+      } else {
+        alert("Error al guardar el examen. Revise los campos e intente nuevamente.");
+      }
     }
   };
 
