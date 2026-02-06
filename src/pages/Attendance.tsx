@@ -155,6 +155,10 @@ const AttendanceManagement: React.FC = () => {
     useState<Attendance | null>(null);
   const [openBulkDialog, setOpenBulkDialog] = useState(false);
   const [openVirtualSessionManagement, setOpenVirtualSessionManagement] = useState(false);
+
+  // Estado para el diálogo de opciones de PDF de asistencia
+  const [openPdfOptionsDialog, setOpenPdfOptionsDialog] = useState(false);
+  const [pdfAttendanceTypeFilter, setPdfAttendanceTypeFilter] = useState<string>("all");
   
   useEffect(() => {
     fetchAttendances();
@@ -602,7 +606,7 @@ const AttendanceManagement: React.FC = () => {
     }
   };
 
-  const handleGenerateAttendanceList = async () => {
+  const handleOpenPdfOptionsDialog = () => {
     if (!dateFilter) {
       showSnackbar(
         "📅 Por favor seleccione una fecha específica para generar la lista de asistencia.",
@@ -611,7 +615,7 @@ const AttendanceManagement: React.FC = () => {
       return;
     }
 
-    // Obtener el curso más común en la fecha seleccionada
+    // Verificar que hay registros para la fecha
     const filteredAttendances = attendances.filter((attendance) => {
       const attendanceDate = new Date(attendance.session_date);
       return attendanceDate.toDateString() === dateFilter.toDateString();
@@ -624,6 +628,22 @@ const AttendanceManagement: React.FC = () => {
       );
       return;
     }
+
+    // Abrir diálogo de opciones
+    setPdfAttendanceTypeFilter("all");
+    setOpenPdfOptionsDialog(true);
+  };
+
+  const handleGenerateAttendanceList = async () => {
+    if (!dateFilter) {
+      return;
+    }
+
+    // Obtener el curso más común en la fecha seleccionada
+    const filteredAttendances = attendances.filter((attendance) => {
+      const attendanceDate = new Date(attendance.session_date);
+      return attendanceDate.toDateString() === dateFilter.toDateString();
+    });
 
     // Obtener el curso más frecuente
     const courseCount: { [key: string]: number } = {};
@@ -638,6 +658,7 @@ const AttendanceManagement: React.FC = () => {
     );
 
     try {
+      setOpenPdfOptionsDialog(false);
       const sessionDate = dateFilter.toISOString().split("T")[0]; // YYYY-MM-DD format
 
       const response = await api.get("/attendance/attendance-list", {
@@ -646,6 +667,7 @@ const AttendanceManagement: React.FC = () => {
         params: {
           course_name: mostFrequentCourse,
           session_date: sessionDate,
+          attendance_type: pdfAttendanceTypeFilter !== "all" ? pdfAttendanceTypeFilter : undefined,
           download: true,
         },
       });
@@ -663,7 +685,8 @@ const AttendanceManagement: React.FC = () => {
       const safeCourse = mostFrequentCourse
         .replace(/[^a-zA-Z0-9]/g, "_")
         .substring(0, 20);
-      const fileName = `lista_asistencia_${safeCourse}_${sessionDate}.pdf`;
+      const typeLabel = pdfAttendanceTypeFilter === "all" ? "" : `_${pdfAttendanceTypeFilter}`;
+      const fileName = `lista_asistencia_${safeCourse}_${sessionDate}${typeLabel}.pdf`;
 
       // Crear blob con tipo MIME específico para PDF
       const pdfBlob = new Blob([response.data], { type: "application/pdf" });
@@ -906,7 +929,7 @@ const AttendanceManagement: React.FC = () => {
                 variant="outlined"
                 color="primary"
                 startIcon={<Download />}
-                onClick={handleGenerateAttendanceList}
+                onClick={handleOpenPdfOptionsDialog}
                 disabled={!dateFilter}
               >
                 Lista de Asistencia
@@ -1295,6 +1318,45 @@ const AttendanceManagement: React.FC = () => {
         />
 
 
+
+        {/* Diálogo de opciones para PDF de lista de asistencia */}
+        <Dialog
+          open={openPdfOptionsDialog}
+          onClose={() => setOpenPdfOptionsDialog(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>Opciones de Lista de Asistencia</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Seleccione el tipo de asistencia a incluir en el reporte PDF:
+            </Typography>
+            <FormControl fullWidth sx={{ mt: 1 }}>
+              <InputLabel>Tipo de Asistencia</InputLabel>
+              <Select
+                value={pdfAttendanceTypeFilter}
+                onChange={(e) => setPdfAttendanceTypeFilter(e.target.value)}
+                label="Tipo de Asistencia"
+              >
+                <MenuItem value="all">Todos (Presencial y Virtual)</MenuItem>
+                <MenuItem value="in_person">Solo Presencial</MenuItem>
+                <MenuItem value="virtual">Solo Virtual</MenuItem>
+              </Select>
+            </FormControl>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenPdfOptionsDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleGenerateAttendanceList}
+              variant="contained"
+              startIcon={<PictureAsPdf />}
+            >
+              Generar PDF
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Virtual Session Management Dialog */}
         <VirtualSessionManagement
