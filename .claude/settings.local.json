@@ -10,7 +10,9 @@
       "Bash(git reset:*)",
       "Bash(del \"\\\\?\\\\e:\\\\DH2OCOL\\\\python\\\\sst-app\\\\sst-frontend\\\\nul\")",
       "Bash(cmd /c \"del /f /q \"\"\\\\?\\\\e:\\\\DH2OCOL\\\\python\\\\sst-app\\\\sst-frontend\\\\nul\"\"\")",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(python -m alembic:*)",
+      "Bash(python -c:*)"
     ],
     "additionalDirectories": [
       "e:\\DH2OCOL\\python\\sst-app\\sst-backend\\app\\api"

@@ -23,6 +23,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -36,6 +39,8 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   MoreVert as MoreVertIcon,
+  CheckCircle as ActivateIcon,
+  Block as DeactivateIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { committeeService } from '../services/committeeService';
@@ -98,6 +103,14 @@ const CommitteeDetail: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activityFormOpen, setActivityFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
+  
+  // Member action state
+  const [memberActionOpen, setMemberActionOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<CommitteeMember | null>(null);
+  const [memberActionType, setMemberActionType] = useState<'activate' | 'deactivate' | null>(null);
+  const [memberActionReason, setMemberActionReason] = useState('');
+  const [showInactiveMembers, setShowInactiveMembers] = useState(false);
+
   const [permissions, setPermissions] = useState({
     canView: false,
     canEdit: false,
@@ -354,6 +367,42 @@ const CommitteeDetail: React.FC = () => {
     }
   };
 
+  // Member management functions
+  const handleMemberAction = (member: CommitteeMember, type: 'activate' | 'deactivate') => {
+    setSelectedMember(member);
+    setMemberActionType(type);
+    setMemberActionReason('');
+    setMemberActionOpen(true);
+  };
+
+  const handleMemberActionClose = () => {
+    setMemberActionOpen(false);
+    setSelectedMember(null);
+    setMemberActionType(null);
+    setMemberActionReason('');
+  };
+
+  const handleMemberActionSubmit = async () => {
+    if (!selectedMember || !memberActionType || !committee) return;
+
+    try {
+      if (memberActionType === 'activate') {
+        await committeeMemberService.activateMember(selectedMember.id, memberActionReason);
+      } else {
+        await committeeMemberService.deactivateMember(selectedMember.id, memberActionReason);
+      }
+      
+      // Reload details to get updated list
+      loadCommitteeData(committee.id);
+      handleMemberActionClose();
+    } catch (err) {
+      console.error('Error changing member status:', err);
+      // Here you might want to set an error state to show in the UI, 
+      // but for now we'll just rely on the console
+      alert('Error al actualizar el estado del miembro');
+    }
+  };
+
   return (
     <Box p={3}>
       {/* Header */}
@@ -474,49 +523,151 @@ const CommitteeDetail: React.FC = () => {
         {/* Members Tab */}
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h6">Miembros del Comité</Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate(`/admin/committees/${committee.id}/members`)}
-            disabled={!permissions.canManageMembers}
-          >
-            Agregar Miembro
-          </Button>
+          <Box display="flex" alignItems="center">
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showInactiveMembers}
+                  onChange={(e) => setShowInactiveMembers(e.target.checked)}
+                />
+              }
+              label="Mostrar inactivos"
+              sx={{ mr: 2 }}
+            />
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate(`/admin/committees/${committee.id}/members`)}
+              disabled={!permissions.canManageMembers}
+            >
+              Agregar Miembro
+            </Button>
+          </Box>
         </Box>
         <Card>
           <CardContent>
             <List>
-              {members.filter(m => m.is_active).map((member, index) => (
+              {members
+                .filter(m => showInactiveMembers || m.is_active)
+                .map((member, index, filteredMembers) => (
                 <React.Fragment key={member.id}>
-                  <ListItem>
+                  <ListItem
+                    secondaryAction={
+                      permissions.canManageMembers && (
+                        <IconButton
+                          edge="end"
+                          onClick={(event) => {
+                            const menu = document.createElement('div');
+                            menu.style.position = 'absolute';
+                            menu.style.zIndex = '1000';
+                            menu.innerHTML = `
+                              <div style="background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                                ${member.is_active 
+                                  ? '<button id="deactivate-member" style="display: block; width: 100%; padding: 8px 16px; border: none; background: none; text-align: left; cursor: pointer; color: orange;">Desactivar</button>'
+                                  : '<button id="activate-member" style="display: block; width: 100%; padding: 8px 16px; border: none; background: none; text-align: left; cursor: pointer; color: green;">Activar</button>'
+                                }
+                                <div style="border-top: 1px solid #eee;"></div>
+                                <button id="delete-member" style="display: block; width: 100%; padding: 8px 16px; border: none; background: none; text-align: left; cursor: pointer; color: red;">Eliminar</button>
+                              </div>
+                            `;
+                            document.body.appendChild(menu);
+                            
+                            const rect = event.currentTarget.getBoundingClientRect();
+                            menu.style.left = `${rect.left - 100}px`;
+                            menu.style.top = `${rect.bottom}px`;
+                            
+                            const deactivateBtn = menu.querySelector('#deactivate-member');
+                            const activateBtn = menu.querySelector('#activate-member');
+                            const deleteBtn = menu.querySelector('#delete-member');
+                            
+                            deactivateBtn?.addEventListener('click', () => {
+                              handleMemberAction(member, 'deactivate');
+                              menu.remove();
+                            });
+
+                            activateBtn?.addEventListener('click', () => {
+                              handleMemberAction(member, 'activate');
+                              menu.remove();
+                            });
+
+                            deleteBtn?.addEventListener('click', async () => {
+                              menu.remove();
+                              const confirmed = await showConfirmDialog({
+                                title: "Eliminar miembro",
+                                message: "¿Estás seguro de que deseas eliminar este miembro del comité?",
+                                confirmText: "Eliminar",
+                                severity: "error"
+                              });
+                              if (confirmed) {
+                                try {
+                                  await committeeMemberService.deleteCommitteeMember(member.id);
+                                  loadCommitteeData(committee.id);
+                                } catch (error) {
+                                  console.error("Error deleting member", error);
+                                  alert("Error al eliminar el miembro");
+                                }
+                              }
+                            });
+                            
+                            const closeMenu = (e: MouseEvent) => {
+                              if (menu.parentNode && !menu.contains(e.target as Node)) {
+                                menu.parentNode.removeChild(menu);
+                                document.removeEventListener('click', closeMenu);
+                              }
+                            };
+                            
+                            setTimeout(() => document.addEventListener('click', closeMenu), 0);
+                          }}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      )
+                    }
+                  >
                     <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: getRoleColor(member.role) }}>
+                      <Avatar sx={{ bgcolor: member.is_active ? getRoleColor(member.role) : 'grey.500' }}>
                         <GroupIcon />
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
-                      primary={member.user ? `${member.user.first_name} ${member.user.last_name}` : 'Usuario no disponible'}
+                      primaryTypographyProps={{ component: 'div' }}
+                      secondaryTypographyProps={{ component: 'div' }}
+                      primary={
+                        <Box display="flex" alignItems="center">
+                          <Typography variant="body1" component="span" sx={{ textDecoration: member.is_active ? 'none' : 'line-through', mr: 1 }}>
+                            {member.user ? `${member.user.first_name} ${member.user.last_name}` : 'Usuario no disponible'}
+                          </Typography>
+                          {!member.is_active && <Chip label="Inactivo" size="small" />}
+                        </Box>
+                      }
                       secondary={
                         <Box>
                           <Chip
                             label={getRoleLabel(member.role)}
                             size="small"
                             color={getRoleColor(member.role)}
-                            sx={{ mr: 1 }}
+                            variant={member.is_active ? "filled" : "outlined"}
+                            sx={{ mr: 1, mt: 0.5 }}
                           />
-                          <Typography variant="caption" color="text.secondary">
-                            Desde: {member.start_date ? new Date(member.start_date).toLocaleDateString('es-ES') : 'No especificado'}
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {member.start_date ? new Date(member.start_date).toLocaleDateString('es-ES') : 'No especificado'} 
+                            {member.end_date ? ` - ${new Date(member.end_date).toLocaleDateString('es-ES')}` : ''}
                           </Typography>
+                          {member.notes && (
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontStyle: 'italic' }}>
+                              {member.notes}
+                            </Typography>
+                          )}
                         </Box>
                       }
                     />
                   </ListItem>
-                  {index < members.filter(m => m.is_active).length - 1 && <Divider />}
+                  {index < filteredMembers.length - 1 && <Divider />}
                 </React.Fragment>
               ))}
-              {members.filter(m => m.is_active).length === 0 && (
+              {members.filter(m => showInactiveMembers || m.is_active).length === 0 && (
                 <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                  No hay miembros activos en este comité
+                  No hay miembros {showInactiveMembers ? '' : 'activos'} que mostrar
                 </Typography>
               )}
             </List>
@@ -679,12 +830,12 @@ const CommitteeDetail: React.FC = () => {
                               
                               editBtn?.addEventListener('click', () => {
                                 handleEditActivity(activity);
-                                document.body.removeChild(menu);
+                                menu.remove();
                               });
-                              
+
                               deleteBtn?.addEventListener('click', () => {
                                 handleDeleteActivity(activity.id);
-                                document.body.removeChild(menu);
+                                menu.remove();
                               });
                               
                               const closeMenu = (e: MouseEvent) => {
@@ -811,6 +962,7 @@ const CommitteeDetail: React.FC = () => {
         onSubmit={handleActivitySubmit}
         activity={editingActivity}
         members={members}
+        meetings={meetings}
         loading={loading}
       />
 
@@ -825,6 +977,44 @@ const CommitteeDetail: React.FC = () => {
         onConfirm={dialogState.onConfirm}
         onCancel={dialogState.onCancel}
       />
+
+      {/* Member Action Dialog */}
+      <Dialog open={memberActionOpen} onClose={handleMemberActionClose}>
+        <DialogTitle>
+          {memberActionType === 'activate' ? 'Activar Miembro' : 'Desactivar Miembro'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography paragraph>
+            {memberActionType === 'activate'
+              ? '¿Está seguro de que desea reactivar a este miembro del comité?'
+              : '¿Está seguro de que desea desactivar a este miembro del comité?'}
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="reason"
+            label="Razón / Justificación"
+            type="text"
+            fullWidth
+            variant="outlined"
+            multiline
+            rows={3}
+            value={memberActionReason}
+            onChange={(e) => setMemberActionReason(e.target.value)}
+            helperText="Ingrese la razón de este cambio de estado (ej: Renuncia, Terminación de contrato, etc.)"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleMemberActionClose}>Cancelar</Button>
+          <Button 
+            onClick={handleMemberActionSubmit} 
+            color={memberActionType === 'activate' ? 'success' : 'warning'}
+            variant="contained"
+          >
+            {memberActionType === 'activate' ? 'Activar' : 'Desactivar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

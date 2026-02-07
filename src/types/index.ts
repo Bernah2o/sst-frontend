@@ -388,10 +388,11 @@ export enum AttendanceStatus {
 }
 
 export enum MeetingAttendanceStatus {
-  PRESENT = "present",
-  ABSENT = "absent",
-  EXCUSED = "excused",
-  LATE = "late",
+  PRESENT = "PRESENT",
+  ABSENT = "ABSENT",
+  EXCUSED = "EXCUSED",
+  LATE = "LATE",
+  CANCELLED = "CANCELLED",
 }
 
 export enum AttendanceType {
@@ -1897,7 +1898,7 @@ export interface CommitteeMemberBase {
   committee_id: number;
   user_id: number;
   role: CommitteeRole;
-  role_id: number;
+  role_id?: number;
   is_active: boolean;
   start_date: string;
   end_date?: string;
@@ -1942,6 +1943,7 @@ export interface MeetingBase {
   location?: string;
   meeting_type?: string;
   agenda?: string;
+  minutes_content?: string;
   status: MeetingStatus;
   is_virtual?: boolean;
   meeting_link?: string;
@@ -1959,6 +1961,7 @@ export interface MeetingUpdate {
   location?: string;
   meeting_type?: string;
   agenda?: string;
+  minutes_content?: string;
   status?: MeetingStatus;
   is_virtual?: boolean;
   meeting_link?: string;

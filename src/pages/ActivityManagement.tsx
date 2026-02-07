@@ -55,6 +55,7 @@ import { committeeActivityService } from '../services/committeeActivityService';
 import { committeeService } from '../services/committeeService';
 import { committeePermissionService } from '../services/committeePermissionService';
 import { committeeMemberService } from '../services/committeeMemberService';
+import { meetingService } from '../services/meetingService';
 import {
   Activity,
   ActivityStatus,
@@ -63,6 +64,8 @@ import {
   ActivityUpdate,
   Committee,
   CommitteeMember,
+  Meeting,
+  MeetingStatus,
 } from '../types';
 
 
@@ -72,6 +75,7 @@ const ActivityManagement: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [committees, setCommittees] = useState<Committee[]>([]);
   const [members, setMembers] = useState<CommitteeMember[]>([]);
+  const [committeeMeetings, setCommitteeMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -101,14 +105,13 @@ const ActivityManagement: React.FC = () => {
   });
   const [formData, setFormData] = useState({
     committee_id: 0,
+    meeting_id: undefined as number | undefined,
     title: '',
     description: '',
     assigned_to: undefined as number | undefined,
     due_date: '',
     priority: ActivityPriority.MEDIUM,
     status: ActivityStatus.PENDING,
-    estimated_hours: undefined as number | undefined,
-    tags: '',
     notes: '',
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
@@ -273,7 +276,7 @@ const ActivityManagement: React.FC = () => {
     if (selectedActivity) {
       setDetailsDialogOpen(true);
     }
-    handleMenuClose();
+    setAnchorEl(null); // Solo cerrar el menú sin limpiar selectedActivity
   };
 
   const loadCommitteeMembers = async (committeeId: number) => {
@@ -286,12 +289,22 @@ const ActivityManagement: React.FC = () => {
     }
   };
 
+  const loadCommitteeMeetings = async (committeeId: number) => {
+    try {
+      const meetingsData = await meetingService.getMeetings({ committee_id: committeeId });
+      setCommitteeMeetings(meetingsData);
+    } catch (err) {
+      console.error('Error loading committee meetings:', err);
+      setCommitteeMeetings([]);
+    }
+  };
+
   const handleEdit = async () => {
     if (selectedActivity) {
       await loadCommitteeMembers(selectedActivity.committee_id);
       setEditDialogOpen(true);
     }
-    handleMenuClose();
+    setAnchorEl(null); // Solo cerrar el menú sin limpiar selectedActivity
   };
 
   const handleStartActivity = async () => {
@@ -424,39 +437,47 @@ const ActivityManagement: React.FC = () => {
     setPage(0);
   };
 
-  const handleCreateActivity = () => {
+  const handleCreateActivity = async () => {
+    const defaultCommitteeId = committees.length > 0 ? committees[0].id : 0;
     setCreateDialogOpen(true);
     // Reset form data
     setFormData({
-      committee_id: committees.length > 0 ? committees[0].id : 0,
+      committee_id: defaultCommitteeId,
+      meeting_id: undefined,
       title: '',
       description: '',
       assigned_to: undefined,
       due_date: '',
       priority: ActivityPriority.MEDIUM,
       status: ActivityStatus.PENDING,
-      estimated_hours: undefined,
-      tags: '',
       notes: '',
     });
     setFormErrors({});
+    // Load members and meetings for the default committee
+    if (defaultCommitteeId) {
+      await Promise.all([
+        loadCommitteeMembers(defaultCommitteeId),
+        loadCommitteeMeetings(defaultCommitteeId),
+      ]);
+    }
   };
 
   const handleCreateDialogClose = () => {
     setCreateDialogOpen(false);
     setFormData({
       committee_id: 0,
+      meeting_id: undefined,
       title: '',
       description: '',
       assigned_to: undefined,
       due_date: '',
       priority: ActivityPriority.MEDIUM,
       status: ActivityStatus.PENDING,
-      estimated_hours: undefined,
-      tags: '',
       notes: '',
     });
     setFormErrors({});
+    setMembers([]);
+    setCommitteeMeetings([]);
   };
 
   const handleFormChange = (field: string, value: any) => {
@@ -488,10 +509,6 @@ const ActivityManagement: React.FC = () => {
       errors.committee_id = 'Debe seleccionar un comité';
     }
 
-    if (formData.estimated_hours && formData.estimated_hours <= 0) {
-      errors.estimated_hours = 'Las horas estimadas deben ser mayor a 0';
-    }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -503,10 +520,9 @@ const ActivityManagement: React.FC = () => {
     try {
       const activityData = {
         ...formData,
-        tags: formData.tags || undefined,
         due_date: formData.due_date || undefined,
-        estimated_hours: formData.estimated_hours || undefined,
         assigned_to: formData.assigned_to || undefined,
+        meeting_id: formData.meeting_id || undefined,
       };
 
       await committeeActivityService.createActivity(formData.committee_id, activityData);
@@ -943,7 +959,19 @@ const ActivityManagement: React.FC = () => {
                   <Select
                     value={formData.committee_id || ''}
                     label="Comité *"
-                    onChange={(e) => handleFormChange('committee_id', e.target.value)}
+                    onChange={(e) => {
+                      const committeeId = e.target.value as number;
+                      handleFormChange('committee_id', committeeId);
+                      handleFormChange('assigned_to', undefined);
+                      handleFormChange('meeting_id', undefined);
+                      if (committeeId) {
+                        loadCommitteeMembers(committeeId);
+                        loadCommitteeMeetings(committeeId);
+                      } else {
+                        setMembers([]);
+                        setCommitteeMeetings([]);
+                      }
+                    }}
                   >
                     {committees.map((committee) => (
                       <MenuItem key={committee.id} value={committee.id}>
@@ -984,6 +1012,62 @@ const ActivityManagement: React.FC = () => {
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Prioridad *</InputLabel>
+                  <Select
+                    value={formData.priority}
+                    label="Prioridad *"
+                    onChange={(e) => handleFormChange('priority', e.target.value)}
+                  >
+                    <MenuItem value={ActivityPriority.LOW}>Baja</MenuItem>
+                    <MenuItem value={ActivityPriority.MEDIUM}>Media</MenuItem>
+                    <MenuItem value={ActivityPriority.HIGH}>Alta</MenuItem>
+                    <MenuItem value={ActivityPriority.CRITICAL}>Crítica</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Asignado a</InputLabel>
+                  <Select
+                    value={formData.assigned_to || ''}
+                    label="Asignado a"
+                    onChange={(e) => handleFormChange('assigned_to', e.target.value || undefined)}
+                  >
+                    <MenuItem value="">Sin asignar</MenuItem>
+                    {members.map((member) => (
+                      <MenuItem key={member.id} value={member.id}>
+                        {member.user ? `${member.user.first_name} ${member.user.last_name}` : 'Usuario no disponible'}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {committeeMeetings.filter(m => m.status !== MeetingStatus.COMPLETED && m.status !== MeetingStatus.CANCELLED).length > 0 && (
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Reunión vinculada (Acta)</InputLabel>
+                    <Select
+                      value={formData.meeting_id || ''}
+                      label="Reunión vinculada (Acta)"
+                      onChange={(e) => handleFormChange('meeting_id', e.target.value || undefined)}
+                    >
+                      <MenuItem value="">Sin reunión</MenuItem>
+                      {committeeMeetings
+                        .filter(m => m.status !== MeetingStatus.COMPLETED && m.status !== MeetingStatus.CANCELLED)
+                        .map((meeting) => (
+                        <MenuItem key={meeting.id} value={meeting.id}>
+                          {meeting.title} - {new Date(meeting.meeting_date).toLocaleDateString('es-ES')}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Fecha Límite"
@@ -993,29 +1077,6 @@ const ActivityManagement: React.FC = () => {
                   InputLabelProps={{
                     shrink: true,
                   }}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Horas Estimadas"
-                  type="number"
-                  value={formData.estimated_hours || ''}
-                  onChange={(e) => handleFormChange('estimated_hours', e.target.value ? parseInt(e.target.value) : undefined)}
-                  error={!!formErrors.estimated_hours}
-                  helperText={formErrors.estimated_hours}
-                  inputProps={{ min: 0 }}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12 }}>
-                <TextField
-                  fullWidth
-                  label="Etiquetas (separadas por comas)"
-                  value={formData.tags}
-                  onChange={(e) => handleFormChange('tags', e.target.value)}
-                  placeholder="etiqueta1, etiqueta2, etiqueta3"
                 />
               </Grid>
 

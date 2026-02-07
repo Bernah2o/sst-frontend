@@ -41,10 +41,12 @@ import {
   Delete as DeleteIcon,
   PlayArrow as StartIcon,
   CheckCircle as CompleteIcon,
+  Cancel as CancelIcon,
   People as AttendanceIcon,
   Schedule as ScheduleIcon,
   LocationOn as LocationIcon,
   VideoCall as VideoCallIcon,
+  PictureAsPdf as PdfIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { meetingService } from '../services/meetingService';
@@ -77,6 +79,11 @@ const MeetingManagement: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePreview, setDeletePreview] = useState<{ attendance_count: number; activities_count: number } | null>(null);
+  const [deletePreviewLoading, setDeletePreviewLoading] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -89,6 +96,7 @@ const MeetingManagement: React.FC = () => {
     location: '',
     meeting_type: 'presencial',
     agenda: '',
+    minutes_content: '',
     is_virtual: false,
     meeting_link: '',
     notes: ''
@@ -313,6 +321,7 @@ const MeetingManagement: React.FC = () => {
       location: '',
       meeting_type: 'presencial',
       agenda: '',
+      minutes_content: '',
       is_virtual: false,
       meeting_link: '',
       notes: ''
@@ -350,6 +359,7 @@ const MeetingManagement: React.FC = () => {
         location: formData.location,
         meeting_type: formData.meeting_type,
         agenda: formData.agenda,
+        minutes_content: formData.minutes_content,
         status: isEditMode ? (selectedMeeting?.status || MeetingStatus.SCHEDULED) : MeetingStatus.SCHEDULED,
         is_virtual: formData.is_virtual,
         meeting_link: formData.meeting_link,
@@ -388,6 +398,7 @@ const MeetingManagement: React.FC = () => {
       location: meeting.location || '',
       meeting_type: meeting.meeting_type || 'presencial',
       agenda: meeting.agenda || '',
+      minutes_content: meeting.minutes_content || '',
       is_virtual: meeting.is_virtual || false,
       meeting_link: meeting.meeting_link || '',
       notes: meeting.notes || ''
@@ -406,24 +417,33 @@ const MeetingManagement: React.FC = () => {
     setAnchorEl(null);
   };
 
-  const handleDeleteMeeting = (meeting: Meeting) => {
+  const handleDeleteMeeting = async (meeting: Meeting) => {
     setSelectedMeeting(meeting);
     setDeleteDialogOpen(true);
-    // No llamamos a handleMenuClose() aquí para evitar limpiar selectedMeeting
-    // Solo cerramos el menú sin limpiar selectedMeeting
     setAnchorEl(null);
+    // Cargar preview de lo que se eliminará
+    setDeletePreviewLoading(true);
+    try {
+      const preview = await meetingService.getDeletePreview(meeting.id);
+      setDeletePreview(preview);
+    } catch (err) {
+      setDeletePreview(null);
+    } finally {
+      setDeletePreviewLoading(false);
+    }
   };
 
   const confirmDeleteMeeting = async () => {
     if (!selectedMeeting) return;
-    
+
     setLoading(true);
     setError('');
-    
+
     try {
       await meetingService.deleteMeeting(selectedMeeting.id, selectedMeeting.committee_id);
       setDeleteDialogOpen(false);
       setSelectedMeeting(null);
+      setDeletePreview(null);
       await loadMeetings();
     } catch (err: any) {
       logger.error('Delete error:', err);
@@ -450,6 +470,52 @@ const MeetingManagement: React.FC = () => {
       handleMenuClose();
     } catch (err) {
       setError('Error al completar la reunión');
+    }
+  };
+
+  const handleCancelMeeting = (meeting: Meeting) => {
+    setSelectedMeeting(meeting);
+    setCancelReason('');
+    setCancelDialogOpen(true);
+    setAnchorEl(null);
+  };
+
+  const confirmCancelMeeting = async () => {
+    if (!selectedMeeting) return;
+
+    setCancelLoading(true);
+    try {
+      await meetingService.cancelMeeting(selectedMeeting.id, selectedMeeting.committee_id, cancelReason || undefined);
+      setCancelDialogOpen(false);
+      setSelectedMeeting(null);
+      setCancelReason('');
+      await loadMeetings();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Error al cancelar la reunión');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const handleGenerateActaPdf = async (meeting: Meeting) => {
+    handleMenuClose();
+    setGeneratingPdf(true);
+    try {
+      const blob = await meetingService.generateMeetingMinutesPdf(meeting.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Acta_Reunion_${meeting.id}_${meeting.title.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Error al generar el acta PDF');
+    } finally {
+      setGeneratingPdf(false);
     }
   };
 
@@ -691,9 +757,22 @@ const MeetingManagement: React.FC = () => {
             Completar Reunión
           </MenuItem>
         )}
+        {selectedMeeting && selectedMeeting.status !== MeetingStatus.COMPLETED && selectedMeeting.status !== MeetingStatus.CANCELLED && permissions.canManageMeetings && (
+          <MenuItem onClick={() => handleCancelMeeting(selectedMeeting)} sx={{ color: 'warning.main' }}>
+            <CancelIcon sx={{ mr: 1 }} />
+            Cancelar Reunión
+          </MenuItem>
+        )}
         <MenuItem onClick={() => navigate(`/meetings/${selectedMeeting?.id}/attendance`)}>
           <AttendanceIcon sx={{ mr: 1 }} />
           Gestionar Asistencia
+        </MenuItem>
+        <MenuItem
+          onClick={() => selectedMeeting && handleGenerateActaPdf(selectedMeeting)}
+          disabled={generatingPdf}
+        >
+          <PdfIcon sx={{ mr: 1 }} />
+          {generatingPdf ? 'Generando...' : 'Generar Acta PDF'}
         </MenuItem>
         {permissions.canDeleteMeetings && (
           <MenuItem 
@@ -835,14 +914,29 @@ const MeetingManagement: React.FC = () => {
                 />
               </Grid>
               
+              {isEditMode && (
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    fullWidth
+                    label="Desarrollo de la Reunión (Acta)"
+                    value={formData.minutes_content}
+                    onChange={(e) => handleFormChange('minutes_content', e.target.value)}
+                    multiline
+                    rows={5}
+                    helperText="Contenido del desarrollo de la reunión. Aparecerá en la sección 3 del Acta PDF."
+                  />
+                </Grid>
+              )}
+
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
-                  label="Notas"
+                  label="Proposiciones y Varios"
                   value={formData.notes}
                   onChange={(e) => handleFormChange('notes', e.target.value)}
                   multiline
                   rows={2}
+                  helperText="Proposiciones adicionales. Aparecerá en la sección 6 del Acta PDF."
                 />
               </Grid>
             </Grid>
@@ -868,29 +962,90 @@ const MeetingManagement: React.FC = () => {
       </Dialog>
 
       {/* Dialog de confirmación de eliminación */}
-      <Dialog open={deleteDialogOpen} onClose={() => !loading && setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
+      <Dialog open={deleteDialogOpen} onClose={() => !loading && setDeleteDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Confirmar Eliminación de Reunión</DialogTitle>
         <DialogContent>
-          <Typography>
-            ¿Está seguro de que desea eliminar la reunión "{selectedMeeting?.title}"?
-            Esta acción no se puede deshacer.
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Esta acción eliminará la reunión y todo su flujo asociado. No se puede deshacer.
+          </Alert>
+          <Typography variant="body1" gutterBottom>
+            ¿Está seguro de que desea eliminar la reunión <strong>"{selectedMeeting?.title}"</strong>?
           </Typography>
+          {deletePreviewLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2" color="text.secondary">Calculando impacto...</Typography>
+            </Box>
+          ) : deletePreview && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.300' }}>
+              <Typography variant="subtitle2" gutterBottom>Se eliminará permanentemente:</Typography>
+              <Typography variant="body2" sx={{ ml: 1 }}>
+                - La reunión y toda su información
+              </Typography>
+              <Typography variant="body2" sx={{ ml: 1 }}>
+                - <strong>{deletePreview.attendance_count}</strong> registro(s) de asistencia
+              </Typography>
+              <Typography variant="body2" sx={{ ml: 1 }}>
+                - <strong>{deletePreview.activities_count}</strong> actividad(es) / compromiso(s) vinculados al acta
+              </Typography>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={() => setDeleteDialogOpen(false)}
+          <Button
+            onClick={() => { setDeleteDialogOpen(false); setDeletePreview(null); }}
             disabled={loading}
           >
             Cancelar
           </Button>
-          <Button 
-            onClick={confirmDeleteMeeting} 
-            color="error" 
+          <Button
+            onClick={confirmDeleteMeeting}
+            color="error"
             variant="contained"
             disabled={loading}
             startIcon={loading ? <CircularProgress size={20} /> : <DeleteIcon />}
           >
             {loading ? 'Eliminando...' : 'Eliminar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de cancelación de reunión */}
+      <Dialog open={cancelDialogOpen} onClose={() => !cancelLoading && setCancelDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Cancelar Reunión</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Esta acción cambiará el estado de la reunión a "Cancelada".
+          </Alert>
+          <Typography variant="body1" gutterBottom>
+            ¿Está seguro de que desea cancelar la reunión <strong>"{selectedMeeting?.title}"</strong>?
+          </Typography>
+          <TextField
+            fullWidth
+            label="Motivo de cancelación"
+            placeholder="Ingrese el motivo por el cual se cancela la reunión..."
+            multiline
+            rows={3}
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => { setCancelDialogOpen(false); setCancelReason(''); }}
+            disabled={cancelLoading}
+          >
+            Volver
+          </Button>
+          <Button
+            onClick={confirmCancelMeeting}
+            color="warning"
+            variant="contained"
+            disabled={cancelLoading}
+            startIcon={cancelLoading ? <CircularProgress size={20} /> : <CancelIcon />}
+          >
+            {cancelLoading ? 'Cancelando...' : 'Confirmar Cancelación'}
           </Button>
         </DialogActions>
       </Dialog>
