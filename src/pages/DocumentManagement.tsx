@@ -289,8 +289,8 @@ const DocumentManagement: React.FC = () => {
   const handleViewDetails = () => {
     if (selectedDocument) {
       setDetailsDialogOpen(true);
+      setAnchorEl(null);
     }
-    handleMenuClose();
   };
 
   const handleDownload = async () => {
@@ -893,11 +893,21 @@ const DocumentManagement: React.FC = () => {
             <Box sx={{ mt: 1 }}>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12 }}>
-                  <Typography variant="h6" gutterBottom>
-                    {selectedDocument.title}
-                  </Typography>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Avatar sx={{ width: 48, height: 48 }}>
+                      {getFileIcon(selectedDocument.file_name)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6">
+                        {selectedDocument.title}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {selectedDocument.file_name}
+                      </Typography>
+                    </Box>
+                  </Box>
                 </Grid>
-                
+
                 {selectedDocument.description && (
                   <Grid size={{ xs: 12 }}>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -909,14 +919,16 @@ const DocumentManagement: React.FC = () => {
                   </Grid>
                 )}
 
+                <Grid size={{ xs: 12 }}><Divider /></Grid>
+
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    <strong>Tipo:</strong>
+                    <strong>Tipo de documento:</strong>
                   </Typography>
-                  <Chip 
-                    label={selectedDocument.document_type} 
-                    size="small" 
-                    color="primary"
+                  <Chip
+                    label={getDocumentTypeLabel(selectedDocument.document_type)}
+                    size="small"
+                    color={getDocumentTypeColor(selectedDocument.document_type)}
                   />
                 </Grid>
 
@@ -934,7 +946,7 @@ const DocumentManagement: React.FC = () => {
                     <strong>Tamaño del archivo:</strong>
                   </Typography>
                   <Typography variant="body2">
-                    {selectedDocument.file_size ? `${(selectedDocument.file_size / 1024 / 1024).toFixed(2)} MB` : 'N/A'}
+                    {selectedDocument.file_size ? formatFileSize(selectedDocument.file_size) : 'N/A'}
                   </Typography>
                 </Grid>
 
@@ -961,7 +973,7 @@ const DocumentManagement: React.FC = () => {
                     <strong>Fecha de subida:</strong>
                   </Typography>
                   <Typography variant="body2">
-                    {selectedDocument.created_at ? new Date(selectedDocument.created_at).toLocaleString() : 'N/A'}
+                    {selectedDocument.created_at ? new Date(selectedDocument.created_at).toLocaleString('es-ES') : 'N/A'}
                   </Typography>
                 </Grid>
 
@@ -971,41 +983,114 @@ const DocumentManagement: React.FC = () => {
                       <strong>Última actualización:</strong>
                     </Typography>
                     <Typography variant="body2">
-                      {new Date(selectedDocument.updated_at).toLocaleString()}
+                      {new Date(selectedDocument.updated_at).toLocaleString('es-ES')}
                     </Typography>
                   </Grid>
                 )}
 
-                {selectedDocument.file_path && (
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong>Descargas:</strong>
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedDocument.download_count ?? 0}
+                  </Typography>
+                </Grid>
+
+                {selectedDocument.version && (
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      <strong>Versión:</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      {selectedDocument.version}
+                    </Typography>
+                  </Grid>
+                )}
+
+                {selectedDocument.tags && (
                   <Grid size={{ xs: 12 }}>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                      <strong>Acciones:</strong>
+                      <strong>Etiquetas:</strong>
                     </Typography>
-                    <Box display="flex" gap={1} flexWrap="wrap">
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<ViewIcon />}
-                        onClick={() => window.open(selectedDocument.file_path, '_blank')}
-                      >
-                        Ver Documento
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<DownloadIcon />}
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = selectedDocument.file_path!;
-                          link.download = selectedDocument.title;
-                          link.click();
-                        }}
-                      >
-                        Descargar
-                      </Button>
+                    <Box display="flex" gap={0.5} flexWrap="wrap">
+                      {selectedDocument.tags.split(',').map((tag, idx) => (
+                        <Chip key={idx} label={tag.trim()} size="small" variant="outlined" />
+                      ))}
                     </Box>
                   </Grid>
                 )}
+
+                {selectedDocument.expiry_date && (
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      <strong>Fecha de expiración:</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      {new Date(selectedDocument.expiry_date).toLocaleDateString('es-ES')}
+                    </Typography>
+                  </Grid>
+                )}
+
+                {selectedDocument.notes && (
+                  <Grid size={{ xs: 12 }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      <strong>Notas:</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      {selectedDocument.notes}
+                    </Typography>
+                  </Grid>
+                )}
+
+                <Grid size={{ xs: 12 }}><Divider /></Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong>Acciones:</strong>
+                  </Typography>
+                  <Box display="flex" gap={1} flexWrap="wrap">
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<ViewIcon />}
+                      onClick={async () => {
+                        try {
+                          const documentUrl = await committeeDocumentService.getDocumentUrl(selectedDocument.id);
+                          window.open(documentUrl, '_blank');
+                        } catch (err) {
+                          setError('Error al abrir el documento');
+                          logger.error('Document view error:', err);
+                        }
+                      }}
+                    >
+                      Ver Documento
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<DownloadIcon />}
+                      onClick={async () => {
+                        try {
+                          const blob = await committeeDocumentService.downloadDocument(selectedDocument.id);
+                          const url = window.URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.setAttribute('download', selectedDocument.file_name || `${selectedDocument.title}.pdf`);
+                          document.body.appendChild(link);
+                          link.click();
+                          link.remove();
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          setError('Error al descargar el documento');
+                          logger.error('Document download error:', err);
+                        }
+                      }}
+                    >
+                      Descargar
+                    </Button>
+                  </Box>
+                </Grid>
               </Grid>
             </Box>
           )}

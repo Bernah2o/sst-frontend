@@ -59,13 +59,19 @@ export const committeeMemberService = {
     return response.data;
   },
 
-  async deactivateMember(id: number): Promise<CommitteeMember> {
-    const response = await api.post(`${BASE_URL}${id}/deactivate`);
+  async deactivateMember(id: number, reason?: string): Promise<CommitteeMember> {
+    const url = reason 
+      ? `${BASE_URL}${id}/deactivate?reason=${encodeURIComponent(reason)}`
+      : `${BASE_URL}${id}/deactivate`;
+    const response = await api.post(url);
     return response.data;
   },
 
-  async activateMember(id: number): Promise<CommitteeMember> {
-    const response = await api.post(`${BASE_URL}${id}/activate`);
+  async activateMember(id: number, reason?: string): Promise<CommitteeMember> {
+    const url = reason 
+      ? `${BASE_URL}${id}/activate?reason=${encodeURIComponent(reason)}` 
+      : `${BASE_URL}${id}/activate`;
+    const response = await api.post(url);
     return response.data;
   },
 
@@ -91,19 +97,27 @@ export const committeeMemberService = {
   // Get role_id for a given role enum
   async getRoleId(role: CommitteeRole): Promise<number> {
     const roles = await this.getCommitteeRolesFromBackend();
-    const roleMapping: { [key in CommitteeRole]: string } = {
-      [CommitteeRole.PRESIDENT]: "Presidente",
-      [CommitteeRole.VICE_PRESIDENT]: "Vicepresidente",
-      [CommitteeRole.SECRETARY]: "Secretario",
-      [CommitteeRole.MEMBER]: "Vocal",
-      [CommitteeRole.ALTERNATE]: "Representante Empleados",
+    
+    // Mapping from Enum to possible backend names (case insensitive search recommended but we'll try exact matches first)
+    const roleMapping: { [key in CommitteeRole]: string[] } = {
+      [CommitteeRole.PRESIDENT]: ["Presidente", "President"],
+      [CommitteeRole.VICE_PRESIDENT]: ["Vicepresidente", "Vice President"],
+      [CommitteeRole.SECRETARY]: ["Secretario", "Secretary"],
+      [CommitteeRole.MEMBER]: ["Miembro", "Vocal", "Member"],
+      [CommitteeRole.ALTERNATE]: ["Suplente", "Representante Empleados", "Alternate"],
     };
 
-    const backendRoleName = roleMapping[role];
-    const foundRole = roles.find((r) => r.name === backendRoleName);
+    const targetNames = roleMapping[role];
+    const foundRole = roles.find((r) => targetNames.includes(r.name));
 
     if (!foundRole) {
-      throw new Error(`Role ${role} not found in backend`);
+      console.error(`Role ${role} not found in backend. Available roles:`, roles.map((r: any) => r.name));
+      // Fallback: try to find by ID if the role enum matches the name property loosely? 
+      // Or just fail. But logging helps debugging.
+      
+      // Attempt blindly fast fix: if roles has "Miembro" and we looked for "Vocal", we found it now.
+      // If we are here, it means NONE of the aliases matched.
+      throw new Error(`Role ${role} not found in backend. Names searched: ${targetNames.join(", ")}`);
     }
 
     return foundRole.id;

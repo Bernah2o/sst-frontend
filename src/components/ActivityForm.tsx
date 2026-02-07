@@ -22,7 +22,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { es } from 'date-fns/locale';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { Activity, ActivityCreate, ActivityUpdate, ActivityPriority, ActivityStatus, CommitteeMember } from '../types';
+import { Activity, ActivityCreate, ActivityUpdate, ActivityPriority, ActivityStatus, CommitteeMember, Meeting, MeetingStatus } from '../types';
 
 interface ActivityFormProps {
   open: boolean;
@@ -30,6 +30,8 @@ interface ActivityFormProps {
   onSubmit: (data: ActivityCreate | ActivityUpdate) => Promise<void>;
   activity?: Activity;
   members: CommitteeMember[];
+  meetings?: Meeting[];
+  defaultMeetingId?: number;
   loading?: boolean;
   error?: string | null;
 }
@@ -63,6 +65,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
   onSubmit,
   activity,
   members,
+  meetings = [],
+  defaultMeetingId,
   loading = false,
   error = null,
 }) => {
@@ -75,6 +79,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
       priority: activity?.priority || ActivityPriority.MEDIUM,
       status: activity?.status || ActivityStatus.PENDING,
       assigned_to: activity?.assigned_to || null,
+      meeting_id: activity?.meeting_id || defaultMeetingId || null,
       due_date: activity?.due_date ? new Date(activity.due_date) : null,
       progress_percentage: activity?.progress_percentage || 0,
       notes: activity?.notes || '',
@@ -87,6 +92,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
           ...values,
           due_date: values.due_date ? values.due_date.toISOString().split('T')[0] : undefined,
           assigned_to: values.assigned_to || undefined,
+          meeting_id: values.meeting_id || undefined,
         };
         await onSubmit(submitData);
         onClose();
@@ -231,13 +237,38 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
                      >
                        <MenuItem value="">Sin asignar</MenuItem>
                        {members.filter(m => m.is_active).map((member) => (
-                         <MenuItem key={member.id} value={member.user?.id}>
+                         <MenuItem key={member.id} value={member.id}>
                            {member.user ? `${member.user.first_name} ${member.user.last_name}` : 'Usuario no disponible'}
                          </MenuItem>
                        ))}
                      </Select>
                    </FormControl>
                  </Grid>
+
+                 {meetings.filter(m => m.status !== MeetingStatus.COMPLETED && m.status !== MeetingStatus.CANCELLED).length > 0 && (
+                   <Grid size={{ xs: 12, md: 6 }}>
+                     <FormControl fullWidth>
+                       <InputLabel>Reunión vinculada</InputLabel>
+                       <Select
+                         name="meeting_id"
+                         value={formik.values.meeting_id || ''}
+                         onChange={formik.handleChange}
+                         onBlur={formik.handleBlur}
+                         label="Reunión vinculada"
+                       >
+                         <MenuItem value="">Sin reunión</MenuItem>
+                         {meetings
+                           .filter(m => m.status !== MeetingStatus.COMPLETED && m.status !== MeetingStatus.CANCELLED)
+                           .map((meeting) => (
+                           <MenuItem key={meeting.id} value={meeting.id}>
+                             {meeting.title} - {new Date(meeting.meeting_date).toLocaleDateString('es-ES')}
+                           </MenuItem>
+                         ))}
+                       </Select>
+                       <FormHelperText>Vincular a una reunión para que aparezca en el Acta PDF</FormHelperText>
+                     </FormControl>
+                   </Grid>
+                 )}
 
                  <Grid size={{ xs: 12, md: 6 }}>
                    <DatePicker

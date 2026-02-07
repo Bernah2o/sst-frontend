@@ -63,7 +63,6 @@ import { adminConfigService } from "../services/adminConfigService";
 import api, { apiService } from "../services/api";
 import { formatDate } from "../utils/dateUtils";
 import { suppliersService, Supplier, Doctor } from "../services/suppliersService";
-import profesiogramaService, { TipoExamen } from "../services/profesiogramaService";
 import AutocompleteField, { AutocompleteOption } from "../components/AutocompleteField";
 import { COLOMBIAN_DEPARTMENTS } from "../data/colombianDepartments";
 import { COLOMBIAN_CITIES } from "../data/colombianCities";
@@ -82,8 +81,7 @@ interface OccupationalExamData {
   worker_hire_date?: string; // Fecha de ingreso del trabajador
 
   // Campos del modelo backend
-  tipo_examen_id: number;
-  tipo_examen?: TipoExamen;
+  exam_type?: string;
   exam_date: string;
   departamento?: string;
   ciudad?: string;
@@ -147,12 +145,20 @@ interface Programa {
   updated_at: string;
 }
 
+// Mapeo de exam_type (campo legacy en BD) a etiquetas legibles
+// Valores que se usan en el Select (opciones del formulario y filtro)
+const EXAM_TYPE_LABELS: Record<string, string> = {
+  INGRESO: "Examen de Ingreso",
+  PERIODICO: "Examen Periódico",
+  REINTEGRO: "Examen de Reintegro",
+  RETIRO: "Examen de Retiro",
+};
+
 const OccupationalExam: React.FC = () => {
   const [exams, setExams] = useState<OccupationalExamData[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [tiposExamen, setTiposExamen] = useState<TipoExamen[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -166,7 +172,7 @@ const OccupationalExam: React.FC = () => {
     null
   );
   const [filters, setFilters] = useState({
-    tipo_examen_id: "",
+    exam_type: "",
     worker: "",
     search: "",
   });
@@ -182,7 +188,7 @@ const OccupationalExam: React.FC = () => {
     worker_name: "",
     worker_position: "",
     worker_hire_date: "",
-    tipo_examen_id: "" as string | number,
+    exam_type: "",
     exam_date: null as Date | null,
     programa: "",
     occupational_conclusions: "",
@@ -256,7 +262,7 @@ const OccupationalExam: React.FC = () => {
       params.append("page", page.toString());
       params.append("limit", "20");
 
-      if (filters.tipo_examen_id) params.append("tipo_examen_id", filters.tipo_examen_id.toString());
+      if (filters.exam_type) params.append("exam_type", filters.exam_type);
       if (filters.worker) params.append("worker_id", filters.worker);
       if (filters.search) params.append("search", filters.search);
 
@@ -471,7 +477,7 @@ const OccupationalExam: React.FC = () => {
       worker_name: "",
       worker_position: "",
       worker_hire_date: "",
-      tipo_examen_id: "",
+      exam_type: "",
       exam_date: null,
       programa: "",
       occupational_conclusions: "",
@@ -528,7 +534,7 @@ const OccupationalExam: React.FC = () => {
 
       const payload: any = {
         worker_id: parseInt(formData.worker_id),
-        tipo_examen_id: formData.tipo_examen_id ? Number(formData.tipo_examen_id) : null,
+        exam_type: formData.exam_type || null,
         exam_date: formData.exam_date?.toISOString().split("T")[0],
         departamento: formData.departamento || null,
         ciudad: formData.ciudad || null,
@@ -659,7 +665,7 @@ const OccupationalExam: React.FC = () => {
       const params = new URLSearchParams();
       params.append("format", "pdf"); // Agregar parámetro format=pdf
       params.append("download", "true"); // Agregar parámetro download=true
-      if (filters.tipo_examen_id) params.append("tipo_examen_id", filters.tipo_examen_id.toString());
+      if (filters.exam_type) params.append("exam_type", filters.exam_type);
       if (filters.worker) params.append("worker_id", filters.worker);
       if (filters.search) params.append("search", filters.search);
 
@@ -729,7 +735,7 @@ const OccupationalExam: React.FC = () => {
         worker_name: exam.worker_name || "",
         worker_position: exam.worker_position || "",
         worker_hire_date: exam.worker_hire_date || "",
-        tipo_examen_id: exam.tipo_examen_id || "",
+        exam_type: exam.exam_type || "",
         exam_date: exam.exam_date ? new Date(exam.exam_date) : null,
         programa: exam.programa || "",
         occupational_conclusions: exam.occupational_conclusions || "",
@@ -768,7 +774,7 @@ const OccupationalExam: React.FC = () => {
         worker_name: "",
         worker_position: "",
         worker_hire_date: "",
-        tipo_examen_id: "",
+        exam_type: "",
         exam_date: null,
         programa: "",
         occupational_conclusions: "",
@@ -954,41 +960,22 @@ const OccupationalExam: React.FC = () => {
   };
 
 
-  const fetchTiposExamen = useCallback(async () => {
-    try {
-      const tipos = await profesiogramaService.listTiposExamen({ activo: true });
-      setTiposExamen(tipos);
-    } catch (error) {
-      console.error("Error fetching tipos examen:", error);
-    }
-  }, []);
 
   useEffect(() => {
     const loadData = async () => {
       await fetchWorkers();
       await fetchProgramas();
       await fetchSuppliers();
-    fetchTiposExamen();
       await fetchExams();
     };
     loadData();
-  }, [page, filters, fetchWorkers, fetchProgramas, fetchSuppliers, fetchExams, fetchTiposExamen]);
+  }, [page, filters, fetchWorkers, fetchProgramas, fetchSuppliers, fetchExams]);
 
   useEffect(() => {
     fetchProgramas();
     fetchSuppliers();
-    fetchTiposExamen();
-  }, [fetchProgramas, fetchSuppliers, fetchTiposExamen]);
+  }, [fetchProgramas, fetchSuppliers]);
 
-  const tiposExamenFiltrados = tiposExamen.filter((type) =>
-    [
-      "Examen de Ingreso",
-      "Examen Periódico",
-      "Examen de Reintegro",
-      "Examen de Retiro",
-      "Examen Médico Ocupacional",
-    ].includes(type.nombre)
-  );
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
@@ -1037,15 +1024,15 @@ const OccupationalExam: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>Tipo de Examen</InputLabel>
                   <Select
-                    value={filters.tipo_examen_id}
+                    value={filters.exam_type}
                     onChange={(e) =>
-                      handleFilterChange("tipo_examen_id", e.target.value)
+                      handleFilterChange("exam_type", e.target.value)
                     }
                   >
                     <MenuItem value="">Todos</MenuItem>
-                    {tiposExamenFiltrados.map((type) => (
-                      <MenuItem key={type.id} value={type.id}>
-                        {type.nombre}
+                    {Object.entries(EXAM_TYPE_LABELS).map(([value, label]) => (
+                      <MenuItem key={value} value={value}>
+                        {label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -1144,7 +1131,7 @@ const OccupationalExam: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={exam.tipo_examen?.nombre || "N/A"}
+                            label={exam.exam_type ? EXAM_TYPE_LABELS[exam.exam_type] || exam.exam_type : "N/A"}
                             color="primary"
                             size="small"
                           />
@@ -1500,17 +1487,17 @@ const OccupationalExam: React.FC = () => {
                 <FormControl fullWidth required>
                   <InputLabel>Tipo de Examen</InputLabel>
                   <Select
-                    value={formData.tipo_examen_id}
+                    value={formData.exam_type}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        tipo_examen_id: e.target.value,
+                        exam_type: e.target.value as string,
                       })
                     }
                   >
-                    {tiposExamenFiltrados.map((type) => (
-                      <MenuItem key={type.id} value={type.id}>
-                        {type.nombre}
+                    {Object.entries(EXAM_TYPE_LABELS).map(([value, label]) => (
+                      <MenuItem key={value} value={value}>
+                        {label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -2024,7 +2011,7 @@ const OccupationalExam: React.FC = () => {
                             <ListItemText
                               primary="Tipo"
                               secondary={
-                                viewingExam.tipo_examen?.nombre || "N/A"
+                                viewingExam.exam_type ? EXAM_TYPE_LABELS[viewingExam.exam_type] || viewingExam.exam_type : "N/A"
                               }
                             />
                           </ListItem>
@@ -2225,7 +2212,7 @@ const OccupationalExam: React.FC = () => {
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Tipo de examen:</strong>{" "}
-                  {deletingExam.tipo_examen?.nombre || "N/A"}
+                  {deletingExam.exam_type ? EXAM_TYPE_LABELS[deletingExam.exam_type] || deletingExam.exam_type : "N/A"}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Fecha:</strong> {formatDate(deletingExam.exam_date)}

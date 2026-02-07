@@ -61,14 +61,14 @@ export const committeeActivityService = {
   // For status changes not supported by backend, we'll use the update endpoint
   async startActivity(committeeId: number, activityId: number): Promise<Activity> {
     const response = await api.put(`${BASE_URL}/${activityId}`, {
-      status: 'in_progress'
+      status: ActivityStatus.IN_PROGRESS
     });
     return response.data;
   },
 
   async pauseActivity(committeeId: number, activityId: number, reason?: string): Promise<Activity> {
     const response = await api.put(`${BASE_URL}/${activityId}`, {
-      status: 'paused',
+      status: ActivityStatus.PENDING,
       notes: reason ? `Pausada: ${reason}` : 'Pausada'
     });
     return response.data;
@@ -76,14 +76,14 @@ export const committeeActivityService = {
 
   async resumeActivity(committeeId: number, activityId: number): Promise<Activity> {
     const response = await api.put(`${BASE_URL}/${activityId}`, {
-      status: 'in_progress'
+      status: ActivityStatus.IN_PROGRESS
     });
     return response.data;
   },
 
   async cancelActivity(committeeId: number, activityId: number, reason?: string): Promise<Activity> {
     const response = await api.put(`${BASE_URL}/${activityId}`, {
-      status: 'cancelled',
+      status: ActivityStatus.CANCELLED,
       notes: reason ? `Cancelada: ${reason}` : 'Cancelada'
     });
     return response.data;

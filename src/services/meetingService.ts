@@ -65,6 +65,11 @@ export const meetingService = {
     await api.delete(`${BASE_URL}/${id}`);
   },
 
+  async getDeletePreview(meetingId: number): Promise<{ meeting_id: number; meeting_title: string; attendance_count: number; activities_count: number; can_delete: boolean }> {
+    const response = await api.get(`${BASE_URL}/${meetingId}/delete-preview`);
+    return response.data;
+  },
+
   // Meeting status management
   async startMeeting(id: number, committeeId: number): Promise<Meeting> {
     const response = await api.post(`${BASE_URL}/${id}/start`);
@@ -101,8 +106,8 @@ export const meetingService = {
     return response.data;
   },
 
-  async updateAttendance(id: number, attendance: MeetingAttendanceUpdate, committeeId: number, meetingId: number): Promise<MeetingAttendance> {
-    const response = await api.put(`${BASE_URL}/${meetingId}/attendance/${id}`, attendance);
+  async updateAttendance(memberId: number, attendance: MeetingAttendanceUpdate, committeeId: number, meetingId: number): Promise<MeetingAttendance> {
+    const response = await api.put(`${BASE_URL}/${meetingId}/attendance/${memberId}`, attendance);
     return response.data;
   },
 
@@ -170,8 +175,18 @@ export const meetingService = {
 
   // Export meeting data
   async exportMeetingData(meetingId: number, committeeId: number, format: 'pdf' | 'excel'): Promise<Blob> {
-    // Note: Export functionality may not be available in backend, returning empty blob
-    console.warn('Export functionality not implemented in backend');
+    if (format === 'pdf') {
+      return this.generateMeetingMinutesPdf(meetingId);
+    }
+    console.warn('Excel export not implemented');
     return new Blob();
+  },
+
+  // Generate meeting minutes PDF (Acta de Reunión)
+  async generateMeetingMinutesPdf(meetingId: number): Promise<Blob> {
+    const response = await api.get(`${BASE_URL}/${meetingId}/minutes/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
   },
 };

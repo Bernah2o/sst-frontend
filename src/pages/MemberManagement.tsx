@@ -77,6 +77,7 @@ const MemberManagement: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState<MemberFormData>({
     user_id: null,
     role: CommitteeRole.MEMBER,
@@ -205,36 +206,35 @@ const MemberManagement: React.FC = () => {
       start_date: new Date().toISOString().split('T')[0],
       notes: '',
     });
+    setFormError(null);
     setAddDialogOpen(true);
   };
 
   const handleFormSubmit = async () => {
     if (!formData.user_id || !committeeId) {
-      setError('Por favor selecciona un usuario');
+      setFormError('Por favor selecciona un usuario');
       return;
     }
 
     try {
       setFormLoading(true);
+      setFormError(null);
       const id = parseInt(committeeId);
 
       if (editDialogOpen && selectedMember) {
-        // Update existing member - only send fields that can be updated
-        const roleId = await committeeMemberService.getRoleId(formData.role);
+        // Update existing member
         const updateData: CommitteeMemberUpdate = {
-          role_id: roleId,
+          role: formData.role,
           start_date: formData.start_date,
           notes: formData.notes,
         };
         await committeeMemberService.updateCommitteeMember(selectedMember.id, updateData);
       } else {
-        // Add new member - get role_id first
-        const roleId = await committeeMemberService.getRoleId(formData.role);
+        // Add new member - backend auto-resolves role_id from role enum
         const createData: CommitteeMemberCreate = {
           committee_id: id,
           user_id: formData.user_id,
           role: formData.role,
-          role_id: roleId,
           is_active: true,
           start_date: formData.start_date,
           notes: formData.notes,
@@ -248,7 +248,9 @@ const MemberManagement: React.FC = () => {
       setSelectedMember(null);
       loadInitialData();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al guardar el miembro');
+      const detail = err.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : err.message || 'Error al guardar el miembro';
+      setFormError(message);
     } finally {
       setFormLoading(false);
     }
@@ -508,12 +510,12 @@ const MemberManagement: React.FC = () => {
 
       {/* Dialog para agregar/editar miembro */}
       <Dialog 
-        open={addDialogOpen || editDialogOpen} 
+        open={addDialogOpen || editDialogOpen}
         onClose={() => {
           setAddDialogOpen(false);
           setEditDialogOpen(false);
           setSelectedMember(null);
-          setError(null);
+          setFormError(null);
         }} 
         maxWidth="sm" 
         fullWidth
@@ -522,6 +524,11 @@ const MemberManagement: React.FC = () => {
           {editDialogOpen ? 'Editar Miembro' : 'Agregar Nuevo Miembro'}
         </DialogTitle>
         <DialogContent>
+          {formError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {formError}
+            </Alert>
+          )}
           <Box sx={{ pt: 2 }}>
             {/* User Selection */}
             <Autocomplete
@@ -589,7 +596,7 @@ const MemberManagement: React.FC = () => {
               setAddDialogOpen(false);
               setEditDialogOpen(false);
               setSelectedMember(null);
-              setError(null);
+              setFormError(null);
             }}
             disabled={formLoading}
           >
