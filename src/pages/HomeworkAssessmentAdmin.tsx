@@ -39,6 +39,7 @@ import {
   AssignmentInd,
   Delete,
   PictureAsPdf,
+  Assessment as AssessmentIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import api from "../services/api";
@@ -275,6 +276,14 @@ const HomeworkAssessmentAdmin: React.FC = () => {
           Gestión de Autoevaluaciones
         </Typography>
         <Box display="flex" gap={2}>
+          <Button
+            startIcon={<AssessmentIcon />}
+            onClick={() => navigate("/admin/homework-assessments/dashboard")}
+            variant="contained"
+            color="info"
+          >
+            Dashboard de Análisis
+          </Button>
           <Button
             startIcon={<Add />}
             onClick={() => setOpenAssignDialog(true)}

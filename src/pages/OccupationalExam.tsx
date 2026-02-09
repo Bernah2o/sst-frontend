@@ -15,6 +15,7 @@ import {
   Clear as ClearIcon,
   PlaylistAdd as FollowUpIcon,
   PlaylistAddCheck as FollowUpActiveIcon,
+  Error as ErrorIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -183,6 +184,12 @@ const OccupationalExam: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [examSeguimientos, setExamSeguimientos] = useState<{[key: number]: boolean}>({});
+  const [errorDialog, setErrorDialog] = useState({ 
+    open: false, 
+    title: '', 
+    message: '',
+    detail: ''
+  });
   const [formData, setFormData] = useState({
     worker_id: "",
     worker_name: "",
@@ -711,11 +718,23 @@ const OccupationalExam: React.FC = () => {
       );
 
       if (response.status === 200) {
-        // Aquí podrías agregar una notificación de éxito
+        // Podrías agregar una notificación de éxito aquí
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error enviando correo:", error);
-      // Aquí podrías agregar una notificación de error al usuario
+      
+      if (error.response && error.response.status === 404) {
+        const errorData = error.response.data;
+        setErrorDialog({
+          open: true,
+          title: "Aviso de Notificación",
+          message: errorData.message || "El trabajador no requiere examen u operacion no permitida.",
+          detail: errorData.detail || ""
+        });
+      } else {
+        const errorMessage = error.response?.data?.detail || error.message || "Error desconocido al enviar la notificación.";
+        alert(`Error al enviar el correo: ${errorMessage}`);
+      }
     } finally {
       setSendingEmail(null);
     }
@@ -2234,6 +2253,42 @@ const OccupationalExam: React.FC = () => {
               startIcon={<DeleteIcon />}
             >
               Eliminar
+            </Button>
+          </DialogActions>
+        </Dialog>
+        
+        {/* Diálogo Genérico de Alerta/Info para el Administrador */}
+        <Dialog
+          open={errorDialog.open}
+          onClose={() => setErrorDialog({ ...errorDialog, open: false })}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box display="flex" alignItems="center" gap={1}>
+              <ErrorIcon color="info" />
+              {errorDialog.title}
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="body1" gutterBottom fontWeight="medium">
+                {errorDialog.message}
+              </Typography>
+              {errorDialog.detail && (
+                <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>
+                  {errorDialog.detail}
+                </Alert>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+                onClick={() => setErrorDialog({ ...errorDialog, open: false })} 
+                color="primary" 
+                variant="contained"
+            >
+              Entendido
             </Button>
           </DialogActions>
         </Dialog>

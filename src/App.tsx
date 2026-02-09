@@ -43,6 +43,7 @@ import Seguimiento from "./pages/Seguimiento";
 import Reinduction from "./pages/Reinduction";
 import HomeworkAssessment from "./pages/HomeworkAssessment";
 import HomeworkAssessmentAdmin from "./pages/HomeworkAssessmentAdmin";
+import HomeworkAssessmentDashboard from "./pages/HomeworkAssessmentDashboard";
 import Suppliers from "./pages/Suppliers";
 import SystemSettings from "./pages/SystemSettings";
 import Contractors from "./pages/Contractors";
@@ -817,6 +818,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
                         <HomeworkAssessmentAdmin />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/homework-assessments/dashboard"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <HomeworkAssessmentDashboard />
                       </ProtectedRoute>
                     }
                   />
