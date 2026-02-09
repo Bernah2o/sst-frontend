@@ -19,8 +19,20 @@ import {
   Alert,
   CircularProgress,
   Autocomplete,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
-import { Save, Download, PhotoCamera, Clear, CheckCircle } from "@mui/icons-material";
+import { 
+  Save, 
+  Download, 
+  PhotoCamera, 
+  Clear, 
+  CheckCircle,
+  AssignmentTurnedIn as ActionIcon,
+  Timeline as FollowUpIcon
+} from "@mui/icons-material";
 import SignatureCanvas from "react-signature-canvas";
 import { useSnackbar } from "notistack";
 import { useParams } from "react-router-dom";
@@ -73,6 +85,7 @@ const HomeworkAssessment: React.FC = () => {
     evaluation_date: new Date().toISOString().split("T")[0],
   });
   const [photos, setPhotos] = useState<Record<string, string>>({});
+  const [managementData, setManagementData] = useState<Record<string, any>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
   
   // Función reutilizable para cargar datos
@@ -142,6 +155,14 @@ const HomeworkAssessment: React.FC = () => {
               try {
                   const savedPhotos = JSON.parse(targetAssessment.photos_data);
                   setPhotos(savedPhotos);
+                  
+                  if (targetAssessment.sst_management_data) {
+                    try {
+                        setManagementData(JSON.parse(targetAssessment.sst_management_data));
+                    } catch (e) {
+                        console.error("Error parsing management data", e);
+                    }
+                  }
               } catch (e) {
                   console.error("Error parsing photos", e);
               }
@@ -307,6 +328,36 @@ const HomeworkAssessment: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveManagement = async () => {
+    if (!formData.id) return;
+    setLoading(true);
+    try {
+      const payload = {
+        ...formData,
+        sst_management_data: JSON.stringify(managementData),
+        photos: photos // Mantener fotos actuales
+      };
+      await api.put(`/assessments/homework/${formData.id}`, payload);
+      enqueueSnackbar("Gestión SST guardada exitosamente", { variant: "success" });
+      await fetchInitialData();
+    } catch (error: any) {
+      console.error("Error saving management:", error);
+      enqueueSnackbar("Error al guardar la gestión", { variant: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManagementChange = (itemId: string, field: string, value: any) => {
+    setManagementData(prev => ({
+      ...prev,
+      [itemId]: {
+        ...(prev[itemId] || { status: 'OPEN', action: '', date: '' }),
+        [field]: value
+      }
+    }));
   };
 
   if (isInitializing) {
@@ -551,6 +602,102 @@ const HomeworkAssessment: React.FC = () => {
           )}
         </Box>
       </Paper>
+
+      {/* Gestión SST y Plan de Acción (Solo para Admin/Supervisor y cuando ya está completada por el trabajador) */}
+      {(user?.role === 'admin' || user?.role === 'supervisor') && isReadOnly && (
+        <Paper sx={{ p: 3, mb: 3, borderTop: 6, borderTopColor: "secondary.main" }}>
+          <Typography variant="h6" gutterBottom color="secondary.main" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FollowUpIcon /> Documentación de Hallazgos y Seguimiento SST
+          </Typography>
+          <Typography variant="body2" color="textSecondary" paragraph>
+            Como administrador, registre aquí las acciones tomadas para resolver los hallazgos identificados en esta autoevaluación.
+          </Typography>
+          
+          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+            <Table size="small">
+              <TableHead sx={{ bgcolor: "grey.50" }}>
+                <TableRow>
+                  <TableCell><strong>Ítem con Hallazgo</strong></TableCell>
+                  <TableCell><strong>Observación del Trabajador</strong></TableCell>
+                  <TableCell width="20%"><strong>Acción Documentada</strong></TableCell>
+                  <TableCell width="15%"><strong>Estado Seguimiento</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {CHECKLIST_ITEMS.filter(item => !formData[`${item.id}_check`]).map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell sx={{ fontWeight: 'medium' }}>{item.label}</TableCell>
+                    <TableCell color="text.secondary">
+                      {formData[`${item.id}_obs`] || "Sin observación"}
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={2}
+                        size="small"
+                        placeholder="Describa la acción correctiva..."
+                        value={managementData[item.id]?.action || ""}
+                        onChange={(e) => handleManagementChange(item.id, 'action', e.target.value)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <FormControl fullWidth size="small">
+                        <Select
+                          value={managementData[item.id]?.status || "OPEN"}
+                          onChange={(e) => handleManagementChange(item.id, 'status', e.target.value)}
+                          sx={{ 
+                            color: managementData[item.id]?.status === 'CLOSED' ? 'success.main' : 
+                                   managementData[item.id]?.status === 'IN_PROGRESS' ? 'warning.main' : 'error.main' 
+                          }}
+                        >
+                          <MenuItem value="OPEN">Abierto / Pendiente</MenuItem>
+                          <MenuItem value="IN_PROGRESS">En Ejecución</MenuItem>
+                          <MenuItem value="CLOSED">Cerrado / Verificado</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {CHECKLIST_ITEMS.filter(item => !formData[`${item.id}_check`]).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      <Typography variant="body2" color="success.main" sx={{ py: 2 }}>
+                        No se identificaron hallazgos que requieran plan de acción.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Observaciones Generales de la Gestión SST"
+                fullWidth
+                multiline
+                rows={3}
+                value={formData.sst_observations || ""}
+                onChange={(e) => setFormData({...formData, sst_observations: e.target.value})}
+              />
+            </Grid>
+          </Grid>
+
+          <Box display="flex" justifyContent="flex-end" sx={{ mt: 3 }}>
+            <Button 
+              variant="contained" 
+              color="secondary" 
+              startIcon={<Save />} 
+              onClick={handleSaveManagement}
+              disabled={loading}
+            >
+              Guardar Gestión y Seguimiento
+            </Button>
+          </Box>
+        </Paper>
+      )}
 
       {!isReadOnly && (
       <Box display="flex" justifyContent="flex-end" gap={2}>
