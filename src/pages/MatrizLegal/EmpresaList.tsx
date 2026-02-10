@@ -50,6 +50,8 @@ import matrizLegalService, {
   EmpresaResumen,
   SectorEconomicoSimple,
 } from "../../services/matrizLegalService";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import ConfirmDialog from "../../components/ConfirmDialog";
 
 interface EmpresaFormData {
   nombre: string;
@@ -128,6 +130,7 @@ const EmpresaList: React.FC = () => {
   const [sectores, setSectores] = useState<SectorEconomicoSimple[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
 
   // Estados de paginación
   const [page, setPage] = useState(0);
@@ -252,7 +255,16 @@ const EmpresaList: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("¿Está seguro de eliminar esta empresa? Se eliminarán también sus evaluaciones.")) return;
+    const empresa = empresas.find(e => e.id === id);
+    const confirmed = await showConfirmDialog({
+      title: 'Eliminar Empresa',
+      message: `¿Está seguro de eliminar la empresa "${empresa?.nombre}"? Se eliminarán también sus evaluaciones y esta acción no se puede deshacer.`,
+      severity: 'error',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar'
+    });
+
+    if (!confirmed) return;
 
     try {
       await matrizLegalService.deleteEmpresa(id);
@@ -562,6 +574,7 @@ const EmpresaList: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <ConfirmDialog {...dialogState} />
     </Box>
   );
 };

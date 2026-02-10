@@ -42,6 +42,8 @@ import {
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import matrizLegalService, { SectorEconomico } from "../../services/matrizLegalService";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import ConfirmDialog from "../../components/ConfirmDialog";
 
 interface SectorFormData {
   nombre: string;
@@ -67,6 +69,7 @@ const SectorEconomicoList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState<"todos" | "activo" | "inactivo">("todos");
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
   
   // Estados de paginación
   const [page, setPage] = useState(0);
@@ -144,7 +147,16 @@ const SectorEconomicoList: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("¿Está seguro de eliminar este sector?")) return;
+    const sector = activos.find(s => s.id === id);
+    const confirmed = await showConfirmDialog({
+      title: 'Eliminar Sector Económico',
+      message: `¿Está seguro de eliminar el sector "${sector?.nombre}"? Esta acción no se puede deshacer.`,
+      severity: 'error',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar'
+    });
+
+    if (!confirmed) return;
 
     try {
       await matrizLegalService.deleteSectorEconomico(id);
@@ -152,7 +164,7 @@ const SectorEconomicoList: React.FC = () => {
       loadSectores();
     } catch (error) {
       console.error("Error deleting sector:", error);
-      enqueueSnackbar("Error al eliminar el sector", { variant: "error" });
+      enqueueSnackbar("Error al eliminar the sector", { variant: "error" });
     }
   };
 
@@ -413,6 +425,7 @@ const SectorEconomicoList: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <ConfirmDialog {...dialogState} />
     </Box>
   );
 };

@@ -36,6 +36,8 @@ import profesiogramaService, {
   Inmunizacion,
   ProfesiogramaDuplicateResult,
 } from "../services/profesiogramaService";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 type TipoEvaluacionExamen =
   | "ingreso"
@@ -920,6 +922,7 @@ const CONTROLES_ESTANDAR: Record<string, {
 
 const ProfesiogramasCargo: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
 
   // Data sources
   const [cargos, setCargos] = useState<CargoOption[]>([]);
@@ -1756,19 +1759,23 @@ const ProfesiogramasCargo: React.FC = () => {
     }
 
     if (factoresExcedenVLP.length > 0) {
-      const confirmacion = window.confirm(
-        `⚠️ ADVERTENCIA: Los siguientes factores de riesgo tienen valores medidos que EXCEDEN el Valor Límite Permisible:\n\n` +
-        factoresExcedenVLP.map(f => `• ${f}`).join('\n') +
-        `\n\nEsto indica una situación de riesgo que requiere:\n` +
-        `- Implementación inmediata de controles\n` +
-        `- Reducción de exposición\n` +
-        `- Evaluación de reubicación de trabajadores\n` +
-        `- ND debe ser 10 (Muy Alto) según GTC 45\n\n` +
-        `¿Desea continuar guardando el profesiograma de todos modos?\n` +
-        `(Se recomienda corregir los valores o implementar controles antes de guardar)`
-      );
+      const confirmed = await showConfirmDialog({
+        title: '⚠️ ADVERTENCIA: Exceso de VLP',
+        message: `Los siguientes factores de riesgo tienen valores medidos que EXCEDEN el Valor Límite Permisible:\n\n` +
+          factoresExcedenVLP.map(f => `• ${f}`).join('\n') +
+          `\n\nEsto indica una situación de riesgo que requiere:\n` +
+          `- Implementación inmediata de controles\n` +
+          `- Reducción de exposición\n` +
+          `- Evaluación de reubicación de trabajadores\n` +
+          `- ND debe ser 10 (Muy Alto) según GTC 45\n\n` +
+          `¿Desea continuar guardando el profesiograma de todos modos?\n` +
+          `(Se recomienda corregir los valores o implementar controles antes de guardar)`,
+        severity: 'warning',
+        confirmText: 'Continuar y Guardar',
+        cancelText: 'Corregir'
+      });
 
-      if (!confirmacion) {
+      if (!confirmed) {
         return;
       }
     }
@@ -3707,6 +3714,7 @@ const ProfesiogramasCargo: React.FC = () => {
           )}
         </Paper>
       )}
+      <ConfirmDialog {...dialogState} />
     </Box>
   );
 };

@@ -25,11 +25,14 @@ import {
 import { useNavigate } from 'react-router-dom';
 import interactiveLessonApi from '../services/interactiveLessonApi';
 import { InteractiveLessonListItem } from '../types/interactiveLesson';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const InteractiveLessons: React.FC = () => {
   const navigate = useNavigate();
   const [lessons, setLessons] = useState<InteractiveLessonListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
 
   useEffect(() => {
     loadLessons();
@@ -48,7 +51,16 @@ const InteractiveLessons: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar esta lección?')) {
+    const lesson = lessons.find(l => l.id === id);
+    const confirmed = await showConfirmDialog({
+      title: 'Eliminar Lección',
+      message: `¿Estás seguro de que deseas eliminar la lección "${lesson?.title}"? Esta acción no se puede deshacer.`,
+      severity: 'error',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar'
+    });
+
+    if (confirmed) {
       try {
         await interactiveLessonApi.deleteLesson(id);
         setLessons(lessons.filter((l) => l.id !== id));
@@ -153,6 +165,7 @@ const InteractiveLessons: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      <ConfirmDialog {...dialogState} />
     </Box>
   );
 };

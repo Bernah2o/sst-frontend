@@ -16,6 +16,9 @@ import {
   PlaylistAdd as FollowUpIcon,
   PlaylistAddCheck as FollowUpActiveIcon,
   Error as ErrorIcon,
+  Warning as WarningIcon,
+  CheckCircle as SuccessIcon,
+  Info as InfoIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -28,6 +31,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   DialogActions,
   IconButton,
   Table,
@@ -67,6 +71,8 @@ import { suppliersService, Supplier, Doctor } from "../services/suppliersService
 import AutocompleteField, { AutocompleteOption } from "../components/AutocompleteField";
 import { COLOMBIAN_DEPARTMENTS } from "../data/colombianDepartments";
 import { COLOMBIAN_CITIES } from "../data/colombianCities";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 
 // Enums que coinciden con el backend
@@ -168,7 +174,7 @@ const OccupationalExam: React.FC = () => {
   const [editingExam, setEditingExam] = useState<OccupationalExamData | null>(null);
   const [viewingExam, setViewingExam] = useState<OccupationalExamData | null>(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
   const [deletingExam, setDeletingExam] = useState<OccupationalExamData | null>(
     null
   );
@@ -184,12 +190,29 @@ const OccupationalExam: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [examSeguimientos, setExamSeguimientos] = useState<{[key: number]: boolean}>({});
-  const [errorDialog, setErrorDialog] = useState({ 
+  const [errorDialog, setErrorDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    detail: string;
+    severity: 'error' | 'warning' | 'info' | 'success';
+  }>({ 
     open: false, 
     title: '', 
     message: '',
-    detail: ''
+    detail: '',
+    severity: 'info'
   });
+
+  const showAlert = (message: string, severity: 'error' | 'warning' | 'info' | 'success' = 'info', title?: string, detail: string = '') => {
+    setErrorDialog({
+      open: true,
+      title: title || (severity === 'error' ? 'Error' : severity === 'warning' ? 'Advertencia' : 'Información'),
+      message,
+      detail,
+      severity
+    });
+  };
   const [formData, setFormData] = useState({
     worker_id: "",
     worker_name: "",
@@ -369,13 +392,13 @@ const OccupationalExam: React.FC = () => {
     if (file) {
       // Validar que sea un archivo PDF
       if (file.type !== 'application/pdf') {
-        alert('Por favor seleccione un archivo PDF válido');
+        showAlert('Por favor seleccione un archivo PDF válido', 'warning');
         return;
       }
       
       // Validar tamaño del archivo (máximo 10MB)
       if (file.size > 10 * 1024 * 1024) {
-        alert('El archivo es demasiado grande. El tamaño máximo permitido es 10MB');
+        showAlert('El archivo es demasiado grande. El tamaño máximo permitido es 10MB', 'warning');
         return;
       }
       
@@ -425,7 +448,7 @@ const OccupationalExam: React.FC = () => {
         errorMessage = error.message;
       }
       
-      alert(errorMessage);
+      showAlert(errorMessage, 'error', 'Error al previsualizar PDF');
     }
   };
 
@@ -474,7 +497,7 @@ const OccupationalExam: React.FC = () => {
         errorMessage = error.message;
       }
       
-      alert(errorMessage);
+      showAlert(errorMessage, 'error', 'Error al descargar PDF');
     }
   };
 
@@ -513,13 +536,13 @@ const OccupationalExam: React.FC = () => {
     try {
       const durValue = formData.duracion_cargo_actual_meses;
       if (durValue === null || durValue === undefined || durValue === '') {
-        alert("Duración del cargo actual (meses) es obligatoria (Art. 15)");
+        showAlert("Duración del cargo actual (meses) es obligatoria (Art. 15)", 'warning');
         return;
       }
 
       const factores = formData.factores_riesgo_evaluados as any[];
       if (!Array.isArray(factores) || factores.length === 0) {
-        alert('Debe incluir al menos un factor de riesgo evaluado (Art. 15)');
+        showAlert('Debe incluir al menos un factor de riesgo evaluado (Art. 15)', 'warning');
         return;
       }
 
@@ -576,28 +599,31 @@ const OccupationalExam: React.FC = () => {
       const detail = error.response?.data?.detail;
       if (detail) {
         const msg = typeof detail === 'string' ? detail : JSON.stringify(detail);
-        alert(`Error al guardar el examen: ${msg}`);
+        showAlert(`Error al guardar el examen: ${msg}`, 'error');
       } else {
-        alert("Error al guardar el examen. Revise los campos e intente nuevamente.");
+        showAlert("Error al guardar el examen. Revise los campos e intente nuevamente.", 'error');
       }
     }
   };
 
-  const handleDeleteExam = (exam: OccupationalExamData) => {
-    setDeletingExam(exam);
-    setOpenDeleteDialog(true);
-  };
+  const handleDeleteExam = async (exam: OccupationalExamData) => {
+    const confirmed = await showConfirmDialog({
+      title: 'Confirmar Eliminación',
+      message: `¿Está seguro de que desea eliminar el examen ocupacional de ${exam.worker_name}? Esta acción no se puede deshacer.`,
+      severity: 'error',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar'
+    });
 
-  const confirmDeleteExam = async () => {
-    if (!deletingExam) return;
+    if (!confirmed) return;
 
     try {
-      await api.delete(`/occupational-exams/${deletingExam.id}`);
+      await api.delete(`/occupational-exams/${exam.id}`);
       fetchExams();
-      setOpenDeleteDialog(false);
-      setDeletingExam(null);
+      showAlert('Examen eliminado correctamente', 'success');
     } catch (error) {
       console.error("Error deleting exam:", error);
+      showAlert('Error al eliminar el examen', 'error');
     }
   };
 
@@ -729,11 +755,12 @@ const OccupationalExam: React.FC = () => {
           open: true,
           title: "Aviso de Notificación",
           message: errorData.message || "El trabajador no requiere examen u operacion no permitida.",
-          detail: errorData.detail || ""
+          detail: errorData.detail || "",
+          severity: 'info'
         });
       } else {
         const errorMessage = error.response?.data?.detail || error.message || "Error desconocido al enviar la notificación.";
-        alert(`Error al enviar el correo: ${errorMessage}`);
+        showAlert(`Error al enviar el correo: ${errorMessage}`, 'error');
       }
     } finally {
       setSendingEmail(null);
@@ -925,7 +952,7 @@ const OccupationalExam: React.FC = () => {
     } catch (error: any) {
       console.error("Error toggling follow-up:", error);
       console.error("Error details:", error.response?.data);
-      alert("Error al actualizar el estado de seguimiento. Por favor, intente nuevamente.");
+      showAlert("Error al actualizar el estado de seguimiento. Por favor, intente nuevamente.", 'error');
     }
   };
 
@@ -955,11 +982,11 @@ const OccupationalExam: React.FC = () => {
         console.log("Seguimiento médico creado exitosamente");
         
         // Opcional: Mostrar notificación de éxito
-        alert("Seguimiento médico creado exitosamente. El examen ha sido desmarcado del seguimiento.");
+        showAlert("Seguimiento médico creado exitosamente. El examen ha sido desmarcado del seguimiento.", 'success');
       }
     } catch (error) {
       console.error("Error creating follow-up:", error);
-      alert("Error al crear el seguimiento médico. Por favor, intente nuevamente.");
+      showAlert("Error al crear el seguimiento médico. Por favor, intente nuevamente.", 'error');
     }
   };
 
@@ -2206,56 +2233,8 @@ const OccupationalExam: React.FC = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Diálogo de confirmación de eliminación */}
-        <Dialog
-          open={openDeleteDialog}
-          onClose={() => setOpenDeleteDialog(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>
-            <Box display="flex" alignItems="center" gap={1}>
-              <DeleteIcon color="error" />
-              Confirmar Eliminación
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body1" gutterBottom>
-              ¿Está seguro de que desea eliminar este examen ocupacional?
-            </Typography>
-            {deletingExam && (
-              <Box mt={2} p={2} bgcolor="grey.50" borderRadius={1}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Trabajador:</strong>{" "}
-                  {deletingExam.worker_name || "No especificado"}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Tipo de examen:</strong>{" "}
-                  {deletingExam.exam_type ? EXAM_TYPE_LABELS[deletingExam.exam_type] || deletingExam.exam_type : "N/A"}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Fecha:</strong> {formatDate(deletingExam.exam_date)}
-                </Typography>
-              </Box>
-            )}
-            <Typography variant="body2" color="error" sx={{ mt: 2 }}>
-              <strong>Advertencia:</strong> Esta acción no se puede deshacer.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenDeleteDialog(false)} color="inherit">
-              Cancelar
-            </Button>
-            <Button
-              onClick={confirmDeleteExam}
-              color="error"
-              variant="contained"
-              startIcon={<DeleteIcon />}
-            >
-              Eliminar
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {/* Componente de Confirmación Reutilizable */}
+        <ConfirmDialog {...dialogState} />
         
         {/* Diálogo Genérico de Alerta/Info para el Administrador */}
         <Dialog
@@ -2263,30 +2242,40 @@ const OccupationalExam: React.FC = () => {
           onClose={() => setErrorDialog({ ...errorDialog, open: false })}
           maxWidth="sm"
           fullWidth
+          PaperProps={{
+            sx: { borderRadius: 2 }
+          }}
         >
           <DialogTitle>
-            <Box display="flex" alignItems="center" gap={1}>
-              <ErrorIcon color="info" />
-              {errorDialog.title}
+            <Box display="flex" alignItems="center" gap={1.5}>
+              {errorDialog.severity === 'error' && <ErrorIcon color="error" fontSize="large" />}
+              {errorDialog.severity === 'warning' && <WarningIcon color="warning" fontSize="large" />}
+              {errorDialog.severity === 'success' && <SuccessIcon color="success" fontSize="large" />}
+              {errorDialog.severity === 'info' && <InfoIcon color="info" fontSize="large" />}
+              <Typography variant="h6" component="span" fontWeight="bold">
+                {errorDialog.title}
+              </Typography>
             </Box>
           </DialogTitle>
           <DialogContent>
             <Box sx={{ mt: 1 }}>
-              <Typography variant="body1" gutterBottom fontWeight="medium">
+              <Typography variant="body1" sx={{ color: 'text.primary', mb: errorDialog.detail ? 2 : 0 }}>
                 {errorDialog.message}
               </Typography>
               {errorDialog.detail && (
-                <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>
+                <Alert severity={errorDialog.severity === 'success' ? 'info' : errorDialog.severity} variant="outlined" sx={{ mt: 2 }}>
                   {errorDialog.detail}
                 </Alert>
               )}
             </Box>
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ p: 2.5, pt: 1 }}>
             <Button 
                 onClick={() => setErrorDialog({ ...errorDialog, open: false })} 
-                color="primary" 
+                color={errorDialog.severity === 'error' ? 'error' : 'primary'} 
                 variant="contained"
+                fullWidth
+                sx={{ py: 1 }}
             >
               Entendido
             </Button>
