@@ -79,6 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
   const {
     canUpdateUsers,
     canViewCoursesPage,
+    canUpdateCourses,
     canViewEvaluationsPage,
     canViewSurveysPage,
     canViewAttendancePage,
@@ -93,6 +94,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     canViewAdminConfigPage,
     canViewReinductionPage,
     canViewSuppliersPage,
+    canViewEnrollmentPage,
+    canViewProgressPage,
+    canViewAuditPage,
+    canViewAbsenteeismPage,
   } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
@@ -660,35 +665,37 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
           // Verificación granular por permisos específicos para usuarios con rol personalizado
           if (user.custom_role_id) {
             // Mapeo de elementos del menú a permisos específicos
+            // Para usuarios con custom_role_id:
+            // - Ítems de empleado: solo verifican user.role (acceso básico siempre disponible)
+            // - Ítems de gestión: verifican permisos del rol personalizado (canViewXPage)
+            //   + fallback al rol base para roles no-employee
+            // Nota: canViewXPage() refleja SOLO permisos del rol personalizado para
+            //   usuarios con custom_role_id (el backend no mezcla permisos base)
+            const isNotEmployee = user.role !== "employee";
             const permissionMap: Record<string, () => boolean> = {
-              // Dashboard - acceso basado en rol y permisos personalizados
+              // Dashboard - acceso basado en rol
               dashboard: () => true, // Will be filtered by children
               "admin-dashboard": () => user.role === "admin",
               "trainer-dashboard": () => user.role === "trainer",
               "supervisor-dashboard": () => user.role === "supervisor",
               "employee-dashboard": () => user.role === "employee",
 
-              // Employee sections - verificar permisos específicos
-              "employee-courses": () =>
-                user.role === "employee" && canViewCoursesPage(),
-              "employee-surveys": () =>
-                user.role === "employee" && canViewSurveysPage(),
-              "employee-evaluations": () =>
-                user.role === "employee" && canViewEvaluationsPage(),
-              "employee-attendance": () =>
-                user.role === "employee" && canViewAttendancePage(),
+              // Employee sections - solo verifican rol base (acceso básico del empleado)
+              "employee-courses": () => user.role === "employee",
+              "employee-surveys": () => user.role === "employee",
+              "employee-evaluations": () => user.role === "employee",
+              "employee-attendance": () => user.role === "employee",
               "employee-homework-assessments": () => user.role === "employee",
-              "employee-certificates": () =>
-                user.role === "employee" && canViewCertificatesPage(),
+              "employee-certificates": () => user.role === "employee",
               "employee-vacations": () => user.role === "employee",
               "employee-votings": () => user.role === "employee",
 
-              // Worker management
+              // Worker management - permiso del rol personalizado O rol base no-employee
               "worker-management": () =>
-                canViewWorkersPage() || canUpdateWorkers(),
-              workers: canViewWorkersPage,
-              "workers-list": canViewWorkersPage,
-              "worker-detail": canViewWorkersPage,
+                canViewWorkersPage() || canUpdateWorkers() || isNotEmployee,
+              workers: () => canViewWorkersPage() || isNotEmployee,
+              "workers-list": () => canViewWorkersPage() || isNotEmployee,
+              "worker-detail": () => canViewWorkersPage() || isNotEmployee,
 
               // Contractor management
               "contractor-management": () =>
@@ -698,33 +705,30 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
               "contractor-documents": () =>
                 user.role === "admin" || user.role === "supervisor",
 
-              // Course management - Solo para roles administrativos, no para employees
-              courses: () => user.role !== "employee" && canViewCoursesPage(),
-              "courses-list": () =>
-                user.role !== "employee" && canViewCoursesPage(),
-              enrollments: () =>
-                user.role !== "employee" && canViewCoursesPage(),
-              reinduction: () =>
-                user.role !== "employee" && canViewReinductionPage(),
+              // Course management - permiso del rol personalizado O rol base no-employee
+              courses: () => canViewCoursesPage() || isNotEmployee,
+              "courses-list": () => canViewCoursesPage() || isNotEmployee,
+              enrollments: () => canViewCoursesPage() || canViewEnrollmentPage() || isNotEmployee,
+              reinduction: () => canViewReinductionPage() || isNotEmployee,
               "user-progress": () =>
-                user.role !== "employee" &&
-                (user.role === "admin" ||
-                  user.role === "trainer" ||
-                  user.role === "supervisor"),
+                canViewProgressPage() ||
+                user.role === "admin" ||
+                user.role === "trainer" ||
+                user.role === "supervisor",
               "interactive-lessons": () =>
-                user.role === "admin" || user.role === "trainer",
+                user.role === "admin" || user.role === "trainer" || canUpdateCourses(),
 
               // Evaluation management
-              evaluations: canViewEvaluationsPage,
-              "evaluations-list": canViewEvaluationsPage,
-              "evaluation-results": canViewEvaluationsPage,
-              surveys: canViewSurveysPage,
-              "survey-tabulation": canViewSurveysPage,
+              evaluations: () => canViewEvaluationsPage() || isNotEmployee,
+              "evaluations-list": () => canViewEvaluationsPage() || isNotEmployee,
+              "evaluation-results": () => canViewEvaluationsPage() || isNotEmployee,
+              surveys: () => canViewSurveysPage() || isNotEmployee,
+              "survey-tabulation": () => canViewSurveysPage() || isNotEmployee,
 
               // Attendance
-              attendance: canViewAttendancePage,
-              "attendance-list": canViewAttendancePage,
-              "admin-attendance": canUpdateAttendance,
+              attendance: () => canViewAttendancePage() || isNotEmployee,
+              "attendance-list": () => canViewAttendancePage() || isNotEmployee,
+              "admin-attendance": () => canUpdateAttendance() || isNotEmployee,
 
               // Health/Medical
               health: () =>
@@ -732,9 +736,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
                 canViewSeguimientoPage() ||
                 user.role === "admin" ||
                 user.role === "supervisor",
-              "occupational-exams": () => canViewOccupationalExamPage(),
+              "occupational-exams": () => canViewOccupationalExamPage() || isNotEmployee,
               "admin-notifications": () => user.role === "admin",
-              seguimientos: () => canViewSeguimientoPage(),
+              seguimientos: () => canViewSeguimientoPage() || isNotEmployee,
               // Profesiogramas
               profesiogramas: () => user.role === "admin" || user.role === "supervisor",
               "profesiogramas-catalogos": () => user.role === "admin",
@@ -743,18 +747,20 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
               "profesiogramas-admin": () => user.role === "admin",
               "homework-assessments": () => user.role === "admin" || user.role === "supervisor",
 
-              // Certificates - Solo para roles administrativos, no para employees
-              certificates: () =>
-                user.role !== "employee" && canViewCertificatesPage(),
+              // Certificates - permiso del rol personalizado O rol base no-employee
+              certificates: () => canViewCertificatesPage() || isNotEmployee,
 
               // Reports
-              reports: canViewReportsPage,
+              reports: () => canViewReportsPage() || isNotEmployee,
 
               // Notifications
-              notifications: canViewNotificationsPage,
+              notifications: () => canViewNotificationsPage() || isNotEmployee,
+
+              // Absenteeism
+              absenteeism: () => canViewAbsenteeismPage() || isNotEmployee,
 
               // Suppliers
-              suppliers: canViewSuppliersPage,
+              suppliers: () => canViewSuppliersPage() || isNotEmployee,
 
               // Committees
               committees: () => true, // Will be filtered by children
@@ -785,13 +791,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
                 user.role === "admin" || user.role === "supervisor",
               "matriz-sectores": () => user.role === "admin",
 
-              // Administration (always check individual permissions)
+              // Administration (check individual permissions or role)
               administration: () => true, // Will be filtered by children
-              audit: () => user.role === "admin", // Solo admins pueden ver auditoría
-              config: () => canViewAdminConfigPage(),
-              roles: () => user.role === "admin", // Solo admins pueden gestionar roles
-              users: canUpdateUsers,
-              "system-settings": () => user.role === "admin", // Solo admins pueden configurar el sistema
+              audit: () => user.role === "admin" || canViewAuditPage(),
+              config: () => canViewAdminConfigPage() || isNotEmployee,
+              roles: () => user.role === "admin",
+              users: () => canUpdateUsers() || isNotEmployee,
+              "system-settings": () => user.role === "admin",
             };
 
             const permissionCheck = permissionMap[newItem.id];
@@ -819,6 +825,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     [
       user,
       canViewCoursesPage,
+      canUpdateCourses,
       canViewSurveysPage,
       canViewEvaluationsPage,
       canViewAttendancePage,
@@ -834,6 +841,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
       canUpdateUsers,
       canViewSuppliersPage,
       canViewReinductionPage,
+      canViewEnrollmentPage,
+      canViewProgressPage,
+      canViewAuditPage,
+      canViewAbsenteeismPage,
     ]
   );
 
