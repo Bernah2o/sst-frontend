@@ -232,7 +232,7 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     description: 'Análisis y tabulación de resultados de encuestas',
     requiredPermissions: ['canViewSurveysPage'],
     allowedRoles: ['admin', 'trainer', 'supervisor'],
-    customCheck: (permissions) => permissions.canViewSurveysPage,
+    customCheck: (permissions) => permissions.canViewSurveysPage(),
   },
   {
     route: '/employee/courses/:id/surveys',
@@ -357,7 +357,7 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     description: 'Administración de archivos del sistema',
     requiredPermissions: ['canViewFilesPage'],
     allowedRoles: ['admin', 'trainer'],
-    customCheck: (permissions) => permissions.canViewFilesPage,
+    customCheck: (permissions) => permissions.canViewFilesPage(),
   },
   {
     route: '/admin/notification-acknowledgment',
@@ -365,7 +365,7 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     description: 'Gestión de confirmaciones de notificaciones',
     requiredPermissions: ['canViewNotificationsPage'],
     allowedRoles: ['admin'],
-    customCheck: (permissions) => permissions.canViewNotificationsPage,
+    customCheck: (permissions) => permissions.canViewNotificationsPage(),
   },
   {
     route: '/admin/evaluation-results',
@@ -373,7 +373,7 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     description: 'Visualización de resultados de evaluaciones',
     requiredPermissions: ['canViewEvaluationsPage'],
     allowedRoles: ['admin', 'trainer'],
-    customCheck: (permissions) => permissions.canViewEvaluationsPage,
+    customCheck: (permissions) => permissions.canViewEvaluationsPage(),
   },
 
   // Absenteeism
@@ -381,9 +381,9 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     route: '/admin/absenteeism',
     name: 'Gestión de Ausentismo',
     description: 'Administración de ausentismo laboral',
-    requiredPermissions: ['canViewWorkersPage'],
+    requiredPermissions: ['canViewAbsenteeismPage'],
     allowedRoles: ['admin', 'supervisor'],
-    customCheck: (permissions) => permissions.canViewWorkersPage(),
+    customCheck: (permissions) => permissions.canViewAbsenteeismPage(),
   },
 
   // Suppliers
@@ -391,9 +391,9 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     route: '/admin/suppliers',
     name: 'Gestión de Proveedores',
     description: 'Administración de proveedores',
-    requiredPermissions: ['canViewWorkersPage'],
+    requiredPermissions: ['canViewSuppliersPage'],
     allowedRoles: ['admin', 'supervisor'],
-    customCheck: (permissions) => permissions.canViewWorkersPage(),
+    customCheck: (permissions) => permissions.canViewSuppliersPage(),
   },
 
   // Profile (accessible to all authenticated users)
@@ -435,7 +435,81 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     description: 'Seguimiento del progreso de usuarios',
     requiredPermissions: ['canViewProgressPage'],
     allowedRoles: ['admin', 'trainer', 'supervisor'],
-    customCheck: (permissions) => permissions.canViewProgressPage,
+    customCheck: (permissions) => permissions.canViewProgressPage(),
+  },
+
+  // Rutas que usan allowedRoles pero necesitan soporte para roles personalizados
+  {
+    route: '/admin/enrollments',
+    name: 'Inscripciones',
+    description: 'Gestión de inscripciones a cursos',
+    requiredPermissions: ['canViewCoursesPage'],
+    allowedRoles: ['admin', 'trainer', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewCoursesPage() || permissions.canViewEnrollmentPage(),
+  },
+  {
+    route: '/admin/evaluation-results',
+    name: 'Resultados de Evaluaciones',
+    description: 'Ver resultados de evaluaciones',
+    requiredPermissions: ['canViewEvaluationsPage'],
+    allowedRoles: ['admin', 'trainer'],
+    customCheck: (permissions) => permissions.canViewEvaluationsPage(),
+  },
+  {
+    route: '/admin/progress',
+    name: 'Progreso',
+    description: 'Seguimiento del progreso de usuarios',
+    requiredPermissions: ['canViewProgressPage'],
+    allowedRoles: ['admin', 'trainer', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewProgressPage(),
+  },
+  {
+    route: '/admin/attendance',
+    name: 'Asistencia',
+    description: 'Gestión de asistencia',
+    requiredPermissions: ['canViewAttendancePage'],
+    allowedRoles: ['admin', 'trainer', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewAttendancePage(),
+  },
+  {
+    route: '/admin/suppliers',
+    name: 'Proveedores',
+    description: 'Gestión de proveedores',
+    requiredPermissions: ['canViewSuppliersPage'],
+    allowedRoles: ['admin', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewSuppliersPage(),
+  },
+  {
+    route: '/admin/workers/detail',
+    name: 'Búsqueda de Trabajadores',
+    description: 'Búsqueda detallada de trabajadores',
+    requiredPermissions: ['canViewWorkersPage'],
+    allowedRoles: ['admin', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewWorkersPage(),
+  },
+  {
+    route: '/admin/workers/vacations',
+    name: 'Vacaciones de Trabajadores',
+    description: 'Gestión de vacaciones',
+    requiredPermissions: ['canViewWorkersPage'],
+    allowedRoles: ['admin', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewWorkersPage(),
+  },
+  {
+    route: '/admin/homework-assessments',
+    name: 'Evaluaciones de Trabajo en Casa',
+    description: 'Gestión de evaluaciones de trabajo en casa',
+    requiredPermissions: ['canViewEvaluationsPage'],
+    allowedRoles: ['admin', 'supervisor'],
+    customCheck: (permissions) => permissions.canViewEvaluationsPage(),
+  },
+  {
+    route: '/admin/lesson/:lessonId/preview',
+    name: 'Vista previa de Lección',
+    description: 'Vista previa de lecciones interactivas',
+    requiredPermissions: ['canViewCoursesPage'],
+    allowedRoles: ['admin', 'trainer'],
+    customCheck: (permissions) => permissions.canViewCoursesPage(),
   },
 ];
 
@@ -461,10 +535,28 @@ export const usePagePermissions = () => {
 
     // Verificar rol
     if (!user) return false;
-    
+
+    // Admin siempre tiene acceso
+    const userRole = user.role || (user as any).rol;
+    if (userRole === UserRole.ADMIN) return true;
+
     // Normalizar el rol para comparación
-    const normalizedRole = user.role?.includes('UserRole.') ? user.role.split('.')[1].toLowerCase() : user.role;
-    
+    const normalizedRole = userRole?.includes('UserRole.') ? userRole.split('.')[1].toLowerCase() : userRole;
+
+    // Si tiene rol personalizado, verificar permisos custom primero
+    if (user.custom_role_id) {
+      if (pageConfig.customCheck) {
+        return pageConfig.customCheck(permissions, user);
+      }
+      if (pageConfig.requiredPermissions.length > 0) {
+        return pageConfig.requiredPermissions.every(permission => {
+          const permissionFunction = (permissions as any)[permission];
+          return typeof permissionFunction === 'function' ? permissionFunction() : false;
+        });
+      }
+    }
+
+    // Verificar acceso por rol base
     if (!pageConfig.allowedRoles.includes(normalizedRole)) {
       return false;
     }
@@ -525,13 +617,24 @@ export const checkPagePermission = (route: string, user: any, permissions: any):
   if (isSystemAdmin) {
     return true; // Los administradores del sistema tienen acceso a todo
   }
-  
+
   // Normalizar el rol para comparación
   const normalizedRole = userRole?.includes('UserRole.') ? userRole.split('.')[1].toLowerCase() : userRole?.toLowerCase();
-  
+
+  // Si tiene rol personalizado, verificar permisos custom primero (sin bloquear por allowedRoles)
+  if (user.custom_role_id) {
+    if (pageConfig.customCheck) return pageConfig.customCheck(permissions, user);
+    if (pageConfig.requiredPermissions.length > 0) {
+      return pageConfig.requiredPermissions.every(permission => {
+        const permissionFunction = (permissions as any)[permission];
+        return typeof permissionFunction === 'function' ? permissionFunction() : false;
+      });
+    }
+  }
+
   if (!pageConfig.allowedRoles.includes(normalizedRole)) return false;
   if (pageConfig.customCheck) return pageConfig.customCheck(permissions, user);
-  
+
   if (pageConfig.requiredPermissions.length > 0) {
     return pageConfig.requiredPermissions.every(permission => {
       const permissionFunction = (permissions as any)[permission];

@@ -115,6 +115,7 @@ interface OccupationalExamData {
   created_at: string;
   updated_at: string;
   next_exam_date?: string; // Fecha de próximo examen
+  has_seguimiento?: boolean; // Si tiene seguimiento asociado (viene del backend)
 
   // Campos legacy para compatibilidad (se pueden eliminar gradualmente)
   doctor_name?: string;
@@ -182,6 +183,7 @@ const OccupationalExam: React.FC = () => {
     exam_type: "",
     worker: "",
     search: "",
+    next_exam_status: "",
   });
   const [generatingReport, setGeneratingReport] = useState(false);
   const [generatingIndividualReport, setGeneratingIndividualReport] =
@@ -256,33 +258,6 @@ const OccupationalExam: React.FC = () => {
 
 
 
-  // Función para verificar si existen seguimientos para los exámenes
-  const checkExamSeguimientos = useCallback(async (examIds: number[]) => {
-    try {
-      const seguimientosMap: {[key: number]: boolean} = {};
-      
-      // Verificar cada examen si tiene seguimiento asociado
-      for (const examId of examIds) {
-        try {
-          const response = await api.get(`/seguimientos?search=${examId}`);
-          const seguimientos = response.data || [];
-          // Verificar si algún seguimiento está asociado a este examen
-          const hasSeguimiento = seguimientos.some((seg: any) => 
-            seg.occupational_exam_id === examId
-          );
-          seguimientosMap[examId] = hasSeguimiento;
-        } catch (error) {
-          console.error(`Error checking seguimiento for exam ${examId}:`, error);
-          seguimientosMap[examId] = false;
-        }
-      }
-      
-      setExamSeguimientos(seguimientosMap);
-    } catch (error) {
-      console.error("Error checking exam seguimientos:", error);
-    }
-  }, []);
-
   // Los datos del trabajador ya vienen del backend, no necesitamos enriquecerlos
 
   const fetchExams = useCallback(async () => {
@@ -295,30 +270,32 @@ const OccupationalExam: React.FC = () => {
       if (filters.exam_type) params.append("exam_type", filters.exam_type);
       if (filters.worker) params.append("worker_id", filters.worker);
       if (filters.search) params.append("search", filters.search);
+      if (filters.next_exam_status) params.append("next_exam_status", filters.next_exam_status);
 
       const response = await api.get(
         `/occupational-exams/?${params.toString()}`
       );
       const examsData = response.data.items || [];
 
-      // Los datos del trabajador ya vienen del backend, no necesitamos enriquecerlos
       setExams(examsData);
-      // Use the 'pages' field directly from API response instead of calculating
       setTotalPages(
         response.data.pages || Math.ceil((response.data.total || 0) / 20)
       );
-      
-      // Verificar seguimientos para los exámenes obtenidos
+
+      // has_seguimiento ya viene del backend, actualizar el mapa local
       if (examsData.length > 0) {
-        const examIds = examsData.map((exam: OccupationalExamData) => exam.id);
-        await checkExamSeguimientos(examIds);
+        const seguimientosMap: {[key: number]: boolean} = {};
+        examsData.forEach((exam: OccupationalExamData) => {
+          seguimientosMap[exam.id] = exam.has_seguimiento || false;
+        });
+        setExamSeguimientos(seguimientosMap);
       }
     } catch (error) {
       console.error("Error fetching exams:", error);
     } finally {
       setLoading(false);
     }
-  }, [page, filters, checkExamSeguimientos]);
+  }, [page, filters]);
 
   const fetchWorkers = useCallback(async () => {
     try {
@@ -945,8 +922,6 @@ const OccupationalExam: React.FC = () => {
         // Recargar los datos para verificar que se guardó correctamente
         setTimeout(() => {
           fetchExams();
-          // También actualizar el estado de seguimientos
-          checkExamSeguimientos([exam.id]);
         }, 1000);
       }
     } catch (error: any) {
@@ -1081,6 +1056,21 @@ const OccupationalExam: React.FC = () => {
                         {label}
                       </MenuItem>
                     ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Próximo Examen</InputLabel>
+                  <Select
+                    value={filters.next_exam_status}
+                    onChange={(e) =>
+                      handleFilterChange("next_exam_status", e.target.value)
+                    }
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    <MenuItem value="proximos">Próximos 30 días</MenuItem>
+                    <MenuItem value="vencidos">Vencidos</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>

@@ -9,6 +9,8 @@ import {
   Group,
   Assignment,
   Notifications,
+  PersonAdd,
+  PersonRemove,
 } from "@mui/icons-material";
 import {
   Box,
@@ -40,6 +42,15 @@ import {
   Checkbox,
   FormGroup,
   Divider,
+  Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  List as MuiList,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
 
@@ -66,6 +77,15 @@ interface Permission {
   resource_type: string;
   action: string;
   description?: string;
+  is_active: boolean;
+}
+
+interface RoleUser {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
   is_active: boolean;
 }
 
@@ -109,32 +129,40 @@ const RoleManagement: React.FC = () => {
   const [roleToDelete, setRoleToDelete] = useState<CustomRole | null>(null);
   const [notifyingUsers, setNotifyingUsers] = useState(false);
   const [, setRolePermissions] = useState<Permission[]>([]);
+  const [usersDialogOpen, setUsersDialogOpen] = useState(false);
+  const [usersDialogRole, setUsersDialogRole] = useState<CustomRole | null>(null);
+  const [roleUsers, setRoleUsers] = useState<RoleUser[]>([]);
+  const [allUsers, setAllUsers] = useState<RoleUser[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
 
   // Mapeo de nombres amigables para recursos/páginas
+  // Las claves deben coincidir con resource_type del backend (PERMISSIONS_DATA)
   const resourceNames: Record<string, string> = {
-    user: "👤 Usuarios",
-    course: "📚 Cursos",
+    dashboard: "📊 Panel de Control",
+    users: "👤 Usuarios",
+    courses: "📚 Cursos",
     modules: "📖 Módulos de Cursos",
     materials: "📄 Materiales de Cursos",
-    evaluation: "📝 Evaluaciones",
-    survey: "📊 Encuestas",
-    certificate: "🏆 Certificados",
+    evaluations: "📝 Evaluaciones",
+    surveys: "📊 Encuestas",
+    certificates: "🏆 Certificados",
     attendance: "📅 Asistencia",
-    report: "📈 Reportes",
-    notification: "🔔 Notificaciones",
-    worker: "👷 Trabajadores",
+    reports: "📈 Reportes",
+    notifications: "🔔 Notificaciones",
+    workers: "👷 Trabajadores",
     reinduction: "🔄 Reinducciones",
     admin_config: "⚙️ Configuración Administrativa",
-    seguimiento: "🏥 Seguimiento de Salud",
-    role: "🔐 Gestión de Roles",
-    file: "📁 Gestión de Archivos",
-    dashboard: "📊 Panel de Control",
+    health_tracking: "🏥 Seguimiento de Salud General",
+    seguimiento: "🏥 Seguimiento de Salud Ocupacional",
+    roles: "🔐 Gestión de Roles",
+    files: "📁 Gestión de Archivos",
+    occupational_exam: "🩺 Exámenes Ocupacionales",
+    progress: "📈 Progreso de Usuarios",
+    suppliers: "🏢 Proveedores",
+    absenteeism: "📉 Ausentismo",
     profile: "👤 Perfil de Usuario",
     audit: "🔍 Auditoría",
-    absenteeism: "📉 Ausentismo",
     enrollment: "📝 Inscripciones",
-    occupational_exam: "🩺 Exámenes Ocupacionales",
-    progress: "📈 Progreso de Usuarios"
   };
 
   // Agrupar permisos por recurso
@@ -408,6 +436,54 @@ const RoleManagement: React.FC = () => {
     }
   };
 
+  // === Funciones para gestión de usuarios asignados a roles ===
+  const handleOpenUsersDialog = async (role: CustomRole) => {
+    setUsersDialogRole(role);
+    setUsersDialogOpen(true);
+    setSelectedUserId("");
+    try {
+      const [roleUsersRes, allUsersRes] = await Promise.all([
+        api.get(`/permissions/roles/${role.id}/users`),
+        api.get("/users/"),
+      ]);
+      setRoleUsers(roleUsersRes.data);
+      // Filtrar usuarios que no tienen ya este rol asignado
+      const assignedIds = new Set(roleUsersRes.data.map((u: RoleUser) => u.id));
+      setAllUsers(
+        (allUsersRes.data.items || allUsersRes.data).filter(
+          (u: RoleUser) => !assignedIds.has(u.id) && u.is_active
+        )
+      );
+    } catch (error) {
+      console.error("Error loading role users:", error);
+      showSnackbar("Error al cargar usuarios del rol", "error");
+    }
+  };
+
+  const handleAssignUser = async () => {
+    if (!usersDialogRole || !selectedUserId) return;
+    try {
+      await api.post(`/permissions/roles/${usersDialogRole.id}/assign-user/${selectedUserId}`);
+      showSnackbar("Usuario asignado al rol exitosamente", "success");
+      // Recargar la lista
+      await handleOpenUsersDialog(usersDialogRole);
+    } catch (error: any) {
+      showSnackbar(error.response?.data?.detail || "Error al asignar usuario", "error");
+    }
+  };
+
+  const handleUnassignUser = async (userId: number) => {
+    try {
+      await api.delete(`/permissions/roles/unassign-user/${userId}`);
+      showSnackbar("Rol removido del usuario exitosamente", "success");
+      if (usersDialogRole) {
+        await handleOpenUsersDialog(usersDialogRole);
+      }
+    } catch (error: any) {
+      showSnackbar(error.response?.data?.detail || "Error al remover rol", "error");
+    }
+  };
+
   const handlePermissionChange = (permissionId: number, checked: boolean) => {
     setFormData((prev) => ({
       ...prev,
@@ -606,6 +682,15 @@ const RoleManagement: React.FC = () => {
                     {renderPermissionIcons(role.id)}
                   </TableCell>
                   <TableCell align="center">
+                    <Tooltip title="Asignar Usuarios">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenUsersDialog(role)}
+                        color="info"
+                      >
+                        <PersonAdd />
+                      </IconButton>
+                    </Tooltip>
                     <IconButton
                       size="small"
                       onClick={() => handleOpenDialog(role)}
@@ -802,6 +887,84 @@ const RoleManagement: React.FC = () => {
           <Button onClick={handleDelete} color="error" variant="contained">
             Eliminar
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Users Assignment Dialog */}
+      <Dialog
+        open={usersDialogOpen}
+        onClose={() => setUsersDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center">
+            <PersonAdd sx={{ mr: 1 }} />
+            Usuarios con rol: {usersDialogRole?.display_name}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {/* Asignar nuevo usuario */}
+          <Box sx={{ display: "flex", gap: 1, mb: 3, mt: 1 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Seleccionar Usuario</InputLabel>
+              <Select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value as string)}
+                label="Seleccionar Usuario"
+              >
+                {allUsers.map((u) => (
+                  <MenuItem key={u.id} value={u.id.toString()}>
+                    {u.first_name} {u.last_name} ({u.email})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button
+              variant="contained"
+              onClick={handleAssignUser}
+              disabled={!selectedUserId}
+              sx={{ minWidth: 100 }}
+            >
+              Asignar
+            </Button>
+          </Box>
+
+          <Divider sx={{ mb: 2 }} />
+          <Typography variant="subtitle2" gutterBottom>
+            Usuarios asignados ({roleUsers.length})
+          </Typography>
+
+          {roleUsers.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
+              No hay usuarios asignados a este rol
+            </Typography>
+          ) : (
+            <MuiList dense>
+              {roleUsers.map((u) => (
+                <ListItem key={u.id}>
+                  <ListItemText
+                    primary={`${u.first_name} ${u.last_name}`}
+                    secondary={`${u.email} - Rol base: ${u.role}`}
+                  />
+                  <ListItemSecondaryAction>
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      color="error"
+                      onClick={() => handleUnassignUser(u.id)}
+                      title="Remover rol personalizado"
+                    >
+                      <PersonRemove />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </MuiList>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUsersDialogOpen(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 

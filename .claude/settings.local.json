@@ -12,7 +12,13 @@
       "Bash(cmd /c \"del /f /q \"\"\\\\?\\\\e:\\\\DH2OCOL\\\\python\\\\sst-app\\\\sst-frontend\\\\nul\"\"\")",
       "Bash(npm run build:*)",
       "Bash(python -m alembic:*)",
-      "Bash(python -c:*)"
+      "Bash(python -c:*)",
+      "Bash(for:*)",
+      "Bash(do if grep -q \"has_role_or_custom\" \"$f\")",
+      "Bash(! grep -q \"import.*has_role_or_custom\" \"$f\")",
+      "Bash(then echo \"MISSING IMPORT: $f\")",
+      "Bash(fi:*)",
+      "Bash(done)"
     ],
     "additionalDirectories": [
       "e:\\DH2OCOL\\python\\sst-app\\sst-backend\\app\\api"

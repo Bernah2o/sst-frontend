@@ -7,6 +7,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 
 import ChangePassword from "./components/ChangePassword";
@@ -99,7 +100,7 @@ import MatrizLegalEmpresa from "./pages/MatrizLegal/MatrizLegalEmpresa";
 import InteractiveLessons from "./pages/InteractiveLessons";
 import { LessonBuilder, LessonViewer } from "./components/interactive-lessons";
 import { UserRole } from "./types";
-import { checkPagePermission } from "./utils/pagePermissions";
+import { checkPagePermission, PAGE_PERMISSIONS } from "./utils/pagePermissions";
 
 const theme = createTheme({
   breakpoints: {
@@ -148,13 +149,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, loading } = useAuth();
   const permissions = usePermissions();
+  const location = useLocation();
 
-  if (loading) {
+  if (loading || permissions.loading) {
     return <Box sx={{ p: 4, textAlign: "center" }}>Cargando...</Box>;
   }
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Admin siempre tiene acceso
+  const userRole = user?.role || user?.rol;
+  if (userRole === UserRole.ADMIN) {
+    return <>{children}</>;
   }
 
   // Si se especifica una ruta, usar el nuevo sistema de permisos
@@ -168,28 +176,43 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Verificación especial para gestión de usuarios (mantener compatibilidad)
   if (requiresUserManagement) {
-    const userRole = user?.role || user?.rol;
-    if (userRole === UserRole.ADMIN) {
-      // Los admins siempre pueden gestionar usuarios
-      return <>{children}</>;
-    }
     if (userRole === UserRole.SUPERVISOR) {
-      // Los supervisores necesitan permisos granulares
       if (!permissions.canUpdateUsers()) {
         return <Navigate to="/unauthorized" replace />;
       }
       return <>{children}</>;
     }
-    // Otros roles no pueden acceder
+    // Usuarios con rol personalizado: verificar permisos
+    if (user.custom_role_id && permissions.canUpdateUsers()) {
+      return <>{children}</>;
+    }
     return <Navigate to="/unauthorized" replace />;
   }
 
   // Verificación tradicional por roles (mantener compatibilidad)
   if (allowedRoles) {
-    const userRole = user?.role || user?.rol;
-    if (!allowedRoles.includes(userRole)) {
-      return <Navigate to="/unauthorized" replace />;
+    if (allowedRoles.includes(userRole)) {
+      return <>{children}</>;
     }
+
+    // Si el usuario tiene rol personalizado, verificar permisos vía pagePermissions
+    // Solo si existe una configuración de permisos para esta ruta (conservador)
+    if (user.custom_role_id) {
+      const currentPath = location.pathname;
+      const pageConfig = PAGE_PERMISSIONS.find(p => {
+        const routePattern = p.route.replace(/:[^/]+/g, '[^/]+');
+        const regex = new RegExp(`^${routePattern}$`);
+        return regex.test(currentPath);
+      });
+      if (pageConfig) {
+        const hasPermission = checkPagePermission(currentPath, user, permissions);
+        if (hasPermission) {
+          return <>{children}</>;
+        }
+      }
+    }
+
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <>{children}</>;
@@ -293,7 +316,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/workers/detail"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute route="/admin/workers/detail">
                         <WorkerSearch />
                       </ProtectedRoute>
                     }
@@ -301,7 +324,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/workers/vacations"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute route="/admin/workers/vacations">
                         <VacationsManagement />
                       </ProtectedRoute>
                     }
@@ -317,7 +340,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/workers/:workerId/vacations"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute route="/admin/workers/:workerId/vacations">
                         <WorkerVacations />
                       </ProtectedRoute>
                     }
@@ -392,7 +415,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/suppliers"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute route="/admin/suppliers">
                         <Suppliers />
                       </ProtectedRoute>
                     }
@@ -707,7 +730,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/lesson/:lessonId/preview"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "trainer"]}>
+                      <ProtectedRoute route="/admin/lesson/:lessonId/preview">
                         <LessonViewer isPreview={true} />
                       </ProtectedRoute>
                     }
@@ -715,9 +738,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/enrollments"
                     element={
-                      <ProtectedRoute
-                        allowedRoles={["admin", "trainer", "supervisor"]}
-                      >
+                      <ProtectedRoute route="/admin/enrollments">
                         <Enrollment />
                       </ProtectedRoute>
                     }
@@ -733,7 +754,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/evaluation-results"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "trainer"]}>
+                      <ProtectedRoute route="/admin/evaluation-results">
                         <EvaluationResults />
                       </ProtectedRoute>
                     }
@@ -760,9 +781,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/progress"
                     element={
-                      <ProtectedRoute
-                        allowedRoles={["admin", "trainer", "supervisor"]}
-                      >
+                      <ProtectedRoute route="/admin/progress">
                         <UserProgress />
                       </ProtectedRoute>
                     }
@@ -770,9 +789,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/user-progress"
                     element={
-                      <ProtectedRoute
-                        allowedRoles={["admin", "trainer", "supervisor"]}
-                      >
+                      <ProtectedRoute route="/admin/user-progress">
                         <UserProgress />
                       </ProtectedRoute>
                     }
@@ -780,9 +797,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/attendance"
                     element={
-                      <ProtectedRoute
-                        allowedRoles={["admin", "trainer", "supervisor"]}
-                      >
+                      <ProtectedRoute route="/admin/attendance">
                         <Attendance />
                       </ProtectedRoute>
                     }
@@ -816,7 +831,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/homework-assessments"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute route="/admin/homework-assessments">
                         <HomeworkAssessmentAdmin />
                       </ProtectedRoute>
                     }
@@ -824,7 +839,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/homework-assessments/dashboard"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute route="/admin/homework-assessments">
                         <HomeworkAssessmentDashboard />
                       </ProtectedRoute>
                     }
@@ -832,7 +847,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/homework-assessments/:id"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute route="/admin/homework-assessments">
                         <HomeworkAssessment />
                       </ProtectedRoute>
                     }
@@ -886,7 +901,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/audit"
                     element={
-                      <ProtectedRoute allowedRoles={["admin"]}>
+                      <ProtectedRoute route="/admin/audit">
                         <Audit />
                       </ProtectedRoute>
                     }
@@ -894,7 +909,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/files"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "trainer"]}>
+                      <ProtectedRoute route="/admin/files">
                         <Files />
                       </ProtectedRoute>
                     }

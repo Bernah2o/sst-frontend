@@ -152,7 +152,7 @@ export interface ResourcePermissions {
 export const usePermissions = () => {
   const { user } = useAuth();
   const [pageAccesses, setPageAccesses] = useState<PageAccess[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [userPermissions, setUserPermissions] = useState<ResourcePermissions>({
     // Page access permissions
     canViewUsersPage: false,
@@ -281,6 +281,7 @@ export const usePermissions = () => {
   // Función para cargar datos del usuario
   const loadUserData = useCallback(async () => {
       if (!user) {
+        setLoading(false);
         setPageAccesses([]);
         setUserPermissions({
           // Page access permissions
