@@ -235,6 +235,36 @@ export interface SugerenciasIAResponse {
   sugerencias: SugerenciasIA;
 }
 
+export interface BulkUpdatePayload {
+  cumplimiento_ids: number[];
+  estado: EstadoCumplimiento;
+  evidencia_cumplimiento?: string | null;
+  plan_accion?: string | null;
+  responsable?: string | null;
+  fecha_compromiso?: string | null;
+  observaciones?: string | null;
+  aplica_empresa?: boolean | null;
+  justificacion_no_aplica?: string | null;
+}
+
+export interface FiltrosBulkUpdatePayload {
+  // Filtros activos en la UI
+  estado_cumplimiento?: string;
+  clasificacion?: string;
+  tema_general?: string;
+  q?: string;
+  solo_aplicables?: boolean;
+  // Datos a aplicar
+  estado: EstadoCumplimiento;
+  evidencia_cumplimiento?: string | null;
+  plan_accion?: string | null;
+  responsable?: string | null;
+  fecha_compromiso?: string | null;
+  observaciones?: string | null;
+  aplica_empresa?: boolean | null;
+  justificacion_no_aplica?: string | null;
+}
+
 // ==================== SERVICIO ====================
 
 class MatrizLegalService {
@@ -425,16 +455,32 @@ class MatrizLegalService {
     return res.data as MatrizLegalCumplimiento;
   }
 
-  async bulkUpdateCumplimiento(
-    empresaId: number,
-    cumplimientoIds: number[],
-    estado: EstadoCumplimiento
-  ) {
+  async bulkUpdateCumplimiento(empresaId: number, payload: BulkUpdatePayload) {
     const res = await api.post(
       `/matriz-legal/empresas/${empresaId}/cumplimiento/bulk`,
-      { cumplimiento_ids: cumplimientoIds, estado }
+      payload
     );
     return res.data as { message: string };
+  }
+
+  async bulkUpdatePorFiltros(empresaId: number, payload: FiltrosBulkUpdatePayload) {
+    const res = await api.post(
+      `/matriz-legal/empresas/${empresaId}/cumplimiento/bulk-filtros`,
+      payload
+    );
+    return res.data as { message: string };
+  }
+
+  async inlineUpdateEstado(
+    empresaId: number,
+    normaId: number,
+    estado: EstadoCumplimiento
+  ) {
+    const res = await api.patch(
+      `/matriz-legal/empresas/${empresaId}/cumplimiento/${normaId}/estado`,
+      { estado }
+    );
+    return res.data as MatrizLegalCumplimiento;
   }
 
   async getHistorialCumplimiento(empresaId: number, cumplimientoId: number) {
@@ -475,6 +521,18 @@ class MatrizLegalService {
    */
   async getSugerenciasIA(normaId: number): Promise<SugerenciasIAResponse> {
     const res = await api.post(`/matriz-legal/normas/${normaId}/sugerencias-ia`);
+    return res.data as SugerenciasIAResponse;
+  }
+
+  /**
+   * Genera sugerencia de evidencia usando IA basada en contexto general (para bulk).
+   */
+  async getSugerenciasIAContexto(params: {
+    clasificacion?: string;
+    tema_general?: string;
+    descripcion_contexto?: string;
+  }): Promise<SugerenciasIAResponse> {
+    const res = await api.post(`/matriz-legal/sugerencias-ia/contexto`, params);
     return res.data as SugerenciasIAResponse;
   }
 

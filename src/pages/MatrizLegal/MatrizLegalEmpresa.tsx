@@ -15,6 +15,7 @@ import {
   DialogTitle,
   IconButton,
   Paper,
+  Popover,
   Table,
   TableBody,
   TableCell,
@@ -61,6 +62,8 @@ import matrizLegalService, {
   MatrizLegalEstadisticas,
   EmpresaResumen,
   EstadoCumplimiento,
+  BulkUpdatePayload,
+  FiltrosBulkUpdatePayload,
 } from "../../services/matrizLegalService";
 
 interface CumplimientoFormData {
@@ -81,6 +84,28 @@ const initialFormData: CumplimientoFormData = {
   plan_accion: "",
   responsable: "",
   fecha_compromiso: null,
+  aplica_empresa: true,
+  justificacion_no_aplica: "",
+};
+
+interface BulkFormData {
+  estado: EstadoCumplimiento;
+  evidencia_cumplimiento: string;
+  plan_accion: string;
+  responsable: string;
+  fecha_compromiso: string | null;
+  observaciones: string;
+  aplica_empresa: boolean;
+  justificacion_no_aplica: string;
+}
+
+const initialBulkFormData: BulkFormData = {
+  estado: "pendiente",
+  evidencia_cumplimiento: "",
+  plan_accion: "",
+  responsable: "",
+  fecha_compromiso: null,
+  observaciones: "",
   aplica_empresa: true,
   justificacion_no_aplica: "",
 };
@@ -197,6 +222,23 @@ const MatrizLegalEmpresa: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [loadingIAField, setLoadingIAField] = useState<string | null>(null);
   const [sugerenciasCache, setSugerenciasCache] = useState<{evidencia: string; observaciones: string; plan_accion: string} | null>(null);
+
+  // Bulk extendido (ítems seleccionados)
+  const [openBulkDialog, setOpenBulkDialog] = useState(false);
+  const [bulkFormData, setBulkFormData] = useState<BulkFormData>(initialBulkFormData);
+  const [savingBulk, setSavingBulk] = useState(false);
+
+  // Aplicar a todos los filtrados
+  const [openFiltrosDialog, setOpenFiltrosDialog] = useState(false);
+  const [savingFiltros, setSavingFiltros] = useState(false);
+
+  // Inline estado (click en chip)
+  const [inlineAnchorEl, setInlineAnchorEl] = useState<HTMLElement | null>(null);
+  const [inlineNorma, setInlineNorma] = useState<MatrizLegalNormaConCumplimiento | null>(null);
+  const [savingInline, setSavingInline] = useState(false);
+
+  // IA para bulk
+  const [loadingIABulk, setLoadingIABulk] = useState(false);
 
   const numEmpresaId = Number(empresaId);
 
@@ -410,12 +452,57 @@ const MatrizLegalEmpresa: React.FC = () => {
     }
   };
 
-  const handleBulkUpdate = async (nuevoEstado: EstadoCumplimiento) => {
-    if (selected.length === 0) return;
-
+  // --- Handler IA para bulk (contexto: filtros activos o descrición manual) ---
+  const handleSolicitarIABulk = async () => {
     try {
-      await matrizLegalService.bulkUpdateCumplimiento(numEmpresaId, selected, nuevoEstado);
-      enqueueSnackbar(`${selected.length} normas actualizadas`, { variant: "success" });
+      setLoadingIABulk(true);
+      const res = await matrizLegalService.getSugerenciasIAContexto({
+        clasificacion: clasificacion || undefined,
+        tema_general: temaGeneral || undefined,
+        descripcion_contexto: bulkFormData.observaciones || undefined,
+      });
+      if (res.sugerencias?.evidencia) {
+        setBulkFormData(prev => ({ ...prev, evidencia_cumplimiento: res.sugerencias.evidencia }));
+        enqueueSnackbar("Sugerencia de evidencia generada por IA", { variant: "success" });
+      }
+    } catch (error) {
+      enqueueSnackbar("Error al obtener sugerencia de IA", { variant: "error" });
+    } finally {
+      setLoadingIABulk(false);
+    }
+  };
+
+  // --- Handlers bulk extendido (ítems seleccionados) ---
+  const handleOpenBulkDialog = () => {
+    if (selected.length === 0) return;
+    setBulkFormData(initialBulkFormData);
+    setOpenBulkDialog(true);
+  };
+
+  const handleQuickNoAplica = () => {
+    if (selected.length === 0) return;
+    setBulkFormData({ ...initialBulkFormData, estado: "no_aplica", aplica_empresa: false });
+    setOpenBulkDialog(true);
+  };
+
+  const handleSaveBulkDialog = async () => {
+    if (selected.length === 0) return;
+    try {
+      setSavingBulk(true);
+      const payload: BulkUpdatePayload = {
+        cumplimiento_ids: selected,
+        estado: bulkFormData.estado,
+        evidencia_cumplimiento: bulkFormData.evidencia_cumplimiento || null,
+        plan_accion: bulkFormData.plan_accion || null,
+        responsable: bulkFormData.responsable || null,
+        fecha_compromiso: bulkFormData.fecha_compromiso || null,
+        observaciones: bulkFormData.observaciones || null,
+        aplica_empresa: bulkFormData.aplica_empresa,
+        justificacion_no_aplica: bulkFormData.justificacion_no_aplica || null,
+      };
+      const result = await matrizLegalService.bulkUpdateCumplimiento(numEmpresaId, payload);
+      enqueueSnackbar(result.message || `${selected.length} normas actualizadas`, { variant: "success" });
+      setOpenBulkDialog(false);
       setSelected([]);
       loadNormas();
       const stats = await matrizLegalService.getEstadisticasEmpresa(numEmpresaId);
@@ -423,6 +510,80 @@ const MatrizLegalEmpresa: React.FC = () => {
     } catch (error) {
       console.error("Error bulk update:", error);
       enqueueSnackbar("Error al actualizar", { variant: "error" });
+    } finally {
+      setSavingBulk(false);
+    }
+  };
+
+  // --- Handlers aplicar a todos los filtrados ---
+  const handleOpenFiltrosDialog = () => {
+    setBulkFormData(initialBulkFormData);
+    setOpenFiltrosDialog(true);
+  };
+
+  const handleSaveFiltros = async () => {
+    try {
+      setSavingFiltros(true);
+      const payload: FiltrosBulkUpdatePayload = {
+        estado_cumplimiento: estadoCumplimiento || undefined,
+        clasificacion: clasificacion || undefined,
+        tema_general: temaGeneral || undefined,
+        q: searchTerm || undefined,
+        solo_aplicables: soloAplicables,
+        estado: bulkFormData.estado,
+        evidencia_cumplimiento: bulkFormData.evidencia_cumplimiento || null,
+        plan_accion: bulkFormData.plan_accion || null,
+        responsable: bulkFormData.responsable || null,
+        fecha_compromiso: bulkFormData.fecha_compromiso || null,
+        observaciones: bulkFormData.observaciones || null,
+        aplica_empresa: bulkFormData.aplica_empresa,
+        justificacion_no_aplica: bulkFormData.justificacion_no_aplica || null,
+      };
+      const result = await matrizLegalService.bulkUpdatePorFiltros(numEmpresaId, payload);
+      enqueueSnackbar(result.message, { variant: "success" });
+      setOpenFiltrosDialog(false);
+      setSelected([]);
+      loadNormas();
+      const stats = await matrizLegalService.getEstadisticasEmpresa(numEmpresaId);
+      setEstadisticas(stats);
+    } catch (error) {
+      console.error("Error bulk filtros:", error);
+      enqueueSnackbar("Error al aplicar a filtrados", { variant: "error" });
+    } finally {
+      setSavingFiltros(false);
+    }
+  };
+
+  // --- Handlers inline estado ---
+  const handleInlineEstadoClick = (event: React.MouseEvent<HTMLElement>, norma: MatrizLegalNormaConCumplimiento) => {
+    event.stopPropagation();
+    setInlineAnchorEl(event.currentTarget);
+    setInlineNorma(norma);
+  };
+
+  const handleInlineEstadoClose = () => {
+    setInlineAnchorEl(null);
+    setInlineNorma(null);
+  };
+
+  const handleInlineEstadoSelect = async (nuevoEstado: EstadoCumplimiento) => {
+    if (!inlineNorma) return;
+    try {
+      setSavingInline(true);
+      await matrizLegalService.inlineUpdateEstado(numEmpresaId, inlineNorma.id, nuevoEstado);
+      enqueueSnackbar("Estado actualizado", { variant: "success" });
+      // Actualización optimista local
+      setNormas(prev =>
+        prev.map(n => n.id === inlineNorma.id ? { ...n, estado_cumplimiento: nuevoEstado } : n)
+      );
+      handleInlineEstadoClose();
+      const stats = await matrizLegalService.getEstadisticasEmpresa(numEmpresaId);
+      setEstadisticas(stats);
+    } catch (error) {
+      console.error("Error inline estado:", error);
+      enqueueSnackbar("Error al actualizar estado", { variant: "error" });
+    } finally {
+      setSavingInline(false);
     }
   };
 
@@ -605,6 +766,16 @@ const MatrizLegalEmpresa: React.FC = () => {
                 </Button>
               </Box>
               <Box display="flex" gap={1} flexWrap="wrap">
+                <Tooltip title={`Aplicar una acción a las ${total} normas que coinciden con los filtros actuales`}>
+                  <Button
+                    startIcon={<CheckIcon />}
+                    variant="outlined"
+                    color="warning"
+                    onClick={handleOpenFiltrosDialog}
+                  >
+                    Aplicar a todos ({total})
+                  </Button>
+                </Tooltip>
                 <Button
                   startIcon={<SyncIcon />}
                   onClick={handleSincronizar}
@@ -627,15 +798,15 @@ const MatrizLegalEmpresa: React.FC = () => {
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   {selected.length} norma(s) seleccionada(s)
                 </Typography>
-                <Box display="flex" gap={1}>
-                  <Button size="small" variant="contained" color="success" onClick={() => handleBulkUpdate("cumple")}>
-                    Marcar Cumple
+                <Box display="flex" gap={1} flexWrap="wrap">
+                  <Button size="small" variant="contained" startIcon={<EditIcon />} onClick={handleOpenBulkDialog}>
+                    Evaluar seleccionadas
                   </Button>
-                  <Button size="small" variant="contained" color="error" onClick={() => handleBulkUpdate("no_cumple")}>
-                    Marcar No Cumple
+                  <Button size="small" variant="outlined" color="inherit" startIcon={<BlockIcon />} onClick={handleQuickNoAplica}>
+                    Marcar No Aplica
                   </Button>
                   <Button size="small" variant="outlined" onClick={() => setSelected([])}>
-                    Cancelar
+                    Cancelar ({selected.length})
                   </Button>
                 </Box>
               </Box>
@@ -784,14 +955,18 @@ const MatrizLegalEmpresa: React.FC = () => {
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
-                          <Tooltip title={matrizLegalService.getLabelEstadoCumplimiento(norma.estado_cumplimiento)}>
+                          <Tooltip title="Clic para cambiar estado rápidamente">
                             <Chip
                               size="small"
                               icon={getEstadoIcon(norma.estado_cumplimiento)}
                               label={matrizLegalService.getLabelEstadoCumplimiento(norma.estado_cumplimiento)}
+                              onClick={(e) => handleInlineEstadoClick(e, norma)}
                               sx={{
                                 bgcolor: getEstadoColor(norma.estado_cumplimiento),
                                 color: "white",
+                                cursor: "pointer",
+                                "&:hover": { opacity: 0.85, transform: "scale(1.05)" },
+                                transition: "all 0.15s",
                               }}
                             />
                           </Tooltip>
@@ -1121,6 +1296,296 @@ const MatrizLegalEmpresa: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Popover inline — cambio rápido de estado */}
+        <Popover
+          open={Boolean(inlineAnchorEl)}
+          anchorEl={inlineAnchorEl}
+          onClose={handleInlineEstadoClose}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+          transformOrigin={{ vertical: "top", horizontal: "center" }}
+        >
+          <Paper sx={{ p: 1, minWidth: 170 }}>
+            <Typography variant="caption" color="textSecondary" sx={{ px: 1, display: "block", mb: 0.5 }}>
+              Cambiar estado:
+            </Typography>
+            {savingInline && <LinearProgress sx={{ mb: 1 }} />}
+            {(["cumple", "no_cumple", "pendiente", "en_proceso", "no_aplica"] as EstadoCumplimiento[]).map((estado) => (
+              <MenuItem
+                key={estado}
+                onClick={() => handleInlineEstadoSelect(estado)}
+                disabled={savingInline || estado === inlineNorma?.estado_cumplimiento}
+                dense
+                sx={{
+                  borderRadius: 1,
+                  mb: 0.25,
+                  bgcolor: estado === inlineNorma?.estado_cumplimiento ? "action.selected" : "inherit",
+                }}
+              >
+                <Box display="flex" alignItems="center" gap={1}>
+                  {getEstadoIcon(estado)}
+                  <Typography variant="body2">
+                    {matrizLegalService.getLabelEstadoCumplimiento(estado)}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </Paper>
+        </Popover>
+
+        {/* Dialog bulk extendido — ítems seleccionados */}
+        <Dialog open={openBulkDialog} onClose={() => setOpenBulkDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>
+            Evaluar {selected.length} norma(s) seleccionada(s)
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+              Los campos completados se aplicarán a todas las normas seleccionadas. Deja en blanco los que no quieras modificar.
+            </Typography>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Box display="flex" flexDirection="column" gap={2} pt={1}>
+              <TextField
+                select
+                label="Estado de Cumplimiento"
+                fullWidth
+                required
+                value={bulkFormData.estado}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, estado: e.target.value as EstadoCumplimiento })}
+              >
+                <MenuItem value="cumple">Cumple</MenuItem>
+                <MenuItem value="no_cumple">No Cumple</MenuItem>
+                <MenuItem value="pendiente">Pendiente</MenuItem>
+                <MenuItem value="en_proceso">En Proceso</MenuItem>
+                <MenuItem value="no_aplica">No Aplica</MenuItem>
+              </TextField>
+
+              {bulkFormData.estado === "no_aplica" && (
+                <TextField
+                  label="Justificación (por qué no aplica)"
+                  fullWidth
+                  multiline
+                  rows={2}
+                  value={bulkFormData.justificacion_no_aplica}
+                  onChange={(e) => setBulkFormData({ ...bulkFormData, justificacion_no_aplica: e.target.value })}
+                  helperText="Se aplicará a todas las normas seleccionadas"
+                />
+              )}
+
+              {(bulkFormData.estado === "no_cumple" || bulkFormData.estado === "en_proceso") && (
+                <Alert severity="info">
+                  El plan de acción es opcional en la actualización masiva. Puedes completarlo individualmente después.
+                </Alert>
+              )}
+
+              {/* Evidencia de cumplimiento */}
+              <Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+                  <Typography variant="body2" color="textSecondary">Evidencia de Cumplimiento (opcional)</Typography>
+                  <Tooltip title="Generar sugerencia con IA basada en los filtros activos">
+                    <span>
+                      <Button
+                        size="small"
+                        startIcon={loadingIABulk ? <CircularProgress size={14} /> : <AIIcon fontSize="small" />}
+                        onClick={handleSolicitarIABulk}
+                        disabled={loadingIABulk}
+                        variant="outlined"
+                        sx={{ fontSize: "0.7rem", py: 0.25 }}
+                      >
+                        {loadingIABulk ? "Generando..." : "Generar con IA"}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </Box>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={bulkFormData.evidencia_cumplimiento}
+                  onChange={(e) => setBulkFormData({ ...bulkFormData, evidencia_cumplimiento: e.target.value })}
+                  placeholder="Documentos, registros o procedimientos que demuestren el cumplimiento..."
+                />
+              </Box>
+
+              <Autocomplete
+                freeSolo
+                options={sugerenciasResponsables}
+                value={bulkFormData.responsable}
+                onChange={(_e, v) => setBulkFormData({ ...bulkFormData, responsable: v || "" })}
+                onInputChange={(_e, v) => setBulkFormData({ ...bulkFormData, responsable: v })}
+                renderInput={(params) => (
+                  <TextField {...params} label="Responsable (opcional)" fullWidth />
+                )}
+              />
+
+              <TextField
+                label="Fecha Compromiso (opcional)"
+                type="date"
+                fullWidth
+                value={bulkFormData.fecha_compromiso || ""}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, fecha_compromiso: e.target.value || null })}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+
+              <TextField
+                label="Observaciones compartidas (opcional)"
+                fullWidth
+                multiline
+                rows={2}
+                value={bulkFormData.observaciones}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, observaciones: e.target.value })}
+              />
+
+              {(bulkFormData.estado === "no_cumple" || bulkFormData.estado === "en_proceso") && (
+                <TextField
+                  label="Plan de Acción (opcional)"
+                  fullWidth
+                  multiline
+                  rows={2}
+                  value={bulkFormData.plan_accion}
+                  onChange={(e) => setBulkFormData({ ...bulkFormData, plan_accion: e.target.value })}
+                />
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenBulkDialog(false)} color="inherit">Cancelar</Button>
+            <Button onClick={handleSaveBulkDialog} variant="contained" disabled={savingBulk}>
+              {savingBulk ? "Guardando..." : `Aplicar a ${selected.length} normas`}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Dialog aplicar a todos los filtrados */}
+        <Dialog open={openFiltrosDialog} onClose={() => setOpenFiltrosDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Aplicar a todos los filtrados</DialogTitle>
+          <DialogContent dividers>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Esta acción afectará <strong>{total} normas</strong>
+              {(estadoCumplimiento || clasificacion || temaGeneral || searchTerm)
+                ? " que coinciden con los filtros activos"
+                : " (toda la matriz aplicable)"}. Incluye registros en páginas que no estás viendo actualmente.
+            </Alert>
+
+            {/* Resumen de filtros activos */}
+            {(estadoCumplimiento || clasificacion || temaGeneral || searchTerm) && (
+              <Box mb={2}>
+                <Typography variant="subtitle2" gutterBottom>Filtros activos:</Typography>
+                <Box display="flex" gap={0.5} flexWrap="wrap">
+                  {estadoCumplimiento && (
+                    <Chip label={`Estado: ${estadoCumplimiento}`} size="small" onDelete={() => setEstadoCumplimiento("")} />
+                  )}
+                  {clasificacion && (
+                    <Chip label={`Clasificación: ${clasificacion}`} size="small" onDelete={() => setClasificacion("")} />
+                  )}
+                  {temaGeneral && (
+                    <Chip label={`Tema: ${temaGeneral}`} size="small" onDelete={() => setTemaGeneral("")} />
+                  )}
+                  {searchTerm && (
+                    <Chip label={`Búsqueda: "${searchTerm}"`} size="small" onDelete={() => setSearchTerm("")} />
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            <Divider sx={{ my: 2 }} />
+
+            <Box display="flex" flexDirection="column" gap={2}>
+              <TextField
+                select
+                label="Estado de Cumplimiento"
+                fullWidth
+                required
+                value={bulkFormData.estado}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, estado: e.target.value as EstadoCumplimiento })}
+              >
+                <MenuItem value="cumple">Cumple</MenuItem>
+                <MenuItem value="no_cumple">No Cumple</MenuItem>
+                <MenuItem value="pendiente">Pendiente</MenuItem>
+                <MenuItem value="en_proceso">En Proceso</MenuItem>
+                <MenuItem value="no_aplica">No Aplica</MenuItem>
+              </TextField>
+
+              {bulkFormData.estado === "no_aplica" && (
+                <TextField
+                  label="Justificación"
+                  fullWidth
+                  multiline
+                  rows={2}
+                  value={bulkFormData.justificacion_no_aplica}
+                  onChange={(e) => setBulkFormData({ ...bulkFormData, justificacion_no_aplica: e.target.value })}
+                />
+              )}
+
+              {/* Evidencia de cumplimiento con IA */}
+              <Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+                  <Typography variant="body2" color="textSecondary">Evidencia de Cumplimiento (opcional)</Typography>
+                  <Tooltip title={
+                    clasificacion || temaGeneral
+                      ? `Generar sugerencia con IA basada en: ${[clasificacion, temaGeneral].filter(Boolean).join(", ")}`
+                      : "Generar sugerencia con IA (añade filtros de clasificación o tema para mayor precisión)"
+                  }>
+                    <span>
+                      <Button
+                        size="small"
+                        startIcon={loadingIABulk ? <CircularProgress size={14} /> : <AIIcon fontSize="small" />}
+                        onClick={handleSolicitarIABulk}
+                        disabled={loadingIABulk}
+                        variant="outlined"
+                        sx={{ fontSize: "0.7rem", py: 0.25 }}
+                      >
+                        {loadingIABulk ? "Generando..." : "Generar con IA"}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </Box>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={bulkFormData.evidencia_cumplimiento}
+                  onChange={(e) => setBulkFormData({ ...bulkFormData, evidencia_cumplimiento: e.target.value })}
+                  placeholder="Documentos, registros o procedimientos que demuestren el cumplimiento..."
+                />
+              </Box>
+
+              <Autocomplete
+                freeSolo
+                options={sugerenciasResponsables}
+                value={bulkFormData.responsable}
+                onChange={(_e, v) => setBulkFormData({ ...bulkFormData, responsable: v || "" })}
+                onInputChange={(_e, v) => setBulkFormData({ ...bulkFormData, responsable: v })}
+                renderInput={(params) => (
+                  <TextField {...params} label="Responsable (opcional)" fullWidth />
+                )}
+              />
+
+              <TextField
+                label="Fecha Compromiso (opcional)"
+                type="date"
+                fullWidth
+                value={bulkFormData.fecha_compromiso || ""}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, fecha_compromiso: e.target.value || null })}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+
+              <TextField
+                label="Observaciones (opcional)"
+                fullWidth
+                multiline
+                rows={2}
+                value={bulkFormData.observaciones}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, observaciones: e.target.value })}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenFiltrosDialog(false)} color="inherit">Cancelar</Button>
+            <Button onClick={handleSaveFiltros} variant="contained" color="warning" disabled={savingFiltros}>
+              {savingFiltros ? "Procesando..." : `Confirmar: aplicar a ${total} normas`}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
       </Box>
   );
 };
