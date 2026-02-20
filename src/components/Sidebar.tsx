@@ -39,6 +39,7 @@ import {
   Category,
   Apartment,
   Slideshow,
+  EventNote,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -597,6 +598,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         roles: ["admin", "supervisor"],
       },
       {
+        id: "plan-trabajo-anual",
+        label: "Plan de Trabajo Anual",
+        icon: <EventNote />,
+        path: "/admin/plan-trabajo-anual",
+        roles: ["admin", "supervisor"],
+      },
+      {
         id: "administration",
         label: "Administración",
         icon: <AdminPanelSettings />,
@@ -790,6 +798,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
               "matriz-empresas": () =>
                 user.role === "admin" || user.role === "supervisor",
               "matriz-sectores": () => user.role === "admin",
+
+              // Plan de Trabajo Anual SG-SST
+              "plan-trabajo-anual": () =>
+                user.role === "admin" || user.role === "supervisor",
 
               // Administration (check individual permissions or role)
               administration: () => true, // Will be filtered by children

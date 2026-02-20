@@ -511,6 +511,20 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     allowedRoles: ['admin', 'trainer'],
     customCheck: (permissions) => permissions.canViewCoursesPage(),
   },
+  {
+    route: '/admin/plan-trabajo-anual',
+    name: 'Plan de Trabajo Anual SG-SST',
+    description: 'Gestión del Plan de Trabajo Anual (PL-SST-02) con seguimiento mensual P/E',
+    requiredPermissions: [],
+    allowedRoles: ['admin', 'supervisor'],
+  },
+  {
+    route: '/admin/plan-trabajo-anual/:planId',
+    name: 'Detalle Plan de Trabajo Anual',
+    description: 'Cronograma anual SG-SST con matriz de actividades y dashboard de cumplimiento',
+    requiredPermissions: [],
+    allowedRoles: ['admin', 'supervisor'],
+  },
 ];
 
 /**
