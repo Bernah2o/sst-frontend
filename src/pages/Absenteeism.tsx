@@ -6,6 +6,10 @@ import {
   Refresh,
   Assessment,
   FilterList,
+  DateRange,
+  MonetizationOn,
+  WorkOff,
+  CalendarMonth,
 } from "@mui/icons-material";
 import {
   Box,
@@ -38,6 +42,8 @@ import {
   Autocomplete,
   Tooltip,
   CircularProgress,
+  LinearProgress,
+  Divider,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -927,85 +933,261 @@ const AbsenteeismManagement: React.FC = () => {
           maxWidth="md"
           fullWidth
         >
-          <DialogTitle>Estadísticas de Ausentismo</DialogTitle>
-          <DialogContent>
+          {/* Header con gradiente */}
+          <Box
+            sx={{
+              background: "linear-gradient(135deg, #1565c0 0%, #1976d2 100%)",
+              px: 3,
+              py: 2.5,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <Assessment sx={{ color: "white", fontSize: 36 }} />
+            <Box>
+              <Typography variant="h6" sx={{ color: "white", fontWeight: "bold" }}>
+                Estadísticas de Ausentismo
+              </Typography>
+              <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.75)" }}>
+                Resumen general de eventos registrados
+              </Typography>
+            </Box>
+          </Box>
+
+          <DialogContent sx={{ p: 3 }}>
             {stats && (
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                  <Card>
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        Total Registros
-                      </Typography>
-                      <Typography variant="h4">
-                        {stats.total_records}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                  <Card>
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        Días Totales
-                      </Typography>
-                      <Typography variant="h4">
-                        {stats.total_disability_days}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <Card>
+              <Box>
+                {/* KPI Cards */}
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        background: "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)",
+                        borderLeft: "4px solid #1976d2",
+                        height: "100%",
+                      }}
+                    >
                       <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          Costos Totales
-                        </Typography>
-                        <Typography variant="h4">
-                          ${stats.total_costs?.toLocaleString() || 0}
-                        </Typography>
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              color="primary"
+                              fontWeight="bold"
+                              sx={{ textTransform: "uppercase", letterSpacing: 1 }}
+                            >
+                              Total Registros
+                            </Typography>
+                            <Typography variant="h3" color="primary.dark" fontWeight="bold">
+                              {stats.total_records}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              eventos registrados
+                            </Typography>
+                          </Box>
+                          <Box sx={{ bgcolor: "primary.main", borderRadius: 2, p: 1 }}>
+                            <Assessment sx={{ color: "white", fontSize: 28 }} />
+                          </Box>
+                        </Box>
                       </CardContent>
                     </Card>
                   </Grid>
-                
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Por Tipo de Evento
-                      </Typography>
-                      {Object.entries(stats.by_event_type).map(([type, count]) => (
-                        <Box key={type} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography>{type}</Typography>
-                          <Typography fontWeight="bold">{count}</Typography>
+
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        background: "linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)",
+                        borderLeft: "4px solid #ed6c02",
+                        height: "100%",
+                      }}
+                    >
+                      <CardContent>
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              color="warning.dark"
+                              fontWeight="bold"
+                              sx={{ textTransform: "uppercase", letterSpacing: 1 }}
+                            >
+                              Días de Incapacidad
+                            </Typography>
+                            <Typography variant="h3" color="warning.dark" fontWeight="bold">
+                              {stats.total_disability_days}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              días acumulados
+                            </Typography>
+                          </Box>
+                          <Box sx={{ bgcolor: "warning.main", borderRadius: 2, p: 1 }}>
+                            <DateRange sx={{ color: "white", fontSize: 28 }} />
+                          </Box>
                         </Box>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </Grid>
-                
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Por Mes
-                      </Typography>
-                      {Object.entries(stats.by_month).map(([month, count]) => (
-                        <Box key={month} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography>{month}</Typography>
-                          <Typography fontWeight="bold">{count}</Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        background: "linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)",
+                        borderLeft: "4px solid #2e7d32",
+                        height: "100%",
+                      }}
+                    >
+                      <CardContent>
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              color="success.dark"
+                              fontWeight="bold"
+                              sx={{ textTransform: "uppercase", letterSpacing: 1 }}
+                            >
+                              Costos Totales
+                            </Typography>
+                            <Typography variant="h3" color="success.dark" fontWeight="bold">
+                              ${(stats.total_costs || 0).toLocaleString()}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              costo acumulado
+                            </Typography>
+                          </Box>
+                          <Box sx={{ bgcolor: "success.main", borderRadius: 2, p: 1 }}>
+                            <MonetizationOn sx={{ color: "white", fontSize: 28 }} />
+                          </Box>
                         </Box>
-                      ))}
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
-              </Grid>
+
+                <Divider sx={{ mb: 3 }} />
+
+                {/* Detalle por categorías */}
+                <Grid container spacing={2}>
+                  {/* Por Tipo de Evento */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Card variant="outlined" sx={{ height: "100%" }}>
+                      <CardContent>
+                        <Box display="flex" alignItems="center" gap={1} mb={2.5}>
+                          <Box sx={{ bgcolor: "error.light", borderRadius: 1.5, p: 0.75 }}>
+                            <WorkOff sx={{ color: "error.dark", fontSize: 20 }} />
+                          </Box>
+                          <Typography variant="h6" fontWeight="bold">
+                            Por Tipo de Evento
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          {(() => {
+                            const values = Object.values(stats.by_event_type) as number[];
+                            const maxVal = values.length > 0 ? Math.max(...values) : 0;
+                            const colorMap: Record<string, "error" | "warning" | "secondary" | "info" | "success"> = {
+                              ACCIDENTE_TRABAJO: "error",
+                              ENFERMEDAD_LABORAL: "warning",
+                              ACCIDENTE_COMUN: "secondary",
+                              ENFERMEDAD_GENERAL: "info",
+                              ENFERMEDAD_LEVE: "success",
+                            };
+                            return Object.entries(stats.by_event_type).map(([type, count]) => {
+                              const pct = maxVal > 0 ? Math.round(((count as number) / maxVal) * 100) : 0;
+                              const label = EVENT_TYPE_OPTIONS.find((o) => o.value === type)?.label || type;
+                              const color = colorMap[type] || "primary";
+                              return (
+                                <Box key={type}>
+                                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.75}>
+                                    <Typography variant="body2" fontWeight="medium">
+                                      {label}
+                                    </Typography>
+                                    <Chip label={count as number} size="small" color={color} />
+                                  </Box>
+                                  <LinearProgress
+                                    variant="determinate"
+                                    value={pct}
+                                    color={color}
+                                    sx={{ height: 8, borderRadius: 4 }}
+                                  />
+                                </Box>
+                              );
+                            });
+                          })()}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Por Mes */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Card variant="outlined" sx={{ height: "100%" }}>
+                      <CardContent>
+                        <Box display="flex" alignItems="center" gap={1} mb={2.5}>
+                          <Box sx={{ bgcolor: "primary.light", borderRadius: 1.5, p: 0.75 }}>
+                            <CalendarMonth sx={{ color: "primary.dark", fontSize: 20 }} />
+                          </Box>
+                          <Typography variant="h6" fontWeight="bold">
+                            Por Mes
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+                          {(() => {
+                            const values = Object.values(stats.by_month) as number[];
+                            const maxVal = values.length > 0 ? Math.max(...values) : 0;
+                            return Object.entries(stats.by_month).map(([month, count]) => {
+                              const pct = maxVal > 0 ? Math.round(((count as number) / maxVal) * 100) : 0;
+                              const label = MONTH_OPTIONS.find((o) => o.value === month)?.label || month;
+                              const hasData = (count as number) > 0;
+                              return (
+                                <Box key={month}>
+                                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.4}>
+                                    <Typography variant="body2" color={hasData ? "text.primary" : "text.disabled"}>
+                                      {label}
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      fontWeight="bold"
+                                      color={hasData ? "primary.main" : "text.disabled"}
+                                    >
+                                      {count as number}
+                                    </Typography>
+                                  </Box>
+                                  <LinearProgress
+                                    variant="determinate"
+                                    value={pct}
+                                    sx={{
+                                      height: 6,
+                                      borderRadius: 3,
+                                      bgcolor: "grey.100",
+                                      "& .MuiLinearProgress-bar": {
+                                        borderRadius: 3,
+                                        bgcolor: hasData ? "primary.main" : "grey.300",
+                                      },
+                                    }}
+                                  />
+                                </Box>
+                              );
+                            });
+                          })()}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Box>
             )}
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenStatsDialog(false)}>Cerrar</Button>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button
+              onClick={() => setOpenStatsDialog(false)}
+              variant="contained"
+              color="primary"
+              sx={{ px: 4 }}
+            >
+              Cerrar
+            </Button>
           </DialogActions>
         </Dialog>
 

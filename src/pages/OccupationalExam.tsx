@@ -19,6 +19,11 @@ import {
   Warning as WarningIcon,
   CheckCircle as SuccessIcon,
   Info as InfoIcon,
+  CalendarMonth as CalendarIcon,
+  EventAvailable as EventAvailableIcon,
+  EventBusy as EventBusyIcon,
+  Schedule as ScheduleIcon,
+  TableChart as TableChartIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -31,7 +36,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogContentText,
   DialogActions,
   IconButton,
   Table,
@@ -56,6 +60,10 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
+  Tabs,
+  Tab,
+  Badge,
+  Divider,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -176,9 +184,6 @@ const OccupationalExam: React.FC = () => {
   const [viewingExam, setViewingExam] = useState<OccupationalExamData | null>(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const { dialogState, showConfirmDialog } = useConfirmDialog();
-  const [deletingExam, setDeletingExam] = useState<OccupationalExamData | null>(
-    null
-  );
   const [filters, setFilters] = useState({
     exam_type: "",
     worker: "",
@@ -198,13 +203,14 @@ const OccupationalExam: React.FC = () => {
     message: string;
     detail: string;
     severity: 'error' | 'warning' | 'info' | 'success';
-  }>({ 
-    open: false, 
-    title: '', 
+  }>({
+    open: false,
+    title: '',
     message: '',
     detail: '',
     severity: 'info'
   });
+  const [activeTab, setActiveTab] = useState(0);
 
   const showAlert = (message: string, severity: 'error' | 'warning' | 'info' | 'success' = 'info', title?: string, detail: string = '') => {
     setErrorDialog({
@@ -997,6 +1003,27 @@ const OccupationalExam: React.FC = () => {
     fetchSuppliers();
   }, [fetchProgramas, fetchSuppliers]);
 
+  // Datos calculados para el cronograma de evaluaciones futuras
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const scheduleData = exams
+    .filter((e) => e.next_exam_date)
+    .map((e) => {
+      const nextDate = new Date(e.next_exam_date!);
+      const daysUntil = Math.ceil(
+        (nextDate.getTime() - today.getTime()) / (1000 * 3600 * 24)
+      );
+      return { ...e, _nextDate: nextDate, _daysUntil: daysUntil };
+    })
+    .sort((a, b) => a._daysUntil - b._daysUntil);
+  const scheduleOverdue = scheduleData.filter((e) => e._daysUntil < 0).length;
+  const scheduleCritical = scheduleData.filter(
+    (e) => e._daysUntil >= 0 && e._daysUntil <= 30
+  ).length;
+  const scheduleUpcoming = scheduleData.filter(
+    (e) => e._daysUntil > 30 && e._daysUntil <= 90
+  ).length;
+  const scheduleFuture = scheduleData.filter((e) => e._daysUntil > 90).length;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
@@ -1109,7 +1136,37 @@ const OccupationalExam: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Tabla de Exámenes */}
+        {/* Pestañas de Navegación */}
+        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+          <Tabs
+            value={activeTab}
+            onChange={(_, v) => setActiveTab(v)}
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab
+              label="Lista de Exámenes"
+              icon={<TableChartIcon />}
+              iconPosition="start"
+            />
+            <Tab
+              label="Cronograma de Evaluaciones Futuras"
+              icon={
+                <Badge
+                  badgeContent={scheduleOverdue + scheduleCritical}
+                  color="error"
+                  invisible={scheduleOverdue + scheduleCritical === 0}
+                >
+                  <CalendarIcon />
+                </Badge>
+              }
+              iconPosition="start"
+            />
+          </Tabs>
+        </Box>
+
+        {/* Tab: Lista de Exámenes */}
+        {activeTab === 0 && (
         <Card>
           <CardContent>
             <TableContainer component={Paper}>
@@ -1398,6 +1455,318 @@ const OccupationalExam: React.FC = () => {
             )}
           </CardContent>
         </Card>
+        )}
+
+        {/* Tab: Cronograma de Evaluaciones Futuras */}
+        {activeTab === 1 && (
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={1} mb={3}>
+                <CalendarIcon color="primary" sx={{ fontSize: 36 }} />
+                <Box>
+                  <Typography variant="h6">
+                    Cronograma de Evaluaciones Futuras
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Exámenes programados según fecha de próximo examen
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* KPI Cards */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Card
+                    variant="outlined"
+                    sx={{ bgcolor: "error.light", borderColor: "error.main" }}
+                  >
+                    <CardContent sx={{ textAlign: "center", py: 2 }}>
+                      <EventBusyIcon color="error" sx={{ fontSize: 36 }} />
+                      <Typography
+                        variant="h4"
+                        color="error.dark"
+                        fontWeight="bold"
+                      >
+                        {scheduleOverdue}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="error.dark"
+                        fontWeight="medium"
+                      >
+                        Vencidos
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Próximo examen no realizado
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      bgcolor: "warning.light",
+                      borderColor: "warning.main",
+                    }}
+                  >
+                    <CardContent sx={{ textAlign: "center", py: 2 }}>
+                      <ScheduleIcon color="warning" sx={{ fontSize: 36 }} />
+                      <Typography
+                        variant="h4"
+                        color="warning.dark"
+                        fontWeight="bold"
+                      >
+                        {scheduleCritical}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="warning.dark"
+                        fontWeight="medium"
+                      >
+                        Críticos
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Próximos 30 días
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Card
+                    variant="outlined"
+                    sx={{ bgcolor: "info.light", borderColor: "info.main" }}
+                  >
+                    <CardContent sx={{ textAlign: "center", py: 2 }}>
+                      <EventAvailableIcon color="info" sx={{ fontSize: 36 }} />
+                      <Typography
+                        variant="h4"
+                        color="info.dark"
+                        fontWeight="bold"
+                      >
+                        {scheduleUpcoming}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="info.dark"
+                        fontWeight="medium"
+                      >
+                        Próximos
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        31 a 90 días
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      bgcolor: "success.light",
+                      borderColor: "success.main",
+                    }}
+                  >
+                    <CardContent sx={{ textAlign: "center", py: 2 }}>
+                      <SuccessIcon color="success" sx={{ fontSize: 36 }} />
+                      <Typography
+                        variant="h4"
+                        color="success.dark"
+                        fontWeight="bold"
+                      >
+                        {scheduleFuture}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="success.dark"
+                        fontWeight="medium"
+                      >
+                        Programados
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Más de 90 días
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ mb: 3 }} />
+
+              {/* Tabla del cronograma */}
+              {scheduleData.length === 0 ? (
+                <Alert severity="info">
+                  No hay exámenes con fecha de próximo examen programada.
+                  Registre la fecha del próximo examen al editar un examen.
+                </Alert>
+              ) : (
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "primary.dark" }}>
+                        <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                          Trabajador
+                        </TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                          Cargo
+                        </TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                          Tipo de Examen
+                        </TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                          Fecha Próximo Examen
+                        </TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                          Días Restantes
+                        </TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                          Aptitud Actual
+                        </TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                          Centro Médico
+                        </TableCell>
+                        <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                          Acciones
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {scheduleData.map((exam) => {
+                        const d = exam._daysUntil;
+                        const isOverdue = d < 0;
+                        const isCritical = d >= 0 && d <= 30;
+                        const isUpcoming = d > 30 && d <= 90;
+                        const rowBg = isOverdue
+                          ? "rgba(244,67,54,0.08)"
+                          : isCritical
+                            ? "rgba(255,152,0,0.08)"
+                            : isUpcoming
+                              ? "rgba(33,150,243,0.06)"
+                              : "rgba(76,175,80,0.04)";
+                        return (
+                          <TableRow key={exam.id} sx={{ bgcolor: rowBg }}>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="medium">
+                                {exam.worker_name || "N/A"}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {exam.worker_document}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {exam.worker_position || "No especificado"}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={
+                                  exam.exam_type
+                                    ? EXAM_TYPE_LABELS[exam.exam_type] ||
+                                      exam.exam_type
+                                    : "N/A"
+                                }
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="medium">
+                                {formatDate(exam.next_exam_date!)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={
+                                  isOverdue
+                                    ? `${Math.abs(d)} días vencido`
+                                    : d === 0
+                                      ? "Hoy"
+                                      : `${d} días`
+                                }
+                                color={
+                                  isOverdue
+                                    ? "error"
+                                    : isCritical
+                                      ? "warning"
+                                      : isUpcoming
+                                        ? "info"
+                                        : "success"
+                                }
+                                size="small"
+                                icon={
+                                  isOverdue ? (
+                                    <ErrorIcon />
+                                  ) : isCritical ? (
+                                    <WarningIcon />
+                                  ) : isUpcoming ? (
+                                    <InfoIcon />
+                                  ) : (
+                                    <SuccessIcon />
+                                  )
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={
+                                  exam.medical_aptitude_concept === "apto"
+                                    ? "Apto"
+                                    : exam.medical_aptitude_concept ===
+                                        "apto_con_recomendaciones"
+                                      ? "Apto c/Rec."
+                                      : "No Apto"
+                                }
+                                color={
+                                  exam.medical_aptitude_concept === "apto"
+                                    ? "success"
+                                    : exam.medical_aptitude_concept ===
+                                        "apto_con_recomendaciones"
+                                      ? "warning"
+                                      : "error"
+                                }
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {exam.medical_center || "N/A"}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Box display="flex" gap={0.5}>
+                                <Tooltip title="Ver detalles">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleViewExam(exam)}
+                                  >
+                                    <ViewIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Editar">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleOpenDialog(exam)}
+                                  >
+                                    <EditIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Dialog para Crear/Editar Examen */}
         <Dialog
