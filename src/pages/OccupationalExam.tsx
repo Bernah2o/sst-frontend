@@ -189,6 +189,7 @@ const OccupationalExam: React.FC = () => {
     worker: "",
     search: "",
     next_exam_status: "",
+    year: "",
   });
   const [generatingReport, setGeneratingReport] = useState(false);
   const [generatingIndividualReport, setGeneratingIndividualReport] =
@@ -211,6 +212,7 @@ const OccupationalExam: React.FC = () => {
     severity: 'info'
   });
   const [activeTab, setActiveTab] = useState(0);
+  const [scheduleYear, setScheduleYear] = useState<number | "">("");
 
   const showAlert = (message: string, severity: 'error' | 'warning' | 'info' | 'success' = 'info', title?: string, detail: string = '') => {
     setErrorDialog({
@@ -277,6 +279,7 @@ const OccupationalExam: React.FC = () => {
       if (filters.worker) params.append("worker_id", filters.worker);
       if (filters.search) params.append("search", filters.search);
       if (filters.next_exam_status) params.append("next_exam_status", filters.next_exam_status);
+      if (filters.year) params.append("next_exam_year", filters.year);
 
       const response = await api.get(
         `/occupational-exams/?${params.toString()}`
@@ -1020,10 +1023,23 @@ const OccupationalExam: React.FC = () => {
   const scheduleCritical = scheduleData.filter(
     (e) => e._daysUntil >= 0 && e._daysUntil <= 30
   ).length;
-  const scheduleUpcoming = scheduleData.filter(
+  // Años disponibles y datos filtrados para el cronograma
+  const scheduleYearsList = Array.from(
+    new Set(scheduleData.map((e) => e._nextDate.getFullYear()))
+  ).sort((a, b) => a - b);
+
+  const filteredScheduleData = scheduleYear
+    ? scheduleData.filter((e) => e._nextDate.getFullYear() === scheduleYear)
+    : scheduleData;
+
+  const filteredOverdue = filteredScheduleData.filter((e) => e._daysUntil < 0).length;
+  const filteredCritical = filteredScheduleData.filter(
+    (e) => e._daysUntil >= 0 && e._daysUntil <= 30
+  ).length;
+  const filteredUpcoming = filteredScheduleData.filter(
     (e) => e._daysUntil > 30 && e._daysUntil <= 90
   ).length;
-  const scheduleFuture = scheduleData.filter((e) => e._daysUntil > 90).length;
+  const filteredFuture = filteredScheduleData.filter((e) => e._daysUntil > 90).length;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
@@ -1098,6 +1114,29 @@ const OccupationalExam: React.FC = () => {
                     <MenuItem value="">Todos</MenuItem>
                     <MenuItem value="proximos">Próximos 30 días</MenuItem>
                     <MenuItem value="vencidos">Vencidos</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Año EMO</InputLabel>
+                  <Select
+                    value={filters.year}
+                    onChange={(e) => handleFilterChange("year", e.target.value)}
+                    label="Año EMO"
+                  >
+                    <MenuItem value="">Todos los años</MenuItem>
+                    {[
+                      new Date().getFullYear() - 1,
+                      new Date().getFullYear(),
+                      new Date().getFullYear() + 1,
+                      new Date().getFullYear() + 2,
+                    ].map((y) => (
+                      <MenuItem key={y} value={y.toString()}>
+                        {y}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
@@ -1461,16 +1500,51 @@ const OccupationalExam: React.FC = () => {
         {activeTab === 1 && (
           <Card>
             <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={3}>
-                <CalendarIcon color="primary" sx={{ fontSize: 36 }} />
-                <Box>
-                  <Typography variant="h6">
-                    Cronograma de Evaluaciones Futuras
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Exámenes programados según fecha de próximo examen
-                  </Typography>
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                flexWrap="wrap"
+                gap={2}
+                mb={3}
+              >
+                <Box display="flex" alignItems="center" gap={1}>
+                  <CalendarIcon color="primary" sx={{ fontSize: 36 }} />
+                  <Box>
+                    <Typography variant="h6">
+                      Cronograma de Evaluaciones Futuras
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {scheduleYear
+                        ? `${filteredScheduleData.length} trabajador(es) con EMO programado para ${scheduleYear}`
+                        : "Exámenes programados según fecha de próximo examen"}
+                    </Typography>
+                  </Box>
                 </Box>
+                <FormControl size="small" sx={{ minWidth: 170 }}>
+                  <InputLabel>Filtrar por Año EMO</InputLabel>
+                  <Select
+                    value={scheduleYear}
+                    onChange={(e) =>
+                      setScheduleYear(e.target.value as number | "")
+                    }
+                    label="Filtrar por Año EMO"
+                  >
+                    <MenuItem value="">Todos los años</MenuItem>
+                    {(scheduleYearsList.length > 0
+                      ? scheduleYearsList
+                      : [
+                          new Date().getFullYear(),
+                          new Date().getFullYear() + 1,
+                          new Date().getFullYear() + 2,
+                        ]
+                    ).map((y) => (
+                      <MenuItem key={y} value={y}>
+                        {y}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Box>
 
               {/* KPI Cards */}
@@ -1487,7 +1561,7 @@ const OccupationalExam: React.FC = () => {
                         color="error.dark"
                         fontWeight="bold"
                       >
-                        {scheduleOverdue}
+                        {filteredOverdue}
                       </Typography>
                       <Typography
                         variant="body2"
@@ -1517,7 +1591,7 @@ const OccupationalExam: React.FC = () => {
                         color="warning.dark"
                         fontWeight="bold"
                       >
-                        {scheduleCritical}
+                        {filteredCritical}
                       </Typography>
                       <Typography
                         variant="body2"
@@ -1544,7 +1618,7 @@ const OccupationalExam: React.FC = () => {
                         color="info.dark"
                         fontWeight="bold"
                       >
-                        {scheduleUpcoming}
+                        {filteredUpcoming}
                       </Typography>
                       <Typography
                         variant="body2"
@@ -1574,7 +1648,7 @@ const OccupationalExam: React.FC = () => {
                         color="success.dark"
                         fontWeight="bold"
                       >
-                        {scheduleFuture}
+                        {filteredFuture}
                       </Typography>
                       <Typography
                         variant="body2"
@@ -1594,10 +1668,11 @@ const OccupationalExam: React.FC = () => {
               <Divider sx={{ mb: 3 }} />
 
               {/* Tabla del cronograma */}
-              {scheduleData.length === 0 ? (
-                <Alert severity="info">
-                  No hay exámenes con fecha de próximo examen programada.
-                  Registre la fecha del próximo examen al editar un examen.
+              {filteredScheduleData.length === 0 ? (
+                <Alert severity={scheduleYear ? "warning" : "info"}>
+                  {scheduleYear
+                    ? `No hay trabajadores con EMO programado para el año ${scheduleYear}.`
+                    : "No hay exámenes con fecha de próximo examen programada. Registre la fecha del próximo examen al editar un examen."}
                 </Alert>
               ) : (
                 <TableContainer component={Paper}>
@@ -1631,7 +1706,7 @@ const OccupationalExam: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {scheduleData.map((exam) => {
+                      {filteredScheduleData.map((exam) => {
                         const d = exam._daysUntil;
                         const isOverdue = d < 0;
                         const isCritical = d >= 0 && d <= 30;

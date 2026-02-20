@@ -101,6 +101,8 @@ import InteractiveLessons from "./pages/InteractiveLessons";
 import { LessonBuilder, LessonViewer } from "./components/interactive-lessons";
 import PlanTrabajoAnual from "./pages/PlanTrabajoAnual";
 import PlanTrabajoAnualDetail from "./pages/PlanTrabajoAnualDetail";
+import PresupuestoSST from "./pages/PresupuestoSST";
+import PresupuestoSSTDetail from "./pages/PresupuestoSSTDetail";
 import { UserRole } from "./types";
 import { checkPagePermission, PAGE_PERMISSIONS } from "./utils/pagePermissions";
 
@@ -724,6 +726,22 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/plan-trabajo-anual/:planId">
                         <PlanTrabajoAnualDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/presupuesto-sst"
+                    element={
+                      <ProtectedRoute route="/admin/presupuesto-sst">
+                        <PresupuestoSST />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/presupuesto-sst/:presupuestoId"
+                    element={
+                      <ProtectedRoute route="/admin/presupuesto-sst/:presupuestoId">
+                        <PresupuestoSSTDetail />
                       </ProtectedRoute>
                     }
                   />
