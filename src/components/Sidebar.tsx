@@ -40,6 +40,7 @@ import {
   Apartment,
   Slideshow,
   EventNote,
+  AccountBalance,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -601,8 +602,23 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
         id: "plan-trabajo-anual",
         label: "Plan de Trabajo Anual",
         icon: <EventNote />,
-        path: "/admin/plan-trabajo-anual",
         roles: ["admin", "supervisor"],
+        children: [
+          {
+            id: "plan-trabajo",
+            label: "Plan de Trabajo",
+            icon: <EventNote />,
+            path: "/admin/plan-trabajo-anual",
+            roles: ["admin", "supervisor"],
+          },
+          {
+            id: "presupuesto-sst",
+            label: "Presupuesto SST",
+            icon: <AccountBalance />,
+            path: "/admin/presupuesto-sst",
+            roles: ["admin", "supervisor"],
+          },
+        ],
       },
       {
         id: "administration",
@@ -801,6 +817,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
 
               // Plan de Trabajo Anual SG-SST
               "plan-trabajo-anual": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "plan-trabajo": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "presupuesto-sst": () =>
                 user.role === "admin" || user.role === "supervisor",
 
               // Administration (check individual permissions or role)
