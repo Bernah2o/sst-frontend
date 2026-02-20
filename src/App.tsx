@@ -103,6 +103,8 @@ import PlanTrabajoAnual from "./pages/PlanTrabajoAnual";
 import PlanTrabajoAnualDetail from "./pages/PlanTrabajoAnualDetail";
 import PresupuestoSST from "./pages/PresupuestoSST";
 import PresupuestoSSTDetail from "./pages/PresupuestoSSTDetail";
+import ProgramaCapacitaciones from "./pages/ProgramaCapacitaciones";
+import ProgramaCapacitacionesDetail from "./pages/ProgramaCapacitacionesDetail";
 import { UserRole } from "./types";
 import { checkPagePermission, PAGE_PERMISSIONS } from "./utils/pagePermissions";
 
@@ -742,6 +744,22 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/presupuesto-sst/:presupuestoId">
                         <PresupuestoSSTDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/programa-capacitaciones"
+                    element={
+                      <ProtectedRoute route="/admin/programa-capacitaciones">
+                        <ProgramaCapacitaciones />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/programa-capacitaciones/:programaId"
+                    element={
+                      <ProtectedRoute route="/admin/programa-capacitaciones/:programaId">
+                        <ProgramaCapacitacionesDetail />
                       </ProtectedRoute>
                     }
                   />
