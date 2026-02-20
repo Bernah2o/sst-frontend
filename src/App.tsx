@@ -99,6 +99,8 @@ import MatrizLegalNormas from "./pages/MatrizLegal/MatrizLegalNormas";
 import MatrizLegalEmpresa from "./pages/MatrizLegal/MatrizLegalEmpresa";
 import InteractiveLessons from "./pages/InteractiveLessons";
 import { LessonBuilder, LessonViewer } from "./components/interactive-lessons";
+import PlanTrabajoAnual from "./pages/PlanTrabajoAnual";
+import PlanTrabajoAnualDetail from "./pages/PlanTrabajoAnualDetail";
 import { UserRole } from "./types";
 import { checkPagePermission, PAGE_PERMISSIONS } from "./utils/pagePermissions";
 
@@ -706,6 +708,22 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/interactive-lessons">
                         <InteractiveLessons />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/plan-trabajo-anual"
+                    element={
+                      <ProtectedRoute route="/admin/plan-trabajo-anual">
+                        <PlanTrabajoAnual />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/plan-trabajo-anual/:planId"
+                    element={
+                      <ProtectedRoute route="/admin/plan-trabajo-anual/:planId">
+                        <PlanTrabajoAnualDetail />
                       </ProtectedRoute>
                     }
                   />
