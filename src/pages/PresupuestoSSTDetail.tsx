@@ -73,7 +73,7 @@ interface MontoCellProps {
 const MontoCell: React.FC<MontoCellProps> = ({
   itemId, mes, field, initialValue, onSaved,
 }) => {
-  const [value, setValue] = useState(initialValue === 0 ? '' : String(initialValue));
+  const [value, setValue] = useState(initialValue > 0 ? String(initialValue) : '');
   const [saving, setSaving] = useState(false);
   const prevRef = useRef(initialValue);
 
@@ -81,12 +81,12 @@ const MontoCell: React.FC<MontoCellProps> = ({
   useEffect(() => {
     if (prevRef.current !== initialValue) {
       prevRef.current = initialValue;
-      setValue(initialValue === 0 ? '' : String(initialValue));
+      setValue(initialValue > 0 ? String(initialValue) : '');
     }
   }, [initialValue]);
 
   const handleBlur = async () => {
-    const num = parseFloat(value.replace(/,/g, '')) || 0;
+    const num = parseFloat(value) || 0;
     if (num === prevRef.current) return;
     setSaving(true);
     try {
@@ -94,8 +94,7 @@ const MontoCell: React.FC<MontoCellProps> = ({
       prevRef.current = num;
       onSaved(itemId, mes, field, num);
     } catch {
-      // revert
-      setValue(prevRef.current === 0 ? '' : String(prevRef.current));
+      setValue(prevRef.current > 0 ? String(prevRef.current) : '');
     } finally {
       setSaving(false);
     }
@@ -104,37 +103,35 @@ const MontoCell: React.FC<MontoCellProps> = ({
   const bg = field === 'proyectado' ? '#FFFDE7' : '#F1F8E9';
 
   return (
-    <TableCell
-      sx={{
-        p: 0,
-        minWidth: 80,
-        background: bg,
-        border: '1px solid #E0E0E0',
-      }}
-    >
-      <TextField
-        variant="standard"
-        type="number"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={handleBlur}
-        placeholder="0"
-        InputProps={{
-          disableUnderline: true,
-          endAdornment: saving ? (
-            <CircularProgress size={10} sx={{ mr: 0.5 }} />
-          ) : null,
-          sx: {
-            fontSize: '0.72rem',
-            px: 0.5,
+    <TableCell sx={{ p: 0, background: bg, border: '1px solid #E0E0E0', minWidth: 72 }}>
+      <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <input
+          type="number"
+          value={value}
+          placeholder="0"
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={handleBlur}
+          onFocus={(e) => e.target.select()}
+          style={{
+            width: '100%',
+            border: 'none',
+            outline: 'none',
+            background: 'transparent',
             textAlign: 'right',
-          },
-        }}
-        inputProps={{
-          style: { textAlign: 'right', padding: '3px 2px' },
-        }}
-        sx={{ width: '100%' }}
-      />
+            fontSize: '0.75rem',
+            padding: '4px 6px',
+            fontFamily: 'inherit',
+            cursor: 'text',
+            boxSizing: 'border-box',
+          }}
+        />
+        {saving && (
+          <CircularProgress
+            size={10}
+            sx={{ position: 'absolute', right: 4, top: '50%', mt: '-5px' }}
+          />
+        )}
+      </Box>
     </TableCell>
   );
 };

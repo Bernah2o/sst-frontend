@@ -57,7 +57,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
@@ -429,6 +429,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             path: "/admin/admin-attendance",
             roles: ["admin"],
           },
+          {
+            id: "programa-capacitaciones",
+            label: "Programa de Capacitaciones",
+            icon: <School />,
+            path: "/admin/programa-capacitaciones",
+            roles: ["admin", "supervisor"],
+          },
         ],
         roles: ["admin", "trainer", "supervisor"],
       },
@@ -753,6 +760,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
               attendance: () => canViewAttendancePage() || isNotEmployee,
               "attendance-list": () => canViewAttendancePage() || isNotEmployee,
               "admin-attendance": () => canUpdateAttendance() || isNotEmployee,
+              "programa-capacitaciones": () => isNotEmployee,
 
               // Health/Medical
               health: () =>
@@ -889,11 +897,12 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
       <React.Fragment key={item.id}>
         <ListItem disablePadding className="sidebar-menu-item">
           <ListItemButton
+            {...(!hasChildren && item.path ? { component: Link, to: item.path } as any : {})}
             onClick={() => {
               if (hasChildren) {
                 handleExpand(item.id);
-              } else if (item.path) {
-                handleNavigation(item.path);
+              } else if (item.path && isMobile) {
+                onToggle();
               }
             }}
             selected={isItemActive}

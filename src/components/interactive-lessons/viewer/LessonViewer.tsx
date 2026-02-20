@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import {
   Box,
   Paper,
@@ -463,7 +464,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({ lessonId: propLessonId, isP
               '& p': { mb: 2, lineHeight: 1.7, fontSize: '1.1rem' },
               '& h1, & h2, & h3': { color: 'primary.main', mb: 2 }
             }}
-            dangerouslySetInnerHTML={{ __html: (currentSlide.content as TextContent)?.html || '' }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize((currentSlide.content as TextContent)?.html || '') }}
           />
         );
 
@@ -564,7 +565,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({ lessonId: propLessonId, isP
               '& p': { mb: 2, lineHeight: 1.7, fontSize: '1.1rem' },
               '& h1, & h2, & h3': { color: 'primary.main', mb: 2 }
             }}
-            dangerouslySetInnerHTML={{ __html: (currentSlide.content as TextContent)?.html || '' }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize((currentSlide.content as TextContent)?.html || '') }}
           />
         );
 
