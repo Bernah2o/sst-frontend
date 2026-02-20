@@ -2,7 +2,7 @@
  * Gestión de Sectores Económicos para la Matriz Legal SST.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Button,
@@ -81,11 +81,7 @@ const SectorEconomicoList: React.FC = () => {
   const [formData, setFormData] = useState<SectorFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadSectores();
-  }, []);
-
-  const loadSectores = async () => {
+  const loadSectores = useCallback(async () => {
     try {
       setLoading(true);
       const data = await matrizLegalService.listSectoresEconomicos();
@@ -96,7 +92,11 @@ const SectorEconomicoList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [enqueueSnackbar]);
+
+  useEffect(() => {
+    loadSectores();
+  }, [loadSectores]);
 
   const handleOpenDialog = (sector?: SectorEconomico) => {
     if (sector) {
