@@ -11,7 +11,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   Grid,
+  InputLabel,
+  MenuItem,
+  Select,
   TextField,
   Typography,
   Alert,
@@ -95,6 +99,16 @@ const PlanTrabajoAnualPage: React.FC = () => {
       setError(msg);
     } finally {
       setCreando(false);
+    }
+  };
+
+  const handleCambiarEstado = async (plan: PlanTrabajoAnual, nuevoEstado: EstadoPlan) => {
+    try {
+      await planTrabajoAnualService.actualizarPlan(plan.id, { estado: nuevoEstado });
+      setPlanes((prev) => prev.map((p) => p.id === plan.id ? { ...p, estado: nuevoEstado } : p));
+      setSuccess(`Estado del plan ${plan.año} actualizado a "${ESTADO_LABELS[nuevoEstado]}"`);
+    } catch {
+      setError('Error al cambiar el estado del plan');
     }
   };
 
@@ -193,6 +207,7 @@ const PlanTrabajoAnualPage: React.FC = () => {
                 plan={plan}
                 onVerDetalle={() => navigate(`/admin/plan-trabajo-anual/${plan.id}`)}
                 onEliminar={() => handleEliminar(plan)}
+                onCambiarEstado={(estado) => handleCambiarEstado(plan, estado)}
               />
             </Grid>
           ))}
@@ -264,12 +279,20 @@ interface PlanCardProps {
   plan: PlanTrabajoAnual;
   onVerDetalle: () => void;
   onEliminar: () => void;
+  onCambiarEstado: (estado: EstadoPlan) => void;
 }
 
-const PlanCard: React.FC<PlanCardProps> = ({ plan, onVerDetalle, onEliminar }) => {
+const PlanCard: React.FC<PlanCardProps> = ({ plan, onVerDetalle, onEliminar, onCambiarEstado }) => {
   const añoActual = new Date().getFullYear();
-  const mesActual = new Date().getMonth() + 1; // meses transcurridos como indicador
+  const mesActual = new Date().getMonth() + 1;
   const progresionEsperada = Math.round((mesActual / 12) * 100);
+  const [cambiando, setCambiando] = useState(false);
+
+  const handleEstadoChange = async (nuevoEstado: EstadoPlan) => {
+    setCambiando(true);
+    await onCambiarEstado(nuevoEstado);
+    setCambiando(false);
+  };
 
   return (
     <Card
@@ -291,11 +314,23 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onVerDetalle, onEliminar }) =
               {plan.codigo} • v{plan.version}
             </Typography>
           </Box>
-          <Chip
-            label={ESTADO_LABELS[plan.estado]}
-            color={ESTADO_COLORS[plan.estado]}
-            size="small"
-          />
+          <FormControl size="small" sx={{ minWidth: 130 }}>
+            <InputLabel>Estado</InputLabel>
+            <Select
+              label="Estado"
+              value={plan.estado}
+              onChange={(e) => handleEstadoChange(e.target.value as EstadoPlan)}
+              disabled={cambiando}
+              endAdornment={cambiando ? <CircularProgress size={14} sx={{ mr: 2 }} /> : null}
+              sx={{ fontSize: '0.8rem' }}
+            >
+              {(Object.keys(ESTADO_LABELS) as EstadoPlan[]).map((key) => (
+                <MenuItem key={key} value={key}>
+                  <Chip label={ESTADO_LABELS[key]} size="small" color={ESTADO_COLORS[key]} sx={{ fontSize: '0.72rem', height: 20 }} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
 
         <Divider sx={{ my: 1.5 }} />

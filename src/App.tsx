@@ -107,6 +107,8 @@ import ProgramaCapacitaciones from "./pages/ProgramaCapacitaciones";
 import ProgramaCapacitacionesDetail from "./pages/ProgramaCapacitacionesDetail";
 import EstandaresMinimos from "./pages/EstandaresMinimos";
 import EstandaresMinimosDetalle from "./pages/EstandaresMinimosDetalle";
+import CronogramaPyp from "./pages/CronogramaPyp";
+import CronogramaPypDetail from "./pages/CronogramaPypDetail";
 import { UserRole } from "./types";
 import { checkPagePermission, PAGE_PERMISSIONS } from "./utils/pagePermissions";
 
@@ -778,6 +780,23 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/estandares-minimos/:evalId">
                         <EstandaresMinimosDetalle />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Rutas de Cronograma PYP */}
+                  <Route
+                    path="/admin/cronograma-pyp"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CronogramaPyp />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/cronograma-pyp/:planId"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <CronogramaPypDetail />
                       </ProtectedRoute>
                     }
                   />
