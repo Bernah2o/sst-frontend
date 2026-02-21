@@ -37,6 +37,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   // Sidebar siempre abierto en desktop, cerrado en móvil
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("sidebar-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showPermissionNotification, setShowPermissionNotification] = useState(false);
 
@@ -55,9 +62,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
 
   const handleSidebarToggle = () => {
-    // Solo permitir toggle en móvil
     if (isMobile) {
       setSidebarOpen(!sidebarOpen);
+    } else {
+      const next = !sidebarCollapsed;
+      setSidebarCollapsed(next);
+      try { localStorage.setItem("sidebar-collapsed", String(next)); } catch { /* noop */ }
     }
   };
 
@@ -108,11 +118,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Manejar cambios entre móvil y desktop
   useEffect(() => {
     if (isMobile) {
-      // En móvil, cerrar el sidebar
       setSidebarOpen(false);
-    } else {
-      // En desktop, siempre abierto
-      setSidebarOpen(true);
     }
   }, [isMobile]);
 
@@ -121,7 +127,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       {/* Sidebar */}
-      <Sidebar open={sidebarOpen} onToggle={handleSidebarToggle} />
+      <Sidebar
+        open={sidebarOpen}
+        collapsed={!isMobile && sidebarCollapsed}
+        onToggle={handleSidebarToggle}
+      />
       
       {/* Main Content */}
       <Box
@@ -149,18 +159,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           }}
         >
           <Toolbar>
-            {/* Solo mostrar botón de toggle en móvil */}
-            {isMobile && (
-              <IconButton
-                color="inherit"
-                aria-label="toggle sidebar"
-                onClick={handleSidebarToggle}
-                edge="start"
-                sx={{ mr: 2 }}
-              >
-                <MenuIcon />
-              </IconButton>
-            )}
+            <IconButton
+              color="inherit"
+              aria-label="toggle sidebar"
+              onClick={handleSidebarToggle}
+              edge="start"
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
             
             <School sx={{ mr: 2, color: theme.palette.primary.main }} />
             <Typography 

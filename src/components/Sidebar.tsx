@@ -19,10 +19,10 @@ import {
   Folder,
   AdminPanelSettings,
   SupervisorAccount,
-  MenuOpen,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle,
   Schedule,
-  Group,
   Groups,
   Description,
   Healing,
@@ -53,17 +53,22 @@ import {
   Typography,
   Box,
   IconButton,
+  Tooltip,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
 
+const DRAWER_WIDTH = 280;
+const MINI_DRAWER_WIDTH = 64;
+
 interface SidebarProps {
   open: boolean;
+  collapsed: boolean;
   onToggle: () => void;
 }
 
@@ -76,7 +81,7 @@ interface MenuItem {
   roles?: string[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
+const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
   const { user } = useAuth();
   const {
     canUpdateUsers,
@@ -101,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     canViewAuditPage,
     canViewAbsenteeismPage,
   } = usePermissions();
-  const navigate = useNavigate();
+
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -151,12 +156,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     );
   };
 
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    if (isMobile) {
-      onToggle();
-    }
-  };
 
   const isActive = (path: string) => {
     return (
@@ -421,13 +420,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
             icon: <Schedule />,
             path: "/admin/attendance",
             roles: ["admin", "trainer", "supervisor"],
-          },
-          {
-            id: "admin-attendance",
-            label: "Gestión de Asistencia",
-            icon: <Group />,
-            path: "/admin/admin-attendance",
-            roles: ["admin"],
           },
           {
             id: "programa-capacitaciones",
@@ -890,42 +882,50 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
 
   const renderMenuItem = (item: MenuItem, level: number = 0) => {
     const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedItems.includes(item.id);
+    const isExpanded = !collapsed && expandedItems.includes(item.id);
     const isItemActive = item.path ? isActive(item.path) : false;
 
-    return (
-      <React.Fragment key={item.id}>
-        <ListItem disablePadding className="sidebar-menu-item">
-          <ListItemButton
-            {...(!hasChildren && item.path ? { component: Link, to: item.path } as any : {})}
-            onClick={() => {
-              if (hasChildren) {
-                handleExpand(item.id);
-              } else if (item.path && isMobile) {
-                onToggle();
-              }
-            }}
-            selected={isItemActive}
-            sx={{
-              pl: 2 + level * 2,
-              minHeight: 48,
-              "&.Mui-selected": {
-                backgroundColor: theme.palette.primary.main + "20",
-                borderRight: `3px solid ${theme.palette.primary.main}`,
-                "&:hover": {
-                  backgroundColor: theme.palette.primary.main + "30",
-                },
-              },
-            }}
-          >
-            <ListItemIcon
-              sx={{
-                minWidth: 40,
-                color: isItemActive ? theme.palette.primary.main : "inherit",
-              }}
-            >
-              {item.icon}
-            </ListItemIcon>
+    const handleItemClick = () => {
+      if (hasChildren) {
+        if (collapsed) {
+          onToggle(); // expandir sidebar
+          if (!expandedItems.includes(item.id)) handleExpand(item.id);
+        } else {
+          handleExpand(item.id);
+        }
+      } else if (item.path && isMobile) {
+        onToggle();
+      }
+    };
+
+    const button = (
+      <ListItemButton
+        {...(!hasChildren && item.path ? { component: Link, to: item.path } as any : {})}
+        onClick={handleItemClick}
+        selected={isItemActive}
+        sx={{
+          pl: collapsed ? 0 : 2 + level * 2,
+          minHeight: 48,
+          justifyContent: collapsed ? "center" : "flex-start",
+          px: collapsed ? 2.5 : undefined,
+          "&.Mui-selected": {
+            backgroundColor: theme.palette.primary.main + "20",
+            borderRight: collapsed ? "none" : `3px solid ${theme.palette.primary.main}`,
+            "&:hover": { backgroundColor: theme.palette.primary.main + "30" },
+          },
+        }}
+      >
+        <ListItemIcon
+          sx={{
+            minWidth: collapsed ? "auto" : 40,
+            justifyContent: "center",
+            color: isItemActive ? theme.palette.primary.main : "inherit",
+          }}
+        >
+          {item.icon}
+        </ListItemIcon>
+        {!collapsed && (
+          <>
             <ListItemText
               primary={item.label}
               primaryTypographyProps={{
@@ -935,9 +935,21 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
               }}
             />
             {hasChildren && (isExpanded ? <ExpandLess /> : <ExpandMore />)}
-          </ListItemButton>
+          </>
+        )}
+      </ListItemButton>
+    );
+
+    return (
+      <React.Fragment key={item.id}>
+        <ListItem disablePadding className="sidebar-menu-item">
+          {collapsed ? (
+            <Tooltip title={item.label} placement="right" arrow>
+              {button}
+            </Tooltip>
+          ) : button}
         </ListItem>
-        {hasChildren && (
+        {hasChildren && !collapsed && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
               {item.children!.map((child) => renderMenuItem(child, level + 1))}
@@ -954,28 +966,31 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
   }, [filterMenuByRole, menuItems]);
 
   const drawerContent = (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       {/* Header */}
       <Box
         sx={{
-          p: 2,
+          p: collapsed ? 1 : 2,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: collapsed ? "center" : "space-between",
           borderBottom: 1,
           borderColor: "divider",
+          minHeight: 64,
         }}
       >
-        <Typography variant="h6" noWrap component="div">
-          Plataforma SST
-        </Typography>
+        {!collapsed && (
+          <Typography variant="h6" noWrap component="div">
+            Plataforma SST
+          </Typography>
+        )}
         <IconButton onClick={onToggle} size="small">
-          <MenuOpen />
+          {collapsed ? <ChevronRight /> : <ChevronLeft />}
         </IconButton>
       </Box>
 
       {/* User Info */}
-      {user && (
+      {user && !collapsed && (
         <Box
           sx={{
             p: 2,
@@ -1020,25 +1035,55 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
     </Box>
   );
 
+  const drawerWidth = collapsed ? MINI_DRAWER_WIDTH : DRAWER_WIDTH;
+  const widthTransition = theme.transitions.create("width", {
+    easing: theme.transitions.easing.sharp,
+    duration: collapsed
+      ? theme.transitions.duration.leavingScreen
+      : theme.transitions.duration.enteringScreen,
+  });
+
+  if (isMobile) {
+    return (
+      <Drawer
+        variant="temporary"
+        anchor="left"
+        open={open}
+        onClose={onToggle}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: DRAWER_WIDTH,
+            boxSizing: "border-box",
+            borderRight: 1,
+            borderColor: "divider",
+          },
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+    );
+  }
+
   return (
     <Drawer
-      variant={isMobile ? "temporary" : "persistent"}
+      variant="permanent"
       anchor="left"
-      open={open}
-      onClose={onToggle}
+      open
       sx={{
-        width: 280,
+        width: drawerWidth,
         flexShrink: 0,
+        transition: widthTransition,
         "& .MuiDrawer-paper": {
-          width: 280,
+          width: drawerWidth,
           boxSizing: "border-box",
+          overflowX: "hidden",
           borderRight: 1,
           borderColor: "divider",
-          zIndex: 1200,
+          transition: widthTransition,
         },
-      }}
-      ModalProps={{
-        keepMounted: true, // Better open performance on mobile.
       }}
     >
       {drawerContent}
