@@ -612,6 +612,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             roles: ["admin", "supervisor"],
           },
           {
+            id: "cronograma-pyp",
+            label: "Cronograma PYP",
+            icon: <Schedule />,
+            path: "/admin/cronograma-pyp",
+            roles: ["admin", "supervisor"],
+          },
+          {
             id: "presupuesto-sst",
             label: "Presupuesto SST",
             icon: <AccountBalance />,
@@ -827,6 +834,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
               "plan-trabajo-anual": () =>
                 user.role === "admin" || user.role === "supervisor",
               "plan-trabajo": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "cronograma-pyp": () =>
                 user.role === "admin" || user.role === "supervisor",
               "presupuesto-sst": () =>
                 user.role === "admin" || user.role === "supervisor",
