@@ -16,7 +16,10 @@ import {
   AssignmentTurnedIn,
 } from "@mui/icons-material";
 import {
+  Autocomplete,
   Box,
+  Divider,
+  InputAdornment,
   Paper,
   Typography,
   Button,
@@ -52,6 +55,7 @@ import AutocompleteField, { AutocompleteOption } from '../components/Autocomplet
 import UppercaseTextField from '../components/UppercaseTextField';
 import { getCitiesByDepartment } from '../data/colombianCities';
 import { COLOMBIAN_DEPARTMENTS } from '../data/colombianDepartments';
+import { PROFESIONES } from '../data/profesiones';
 import { useCargoAutocompleteOptimized } from '../hooks/useCargoAutocompleteOptimized';
 import { 
   Worker, 
@@ -196,9 +200,6 @@ const WorkersManagement: React.FC = () => {
     message: "",
     severity: "success" as "success" | "error",
   });
-
-  const [ocupacionOption, setOcupacionOption] = useState<AutocompleteOption | null>(null);
-
 
   // Estados para funcionalidades administrativas
   const [linkUserDialog, setLinkUserDialog] = useState(false);
@@ -428,7 +429,6 @@ const WorkersManagement: React.FC = () => {
       is_active: true,
       assigned_role: UserRole.EMPLOYEE,
     });
-    setOcupacionOption(null);
     setAvailableCities([]);
     setOpenDialog(true);
   };
@@ -479,17 +479,6 @@ const WorkersManagement: React.FC = () => {
         assigned_role: fullWorker.assigned_role || UserRole.EMPLOYEE,
       });
 
-      setOcupacionOption(
-        fullWorker.occupation
-          ? {
-              id: fullWorker.occupation,
-              label: fullWorker.occupation,
-              value: { name: fullWorker.occupation },
-            }
-          : null
-      );
-
-      
       // Cargar ciudades disponibles si hay departamento seleccionado
       if (fullWorker.department) {
         setAvailableCities(getCitiesByDepartment(fullWorker.department));
@@ -1009,13 +998,23 @@ const WorkersManagement: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }} className="responsive-form">
-            {/* Personal Information */}
+
+            {/* ── INFORMACIÓN PERSONAL ── */}
+            <Grid size={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.5 }}>
+                <Typography variant="overline" color="primary" sx={{ fontWeight: 700, letterSpacing: 1.2, whiteSpace: 'nowrap' }}>
+                  Información Personal
+                </Typography>
+                <Divider sx={{ flex: 1 }} />
+              </Box>
+            </Grid>
 
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth required>
                 <InputLabel>Género</InputLabel>
                 <Select
                   value={formData.gender}
+                  label="Género"
                   onChange={(e) =>
                     setFormData({ ...formData, gender: e.target.value as Gender })
                   }
@@ -1031,6 +1030,7 @@ const WorkersManagement: React.FC = () => {
                 <InputLabel>Tipo de Documento</InputLabel>
                 <Select
                   value={formData.document_type}
+                  label="Tipo de Documento"
                   onChange={(e) =>
                     setFormData({ ...formData, document_type: e.target.value as DocumentType })
                   }
@@ -1048,12 +1048,7 @@ const WorkersManagement: React.FC = () => {
                 value={formData.document_number}
                 onChange={(e) => {
                   const documentNumber = e.target.value;
-                  setFormData({ 
-                    ...formData, 
-                    document_number: documentNumber
-                  });
-                  
-                  // Buscar usuario por documento si no estamos editando
+                  setFormData({ ...formData, document_number: documentNumber });
                   if (!editingWorker && documentNumber.length >= 3) {
                     searchUserByDocument(documentNumber);
                   }
@@ -1082,12 +1077,7 @@ const WorkersManagement: React.FC = () => {
               <UppercaseTextField
                 label="Nombres"
                 value={formData.first_name}
-                onChange={(e) =>
-                  setFormData({ 
-                    ...formData, 
-                    first_name: e.target.value
-                  })
-                }
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                 fullWidth
                 required
               />
@@ -1096,12 +1086,7 @@ const WorkersManagement: React.FC = () => {
               <UppercaseTextField
                 label="Apellidos"
                 value={formData.last_name}
-                onChange={(e) =>
-                  setFormData({ 
-                    ...formData, 
-                    last_name: e.target.value
-                  })
-                }
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                 fullWidth
                 required
               />
@@ -1111,9 +1096,7 @@ const WorkersManagement: React.FC = () => {
                 label="Fecha de Nacimiento"
                 type="date"
                 value={formData.birth_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, birth_date: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
                 fullWidth
                 required
                 InputLabelProps={{ shrink: true }}
@@ -1128,16 +1111,12 @@ const WorkersManagement: React.FC = () => {
                 disabled
               />
             </Grid>
-            
-            {/* Contact Information */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Email"
                 type="email"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 fullWidth
                 required
               />
@@ -1146,22 +1125,27 @@ const WorkersManagement: React.FC = () => {
               <TextField
                 label="Teléfono"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ 
-                    ...formData, 
-                    phone: e.target.value
-                  })
-                }
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 fullWidth
               />
             </Grid>
-            
-            {/* Work Information */}
+
+            {/* ── INFORMACIÓN LABORAL ── */}
+            <Grid size={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
+                <Typography variant="overline" color="primary" sx={{ fontWeight: 700, letterSpacing: 1.2, whiteSpace: 'nowrap' }}>
+                  Información Laboral
+                </Typography>
+                <Divider sx={{ flex: 1 }} />
+              </Box>
+            </Grid>
+
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth required>
                 <InputLabel>Tipo de Contrato</InputLabel>
                 <Select
                   value={formData.contract_type}
+                  label="Tipo de Contrato"
                   onChange={(e) =>
                     setFormData({ ...formData, contract_type: e.target.value as ContractType })
                   }
@@ -1178,6 +1162,7 @@ const WorkersManagement: React.FC = () => {
                 <InputLabel>Modalidad de Trabajo</InputLabel>
                 <Select
                   value={formData.work_modality}
+                  label="Modalidad de Trabajo"
                   onChange={(e) =>
                     setFormData({ ...formData, work_modality: e.target.value as WorkModality })
                   }
@@ -1194,21 +1179,17 @@ const WorkersManagement: React.FC = () => {
               <CargoAutocompleteField
                 value={formData.position}
                 onChange={(selectedCargo) => {
-                  setFormData({ 
-                    ...formData, 
+                  setFormData({
+                    ...formData,
                     position: selectedCargo?.value?.nombre_cargo || selectedCargo?.label || ''
                   });
                 }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Profesión"
-                value={formData.profession}
-                onChange={(e) =>
-                  setFormData({ ...formData, profession: e.target.value })
-                }
-                fullWidth
+              <ProfesionAutocompleteField
+                value={formData.profession || ''}
+                onChange={(val) => setFormData({ ...formData, profession: val })}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -1216,6 +1197,7 @@ const WorkersManagement: React.FC = () => {
                 <InputLabel>Nivel de Riesgo</InputLabel>
                 <Select
                   value={formData.risk_level}
+                  label="Nivel de Riesgo"
                   onChange={(e) =>
                     setFormData({ ...formData, risk_level: e.target.value as RiskLevel })
                   }
@@ -1229,53 +1211,6 @@ const WorkersManagement: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>Departamento</InputLabel>
-                <Select
-                  value={formData.department || ''}
-                  onChange={(e) => handleDepartmentChange(e.target.value)}
-                  label="Departamento"
-                >
-                  <MenuItem value="">
-                    <em>Seleccionar departamento</em>
-                  </MenuItem>
-                  {COLOMBIAN_DEPARTMENTS.map((department) => (
-                    <MenuItem key={department} value={department}>
-                      {department}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Fecha de Ingreso"
-                type="date"
-                value={formData.fecha_de_ingreso}
-                onChange={(e) =>
-                  setFormData({ 
-                    ...formData, 
-                    fecha_de_ingreso: e.target.value
-                  })
-                }
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Fecha de Retiro"
-                type="date"
-                value={formData.fecha_de_retiro}
-                onChange={(e) =>
-                  setFormData({ ...formData, fecha_de_retiro: e.target.value })
-                }
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Salario IBC"
                 type="number"
@@ -1284,55 +1219,65 @@ const WorkersManagement: React.FC = () => {
                   setFormData({ ...formData, salary_ibc: parseFloat(e.target.value) || undefined })
                 }
                 fullWidth
-              />
-            </Grid>
-            
-            {/* Additional Information */}
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <AutocompleteField
-                label="Ocupación"
-                placeholder="Buscar ocupación"
-                value={
-                  ocupacionOption ||
-                  (formData.occupation
-                    ? {
-                        id: formData.occupation,
-                        label: formData.occupation,
-                        value: { name: formData.occupation },
-                      }
-                    : null)
-                }
-                onChange={(value) => {
-                  const option = (value as AutocompleteOption | null) || null;
-                  setOcupacionOption(option);
-                  setFormData((prev) => ({
-                    ...prev,
-                    occupation: option ? option.label : "",
-                  }));
-                }}
-                autocompleteOptions={{
-                  apiEndpoint: "/admin/config/ocupaciones/search",
-                  minSearchLength: 0,
-                  transformResponse: (data: any[]) =>
-                    (data || []).map((item: any) => ({
-                      id: item.id ?? item.nombre ?? item.name,
-                      label: item.name ?? item.nombre ?? String(item),
-                      value: item,
-                      description: item.description ?? item.descripcion ?? undefined,
-                    })),
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
                 }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
+                label="Fecha de Ingreso"
+                type="date"
+                value={formData.fecha_de_ingreso}
+                onChange={(e) => setFormData({ ...formData, fecha_de_ingreso: e.target.value })}
+                fullWidth
+                required
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Fecha de Retiro"
+                type="date"
+                value={formData.fecha_de_retiro}
+                onChange={(e) => setFormData({ ...formData, fecha_de_retiro: e.target.value })}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            {/* ── UBICACIÓN ── */}
+            <Grid size={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
+                <Typography variant="overline" color="primary" sx={{ fontWeight: 700, letterSpacing: 1.2, whiteSpace: 'nowrap' }}>
+                  Ubicación
+                </Typography>
+                <Divider sx={{ flex: 1 }} />
+              </Box>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
                 label="País"
                 value={formData.country}
-                onChange={(e) =>
-                  setFormData({ ...formData, country: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                 fullWidth
                 required
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>Departamento</InputLabel>
+                <Select
+                  value={formData.department || ''}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  label="Departamento"
+                >
+                  <MenuItem value=""><em>Seleccionar departamento</em></MenuItem>
+                  {COLOMBIAN_DEPARTMENTS.map((department) => (
+                    <MenuItem key={department} value={department}>{department}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
@@ -1343,13 +1288,9 @@ const WorkersManagement: React.FC = () => {
                   label="Ciudad"
                   disabled={!formData.department || availableCities.length === 0}
                 >
-                  <MenuItem value="">
-                    <em>Seleccionar ciudad</em>
-                  </MenuItem>
+                  <MenuItem value=""><em>Seleccionar ciudad</em></MenuItem>
                   {availableCities.map((city) => (
-                    <MenuItem key={city} value={city}>
-                      {city}
-                    </MenuItem>
+                    <MenuItem key={city} value={city}>{city}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -1358,18 +1299,79 @@ const WorkersManagement: React.FC = () => {
               <TextField
                 label="Dirección"
                 value={formData.direccion || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, direccion: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
                 fullWidth
                 placeholder="Ingrese la dirección completa"
               />
+            </Grid>
+
+            {/* ── SEGURIDAD SOCIAL ── */}
+            <Grid size={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
+                <Typography variant="overline" color="primary" sx={{ fontWeight: 700, letterSpacing: 1.2, whiteSpace: 'nowrap' }}>
+                  Seguridad Social
+                </Typography>
+                <Divider sx={{ flex: 1 }} />
+              </Box>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>EPS</InputLabel>
+                <Select
+                  value={formData.eps_id || ''}
+                  label="EPS"
+                  onChange={(e) =>
+                    setFormData({ ...formData, eps_id: e.target.value ? Number(e.target.value) : undefined })
+                  }
+                >
+                  <MenuItem value=""><em>Seleccionar EPS</em></MenuItem>
+                  {epsOptions.map((eps) => (
+                    <MenuItem key={eps.id} value={eps.id}>{eps.display_name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>AFP</InputLabel>
+                <Select
+                  value={formData.afp_id || ''}
+                  label="AFP"
+                  onChange={(e) =>
+                    setFormData({ ...formData, afp_id: e.target.value ? Number(e.target.value) : undefined })
+                  }
+                >
+                  <MenuItem value=""><em>Seleccionar AFP</em></MenuItem>
+                  {afpOptions.map((afp) => (
+                    <MenuItem key={afp.id} value={afp.id}>{afp.display_name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel>ARL</InputLabel>
+                <Select
+                  value={formData.arl_id || ''}
+                  label="ARL"
+                  onChange={(e) =>
+                    setFormData({ ...formData, arl_id: e.target.value ? Number(e.target.value) : undefined })
+                  }
+                >
+                  <MenuItem value=""><em>Seleccionar ARL</em></MenuItem>
+                  {arlOptions.map((arl) => (
+                    <MenuItem key={arl.id} value={arl.id}>{arl.display_name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Tipo de Sangre</InputLabel>
                 <Select
                   value={formData.blood_type || ""}
+                  label="Tipo de Sangre"
                   onChange={(e) =>
                     setFormData({ ...formData, blood_type: e.target.value as BloodType })
                   }
@@ -1385,82 +1387,30 @@ const WorkersManagement: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>EPS</InputLabel>
-                <Select
-                  value={formData.eps_id || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, eps_id: e.target.value ? Number(e.target.value) : undefined })
-                  }
-                >
-                  <MenuItem value="">
-                    <em>Seleccionar EPS</em>
-                  </MenuItem>
-                  {epsOptions.map((eps) => (
-                    <MenuItem key={eps.id} value={eps.id}>
-                      {eps.display_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+
+            {/* ── CONFIGURACIÓN DEL SISTEMA ── */}
+            <Grid size={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
+                <Typography variant="overline" color="primary" sx={{ fontWeight: 700, letterSpacing: 1.2, whiteSpace: 'nowrap' }}>
+                  Configuración del Sistema
+                </Typography>
+                <Divider sx={{ flex: 1 }} />
+              </Box>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>AFP</InputLabel>
-                <Select
-                  value={formData.afp_id || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, afp_id: e.target.value ? Number(e.target.value) : undefined })
-                  }
-                >
-                  <MenuItem value="">
-                    <em>Seleccionar AFP</em>
-                  </MenuItem>
-                  {afpOptions.map((afp) => (
-                    <MenuItem key={afp.id} value={afp.id}>
-                      {afp.display_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>ARL</InputLabel>
-                <Select
-                  value={formData.arl_id || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, arl_id: e.target.value ? Number(e.target.value) : undefined })
-                  }
-                >
-                  <MenuItem value="">
-                    <em>Seleccionar ARL</em>
-                  </MenuItem>
-                  {arlOptions.map((arl) => (
-                    <MenuItem key={arl.id} value={arl.id}>
-                      {arl.display_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Área</InputLabel>
                 <Select
                   value={formData.area_id || ''}
+                  label="Área"
                   onChange={(e) =>
                     setFormData({ ...formData, area_id: e.target.value ? Number(e.target.value) : undefined })
                   }
                 >
-                  <MenuItem value="">
-                    <em>Seleccionar Área</em>
-                  </MenuItem>
+                  <MenuItem value=""><em>Seleccionar Área</em></MenuItem>
                   {areaOptions.map((area) => (
-                    <MenuItem key={area.id} value={area.id}>
-                      {area.name}
-                    </MenuItem>
+                    <MenuItem key={area.id} value={area.id}>{area.name}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -1470,6 +1420,7 @@ const WorkersManagement: React.FC = () => {
                 <InputLabel>Rol Asignado</InputLabel>
                 <Select
                   value={formData.assigned_role || ""}
+                  label="Rol Asignado"
                   onChange={(e) =>
                     setFormData({ ...formData, assigned_role: e.target.value as UserRole })
                   }
@@ -1485,9 +1436,7 @@ const WorkersManagement: React.FC = () => {
               <TextField
                 label="Observaciones"
                 value={formData.observations}
-                onChange={(e) =>
-                  setFormData({ ...formData, observations: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
                 fullWidth
                 multiline
                 rows={3}
@@ -1498,12 +1447,7 @@ const WorkersManagement: React.FC = () => {
                 control={
                   <Switch
                     checked={formData.is_active}
-                    onChange={(e) =>
-                      setFormData({ 
-                        ...formData, 
-                        is_active: e.target.checked
-                      })
-                    }
+                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                   />
                 }
                 label="Trabajador activo"
@@ -1951,6 +1895,45 @@ const WorkersManagement: React.FC = () => {
         </Alert>
       </Snackbar>
     </Box>
+  );
+};
+
+// Componente auxiliar para autocompletado de profesiones con freeSolo
+const ProfesionAutocompleteField: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+}> = ({ value, onChange }) => {
+  return (
+    <Autocomplete
+      freeSolo
+      options={PROFESIONES}
+      inputValue={value}
+      onInputChange={(_, newValue) => {
+        onChange(newValue.toUpperCase());
+      }}
+      filterOptions={(options, { inputValue }) => {
+        if (!inputValue) return [];
+        return options
+          .filter((opt) => opt.toLowerCase().includes(inputValue.toLowerCase()))
+          .slice(0, 20);
+      }}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          label="Profesión"
+          placeholder="Buscar o escribir profesión..."
+          fullWidth
+          InputProps={{
+            ...params.InputProps,
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search color="action" fontSize="small" />
+              </InputAdornment>
+            ),
+          }}
+        />
+      )}
+    />
   );
 };
 

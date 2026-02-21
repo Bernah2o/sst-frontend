@@ -105,6 +105,8 @@ import PresupuestoSST from "./pages/PresupuestoSST";
 import PresupuestoSSTDetail from "./pages/PresupuestoSSTDetail";
 import ProgramaCapacitaciones from "./pages/ProgramaCapacitaciones";
 import ProgramaCapacitacionesDetail from "./pages/ProgramaCapacitacionesDetail";
+import EstandaresMinimos from "./pages/EstandaresMinimos";
+import EstandaresMinimosDetalle from "./pages/EstandaresMinimosDetalle";
 import { UserRole } from "./types";
 import { checkPagePermission, PAGE_PERMISSIONS } from "./utils/pagePermissions";
 
@@ -760,6 +762,22 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/programa-capacitaciones/:programaId">
                         <ProgramaCapacitacionesDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/estandares-minimos"
+                    element={
+                      <ProtectedRoute route="/admin/estandares-minimos">
+                        <EstandaresMinimos />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/estandares-minimos/:evalId"
+                    element={
+                      <ProtectedRoute route="/admin/estandares-minimos/:evalId">
+                        <EstandaresMinimosDetalle />
                       </ProtectedRoute>
                     }
                   />
