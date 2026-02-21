@@ -41,6 +41,7 @@ import {
   Slideshow,
   EventNote,
   AccountBalance,
+  FactCheck,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -617,6 +618,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             path: "/admin/presupuesto-sst",
             roles: ["admin", "supervisor"],
           },
+          {
+            id: "estandares-minimos",
+            label: "Estándares Mínimos SST",
+            icon: <FactCheck />,
+            path: "/admin/estandares-minimos",
+            roles: ["admin", "supervisor"],
+          },
         ],
       },
       {
@@ -821,6 +829,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
               "plan-trabajo": () =>
                 user.role === "admin" || user.role === "supervisor",
               "presupuesto-sst": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "estandares-minimos": () =>
                 user.role === "admin" || user.role === "supervisor",
 
               // Administration (check individual permissions or role)
