@@ -81,4 +81,28 @@ export const masterDocumentService = {
   async deleteDocument(id: number): Promise<void> {
     await api.delete(`/master-documents/${id}`);
   },
+
+  async downloadPdf(filters: MasterDocumentFilters = {}): Promise<void> {
+    const params = new URLSearchParams();
+    if (filters.empresa_id)
+      params.append("empresa_id", filters.empresa_id.toString());
+    if (filters.tipo_documento)
+      params.append("tipo_documento", filters.tipo_documento);
+    if (filters.search) params.append("search", filters.search);
+
+    const response = await api.get(`/master-documents/pdf?${params.toString()}`, {
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `listado_maestro_documentos_${new Date().toISOString().split("T")[0]}.pdf`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  },
 };

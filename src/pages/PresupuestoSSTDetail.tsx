@@ -4,7 +4,7 @@ import React, {
   useCallback,
   useMemo,
   useRef,
-} from 'react';
+} from "react";
 import {
   Box,
   Breadcrumbs,
@@ -29,15 +29,17 @@ import {
   Tooltip,
   Typography,
   Alert,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   FileDownload as FileDownloadIcon,
   PictureAsPdf as PdfIcon,
   ArrowBack as ArrowBackIcon,
-} from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+  Edit as EditIcon,
+  Save as SaveIcon,
+} from "@mui/icons-material";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   presupuestoSSTService,
   PresupuestoSSTDetail,
@@ -50,13 +52,23 @@ import {
   CAT_LIGHT_COLORS,
   computeItemTotals,
   formatMoney,
-} from '../services/presupuestoSSTService';
-import { useConfirmDialog } from '../hooks/useConfirmDialog';
-import ConfirmDialog from '../components/ConfirmDialog';
+} from "../services/presupuestoSSTService";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const MESES = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
 ];
 
 // ────────────────────────────────────────────
@@ -65,15 +77,26 @@ const MESES = [
 interface MontoCellProps {
   itemId: number;
   mes: number;
-  field: 'proyectado' | 'ejecutado';
+  field: "proyectado" | "ejecutado";
   initialValue: number;
-  onSaved: (itemId: number, mes: number, field: 'proyectado' | 'ejecutado', value: number) => void;
+  onSaved: (
+    itemId: number,
+    mes: number,
+    field: "proyectado" | "ejecutado",
+    value: number,
+  ) => void;
 }
 
 const MontoCell: React.FC<MontoCellProps> = ({
-  itemId, mes, field, initialValue, onSaved,
+  itemId,
+  mes,
+  field,
+  initialValue,
+  onSaved,
 }) => {
-  const [value, setValue] = useState(initialValue > 0 ? String(initialValue) : '');
+  const [value, setValue] = useState(
+    initialValue > 0 ? String(initialValue) : "",
+  );
   const [saving, setSaving] = useState(false);
   const prevRef = useRef(initialValue);
 
@@ -81,7 +104,7 @@ const MontoCell: React.FC<MontoCellProps> = ({
   useEffect(() => {
     if (prevRef.current !== initialValue) {
       prevRef.current = initialValue;
-      setValue(initialValue > 0 ? String(initialValue) : '');
+      setValue(initialValue > 0 ? String(initialValue) : "");
     }
   }, [initialValue]);
 
@@ -90,21 +113,25 @@ const MontoCell: React.FC<MontoCellProps> = ({
     if (num === prevRef.current) return;
     setSaving(true);
     try {
-      await presupuestoSSTService.actualizarMensual(itemId, mes, { [field]: num });
+      await presupuestoSSTService.actualizarMensual(itemId, mes, {
+        [field]: num,
+      });
       prevRef.current = num;
       onSaved(itemId, mes, field, num);
     } catch {
-      setValue(prevRef.current > 0 ? String(prevRef.current) : '');
+      setValue(prevRef.current > 0 ? String(prevRef.current) : "");
     } finally {
       setSaving(false);
     }
   };
 
-  const bg = field === 'proyectado' ? '#FFFDE7' : '#F1F8E9';
+  const bg = field === "proyectado" ? "#FFFDE7" : "#F1F8E9";
 
   return (
-    <TableCell sx={{ p: 0, background: bg, border: '1px solid #E0E0E0', minWidth: 72 }}>
-      <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+    <TableCell
+      sx={{ p: 0, background: bg, border: "1px solid #E0E0E0", minWidth: 72 }}
+    >
+      <Box sx={{ position: "relative", display: "flex", alignItems: "center" }}>
         <input
           type="number"
           value={value}
@@ -113,22 +140,22 @@ const MontoCell: React.FC<MontoCellProps> = ({
           onBlur={handleBlur}
           onFocus={(e) => e.target.select()}
           style={{
-            width: '100%',
-            border: 'none',
-            outline: 'none',
-            background: 'transparent',
-            textAlign: 'right',
-            fontSize: '0.75rem',
-            padding: '4px 6px',
-            fontFamily: 'inherit',
-            cursor: 'text',
-            boxSizing: 'border-box',
+            width: "100%",
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            textAlign: "right",
+            fontSize: "0.75rem",
+            padding: "4px 6px",
+            fontFamily: "inherit",
+            cursor: "text",
+            boxSizing: "border-box",
           }}
         />
         {saving && (
           <CircularProgress
             size={10}
-            sx={{ position: 'absolute', right: 4, top: '50%', mt: '-5px' }}
+            sx={{ position: "absolute", right: 4, top: "50%", mt: "-5px" }}
           />
         )}
       </Box>
@@ -144,18 +171,31 @@ const PresupuestoSSTDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { dialogState, showConfirmDialog } = useConfirmDialog();
 
-  const [presupuesto, setPresupuesto] = useState<PresupuestoSSTDetail | null>(null);
+  const [presupuesto, setPresupuesto] = useState<PresupuestoSSTDetail | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   // Dialog agregar ítem
   const [addDialog, setAddDialog] = useState<{
     open: boolean;
     categoria: CategoriaPresupuesto | null;
   }>({ open: false, categoria: null });
-  const [newActividad, setNewActividad] = useState('');
+  const [newActividad, setNewActividad] = useState("");
   const [adding, setAdding] = useState(false);
+
+  // Dialog Editar Encabezado
+  const [headerDialog, setHeaderDialog] = useState(false);
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [headerForm, setHeaderForm] = useState({
+    codigo: "",
+    version: "",
+    titulo: "",
+    encargado_sgsst: "",
+    aprobado_por: "",
+  });
 
   const cargar = useCallback(async () => {
     if (!presupuestoId) return;
@@ -164,7 +204,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
       const data = await presupuestoSSTService.obtener(Number(presupuestoId));
       setPresupuesto(data);
     } catch {
-      setError('Error al cargar el presupuesto');
+      setError("Error al cargar el presupuesto");
     } finally {
       setLoading(false);
     }
@@ -176,7 +216,12 @@ const PresupuestoSSTDetailPage: React.FC = () => {
 
   // Actualiza el estado local tras guardar un monto (sin refetch)
   const handleMensualSaved = useCallback(
-    (itemId: number, mes: number, field: 'proyectado' | 'ejecutado', value: number) => {
+    (
+      itemId: number,
+      mes: number,
+      field: "proyectado" | "ejecutado",
+      value: number,
+    ) => {
       setPresupuesto((prev) => {
         if (!prev) return prev;
         return {
@@ -188,7 +233,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
               return {
                 ...item,
                 montos_mensuales: item.montos_mensuales.map((m) =>
-                  m.mes === mes ? { ...m, [field]: value } : m
+                  m.mes === mes ? { ...m, [field]: value } : m,
                 ),
               };
             }),
@@ -196,7 +241,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
         };
       });
     },
-    []
+    [],
   );
 
   // Grand totals
@@ -217,11 +262,14 @@ const PresupuestoSSTDetailPage: React.FC = () => {
 
   const handleExportExcel = async () => {
     if (!presupuesto) return;
-    setExporting('excel');
+    setExporting("excel");
     try {
-      await presupuestoSSTService.exportarExcel(presupuesto.id, presupuesto.año);
+      await presupuestoSSTService.exportarExcel(
+        presupuesto.id,
+        presupuesto.año,
+      );
     } catch {
-      setError('Error al exportar a Excel');
+      setError("Error al exportar a Excel");
     } finally {
       setExporting(null);
     }
@@ -229,13 +277,39 @@ const PresupuestoSSTDetailPage: React.FC = () => {
 
   const handleExportPdf = async () => {
     if (!presupuesto) return;
-    setExporting('pdf');
+    setExporting("pdf");
     try {
       await presupuestoSSTService.exportarPdf(presupuesto.id, presupuesto.año);
     } catch {
-      setError('Error al exportar a PDF');
+      setError("Error al exportar a PDF");
     } finally {
       setExporting(null);
+    }
+  };
+
+  const openHeaderDialog = () => {
+    if (!presupuesto) return;
+    setHeaderForm({
+      codigo: presupuesto.codigo || "",
+      version: presupuesto.version || "",
+      titulo: presupuesto.titulo || "",
+      encargado_sgsst: presupuesto.encargado_sgsst || "",
+      aprobado_por: presupuesto.aprobado_por || "",
+    });
+    setHeaderDialog(true);
+  };
+
+  const saveHeader = async () => {
+    if (!presupuesto) return;
+    setSavingHeader(true);
+    try {
+      await presupuestoSSTService.actualizar(presupuesto.id, headerForm);
+      setPresupuesto((prev) => (prev ? { ...prev, ...headerForm } : prev));
+      setHeaderDialog(false);
+    } catch {
+      setError("Error al actualizar el encabezado");
+    } finally {
+      setSavingHeader(false);
     }
   };
 
@@ -246,7 +320,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
       const nuevoItem = await presupuestoSSTService.agregarItem(
         presupuesto.id,
         addDialog.categoria,
-        newActividad.trim()
+        newActividad.trim(),
       );
       setPresupuesto((prev) => {
         if (!prev) return prev;
@@ -259,9 +333,9 @@ const PresupuestoSSTDetailPage: React.FC = () => {
         };
       });
       setAddDialog({ open: false, categoria: null });
-      setNewActividad('');
+      setNewActividad("");
     } catch {
-      setError('Error al agregar el ítem');
+      setError("Error al agregar el ítem");
     } finally {
       setAdding(false);
     }
@@ -269,10 +343,10 @@ const PresupuestoSSTDetailPage: React.FC = () => {
 
   const handleEliminarItem = async (item: PresupuestoItem) => {
     const confirmed = await showConfirmDialog({
-      title: 'Eliminar ítem',
+      title: "Eliminar ítem",
       message: `¿Eliminar "${item.actividad}"? Se borrarán todos los montos mensuales asociados.`,
-      confirmText: 'Eliminar',
-      severity: 'error',
+      confirmText: "Eliminar",
+      severity: "error",
     });
     if (!confirmed) return;
     try {
@@ -288,13 +362,13 @@ const PresupuestoSSTDetailPage: React.FC = () => {
         };
       });
     } catch {
-      setError('Error al eliminar el ítem');
+      setError("Error al eliminar el ítem");
     }
   };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
         <CircularProgress />
       </Box>
     );
@@ -309,11 +383,9 @@ const PresupuestoSSTDetailPage: React.FC = () => {
   }
 
   // Ordenar categorías según CATEGORIAS_ORDER
-  const categoriasOrdenadas = CATEGORIAS_ORDER
-    .map((catKey) =>
-      presupuesto.categorias.find((c) => c.categoria === catKey)
-    )
-    .filter(Boolean) as PresupuestoCategoria[];
+  const categoriasOrdenadas = CATEGORIAS_ORDER.map((catKey) =>
+    presupuesto.categorias.find((c) => c.categoria === catKey),
+  ).filter(Boolean) as PresupuestoCategoria[];
 
   return (
     <Box sx={{ p: 3 }}>
@@ -322,8 +394,8 @@ const PresupuestoSSTDetailPage: React.FC = () => {
         <Link
           underline="hover"
           color="inherit"
-          sx={{ cursor: 'pointer' }}
-          onClick={() => navigate('/admin/presupuesto-sst')}
+          sx={{ cursor: "pointer" }}
+          onClick={() => navigate("/admin/presupuesto-sst")}
         >
           Presupuesto SST
         </Link>
@@ -333,17 +405,17 @@ const PresupuestoSSTDetailPage: React.FC = () => {
       {/* Header */}
       <Box
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
           mb: 3,
-          flexWrap: 'wrap',
+          flexWrap: "wrap",
           gap: 2,
         }}
       >
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton onClick={() => navigate('/admin/presupuesto-sst')}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <IconButton onClick={() => navigate("/admin/presupuesto-sst")}>
               <ArrowBackIcon />
             </IconButton>
             <Typography variant="h5" fontWeight="bold">
@@ -355,11 +427,20 @@ const PresupuestoSSTDetailPage: React.FC = () => {
             {presupuesto.encargado_sgsst && ` • ${presupuesto.encargado_sgsst}`}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<EditIcon />}
+            onClick={openHeaderDialog}
+            disabled={exporting !== null}
+          >
+            Editar Encabezado
+          </Button>
           <Button
             variant="outlined"
             startIcon={
-              exporting === 'excel' ? (
+              exporting === "excel" ? (
                 <CircularProgress size={16} />
               ) : (
                 <FileDownloadIcon />
@@ -374,11 +455,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
             variant="outlined"
             color="error"
             startIcon={
-              exporting === 'pdf' ? (
-                <CircularProgress size={16} />
-              ) : (
-                <PdfIcon />
-              )
+              exporting === "pdf" ? <CircularProgress size={16} /> : <PdfIcon />
             }
             onClick={handleExportPdf}
             disabled={exporting !== null}
@@ -396,7 +473,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
 
       {/* Summary cards */}
       {grandTotals && (
-        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+        <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
           <SummaryCard
             label="Total Proyectado"
             value={formatMoney(grandTotals.totalProy)}
@@ -410,7 +487,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
           <SummaryCard
             label="% Ejecutado"
             value={`${grandTotals.pct.toFixed(1)}%`}
-            color={grandTotals.pct >= 80 ? '#2E7D32' : '#E65100'}
+            color={grandTotals.pct >= 80 ? "#2E7D32" : "#E65100"}
           />
           <SummaryCard
             label="Por Ejecutar"
@@ -423,7 +500,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
       {/* Tabla presupuestal */}
       <TableContainer
         component={Paper}
-        sx={{ overflowX: 'auto', borderRadius: 2, boxShadow: 2 }}
+        sx={{ overflowX: "auto", borderRadius: 2, boxShadow: 2 }}
       >
         <Table size="small" stickyHeader>
           <TableHead>
@@ -433,22 +510,18 @@ const PresupuestoSSTDetailPage: React.FC = () => {
                 rowSpan={2}
                 sx={{
                   minWidth: 200,
-                  fontWeight: 'bold',
-                  background: '#37474F',
-                  color: '#fff',
-                  position: 'sticky',
+                  fontWeight: "bold",
+                  background: "#37474F",
+                  color: "#fff",
+                  position: "sticky",
                   left: 0,
                   zIndex: 4,
-                  border: '1px solid #546E7A',
+                  border: "1px solid #546E7A",
                 }}
               >
                 ACTIVIDADES
               </TableCell>
-              <TableCell
-                rowSpan={2}
-                align="right"
-                sx={hdrStyle}
-              >
+              <TableCell rowSpan={2} align="right" sx={hdrStyle}>
                 PRES. PROYECTADO
               </TableCell>
               <TableCell rowSpan={2} align="right" sx={hdrStyle}>
@@ -468,7 +541,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
                   key={m}
                   colSpan={2}
                   align="center"
-                  sx={{ ...hdrStyle, fontSize: '0.7rem' }}
+                  sx={{ ...hdrStyle, fontSize: "0.7rem" }}
                 >
                   {m}
                 </TableCell>
@@ -478,10 +551,21 @@ const PresupuestoSSTDetailPage: React.FC = () => {
             <TableRow>
               {MESES.map((m) => (
                 <React.Fragment key={m}>
-                  <TableCell align="center" sx={{ ...hdrStyle, fontSize: '0.65rem', py: 0.5 }}>
+                  <TableCell
+                    align="center"
+                    sx={{ ...hdrStyle, fontSize: "0.65rem", py: 0.5 }}
+                  >
                     P
                   </TableCell>
-                  <TableCell align="center" sx={{ ...hdrStyle, fontSize: '0.65rem', py: 0.5, background: '#455A64' }}>
+                  <TableCell
+                    align="center"
+                    sx={{
+                      ...hdrStyle,
+                      fontSize: "0.65rem",
+                      py: 0.5,
+                      background: "#455A64",
+                    }}
+                  >
                     E
                   </TableCell>
                 </React.Fragment>
@@ -492,8 +576,8 @@ const PresupuestoSSTDetailPage: React.FC = () => {
           <TableBody>
             {categoriasOrdenadas.map((cat) => {
               const catKey = cat.categoria as CategoriaPresupuesto;
-              const bgDark = CAT_COLORS[catKey] ?? '#37474F';
-              const bgLight = CAT_LIGHT_COLORS[catKey] ?? '#FAFAFA';
+              const bgDark = CAT_COLORS[catKey] ?? "#37474F";
+              const bgLight = CAT_LIGHT_COLORS[catKey] ?? "#FAFAFA";
 
               // Calcular totales de categoría
               const catTotals = cat.items.reduce(
@@ -504,7 +588,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
                     totalEjec: acc.totalEjec + t.totalEjec,
                   };
                 },
-                { totalProy: 0, totalEjec: 0 }
+                { totalProy: 0, totalEjec: 0 },
               );
               const catPorEj = catTotals.totalProy - catTotals.totalEjec;
               const catPct =
@@ -520,20 +604,26 @@ const PresupuestoSSTDetailPage: React.FC = () => {
                       colSpan={6 + 24}
                       sx={{
                         background: bgDark,
-                        color: '#fff',
-                        fontWeight: 'bold',
+                        color: "#fff",
+                        fontWeight: "bold",
                         py: 0.75,
-                        position: 'sticky',
+                        position: "sticky",
                         left: 0,
                         zIndex: 2,
                       }}
                     >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
                         <span>{CATEGORIA_LABELS[catKey]}</span>
                         <Tooltip title="Agregar ítem a esta categoría">
                           <IconButton
                             size="small"
-                            sx={{ color: '#fff' }}
+                            sx={{ color: "#fff" }}
                             onClick={() =>
                               setAddDialog({ open: true, categoria: catKey })
                             }
@@ -549,13 +639,9 @@ const PresupuestoSSTDetailPage: React.FC = () => {
                   {cat.items.map((item) => {
                     const t = computeItemTotals(item);
                     const pctEjec =
-                      t.totalProy > 0
-                        ? (t.totalEjec / t.totalProy) * 100
-                        : 0;
+                      t.totalProy > 0 ? (t.totalEjec / t.totalProy) * 100 : 0;
                     const pctPor =
-                      t.totalProy > 0
-                        ? (t.porEjecutar / t.totalProy) * 100
-                        : 0;
+                      t.totalProy > 0 ? (t.porEjecutar / t.totalProy) * 100 : 0;
 
                     return (
                       <TableRow key={item.id} hover>
@@ -563,23 +649,30 @@ const PresupuestoSSTDetailPage: React.FC = () => {
                         <TableCell
                           sx={{
                             background: bgLight,
-                            position: 'sticky',
+                            position: "sticky",
                             left: 0,
                             zIndex: 2,
-                            fontSize: '0.75rem',
+                            fontSize: "0.75rem",
                             minWidth: 200,
                             maxWidth: 280,
-                            border: '1px solid #E0E0E0',
+                            border: "1px solid #E0E0E0",
                           }}
                         >
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
                             <span>{item.actividad}</span>
                             <Tooltip title="Eliminar ítem">
                               <IconButton
                                 size="small"
                                 color="error"
                                 onClick={() => handleEliminarItem(item)}
-                                sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
+                                sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}
                               >
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -588,14 +681,32 @@ const PresupuestoSSTDetailPage: React.FC = () => {
                         </TableCell>
 
                         {/* Totales calculados (solo lectura) */}
-                        <ReadonlyCell value={formatMoney(t.totalProy)} bg={bgLight} align="right" />
-                        <ReadonlyCell value={formatMoney(t.totalEjec)} bg={bgLight} align="right" />
+                        <ReadonlyCell
+                          value={formatMoney(t.totalProy)}
+                          bg={bgLight}
+                          align="right"
+                        />
+                        <ReadonlyCell
+                          value={formatMoney(t.totalEjec)}
+                          bg={bgLight}
+                          align="right"
+                        />
                         <ReadonlyCell
                           value={`${pctEjec.toFixed(0)}%`}
-                          bg={pctEjec >= 80 ? '#C8E6C9' : pctEjec > 0 ? '#FFF9C4' : bgLight}
+                          bg={
+                            pctEjec >= 80
+                              ? "#C8E6C9"
+                              : pctEjec > 0
+                                ? "#FFF9C4"
+                                : bgLight
+                          }
                           align="center"
                         />
-                        <ReadonlyCell value={formatMoney(t.porEjecutar)} bg={bgLight} align="right" />
+                        <ReadonlyCell
+                          value={formatMoney(t.porEjecutar)}
+                          bg={bgLight}
+                          align="right"
+                        />
                         <ReadonlyCell
                           value={`${pctPor.toFixed(0)}%`}
                           bg={bgLight}
@@ -603,27 +714,31 @@ const PresupuestoSSTDetailPage: React.FC = () => {
                         />
 
                         {/* Celdas mensuales editables */}
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((mes) => {
-                          const m = item.montos_mensuales.find((x) => x.mes === mes);
-                          return (
-                            <React.Fragment key={mes}>
-                              <MontoCell
-                                itemId={item.id}
-                                mes={mes}
-                                field="proyectado"
-                                initialValue={Number(m?.proyectado ?? 0)}
-                                onSaved={handleMensualSaved}
-                              />
-                              <MontoCell
-                                itemId={item.id}
-                                mes={mes}
-                                field="ejecutado"
-                                initialValue={Number(m?.ejecutado ?? 0)}
-                                onSaved={handleMensualSaved}
-                              />
-                            </React.Fragment>
-                          );
-                        })}
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                          (mes) => {
+                            const m = item.montos_mensuales.find(
+                              (x) => x.mes === mes,
+                            );
+                            return (
+                              <React.Fragment key={mes}>
+                                <MontoCell
+                                  itemId={item.id}
+                                  mes={mes}
+                                  field="proyectado"
+                                  initialValue={Number(m?.proyectado ?? 0)}
+                                  onSaved={handleMensualSaved}
+                                />
+                                <MontoCell
+                                  itemId={item.id}
+                                  mes={mes}
+                                  field="ejecutado"
+                                  initialValue={Number(m?.ejecutado ?? 0)}
+                                  onSaved={handleMensualSaved}
+                                />
+                              </React.Fragment>
+                            );
+                          },
+                        )}
                       </TableRow>
                     );
                   })}
@@ -633,30 +748,73 @@ const PresupuestoSSTDetailPage: React.FC = () => {
                     <TableCell
                       sx={{
                         background: bgDark,
-                        color: '#fff',
-                        fontWeight: 'bold',
-                        fontSize: '0.72rem',
-                        position: 'sticky',
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "0.72rem",
+                        position: "sticky",
                         left: 0,
                         zIndex: 2,
                       }}
                     >
                       Total {CATEGORIA_LABELS[catKey]}
                     </TableCell>
-                    <TableCell align="right" sx={{ background: bgDark, color: '#fff', fontWeight: 'bold', fontSize: '0.72rem' }}>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        background: bgDark,
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "0.72rem",
+                      }}
+                    >
                       {formatMoney(catTotals.totalProy)}
                     </TableCell>
-                    <TableCell align="right" sx={{ background: bgDark, color: '#fff', fontWeight: 'bold', fontSize: '0.72rem' }}>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        background: bgDark,
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "0.72rem",
+                      }}
+                    >
                       {formatMoney(catTotals.totalEjec)}
                     </TableCell>
-                    <TableCell align="center" sx={{ background: bgDark, color: '#fff', fontWeight: 'bold', fontSize: '0.72rem' }}>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        background: bgDark,
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "0.72rem",
+                      }}
+                    >
                       {catPct.toFixed(0)}%
                     </TableCell>
-                    <TableCell align="right" sx={{ background: bgDark, color: '#fff', fontWeight: 'bold', fontSize: '0.72rem' }}>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        background: bgDark,
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "0.72rem",
+                      }}
+                    >
                       {formatMoney(catPorEj)}
                     </TableCell>
-                    <TableCell align="center" sx={{ background: bgDark, color: '#fff', fontWeight: 'bold', fontSize: '0.72rem' }}>
-                      {catTotals.totalProy > 0 ? ((catPorEj / catTotals.totalProy) * 100).toFixed(0) : 0}%
+                    <TableCell
+                      align="center"
+                      sx={{
+                        background: bgDark,
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "0.72rem",
+                      }}
+                    >
+                      {catTotals.totalProy > 0
+                        ? ((catPorEj / catTotals.totalProy) * 100).toFixed(0)
+                        : 0}
+                      %
                     </TableCell>
                     {Array.from({ length: 24 }, (_, i) => (
                       <TableCell key={i} sx={{ background: bgDark }} />
@@ -671,35 +829,74 @@ const PresupuestoSSTDetailPage: React.FC = () => {
               <TableRow>
                 <TableCell
                   sx={{
-                    background: '#1A237E',
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    position: 'sticky',
+                    background: "#1A237E",
+                    color: "#fff",
+                    fontWeight: "bold",
+                    position: "sticky",
                     left: 0,
                     zIndex: 2,
                   }}
                 >
                   GRAN TOTAL PRESUPUESTO SST
                 </TableCell>
-                <TableCell align="right" sx={{ background: '#1A237E', color: '#fff', fontWeight: 'bold' }}>
+                <TableCell
+                  align="right"
+                  sx={{
+                    background: "#1A237E",
+                    color: "#fff",
+                    fontWeight: "bold",
+                  }}
+                >
                   {formatMoney(grandTotals.totalProy)}
                 </TableCell>
-                <TableCell align="right" sx={{ background: '#1A237E', color: '#fff', fontWeight: 'bold' }}>
+                <TableCell
+                  align="right"
+                  sx={{
+                    background: "#1A237E",
+                    color: "#fff",
+                    fontWeight: "bold",
+                  }}
+                >
                   {formatMoney(grandTotals.totalEjec)}
                 </TableCell>
-                <TableCell align="center" sx={{ background: '#1A237E', color: '#fff', fontWeight: 'bold' }}>
+                <TableCell
+                  align="center"
+                  sx={{
+                    background: "#1A237E",
+                    color: "#fff",
+                    fontWeight: "bold",
+                  }}
+                >
                   {grandTotals.pct.toFixed(1)}%
                 </TableCell>
-                <TableCell align="right" sx={{ background: '#1A237E', color: '#fff', fontWeight: 'bold' }}>
+                <TableCell
+                  align="right"
+                  sx={{
+                    background: "#1A237E",
+                    color: "#fff",
+                    fontWeight: "bold",
+                  }}
+                >
                   {formatMoney(grandTotals.porEjecutar)}
                 </TableCell>
-                <TableCell align="center" sx={{ background: '#1A237E', color: '#fff', fontWeight: 'bold' }}>
+                <TableCell
+                  align="center"
+                  sx={{
+                    background: "#1A237E",
+                    color: "#fff",
+                    fontWeight: "bold",
+                  }}
+                >
                   {grandTotals.totalProy > 0
-                    ? ((grandTotals.porEjecutar / grandTotals.totalProy) * 100).toFixed(1)
-                    : 0}%
+                    ? (
+                        (grandTotals.porEjecutar / grandTotals.totalProy) *
+                        100
+                      ).toFixed(1)
+                    : 0}
+                  %
                 </TableCell>
                 {Array.from({ length: 24 }, (_, i) => (
-                  <TableCell key={i} sx={{ background: '#1A237E' }} />
+                  <TableCell key={i} sx={{ background: "#1A237E" }} />
                 ))}
               </TableRow>
             )}
@@ -707,16 +904,92 @@ const PresupuestoSSTDetailPage: React.FC = () => {
         </Table>
       </TableContainer>
 
+      {/* Dialog Editar Encabezado */}
+      <Dialog
+        open={headerDialog}
+        onClose={() => !savingHeader && setHeaderDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Editar Encabezado</DialogTitle>
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}
+        >
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <TextField
+              label="Código"
+              fullWidth
+              value={headerForm.codigo}
+              onChange={(e) =>
+                setHeaderForm((f) => ({ ...f, codigo: e.target.value }))
+              }
+            />
+            <TextField
+              label="Versión"
+              fullWidth
+              value={headerForm.version}
+              onChange={(e) =>
+                setHeaderForm((f) => ({ ...f, version: e.target.value }))
+              }
+            />
+          </Box>
+          <TextField
+            label="Título"
+            fullWidth
+            value={headerForm.titulo}
+            onChange={(e) =>
+              setHeaderForm((f) => ({ ...f, titulo: e.target.value }))
+            }
+          />
+          <TextField
+            label="Encargado SG-SST"
+            fullWidth
+            value={headerForm.encargado_sgsst}
+            onChange={(e) =>
+              setHeaderForm((f) => ({ ...f, encargado_sgsst: e.target.value }))
+            }
+          />
+          <TextField
+            label="Aprobado por"
+            fullWidth
+            value={headerForm.aprobado_por}
+            onChange={(e) =>
+              setHeaderForm((f) => ({ ...f, aprobado_por: e.target.value }))
+            }
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setHeaderDialog(false)}
+            disabled={savingHeader}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={saveHeader}
+            disabled={savingHeader}
+            startIcon={
+              savingHeader ? <CircularProgress size={16} /> : <SaveIcon />
+            }
+          >
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Dialog agregar ítem */}
       <Dialog
         open={addDialog.open}
-        onClose={() => !adding && setAddDialog({ open: false, categoria: null })}
+        onClose={() =>
+          !adding && setAddDialog({ open: false, categoria: null })
+        }
         maxWidth="sm"
         fullWidth
       >
         <DialogTitle>
-          Agregar actividad a{' '}
-          {addDialog.categoria ? CATEGORIA_LABELS[addDialog.categoria] : ''}
+          Agregar actividad a{" "}
+          {addDialog.categoria ? CATEGORIA_LABELS[addDialog.categoria] : ""}
         </DialogTitle>
         <DialogContent>
           <TextField
@@ -725,7 +998,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
             fullWidth
             value={newActividad}
             onChange={(e) => setNewActividad(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAgregarItem()}
+            onKeyDown={(e) => e.key === "Enter" && handleAgregarItem()}
             sx={{ mt: 1 }}
           />
         </DialogContent>
@@ -742,7 +1015,7 @@ const PresupuestoSSTDetailPage: React.FC = () => {
             disabled={adding || !newActividad.trim()}
             startIcon={adding ? <CircularProgress size={16} /> : <AddIcon />}
           >
-            {adding ? 'Agregando...' : 'Agregar'}
+            {adding ? "Agregando..." : "Agregar"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -763,30 +1036,34 @@ const PresupuestoSSTDetailPage: React.FC = () => {
 
 // ── Helpers de celda ──
 const hdrStyle = {
-  background: '#37474F',
-  color: '#fff',
-  fontWeight: 'bold',
-  fontSize: '0.7rem',
-  border: '1px solid #546E7A',
+  background: "#37474F",
+  color: "#fff",
+  fontWeight: "bold",
+  fontSize: "0.7rem",
+  border: "1px solid #546E7A",
   py: 1,
-  whiteSpace: 'nowrap',
+  whiteSpace: "nowrap",
 } as const;
 
 interface ReadonlyCellProps {
   value: string;
   bg?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
-const ReadonlyCell: React.FC<ReadonlyCellProps> = ({ value, bg, align = 'left' }) => (
+const ReadonlyCell: React.FC<ReadonlyCellProps> = ({
+  value,
+  bg,
+  align = "left",
+}) => (
   <TableCell
     align={align}
     sx={{
-      background: bg ?? '#FAFAFA',
-      fontSize: '0.72rem',
+      background: bg ?? "#FAFAFA",
+      fontSize: "0.72rem",
       fontWeight: 500,
-      border: '1px solid #E0E0E0',
-      whiteSpace: 'nowrap',
+      border: "1px solid #E0E0E0",
+      whiteSpace: "nowrap",
       px: 1,
     }}
   >
@@ -802,8 +1079,8 @@ interface SummaryCardProps {
 }
 
 const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, color }) => (
-  <Card sx={{ flex: '1 1 180px', minWidth: 160 }}>
-    <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+  <Card sx={{ flex: "1 1 180px", minWidth: 160 }}>
+    <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
