@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Alert,
   Box,
@@ -24,7 +24,7 @@ import {
   TextField,
   Tooltip,
   Typography,
-} from '@mui/material';
+} from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   ExpandMore as ExpandMoreIcon,
@@ -34,8 +34,10 @@ import {
   Schedule as ScheduleIcon,
   FileDownload as FileDownloadIcon,
   PictureAsPdf as PictureAsPdfIcon,
-} from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
+  Edit as EditIcon,
+  Save as SaveIcon,
+} from "@mui/icons-material";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -47,7 +49,7 @@ import {
   ReferenceLine,
   Legend,
   Cell,
-} from 'recharts';
+} from "recharts";
 import {
   planTrabajoAnualService,
   PlanTrabajoAnualDetail,
@@ -55,44 +57,68 @@ import {
   DashboardIndicadores,
   CicloPhva,
   CategoriaActividad,
-} from '../services/planTrabajoAnualService';
+} from "../services/planTrabajoAnualService";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
 
 // ============================================================
 // Constantes de etiquetas
 // ============================================================
 const CICLO_LABELS: Record<CicloPhva, string> = {
-  I_PLANEAR: 'I. PLANEAR',
-  II_HACER: 'II. HACER',
-  III_VERIFICAR: 'III. VERIFICAR',
-  IV_ACTUAR: 'IV. ACTUAR',
+  I_PLANEAR: "I. PLANEAR",
+  II_HACER: "II. HACER",
+  III_VERIFICAR: "III. VERIFICAR",
+  IV_ACTUAR: "IV. ACTUAR",
 };
 
 const CICLO_COLORS: Record<CicloPhva, string> = {
-  I_PLANEAR: '#1976d2',
-  II_HACER: '#388e3c',
-  III_VERIFICAR: '#f57c00',
-  IV_ACTUAR: '#7b1fa2',
+  I_PLANEAR: "#1976d2",
+  II_HACER: "#388e3c",
+  III_VERIFICAR: "#f57c00",
+  IV_ACTUAR: "#7b1fa2",
 };
 
 const CATEGORIA_LABELS: Record<CategoriaActividad, string> = {
-  RECURSOS: 'RECURSOS',
-  GESTION_INTEGRAL: 'GESTIÓN INTEGRAL DEL SISTEMA',
-  GESTION_SALUD: 'GESTIÓN DE LA SALUD',
-  GESTION_PELIGROS: 'GESTIÓN DE PELIGROS Y RIESGOS',
-  GESTION_AMENAZAS: 'GESTIÓN DE AMENAZAS',
-  VERIFICACION: 'VERIFICACIÓN DEL SG-SST',
-  MEJORAMIENTO: 'MEJORAMIENTO',
+  RECURSOS: "RECURSOS",
+  GESTION_INTEGRAL: "GESTIÓN INTEGRAL DEL SISTEMA",
+  GESTION_SALUD: "GESTIÓN DE LA SALUD",
+  GESTION_PELIGROS: "GESTIÓN DE PELIGROS Y RIESGOS",
+  GESTION_AMENAZAS: "GESTIÓN DE AMENAZAS",
+  VERIFICACION: "VERIFICACIÓN DEL SG-SST",
+  MEJORAMIENTO: "MEJORAMIENTO",
 };
 
-const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MESES_CORTOS = [
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
+];
 
 // Orden de ciclos y categorías
-const CICLOS_ORDER: CicloPhva[] = ['I_PLANEAR', 'II_HACER', 'III_VERIFICAR', 'IV_ACTUAR'];
+const CICLOS_ORDER: CicloPhva[] = [
+  "I_PLANEAR",
+  "II_HACER",
+  "III_VERIFICAR",
+  "IV_ACTUAR",
+];
 const CATEGORIAS_BY_CICLO: Record<CicloPhva, CategoriaActividad[]> = {
-  I_PLANEAR: ['RECURSOS', 'GESTION_INTEGRAL'],
-  II_HACER: ['GESTION_SALUD', 'GESTION_PELIGROS', 'GESTION_AMENAZAS'],
-  III_VERIFICAR: ['VERIFICACION'],
-  IV_ACTUAR: ['MEJORAMIENTO'],
+  I_PLANEAR: ["RECURSOS", "GESTION_INTEGRAL"],
+  II_HACER: ["GESTION_SALUD", "GESTION_PELIGROS", "GESTION_AMENAZAS"],
+  III_VERIFICAR: ["VERIFICACION"],
+  IV_ACTUAR: ["MEJORAMIENTO"],
 };
 
 // ============================================================
@@ -111,14 +137,28 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
 
+  // Dialog Editar Encabezado
+  const [headerDialog, setHeaderDialog] = useState(false);
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [headerForm, setHeaderForm] = useState({
+    codigo: "",
+    version: "",
+    objetivo: "",
+    alcance: "",
+    encargado_sgsst: "",
+    aprobado_por: "",
+  });
+
   const cargarDatos = useCallback(async () => {
     if (!planId) return;
     try {
       setLoadingPlan(true);
-      const planData = await planTrabajoAnualService.obtenerPlan(parseInt(planId));
+      const planData = await planTrabajoAnualService.obtenerPlan(
+        parseInt(planId),
+      );
       setPlan(planData);
     } catch {
-      setError('Error al cargar el plan de trabajo');
+      setError("Error al cargar el plan de trabajo");
     } finally {
       setLoadingPlan(false);
     }
@@ -128,7 +168,9 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
     if (!planId) return;
     try {
       setLoadingDashboard(true);
-      const dash = await planTrabajoAnualService.obtenerDashboard(parseInt(planId));
+      const dash = await planTrabajoAnualService.obtenerDashboard(
+        parseInt(planId),
+      );
       setDashboard(dash);
     } catch {
       // Dashboard no crítico
@@ -145,8 +187,8 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
   const handleTogglePE = async (
     actividadId: number,
     mes: number,
-    campo: 'programada' | 'ejecutada',
-    valorActual: boolean
+    campo: "programada" | "ejecutada",
+    valorActual: boolean,
   ) => {
     const key = `${actividadId}-${mes}-${campo}`;
     if (updatingCell === key) return;
@@ -167,7 +209,7 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
             return {
               ...act,
               seguimientos_mensuales: act.seguimientos_mensuales.map((s) =>
-                s.mes === mes ? { ...s, [campo]: !valorActual } : s
+                s.mes === mes ? { ...s, [campo]: !valorActual } : s,
               ),
             };
           }),
@@ -177,28 +219,34 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
       // Refrescar dashboard en background
       cargarDashboard();
     } catch {
-      setError('Error al actualizar el seguimiento');
+      setError("Error al actualizar el seguimiento");
     } finally {
       setUpdatingCell(null);
     }
   };
 
-  const handleUpdateActividad = useCallback(async (actividadId: number, data: { frecuencia?: string; responsable?: string }) => {
-    try {
-      await planTrabajoAnualService.actualizarActividad(actividadId, data);
-      setPlan((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          actividades: prev.actividades.map((act) =>
-            act.id === actividadId ? { ...act, ...data } : act
-          ),
-        };
-      });
-    } catch {
-      setError('Error al guardar el cambio');
-    }
-  }, []);
+  const handleUpdateActividad = useCallback(
+    async (
+      actividadId: number,
+      data: { frecuencia?: string; responsable?: string },
+    ) => {
+      try {
+        await planTrabajoAnualService.actualizarActividad(actividadId, data);
+        setPlan((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            actividades: prev.actividades.map((act) =>
+              act.id === actividadId ? { ...act, ...data } : act,
+            ),
+          };
+        });
+      } catch {
+        setError("Error al guardar el cambio");
+      }
+    },
+    [],
+  );
 
   const handleExportarExcel = async () => {
     if (!plan) return;
@@ -206,7 +254,7 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
     try {
       await planTrabajoAnualService.exportarExcel(plan.id, plan.año);
     } catch {
-      setError('Error al exportar a Excel');
+      setError("Error al exportar a Excel");
     } finally {
       setExportingExcel(false);
     }
@@ -218,9 +266,36 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
     try {
       await planTrabajoAnualService.exportarPdf(plan.id, plan.año);
     } catch {
-      setError('Error al exportar a PDF');
+      setError("Error al exportar a PDF");
     } finally {
       setExportingPdf(false);
+    }
+  };
+
+  const openHeaderDialog = () => {
+    if (!plan) return;
+    setHeaderForm({
+      codigo: plan.codigo || "",
+      version: plan.version || "",
+      objetivo: plan.objetivo || "",
+      alcance: plan.alcance || "",
+      encargado_sgsst: plan.encargado_sgsst || "",
+      aprobado_por: plan.aprobado_por || "",
+    });
+    setHeaderDialog(true);
+  };
+
+  const saveHeader = async () => {
+    if (!plan) return;
+    setSavingHeader(true);
+    try {
+      await planTrabajoAnualService.actualizarPlan(plan.id, headerForm);
+      setPlan((prev) => (prev ? { ...prev, ...headerForm } : prev));
+      setHeaderDialog(false);
+    } catch {
+      setError("Error al actualizar el encabezado");
+    } finally {
+      setSavingHeader(false);
     }
   };
 
@@ -250,8 +325,8 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
           component="button"
           underline="hover"
           color="inherit"
-          onClick={() => navigate('/admin/plan-trabajo-anual')}
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+          onClick={() => navigate("/admin/plan-trabajo-anual")}
+          sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
         >
           <ArrowBackIcon fontSize="small" />
           Planes de Trabajo
@@ -260,20 +335,44 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
       </Breadcrumbs>
 
       {/* Título */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          mb: 3,
+        }}
+      >
         <Box>
           <Typography variant="h4" fontWeight="bold">
             Plan de Trabajo Anual SG-SST — {plan.año}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {plan.codigo} • v{plan.version} {plan.encargado_sgsst && `• Encargado: ${plan.encargado_sgsst}`}
+            {plan.codigo} • v{plan.version}{" "}
+            {plan.encargado_sgsst && `• Encargado: ${plan.encargado_sgsst}`}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+        <Box sx={{ display: "flex", gap: 1, flexShrink: 0 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<EditIcon />}
+            onClick={openHeaderDialog}
+            disabled={exportingExcel || exportingPdf}
+            size="small"
+          >
+            Editar Encabezado
+          </Button>
           <Button
             variant="outlined"
             color="success"
-            startIcon={exportingExcel ? <CircularProgress size={16} /> : <FileDownloadIcon />}
+            startIcon={
+              exportingExcel ? (
+                <CircularProgress size={16} />
+              ) : (
+                <FileDownloadIcon />
+              )
+            }
             onClick={handleExportarExcel}
             disabled={exportingExcel || exportingPdf}
             size="small"
@@ -283,7 +382,13 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
           <Button
             variant="outlined"
             color="error"
-            startIcon={exportingPdf ? <CircularProgress size={16} /> : <PictureAsPdfIcon />}
+            startIcon={
+              exportingPdf ? (
+                <CircularProgress size={16} />
+              ) : (
+                <PictureAsPdfIcon />
+              )
+            }
             onClick={handleExportarPdf}
             disabled={exportingExcel || exportingPdf}
             size="small"
@@ -310,13 +415,13 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
       <Divider sx={{ my: 3 }} />
 
       {/* Leyenda */}
-      <Box sx={{ display: 'flex', gap: 3, mb: 2, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <CheckCircleIcon sx={{ color: 'primary.main', fontSize: 18 }} />
+      <Box sx={{ display: "flex", gap: 3, mb: 2, flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <CheckCircleIcon sx={{ color: "primary.main", fontSize: 18 }} />
           <Typography variant="caption">P = Programada</Typography>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <CheckCircleIcon sx={{ color: 'success.main', fontSize: 18 }} />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <CheckCircleIcon sx={{ color: "success.main", fontSize: 18 }} />
           <Typography variant="caption">E = Ejecutada</Typography>
         </Box>
         <Typography variant="caption" color="text.secondary">
@@ -335,6 +440,92 @@ const PlanTrabajoAnualDetailPage: React.FC = () => {
           onUpdateActividad={handleUpdateActividad}
         />
       ))}
+
+      {/* Dialog Editar Encabezado */}
+      <Dialog
+        open={headerDialog}
+        onClose={() => !savingHeader && setHeaderDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Editar Encabezado</DialogTitle>
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}
+        >
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <TextField
+              label="Código"
+              fullWidth
+              value={headerForm.codigo}
+              onChange={(e) =>
+                setHeaderForm((f) => ({ ...f, codigo: e.target.value }))
+              }
+            />
+            <TextField
+              label="Versión"
+              fullWidth
+              value={headerForm.version}
+              onChange={(e) =>
+                setHeaderForm((f) => ({ ...f, version: e.target.value }))
+              }
+            />
+          </Box>
+          <TextField
+            label="Encargado SG-SST"
+            fullWidth
+            value={headerForm.encargado_sgsst}
+            onChange={(e) =>
+              setHeaderForm((f) => ({ ...f, encargado_sgsst: e.target.value }))
+            }
+          />
+          <TextField
+            label="Aprobado por"
+            fullWidth
+            value={headerForm.aprobado_por}
+            onChange={(e) =>
+              setHeaderForm((f) => ({ ...f, aprobado_por: e.target.value }))
+            }
+          />
+          <TextField
+            label="Objetivo"
+            fullWidth
+            multiline
+            rows={2}
+            value={headerForm.objetivo}
+            onChange={(e) =>
+              setHeaderForm((f) => ({ ...f, objetivo: e.target.value }))
+            }
+          />
+          <TextField
+            label="Alcance"
+            fullWidth
+            multiline
+            rows={2}
+            value={headerForm.alcance}
+            onChange={(e) =>
+              setHeaderForm((f) => ({ ...f, alcance: e.target.value }))
+            }
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setHeaderDialog(false)}
+            disabled={savingHeader}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={saveHeader}
+            disabled={savingHeader}
+            startIcon={
+              savingHeader ? <CircularProgress size={16} /> : <SaveIcon />
+            }
+          >
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
@@ -349,7 +540,12 @@ interface DashboardSectionProps {
   actividades: PlanTrabajoActividad[];
 }
 
-const DashboardSection: React.FC<DashboardSectionProps> = ({ dashboard, loading, metaPorcentaje, actividades }) => {
+const DashboardSection: React.FC<DashboardSectionProps> = ({
+  dashboard,
+  loading,
+  metaPorcentaje,
+  actividades,
+}) => {
   const chartData = useMemo(() => {
     if (!dashboard) return [];
     return dashboard.meses.map((m) => ({
@@ -364,7 +560,8 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({ dashboard, loading,
   const cicloData = useMemo(() => {
     return CICLOS_ORDER.map((ciclo) => {
       const acts = actividades.filter((a) => a.ciclo === ciclo);
-      let prog = 0, ejec = 0;
+      let prog = 0,
+        ejec = 0;
       acts.forEach((act) => {
         act.seguimientos_mensuales.forEach((s) => {
           if (s.programada) prog++;
@@ -397,7 +594,12 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({ dashboard, loading,
   if (!dashboard) return null;
 
   const pct = dashboard.porcentaje_global;
-  const pctColor = pct >= metaPorcentaje ? 'success.main' : pct >= metaPorcentaje * 0.7 ? 'warning.main' : 'error.main';
+  const pctColor =
+    pct >= metaPorcentaje
+      ? "success.main"
+      : pct >= metaPorcentaje * 0.7
+        ? "warning.main"
+        : "error.main";
 
   return (
     <Grid container spacing={3}>
@@ -407,37 +609,53 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({ dashboard, loading,
           <Grid size={12}>
             <Card>
               <CardContent>
-                <Typography variant="caption" color="text.secondary" gutterBottom>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  gutterBottom
+                >
                   TOTAL PROGRAMADAS
                 </Typography>
                 <Typography variant="h4" fontWeight="bold" color="primary">
                   {dashboard.total_programadas}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">actividades en el año</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  actividades en el año
+                </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid size={12}>
             <Card>
               <CardContent>
-                <Typography variant="caption" color="text.secondary" gutterBottom>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  gutterBottom
+                >
                   TOTAL EJECUTADAS
                 </Typography>
                 <Typography variant="h4" fontWeight="bold" color="success.main">
                   {dashboard.total_ejecutadas}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">actividades completadas</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  actividades completadas
+                </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid size={12}>
             <Card>
               <CardContent>
-                <Typography variant="caption" color="text.secondary" gutterBottom>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  gutterBottom
+                >
                   CUMPLIMIENTO GLOBAL
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ position: "relative", display: "inline-flex" }}>
                     <CircularProgress
                       variant="determinate"
                       value={Math.min(pct, 100)}
@@ -447,20 +665,31 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({ dashboard, loading,
                     />
                     <Box
                       sx={{
-                        top: 0, left: 0, bottom: 0, right: 0,
-                        position: 'absolute',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        right: 0,
+                        position: "absolute",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      <Typography variant="caption" fontWeight="bold" sx={{ color: pctColor }}>
+                      <Typography
+                        variant="caption"
+                        fontWeight="bold"
+                        sx={{ color: pctColor }}
+                      >
                         {pct}%
                       </Typography>
                     </Box>
                   </Box>
                   <Box>
-                    <Typography variant="body2" fontWeight="bold" sx={{ color: pctColor }}>
+                    <Typography
+                      variant="body2"
+                      fontWeight="bold"
+                      sx={{ color: pctColor }}
+                    >
                       {pct}%
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -482,7 +711,10 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({ dashboard, loading,
               Cumplimiento del Plan de Trabajo — Actividades por Mes
             </Typography>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <BarChart
+                data={chartData}
+                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -495,7 +727,12 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({ dashboard, loading,
                   y={metaPorcentaje / 100}
                   stroke="#f44336"
                   strokeDasharray="5 5"
-                  label={{ value: `Meta ${metaPorcentaje}%`, position: 'insideTopRight', fontSize: 11, fill: '#f44336' }}
+                  label={{
+                    value: `Meta ${metaPorcentaje}%`,
+                    position: "insideTopRight",
+                    fontSize: 11,
+                    fill: "#f44336",
+                  }}
                 />
                 <Bar dataKey="Programadas" fill="#1976d2" radius={[4, 4, 0, 0]}>
                   {chartData.map((_entry, index) => (
@@ -527,30 +764,62 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({ dashboard, loading,
                 barCategoryGap="30%"
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="ciclo" tick={{ fontSize: 11, fontWeight: 600 }} />
+                <XAxis
+                  dataKey="ciclo"
+                  tick={{ fontSize: 11, fontWeight: 600 }}
+                />
                 <YAxis
                   domain={[0, 100]}
                   tickFormatter={(v) => `${v}%`}
                   tick={{ fontSize: 11 }}
-                  label={{ value: '% Cumplimiento', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#757575' }}
+                  label={{
+                    value: "% Cumplimiento",
+                    angle: -90,
+                    position: "insideLeft",
+                    fontSize: 10,
+                    fill: "#757575",
+                  }}
                 />
                 <RechartsTooltip
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const d = payload[0].payload;
-                    const pctColor = d.Cumplimiento >= metaPorcentaje ? '#2e7d32' : d.Cumplimiento >= metaPorcentaje * 0.7 ? '#e65100' : '#c62828';
+                    const pctColor =
+                      d.Cumplimiento >= metaPorcentaje
+                        ? "#2e7d32"
+                        : d.Cumplimiento >= metaPorcentaje * 0.7
+                          ? "#e65100"
+                          : "#c62828";
                     return (
                       <Paper elevation={3} sx={{ p: 1.5, minWidth: 160 }}>
-                        <Typography variant="caption" fontWeight="bold" display="block" sx={{ mb: 0.5 }}>
+                        <Typography
+                          variant="caption"
+                          fontWeight="bold"
+                          display="block"
+                          sx={{ mb: 0.5 }}
+                        >
                           {d.ciclo}
                         </Typography>
-                        <Typography variant="caption" display="block" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          color="text.secondary"
+                        >
                           Programadas: <b>{d.Programadas}</b>
                         </Typography>
-                        <Typography variant="caption" display="block" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          color="text.secondary"
+                        >
                           Ejecutadas: <b>{d.Ejecutadas}</b>
                         </Typography>
-                        <Typography variant="caption" display="block" fontWeight="bold" sx={{ color: pctColor, mt: 0.5 }}>
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          fontWeight="bold"
+                          sx={{ color: pctColor, mt: 0.5 }}
+                        >
                           Cumplimiento: {d.Cumplimiento}%
                         </Typography>
                       </Paper>
@@ -562,14 +831,31 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({ dashboard, loading,
                   stroke="#f44336"
                   strokeDasharray="6 3"
                   strokeWidth={1.5}
-                  label={{ value: `Meta ${metaPorcentaje}%`, position: 'insideTopRight', fontSize: 10, fill: '#f44336' }}
+                  label={{
+                    value: `Meta ${metaPorcentaje}%`,
+                    position: "insideTopRight",
+                    fontSize: 10,
+                    fill: "#f44336",
+                  }}
                 />
-                <Bar dataKey="Cumplimiento" radius={[6, 6, 0, 0]} maxBarSize={100} label={{ position: 'top', formatter: (v: any) => `${v}%`, fontSize: 11, fontWeight: 700 }}>
+                <Bar
+                  dataKey="Cumplimiento"
+                  radius={[6, 6, 0, 0]}
+                  maxBarSize={100}
+                  label={{
+                    position: "top",
+                    formatter: (v: any) => `${v}%`,
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
                   {cicloData.map((entry, index) => (
                     <Cell
                       key={index}
                       fill={entry.color}
-                      fillOpacity={entry.Cumplimiento >= metaPorcentaje ? 0.95 : 0.65}
+                      fillOpacity={
+                        entry.Cumplimiento >= metaPorcentaje ? 0.95 : 0.65
+                      }
                     />
                   ))}
                 </Bar>
@@ -589,11 +875,25 @@ interface CicloSectionProps {
   ciclo: CicloPhva;
   actividades: PlanTrabajoActividad[];
   updatingCell: string | null;
-  onToggle: (actividadId: number, mes: number, campo: 'programada' | 'ejecutada', valorActual: boolean) => void;
-  onUpdateActividad: (id: number, data: { frecuencia?: string; responsable?: string }) => Promise<void>;
+  onToggle: (
+    actividadId: number,
+    mes: number,
+    campo: "programada" | "ejecutada",
+    valorActual: boolean,
+  ) => void;
+  onUpdateActividad: (
+    id: number,
+    data: { frecuencia?: string; responsable?: string },
+  ) => Promise<void>;
 }
 
-const CicloSection: React.FC<CicloSectionProps> = ({ ciclo, actividades, updatingCell, onToggle, onUpdateActividad }) => {
+const CicloSection: React.FC<CicloSectionProps> = ({
+  ciclo,
+  actividades,
+  updatingCell,
+  onToggle,
+  onUpdateActividad,
+}) => {
   const [expanded, setExpanded] = useState(true);
   const categorias = CATEGORIAS_BY_CICLO[ciclo];
   const color = CICLO_COLORS[ciclo];
@@ -606,15 +906,15 @@ const CicloSection: React.FC<CicloSectionProps> = ({ ciclo, actividades, updatin
       {/* Header del ciclo */}
       <Paper
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
           px: 2,
           py: 1,
           mb: 1,
           bgcolor: color,
-          color: 'white',
-          cursor: 'pointer',
+          color: "white",
+          cursor: "pointer",
           borderRadius: 1,
         }}
         onClick={() => setExpanded(!expanded)}
@@ -622,11 +922,11 @@ const CicloSection: React.FC<CicloSectionProps> = ({ ciclo, actividades, updatin
         <Typography variant="h6" fontWeight="bold">
           {CICLO_LABELS[ciclo]}
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Chip
             label={`${actividadesDelCiclo.length} actividades`}
             size="small"
-            sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+            sx={{ bgcolor: "rgba(255,255,255,0.2)", color: "white" }}
           />
           {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         </Box>
@@ -634,7 +934,9 @@ const CicloSection: React.FC<CicloSectionProps> = ({ ciclo, actividades, updatin
 
       <Collapse in={expanded}>
         {categorias.map((cat) => {
-          const actsCat = actividadesDelCiclo.filter((a) => a.categoria === cat);
+          const actsCat = actividadesDelCiclo.filter(
+            (a) => a.categoria === cat,
+          );
           if (actsCat.length === 0) return null;
           return (
             <CategoriaTable
@@ -661,11 +963,26 @@ interface CategoriaTableProps {
   cicloColor: string;
   actividades: PlanTrabajoActividad[];
   updatingCell: string | null;
-  onToggle: (actividadId: number, mes: number, campo: 'programada' | 'ejecutada', valorActual: boolean) => void;
-  onUpdateActividad: (id: number, data: { frecuencia?: string; responsable?: string }) => Promise<void>;
+  onToggle: (
+    actividadId: number,
+    mes: number,
+    campo: "programada" | "ejecutada",
+    valorActual: boolean,
+  ) => void;
+  onUpdateActividad: (
+    id: number,
+    data: { frecuencia?: string; responsable?: string },
+  ) => Promise<void>;
 }
 
-const CategoriaTable: React.FC<CategoriaTableProps> = ({ categoria, cicloColor, actividades, updatingCell, onToggle, onUpdateActividad }) => {
+const CategoriaTable: React.FC<CategoriaTableProps> = ({
+  categoria,
+  cicloColor,
+  actividades,
+  updatingCell,
+  onToggle,
+  onUpdateActividad,
+}) => {
   return (
     <Box sx={{ mb: 2 }}>
       <Box
@@ -682,25 +999,56 @@ const CategoriaTable: React.FC<CategoriaTableProps> = ({ categoria, cicloColor, 
         </Typography>
       </Box>
 
-      <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+      <TableContainer
+        component={Paper}
+        variant="outlined"
+        sx={{ overflowX: "auto" }}
+      >
         <Table size="small" sx={{ minWidth: 1400 }}>
           <TableHead>
-            <TableRow sx={{ bgcolor: 'grey.50' }}>
-              <TableCell sx={{ fontWeight: 'bold', minWidth: 80, fontSize: '0.7rem' }}>Estándar</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', minWidth: 280, fontSize: '0.7rem' }}>Descripción</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', minWidth: 110, fontSize: '0.7rem' }}>
-                Frecuencia
-                <Typography component="span" sx={{ fontSize: '0.6rem', color: 'primary.main', ml: 0.5 }}>✎</Typography>
+            <TableRow sx={{ bgcolor: "grey.50" }}>
+              <TableCell
+                sx={{ fontWeight: "bold", minWidth: 80, fontSize: "0.7rem" }}
+              >
+                Estándar
               </TableCell>
-              <TableCell sx={{ fontWeight: 'bold', minWidth: 150, fontSize: '0.7rem' }}>
+              <TableCell
+                sx={{ fontWeight: "bold", minWidth: 280, fontSize: "0.7rem" }}
+              >
+                Descripción
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: "bold", minWidth: 110, fontSize: "0.7rem" }}
+              >
+                Frecuencia
+                <Typography
+                  component="span"
+                  sx={{ fontSize: "0.6rem", color: "primary.main", ml: 0.5 }}
+                >
+                  ✎
+                </Typography>
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: "bold", minWidth: 150, fontSize: "0.7rem" }}
+              >
                 Responsable
-                <Typography component="span" sx={{ fontSize: '0.6rem', color: 'primary.main', ml: 0.5 }}>✎</Typography>
+                <Typography
+                  component="span"
+                  sx={{ fontSize: "0.6rem", color: "primary.main", ml: 0.5 }}
+                >
+                  ✎
+                </Typography>
               </TableCell>
               {MESES_CORTOS.map((mes) => (
                 <TableCell
                   key={mes}
                   align="center"
-                  sx={{ fontWeight: 'bold', minWidth: 54, fontSize: '0.7rem', px: 0.5 }}
+                  sx={{
+                    fontWeight: "bold",
+                    minWidth: 54,
+                    fontSize: "0.7rem",
+                    px: 0.5,
+                  }}
                 >
                   {mes}
                 </TableCell>
@@ -734,15 +1082,20 @@ interface InlineEditCellProps {
   icon?: React.ReactNode;
 }
 
-const InlineEditCell: React.FC<InlineEditCellProps> = ({ value, placeholder, onSave, icon }) => {
+const InlineEditCell: React.FC<InlineEditCellProps> = ({
+  value,
+  placeholder,
+  onSave,
+  icon,
+}) => {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value || '');
+  const [draft, setDraft] = useState(value || "");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setEditing(false);
     const trimmed = draft.trim();
-    if (trimmed === (value || '')) return;
+    if (trimmed === (value || "")) return;
     setSaving(true);
     try {
       await onSave(trimmed);
@@ -752,8 +1105,14 @@ const InlineEditCell: React.FC<InlineEditCellProps> = ({ value, placeholder, onS
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
-    if (e.key === 'Escape') { setDraft(value || ''); setEditing(false); }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    }
+    if (e.key === "Escape") {
+      setDraft(value || "");
+      setEditing(false);
+    }
   };
 
   if (editing) {
@@ -767,7 +1126,7 @@ const InlineEditCell: React.FC<InlineEditCellProps> = ({ value, placeholder, onS
         variant="standard"
         size="small"
         fullWidth
-        inputProps={{ style: { fontSize: '0.72rem' } }}
+        inputProps={{ style: { fontSize: "0.72rem" } }}
       />
     );
   }
@@ -775,21 +1134,43 @@ const InlineEditCell: React.FC<InlineEditCellProps> = ({ value, placeholder, onS
   return (
     <Tooltip title="Clic para editar" placement="top">
       <Box
-        onClick={() => { setDraft(value || ''); setEditing(true); }}
+        onClick={() => {
+          setDraft(value || "");
+          setEditing(true);
+        }}
         sx={{
-          display: 'flex', alignItems: 'center', gap: 0.5,
-          cursor: 'text', borderRadius: 0.5, px: 0.5, py: 0.25,
+          display: "flex",
+          alignItems: "center",
+          gap: 0.5,
+          cursor: "text",
+          borderRadius: 0.5,
+          px: 0.5,
+          py: 0.25,
           minHeight: 24,
-          '&:hover': { bgcolor: 'action.hover', outline: '1px dashed', outlineColor: 'primary.light' },
+          "&:hover": {
+            bgcolor: "action.hover",
+            outline: "1px dashed",
+            outlineColor: "primary.light",
+          },
         }}
       >
         {icon}
         {saving ? (
-          <Typography variant="caption" color="text.disabled">Guardando…</Typography>
+          <Typography variant="caption" color="text.disabled">
+            Guardando…
+          </Typography>
         ) : value ? (
-          <Typography sx={{ fontSize: '0.72rem' }}>{value}</Typography>
+          <Typography sx={{ fontSize: "0.72rem" }}>{value}</Typography>
         ) : (
-          <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled', fontStyle: 'italic' }}>{placeholder}</Typography>
+          <Typography
+            sx={{
+              fontSize: "0.7rem",
+              color: "text.disabled",
+              fontStyle: "italic",
+            }}
+          >
+            {placeholder}
+          </Typography>
         )}
       </Box>
     </Tooltip>
@@ -802,11 +1183,24 @@ const InlineEditCell: React.FC<InlineEditCellProps> = ({ value, placeholder, onS
 interface ActividadRowProps {
   actividad: PlanTrabajoActividad;
   updatingCell: string | null;
-  onToggle: (actividadId: number, mes: number, campo: 'programada' | 'ejecutada', valorActual: boolean) => void;
-  onUpdateActividad: (id: number, data: { frecuencia?: string; responsable?: string }) => Promise<void>;
+  onToggle: (
+    actividadId: number,
+    mes: number,
+    campo: "programada" | "ejecutada",
+    valorActual: boolean,
+  ) => void;
+  onUpdateActividad: (
+    id: number,
+    data: { frecuencia?: string; responsable?: string },
+  ) => Promise<void>;
 }
 
-const ActividadRow: React.FC<ActividadRowProps> = ({ actividad, updatingCell, onToggle, onUpdateActividad }) => {
+const ActividadRow: React.FC<ActividadRowProps> = ({
+  actividad,
+  updatingCell,
+  onToggle,
+  onUpdateActividad,
+}) => {
   // Crear mapa mes→seguimiento para acceso rápido
   const seguimientoMap = useMemo(() => {
     const map: Record<number, { programada: boolean; ejecutada: boolean }> = {};
@@ -818,21 +1212,32 @@ const ActividadRow: React.FC<ActividadRowProps> = ({ actividad, updatingCell, on
 
   return (
     <TableRow hover>
-      <TableCell sx={{ fontSize: '0.7rem', color: 'text.secondary', verticalAlign: 'top', pt: 1 }}>
+      <TableCell
+        sx={{
+          fontSize: "0.7rem",
+          color: "text.secondary",
+          verticalAlign: "top",
+          pt: 1,
+        }}
+      >
         {actividad.estandar}
       </TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', verticalAlign: 'top', pt: 1 }}>
+      <TableCell sx={{ fontSize: "0.75rem", verticalAlign: "top", pt: 1 }}>
         {actividad.descripcion}
       </TableCell>
-      <TableCell sx={{ verticalAlign: 'top', pt: 0.5 }}>
+      <TableCell sx={{ verticalAlign: "top", pt: 0.5 }}>
         <InlineEditCell
           value={actividad.frecuencia}
           placeholder="— agregar frecuencia"
-          icon={<ScheduleIcon sx={{ fontSize: 11, color: 'text.disabled', flexShrink: 0 }} />}
+          icon={
+            <ScheduleIcon
+              sx={{ fontSize: 11, color: "text.disabled", flexShrink: 0 }}
+            />
+          }
           onSave={(v) => onUpdateActividad(actividad.id, { frecuencia: v })}
         />
       </TableCell>
-      <TableCell sx={{ verticalAlign: 'top', pt: 0.5 }}>
+      <TableCell sx={{ verticalAlign: "top", pt: 0.5 }}>
         <InlineEditCell
           value={actividad.responsable}
           placeholder="— agregar responsable"
@@ -842,7 +1247,10 @@ const ActividadRow: React.FC<ActividadRowProps> = ({ actividad, updatingCell, on
 
       {/* Celdas de meses (1-12) */}
       {Array.from({ length: 12 }, (_, i) => i + 1).map((mes) => {
-        const seg = seguimientoMap[mes] || { programada: false, ejecutada: false };
+        const seg = seguimientoMap[mes] || {
+          programada: false,
+          ejecutada: false,
+        };
         const keyP = `${actividad.id}-${mes}-programada`;
         const keyE = `${actividad.id}-${mes}-ejecutada`;
         const loadingP = updatingCell === keyP;
@@ -855,55 +1263,108 @@ const ActividadRow: React.FC<ActividadRowProps> = ({ actividad, updatingCell, on
             sx={{
               px: 0.25,
               py: 0.5,
-              bgcolor: seg.ejecutada ? 'success.50' : seg.programada ? 'primary.50' : 'transparent',
-              transition: 'background-color 0.2s',
+              bgcolor: seg.ejecutada
+                ? "success.50"
+                : seg.programada
+                  ? "primary.50"
+                  : "transparent",
+              transition: "background-color 0.2s",
             }}
           >
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 0.25,
+              }}
+            >
               {/* P - Programada */}
-              <Tooltip title={`${seg.programada ? 'Quitar de' : 'Marcar como'} Programada en ${MESES_CORTOS[mes - 1]}`}>
+              <Tooltip
+                title={`${seg.programada ? "Quitar de" : "Marcar como"} Programada en ${MESES_CORTOS[mes - 1]}`}
+              >
                 <span>
                   {loadingP ? (
                     <CircularProgress size={14} />
                   ) : (
                     <IconButton
                       size="small"
-                      onClick={() => onToggle(actividad.id, mes, 'programada', seg.programada)}
+                      onClick={() =>
+                        onToggle(
+                          actividad.id,
+                          mes,
+                          "programada",
+                          seg.programada,
+                        )
+                      }
                       sx={{ p: 0.25 }}
                     >
                       {seg.programada ? (
-                        <CheckCircleIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                        <CheckCircleIcon
+                          sx={{ fontSize: 16, color: "primary.main" }}
+                        />
                       ) : (
-                        <UncheckedIcon sx={{ fontSize: 16, color: 'grey.300' }} />
+                        <UncheckedIcon
+                          sx={{ fontSize: 16, color: "grey.300" }}
+                        />
                       )}
                     </IconButton>
                   )}
                 </span>
               </Tooltip>
-              <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'primary.main', lineHeight: 1 }}>P</Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: "0.6rem",
+                  color: "primary.main",
+                  lineHeight: 1,
+                }}
+              >
+                P
+              </Typography>
 
               {/* E - Ejecutada */}
-              <Tooltip title={`${seg.ejecutada ? 'Quitar de' : 'Marcar como'} Ejecutada en ${MESES_CORTOS[mes - 1]}`}>
+              <Tooltip
+                title={`${seg.ejecutada ? "Quitar de" : "Marcar como"} Ejecutada en ${MESES_CORTOS[mes - 1]}`}
+              >
                 <span>
                   {loadingE ? (
                     <CircularProgress size={14} />
                   ) : (
                     <IconButton
                       size="small"
-                      onClick={() => onToggle(actividad.id, mes, 'ejecutada', seg.ejecutada)}
+                      onClick={() =>
+                        onToggle(actividad.id, mes, "ejecutada", seg.ejecutada)
+                      }
                       sx={{ p: 0.25 }}
                       disabled={!seg.programada}
                     >
                       {seg.ejecutada ? (
-                        <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                        <CheckCircleIcon
+                          sx={{ fontSize: 16, color: "success.main" }}
+                        />
                       ) : (
-                        <UncheckedIcon sx={{ fontSize: 16, color: seg.programada ? 'grey.400' : 'grey.200' }} />
+                        <UncheckedIcon
+                          sx={{
+                            fontSize: 16,
+                            color: seg.programada ? "grey.400" : "grey.200",
+                          }}
+                        />
                       )}
                     </IconButton>
                   )}
                 </span>
               </Tooltip>
-              <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'success.main', lineHeight: 1 }}>E</Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: "0.6rem",
+                  color: "success.main",
+                  lineHeight: 1,
+                }}
+              >
+                E
+              </Typography>
             </Box>
           </TableCell>
         );

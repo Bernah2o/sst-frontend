@@ -5,8 +5,10 @@ import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
   Description as DescriptionIcon,
+  PictureAsPdf as PictureAsPdfIcon,
 } from "@mui/icons-material";
 import {
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -42,6 +44,26 @@ import {
 } from "../services/masterDocumentService";
 import { formatDate } from "../utils/dateUtils";
 import { logger } from "../utils/logger";
+
+const DOCUMENT_TYPES = [
+  { label: "PROCEDIMIENTO", code: "PR" },
+  { label: "PROCESO", code: "PC" },
+  { label: "MANUAL", code: "MA" },
+  { label: "INSTRUCTIVO", code: "IN" },
+  { label: "FORMATO", code: "FO" },
+  { label: "FICHA TÉCNICA", code: "FT" },
+  { label: "GUÍA", code: "GU" },
+  { label: "PROTOCOLO", code: "PT" },
+  { label: "MATERIAL EDUCATIVO", code: "ME" },
+  { label: "REGLAMENTO", code: "RG" },
+  { label: "POLÍTICA", code: "PO" },
+  { label: "PROGRAMA", code: "PG" },
+  { label: "MATRIZ", code: "MT" },
+  { label: "CAPACITACIÓN", code: "CP" },
+  { label: "ACTA", code: "AC" },
+];
+
+const LOCATION_TYPES = ["PC ADMINISTRADOR", "DIGITAL"];
 
 const MasterDocuments: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
@@ -215,6 +237,19 @@ const MasterDocuments: React.FC = () => {
     setPage(0);
   };
 
+  const handleDownloadPdf = async () => {
+    try {
+      await masterDocumentService.downloadPdf({
+        search: filters.search,
+        tipo_documento: filters.tipo_documento,
+      });
+      enqueueSnackbar("PDF generado exitosamente", { variant: "success" });
+    } catch (error) {
+      logger.error("Error generating PDF:", error);
+      enqueueSnackbar("Error al generar el PDF", { variant: "error" });
+    }
+  };
+
   return (
     <Container maxWidth="xl">
       <Box
@@ -258,22 +293,47 @@ const MasterDocuments: React.FC = () => {
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
+            <Autocomplete
               fullWidth
-              label="Tipo de Documento"
-              name="tipo_documento"
-              value={filters.tipo_documento}
-              onChange={handleFilterChange}
               size="small"
+              options={DOCUMENT_TYPES}
+              getOptionLabel={(option) => option.label}
+              value={
+                DOCUMENT_TYPES.find(
+                  (t) => t.label === filters.tipo_documento,
+                ) || null
+              }
+              onChange={(_, newValue) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  tipo_documento: newValue ? newValue.label : "",
+                }));
+                setPage(0);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Tipo de Documento"
+                  name="tipo_documento"
+                />
+              )}
             />
           </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, md: 4 }} sx={{ display: "flex", gap: 2 }}>
             <Button
               startIcon={<RefreshIcon />}
               onClick={fetchDocuments}
               variant="outlined"
             >
               Refrescar
+            </Button>
+            <Button
+              startIcon={<PictureAsPdfIcon />}
+              onClick={handleDownloadPdf}
+              variant="outlined"
+              color="secondary"
+            >
+              PDF
             </Button>
           </Grid>
         </Grid>
@@ -396,20 +456,36 @@ const MasterDocuments: React.FC = () => {
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
+                <Autocomplete
                   fullWidth
-                  label="Tipo de Documento"
-                  name="tipo_documento"
-                  value={formik.values.tipo_documento}
-                  onChange={formik.handleChange}
-                  error={
-                    formik.touched.tipo_documento &&
-                    Boolean(formik.errors.tipo_documento)
+                  options={DOCUMENT_TYPES}
+                  getOptionLabel={(option) => option.label}
+                  value={
+                    DOCUMENT_TYPES.find(
+                      (t) => t.label === formik.values.tipo_documento,
+                    ) || null
                   }
-                  helperText={
-                    formik.touched.tipo_documento &&
-                    formik.errors.tipo_documento
-                  }
+                  onChange={(_, newValue) => {
+                    formik.setFieldValue(
+                      "tipo_documento",
+                      newValue ? newValue.label : "",
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Tipo de Documento"
+                      name="tipo_documento"
+                      error={
+                        formik.touched.tipo_documento &&
+                        Boolean(formik.errors.tipo_documento)
+                      }
+                      helperText={
+                        formik.touched.tipo_documento &&
+                        formik.errors.tipo_documento
+                      }
+                    />
+                  )}
                 />
               </Grid>
               <Grid size={12}>
@@ -456,18 +532,27 @@ const MasterDocuments: React.FC = () => {
                 />
               </Grid>
               <Grid size={12}>
-                <TextField
+                <Autocomplete
                   fullWidth
-                  label="Ubicación"
-                  name="ubicacion"
-                  value={formik.values.ubicacion}
-                  onChange={formik.handleChange}
-                  error={
-                    formik.touched.ubicacion && Boolean(formik.errors.ubicacion)
-                  }
-                  helperText={
-                    formik.touched.ubicacion && formik.errors.ubicacion
-                  }
+                  options={LOCATION_TYPES}
+                  value={formik.values.ubicacion || null}
+                  onChange={(_, newValue) => {
+                    formik.setFieldValue("ubicacion", newValue || "");
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Ubicación"
+                      name="ubicacion"
+                      error={
+                        formik.touched.ubicacion &&
+                        Boolean(formik.errors.ubicacion)
+                      }
+                      helperText={
+                        formik.touched.ubicacion && formik.errors.ubicacion
+                      }
+                    />
+                  )}
                 />
               </Grid>
             </Grid>
