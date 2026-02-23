@@ -51,6 +51,7 @@ import seguimientoActividadesService, {
   SeguimientoActividadCreate,
   SeguimientoActividadUpdate
 } from '../services/seguimientoActividadesService';
+import api from '../services/api';
 import ConfirmDialog from './ConfirmDialog';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 
@@ -74,6 +75,7 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
   const [uploadingFile, setUploadingFile] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     titulo: '',
@@ -237,6 +239,73 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
     }
   };
 
+  const handleViewFile = async (url: string, nombre: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Si es una URL completa de un storage externo, abrir directamente
+      if (url.startsWith('http') && !url.includes(window.location.hostname)) {
+        window.open(url, '_blank');
+        return;
+      }
+
+      // Si es una URL relativa del backend, descargarla con axios para incluir el token
+      const response = await api.get(url, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Abrir en una nueva pestaña
+      window.open(blobUrl, '_blank');
+      
+      // Limpiar después de un tiempo
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+    } catch (err) {
+      console.error('Error viewing file:', err);
+      setError('Error al abrir el archivo. Es posible que el enlace haya expirado o no tenga permisos.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGeneratePdf = async (actividad: SeguimientoActividad) => {
+    try {
+      setIsGeneratingPdf(actividad.id);
+      setError(null);
+      // No usamos setLoading(true) para no grisear toda la pantalla
+      
+      const blob = await seguimientoActividadesService.generateActividadPdf(actividad.id);
+
+      if (!blob || (blob as any).size === 0) {
+        setError('No se pudo generar el PDF de la actividad. Intente nuevamente.');
+        return;
+      }
+
+      const safeTitle = (actividad.titulo || 'actividad_seguimiento')
+        .replace(/[^a-zA-Z0-9]/g, '_')
+        .substring(0, 40);
+
+      const fileName = `actividad_seguimiento_${safeTitle}_${actividad.id}.pdf`;
+
+      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(pdfBlob);
+      
+      // En lugar de descarga forzada, abrimos en nueva pestaña para "previsualizar"
+      window.open(url, '_blank');
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 10000);
+
+      setSuccess('PDF generado exitosamente');
+    } catch (err) {
+      console.error('Error generating actividad PDF:', err);
+      setError('Error al generar el PDF de la actividad. Verifique los datos e intente nuevamente.');
+    } finally {
+      setIsGeneratingPdf(null);
+    }
+  };
+
   const handleEditActividad = (actividad: SeguimientoActividad) => {
     setEditingActividad(actividad);
     setFormData({
@@ -384,6 +453,15 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
                                         <EditIcon />
                                       </IconButton>
                                     </Tooltip>
+                                    <Tooltip title="Descargar PDF (para firma)">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleGeneratePdf(actividad)}
+                                        disabled={loading || isGeneratingPdf === actividad.id}
+                                      >
+                                        {isGeneratingPdf === actividad.id ? <LinearProgress sx={{ width: 20 }} /> : <PdfIcon />}
+                                      </IconButton>
+                                    </Tooltip>
                                     <Tooltip title="Eliminar">
                                       <IconButton
                                         size="small"
@@ -404,11 +482,11 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
                                           {actividad.archivo_soporte_nombre}
                                         </Typography>
                                       </Box>
-                                      <Box display="flex" gap={1}>
+                                      <Box display="flex" alignItems="center" gap={1}>
                                         <Button
                                           size="small"
                                           startIcon={<DownloadIcon />}
-                                          onClick={() => window.open(actividad.archivo_soporte_url, '_blank')}
+                                          onClick={() => handleViewFile(actividad.archivo_soporte_url!, actividad.archivo_soporte_nombre!)}
                                         >
                                           Ver
                                         </Button>
@@ -419,7 +497,7 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
                                           onClick={() => handleDeleteFile(actividad.id)}
                                           disabled={loading}
                                         >
-                                          Eliminar
+                                          Eliminar Archivo
                                         </Button>
                                       </Box>
                                     </Box>

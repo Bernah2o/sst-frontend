@@ -1,6 +1,4 @@
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as ViewIcon,
   Assignment as ExamIcon,
@@ -24,6 +22,8 @@ import {
   EventBusy as EventBusyIcon,
   Schedule as ScheduleIcon,
   TableChart as TableChartIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -71,17 +71,21 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { es } from "date-fns/locale";
 import React, { useState, useEffect, useCallback } from "react";
 
-
 import { adminConfigService } from "../services/adminConfigService";
 import api, { apiService } from "../services/api";
 import { formatDate } from "../utils/dateUtils";
-import { suppliersService, Supplier, Doctor } from "../services/suppliersService";
-import AutocompleteField, { AutocompleteOption } from "../components/AutocompleteField";
+import {
+  suppliersService,
+  Supplier,
+  Doctor,
+} from "../services/suppliersService";
+import AutocompleteField, {
+  AutocompleteOption,
+} from "../components/AutocompleteField";
 import { COLOMBIAN_DEPARTMENTS } from "../data/colombianDepartments";
 import { COLOMBIAN_CITIES } from "../data/colombianCities";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import ConfirmDialog from "../components/ConfirmDialog";
-
 
 // Enums que coinciden con el backend
 
@@ -113,13 +117,13 @@ interface OccupationalExamData {
   medical_center?: string;
   pdf_file_path?: string;
   requires_follow_up?: boolean; // Nuevo campo para seguimiento
-  
+
   // Nuevos campos para suppliers
   supplier_id?: number;
   doctor_id?: number;
   supplier?: Supplier;
   doctor?: Doctor;
-  
+
   created_at: string;
   updated_at: string;
   next_exam_date?: string; // Fecha de próximo examen
@@ -180,8 +184,12 @@ const OccupationalExam: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingExam, setEditingExam] = useState<OccupationalExamData | null>(null);
-  const [viewingExam, setViewingExam] = useState<OccupationalExamData | null>(null);
+  const [editingExam, setEditingExam] = useState<OccupationalExamData | null>(
+    null,
+  );
+  const [viewingExam, setViewingExam] = useState<OccupationalExamData | null>(
+    null,
+  );
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const { dialogState, showConfirmDialog } = useConfirmDialog();
   const [filters, setFilters] = useState({
@@ -197,30 +205,43 @@ const OccupationalExam: React.FC = () => {
   const [sendingEmail, setSendingEmail] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
-  const [examSeguimientos, setExamSeguimientos] = useState<{[key: number]: boolean}>({});
+  const [examSeguimientos, setExamSeguimientos] = useState<{
+    [key: number]: boolean;
+  }>({});
   const [errorDialog, setErrorDialog] = useState<{
     open: boolean;
     title: string;
     message: string;
     detail: string;
-    severity: 'error' | 'warning' | 'info' | 'success';
+    severity: "error" | "warning" | "info" | "success";
   }>({
     open: false,
-    title: '',
-    message: '',
-    detail: '',
-    severity: 'info'
+    title: "",
+    message: "",
+    detail: "",
+    severity: "info",
   });
   const [activeTab, setActiveTab] = useState(0);
   const [scheduleYear, setScheduleYear] = useState<number | "">("");
 
-  const showAlert = (message: string, severity: 'error' | 'warning' | 'info' | 'success' = 'info', title?: string, detail: string = '') => {
+  const showAlert = (
+    message: string,
+    severity: "error" | "warning" | "info" | "success" = "info",
+    title?: string,
+    detail: string = "",
+  ) => {
     setErrorDialog({
       open: true,
-      title: title || (severity === 'error' ? 'Error' : severity === 'warning' ? 'Advertencia' : 'Información'),
+      title:
+        title ||
+        (severity === "error"
+          ? "Error"
+          : severity === "warning"
+            ? "Advertencia"
+            : "Información"),
       message,
       detail,
-      severity
+      severity,
     });
   };
   const [formData, setFormData] = useState({
@@ -244,13 +265,11 @@ const OccupationalExam: React.FC = () => {
     next_exam_date: null as Date | null,
     pdf_file_path: null as string | null,
     requires_follow_up: false,
-    duracion_cargo_actual_meses: '',
+    duracion_cargo_actual_meses: "",
     factores_riesgo_evaluados: [],
-    departamento: '',
-    ciudad: '',
+    departamento: "",
+    ciudad: "",
   });
-
-
 
   const medicalAptitudeTypes = [
     { value: "apto", label: "Apto", color: "success" },
@@ -261,10 +280,6 @@ const OccupationalExam: React.FC = () => {
     },
     { value: "no_apto", label: "No Apto", color: "error" },
   ];
-
-
-
-
 
   // Los datos del trabajador ya vienen del backend, no necesitamos enriquecerlos
 
@@ -278,22 +293,23 @@ const OccupationalExam: React.FC = () => {
       if (filters.exam_type) params.append("exam_type", filters.exam_type);
       if (filters.worker) params.append("worker_id", filters.worker);
       if (filters.search) params.append("search", filters.search);
-      if (filters.next_exam_status) params.append("next_exam_status", filters.next_exam_status);
+      if (filters.next_exam_status)
+        params.append("next_exam_status", filters.next_exam_status);
       if (filters.year) params.append("next_exam_year", filters.year);
 
       const response = await api.get(
-        `/occupational-exams/?${params.toString()}`
+        `/occupational-exams/?${params.toString()}`,
       );
       const examsData = response.data.items || [];
 
       setExams(examsData);
       setTotalPages(
-        response.data.pages || Math.ceil((response.data.total || 0) / 20)
+        response.data.pages || Math.ceil((response.data.total || 0) / 20),
       );
 
       // has_seguimiento ya viene del backend, actualizar el mapa local
       if (examsData.length > 0) {
-        const seguimientosMap: {[key: number]: boolean} = {};
+        const seguimientosMap: { [key: number]: boolean } = {};
         examsData.forEach((exam: OccupationalExamData) => {
           seguimientosMap[exam.id] = exam.has_seguimiento || false;
         });
@@ -339,14 +355,16 @@ const OccupationalExam: React.FC = () => {
   };
 
   const handleSupplierChange = async (supplierId: string) => {
-    setFormData({ 
-      ...formData, 
+    setFormData({
+      ...formData,
       supplier_id: supplierId,
       doctor_id: "", // Reset doctor selection
-      medical_center: supplierId ? suppliers.find(s => s.id.toString() === supplierId)?.name || "" : "",
-      examining_doctor: "" // Reset examining doctor
+      medical_center: supplierId
+        ? suppliers.find((s) => s.id.toString() === supplierId)?.name || ""
+        : "",
+      examining_doctor: "", // Reset examining doctor
     });
-    
+
     if (supplierId) {
       await fetchDoctorsBySupplier(parseInt(supplierId));
     } else {
@@ -355,11 +373,13 @@ const OccupationalExam: React.FC = () => {
   };
 
   const handleDoctorChange = (doctorId: string) => {
-    const selectedDoctor = doctors.find(d => d.id.toString() === doctorId);
-    setFormData({ 
-      ...formData, 
+    const selectedDoctor = doctors.find((d) => d.id.toString() === doctorId);
+    setFormData({
+      ...formData,
       doctor_id: doctorId,
-      examining_doctor: selectedDoctor ? suppliersService.formatDoctorName(selectedDoctor) : ""
+      examining_doctor: selectedDoctor
+        ? suppliersService.formatDoctorName(selectedDoctor)
+        : "",
     });
   };
 
@@ -377,17 +397,20 @@ const OccupationalExam: React.FC = () => {
     const file = event.target.files?.[0];
     if (file) {
       // Validar que sea un archivo PDF
-      if (file.type !== 'application/pdf') {
-        showAlert('Por favor seleccione un archivo PDF válido', 'warning');
+      if (file.type !== "application/pdf") {
+        showAlert("Por favor seleccione un archivo PDF válido", "warning");
         return;
       }
-      
+
       // Validar tamaño del archivo (máximo 10MB)
       if (file.size > 10 * 1024 * 1024) {
-        showAlert('El archivo es demasiado grande. El tamaño máximo permitido es 10MB', 'warning');
+        showAlert(
+          "El archivo es demasiado grande. El tamaño máximo permitido es 10MB",
+          "warning",
+        );
         return;
       }
-      
+
       setSelectedFile(file);
     }
   };
@@ -396,94 +419,97 @@ const OccupationalExam: React.FC = () => {
   const handlePreviewPdf = async (examId: number) => {
     try {
       const response = await api.get(`/occupational-exams/${examId}/pdf`, {
-        responseType: 'blob',
+        responseType: "blob",
       });
-      
+
       // Verificar si la respuesta es válida
       if (!response.data || response.data.size === 0) {
-        throw new Error('El archivo PDF está vacío o no existe');
+        throw new Error("El archivo PDF está vacío o no existe");
       }
-      
+
       // Crear URL temporal para el blob
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
-      
+
       // Abrir en nueva ventana
-      window.open(url, '_blank');
-      
+      window.open(url, "_blank");
+
       // Limpiar URL después de un tiempo
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
       }, 1000);
     } catch (error: any) {
-      console.error('Error previewing PDF:', error);
-      
-      let errorMessage = 'Error al previsualizar el PDF.';
+      console.error("Error previewing PDF:", error);
+
+      let errorMessage = "Error al previsualizar el PDF.";
       if (error.response) {
-        console.error('Error response:', error.response);
+        console.error("Error response:", error.response);
         if (error.response.status === 404) {
-          errorMessage = 'El archivo PDF no fue encontrado.';
+          errorMessage = "El archivo PDF no fue encontrado.";
         } else if (error.response.status === 403) {
-          errorMessage = 'No tiene permisos para acceder a este archivo.';
+          errorMessage = "No tiene permisos para acceder a este archivo.";
         } else if (error.response.status === 500) {
-          errorMessage = 'Error interno del servidor al obtener el PDF.';
+          errorMessage = "Error interno del servidor al obtener el PDF.";
         } else {
           errorMessage = `Error del servidor: ${error.response.status}`;
         }
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
-      showAlert(errorMessage, 'error', 'Error al previsualizar PDF');
+
+      showAlert(errorMessage, "error", "Error al previsualizar PDF");
     }
   };
 
   // Función para descargar PDF con autenticación
   const handleDownloadPdf = async (examId: number, workerName?: string) => {
     try {
-      const response = await api.get(`/occupational-exams/${examId}/pdf?download=true`, {
-        responseType: 'blob',
-      });
-      
+      const response = await api.get(
+        `/occupational-exams/${examId}/pdf?download=true`,
+        {
+          responseType: "blob",
+        },
+      );
+
       // Verificar si la respuesta es válida
       if (!response.data || response.data.size === 0) {
-        throw new Error('El archivo PDF está vacío o no existe');
+        throw new Error("El archivo PDF está vacío o no existe");
       }
-      
+
       // Crear URL temporal para el blob
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
-      
+
       // Crear elemento de descarga
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = `Examen_Ocupacional_${workerName?.replace(/\s+/g, '_') || examId}.pdf`;
+      link.download = `Examen_Ocupacional_${workerName?.replace(/\s+/g, "_") || examId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Limpiar URL
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error('Error downloading PDF:', error);
-      
-      let errorMessage = 'Error al descargar el PDF.';
+      console.error("Error downloading PDF:", error);
+
+      let errorMessage = "Error al descargar el PDF.";
       if (error.response) {
-        console.error('Error response:', error.response);
+        console.error("Error response:", error.response);
         if (error.response.status === 404) {
-          errorMessage = 'El archivo PDF no fue encontrado.';
+          errorMessage = "El archivo PDF no fue encontrado.";
         } else if (error.response.status === 403) {
-          errorMessage = 'No tiene permisos para acceder a este archivo.';
+          errorMessage = "No tiene permisos para acceder a este archivo.";
         } else if (error.response.status === 500) {
-          errorMessage = 'Error interno del servidor al obtener el PDF.';
+          errorMessage = "Error interno del servidor al obtener el PDF.";
         } else {
           errorMessage = `Error del servidor: ${error.response.status}`;
         }
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
-      showAlert(errorMessage, 'error', 'Error al descargar PDF');
+
+      showAlert(errorMessage, "error", "Error al descargar PDF");
     }
   };
 
@@ -506,14 +532,14 @@ const OccupationalExam: React.FC = () => {
       supplier_id: "",
       doctor_id: "",
 
-        restrictions: "",
-        next_exam_date: null,
-        pdf_file_path: null,
-        requires_follow_up: false,
-    duracion_cargo_actual_meses: '',
-    factores_riesgo_evaluados: [],
-    departamento: '',
-    ciudad: '',
+      restrictions: "",
+      next_exam_date: null,
+      pdf_file_path: null,
+      requires_follow_up: false,
+      duracion_cargo_actual_meses: "",
+      factores_riesgo_evaluados: [],
+      departamento: "",
+      ciudad: "",
     });
     setSelectedFile(null);
   };
@@ -521,14 +547,20 @@ const OccupationalExam: React.FC = () => {
   const handleSaveExam = async () => {
     try {
       const durValue = formData.duracion_cargo_actual_meses;
-      if (durValue === null || durValue === undefined || durValue === '') {
-        showAlert("Duración del cargo actual (meses) es obligatoria (Art. 15)", 'warning');
+      if (durValue === null || durValue === undefined || durValue === "") {
+        showAlert(
+          "Duración del cargo actual (meses) es obligatoria (Art. 15)",
+          "warning",
+        );
         return;
       }
 
       const factores = formData.factores_riesgo_evaluados as any[];
       if (!Array.isArray(factores) || factores.length === 0) {
-        showAlert('Debe incluir al menos un factor de riesgo evaluado (Art. 15)', 'warning');
+        showAlert(
+          "Debe incluir al menos un factor de riesgo evaluado (Art. 15)",
+          "warning",
+        );
         return;
       }
 
@@ -538,7 +570,8 @@ const OccupationalExam: React.FC = () => {
       if (selectedFile) {
         setUploadingPdf(true);
         try {
-          const uploadResponse = await apiService.uploadOccupationalExamPdf(selectedFile);
+          const uploadResponse =
+            await apiService.uploadOccupationalExamPdf(selectedFile);
           pdfFilePath = uploadResponse.file_path;
         } catch (error) {
           console.error("Error uploading PDF:", error);
@@ -556,7 +589,8 @@ const OccupationalExam: React.FC = () => {
         ciudad: formData.ciudad || null,
         programa: formData.programa || null,
         occupational_conclusions: formData.occupational_conclusions || null,
-        preventive_occupational_behaviors: formData.preventive_occupational_behaviors || null,
+        preventive_occupational_behaviors:
+          formData.preventive_occupational_behaviors || null,
         general_recommendations: formData.general_recommendations || null,
         medical_aptitude_concept: formData.medical_aptitude_concept,
         observations: formData.observations || null,
@@ -566,13 +600,18 @@ const OccupationalExam: React.FC = () => {
         requires_follow_up: formData.requires_follow_up,
         supplier_id: formData.supplier_id ? Number(formData.supplier_id) : null,
         doctor_id: formData.doctor_id ? Number(formData.doctor_id) : null,
-        duracion_cargo_actual_meses: formData.duracion_cargo_actual_meses ? Number(formData.duracion_cargo_actual_meses) : null,
+        duracion_cargo_actual_meses: formData.duracion_cargo_actual_meses
+          ? Number(formData.duracion_cargo_actual_meses)
+          : null,
         factores_riesgo_evaluados: formData.factores_riesgo_evaluados || [],
       };
 
       let examResponse;
       if (editingExam) {
-        examResponse = await api.put(`/occupational-exams/${editingExam.id}`, payload);
+        examResponse = await api.put(
+          `/occupational-exams/${editingExam.id}`,
+          payload,
+        );
         examResponse.data = { ...editingExam, ...payload };
       } else {
         examResponse = await api.post("/occupational-exams/", payload);
@@ -584,21 +623,25 @@ const OccupationalExam: React.FC = () => {
       console.error("Error saving exam:", error);
       const detail = error.response?.data?.detail;
       if (detail) {
-        const msg = typeof detail === 'string' ? detail : JSON.stringify(detail);
-        showAlert(`Error al guardar el examen: ${msg}`, 'error');
+        const msg =
+          typeof detail === "string" ? detail : JSON.stringify(detail);
+        showAlert(`Error al guardar el examen: ${msg}`, "error");
       } else {
-        showAlert("Error al guardar el examen. Revise los campos e intente nuevamente.", 'error');
+        showAlert(
+          "Error al guardar el examen. Revise los campos e intente nuevamente.",
+          "error",
+        );
       }
     }
   };
 
   const handleDeleteExam = async (exam: OccupationalExamData) => {
     const confirmed = await showConfirmDialog({
-      title: 'Confirmar Eliminación',
+      title: "Confirmar Eliminación",
       message: `¿Está seguro de que desea eliminar el examen ocupacional de ${exam.worker_name}? Esta acción no se puede deshacer.`,
-      severity: 'error',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar'
+      severity: "error",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
     });
 
     if (!confirmed) return;
@@ -606,10 +649,10 @@ const OccupationalExam: React.FC = () => {
     try {
       await api.delete(`/occupational-exams/${exam.id}`);
       fetchExams();
-      showAlert('Examen eliminado correctamente', 'success');
+      showAlert("Examen eliminado correctamente", "success");
     } catch (error) {
       console.error("Error deleting exam:", error);
-      showAlert('Error al eliminar el examen', 'error');
+      showAlert("Error al eliminar el examen", "error");
     }
   };
 
@@ -619,14 +662,14 @@ const OccupationalExam: React.FC = () => {
         `/occupational-exams/${exam.id}/certificate`,
         {
           responseType: "blob",
-        }
+        },
       );
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute(
         "download",
-        `certificado_${exam.worker_name}_${exam.exam_date}.pdf`
+        `certificado_${exam.worker_name}_${exam.exam_date}.pdf`,
       );
       document.body.appendChild(link);
       link.click();
@@ -636,41 +679,51 @@ const OccupationalExam: React.FC = () => {
     }
   };
 
-  const fetchAndSetExamCalculations = async (workerId: string, hireDateStr: string, examDate: Date | null) => {
+  const fetchAndSetExamCalculations = async (
+    workerId: string,
+    hireDateStr: string,
+    examDate: Date | null,
+  ) => {
     if (!examDate) return;
 
     // Calcular duración si hay fecha de ingreso
-    let duracionMesesStr = '';
+    let duracionMesesStr = "";
     if (hireDateStr) {
       const ingreso = new Date(hireDateStr);
       let months = (examDate.getFullYear() - ingreso.getFullYear()) * 12;
       months -= ingreso.getMonth();
       months += examDate.getMonth();
       if (examDate.getDate() < ingreso.getDate()) {
-          months--;
+        months--;
       }
       duracionMesesStr = Math.max(0, months).toString();
     }
 
     try {
-      const examDateStr = examDate.toISOString().split('T')[0];
+      const examDateStr = examDate.toISOString().split("T")[0];
       const response = await api.get(
-        `/occupational-exams/calculate-next-exam-date/${workerId}?exam_date=${examDateStr}`
+        `/occupational-exams/calculate-next-exam-date/${workerId}?exam_date=${examDateStr}`,
       );
-      
-      setFormData(prev => ({
+
+      setFormData((prev) => ({
         ...prev,
-        duracion_cargo_actual_meses: duracionMesesStr ? (duracionMesesStr as any) : prev.duracion_cargo_actual_meses,
-        ...(response.data.next_exam_date ? { next_exam_date: new Date(response.data.next_exam_date) } : {}),
-        ...(response.data.risk_factors ? { factores_riesgo_evaluados: response.data.risk_factors } : {})
+        duracion_cargo_actual_meses: duracionMesesStr
+          ? (duracionMesesStr as any)
+          : prev.duracion_cargo_actual_meses,
+        ...(response.data.next_exam_date
+          ? { next_exam_date: new Date(response.data.next_exam_date) }
+          : {}),
+        ...(response.data.risk_factors
+          ? { factores_riesgo_evaluados: response.data.risk_factors }
+          : {}),
       }));
     } catch (error) {
-      console.error('Error calculando info del examen:', error);
+      console.error("Error calculando info del examen:", error);
       // Aun si falla la API, actualizar la duración calculada
       if (duracionMesesStr) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          duracion_cargo_actual_meses: duracionMesesStr as any
+          duracion_cargo_actual_meses: duracionMesesStr as any,
         }));
       }
     }
@@ -692,12 +745,12 @@ const OccupationalExam: React.FC = () => {
         `/exam-scheduler/generate-report?${params.toString()}`,
         {
           responseType: "blob",
-        }
+        },
       );
 
       // Crear y descargar el archivo PDF
       const url = window.URL.createObjectURL(
-        new Blob([response.data], { type: "application/pdf" })
+        new Blob([response.data], { type: "application/pdf" }),
       );
       const link = document.createElement("a");
       link.href = url;
@@ -707,7 +760,7 @@ const OccupationalExam: React.FC = () => {
         .replace(/:/g, "-");
       link.setAttribute(
         "download",
-        `reporte_examenes_ocupacionales_${timestamp}.pdf`
+        `reporte_examenes_ocupacionales_${timestamp}.pdf`,
       );
       document.body.appendChild(link);
       link.click();
@@ -721,12 +774,14 @@ const OccupationalExam: React.FC = () => {
     }
   };
 
+  // Matriz de seguimiento eliminada a petición del usuario.
+
   const handleSendManualEmail = async (exam: OccupationalExamData) => {
     try {
       setSendingEmail(exam.id);
 
       const response = await api.post(
-        `/exam-scheduler/send-notification-with-pdf/${exam.id}`
+        `/exam-scheduler/send-notification-with-pdf/${exam.id}`,
       );
 
       if (response.status === 200) {
@@ -734,19 +789,24 @@ const OccupationalExam: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Error enviando correo:", error);
-      
+
       if (error.response && error.response.status === 404) {
         const errorData = error.response.data;
         setErrorDialog({
           open: true,
           title: "Aviso de Notificación",
-          message: errorData.message || "El trabajador no requiere examen u operacion no permitida.",
+          message:
+            errorData.message ||
+            "El trabajador no requiere examen u operacion no permitida.",
           detail: errorData.detail || "",
-          severity: 'info'
+          severity: "info",
         });
       } else {
-        const errorMessage = error.response?.data?.detail || error.message || "Error desconocido al enviar la notificación.";
-        showAlert(`Error al enviar el correo: ${errorMessage}`, 'error');
+        const errorMessage =
+          error.response?.data?.detail ||
+          error.message ||
+          "Error desconocido al enviar la notificación.";
+        showAlert(`Error al enviar el correo: ${errorMessage}`, "error");
       }
     } finally {
       setSendingEmail(null);
@@ -777,24 +837,29 @@ const OccupationalExam: React.FC = () => {
         medical_aptitude_concept: exam.medical_aptitude_concept || "apto",
         observations: exam.observations || "",
         examining_doctor: exam.examining_doctor || "",
-      medical_center: exam.medical_center || "",
-      supplier_id: exam.supplier_id?.toString() || "",
-      doctor_id: exam.doctor_id?.toString() || "",
-      duracion_cargo_actual_meses: (exam as any).duracion_cargo_actual_meses ? String((exam as any).duracion_cargo_actual_meses) : '',
-      factores_riesgo_evaluados: (exam as any).factores_riesgo_evaluados || [],
-      departamento: (exam as any).departamento || '',
-      ciudad: (exam as any).ciudad || '',
+        medical_center: exam.medical_center || "",
+        supplier_id: exam.supplier_id?.toString() || "",
+        doctor_id: exam.doctor_id?.toString() || "",
+        duracion_cargo_actual_meses: (exam as any).duracion_cargo_actual_meses
+          ? String((exam as any).duracion_cargo_actual_meses)
+          : "",
+        factores_riesgo_evaluados:
+          (exam as any).factores_riesgo_evaluados || [],
+        departamento: (exam as any).departamento || "",
+        ciudad: (exam as any).ciudad || "",
 
         restrictions: exam.restrictions || "",
         next_exam_date: exam.next_exam_date
           ? new Date(exam.next_exam_date)
           : null,
-        pdf_file_path: exam.pdf_file_path ? exam.pdf_file_path.trim().replace(/`/g, '') : null,
+        pdf_file_path: exam.pdf_file_path
+          ? exam.pdf_file_path.trim().replace(/`/g, "")
+          : null,
         requires_follow_up: exam.requires_follow_up || false,
       };
 
       setFormData(formDataToSet);
-      
+
       // Si hay un supplier_id, cargar los médicos de ese proveedor
       if (exam.supplier_id) {
         fetchDoctorsBySupplier(exam.supplier_id);
@@ -823,14 +888,14 @@ const OccupationalExam: React.FC = () => {
         next_exam_date: null,
         pdf_file_path: null,
         requires_follow_up: false,
-    duracion_cargo_actual_meses: '',
-    factores_riesgo_evaluados: [],
+        duracion_cargo_actual_meses: "",
+        factores_riesgo_evaluados: [],
 
-    departamento: '',
-    ciudad: '',
+        departamento: "",
+        ciudad: "",
       });
     }
-    
+
     // Limpiar archivo seleccionado al abrir el diálogo
     setSelectedFile(null);
     setOpenDialog(true);
@@ -857,12 +922,12 @@ const OccupationalExam: React.FC = () => {
         `/occupational-exams/${exam.id}/medical-recommendation-report`,
         {
           responseType: "blob",
-        }
+        },
       );
 
       // Crear y descargar el archivo PDF
       const url = window.URL.createObjectURL(
-        new Blob([response.data], { type: "application/pdf" })
+        new Blob([response.data], { type: "application/pdf" }),
       );
       const link = document.createElement("a");
       link.href = url;
@@ -872,7 +937,7 @@ const OccupationalExam: React.FC = () => {
         .replace(/:/g, "-");
       link.setAttribute(
         "download",
-        `notificacion_medica_${exam.worker_name || exam.id}_${timestamp}.pdf`
+        `notificacion_medica_${exam.worker_name || exam.id}_${timestamp}.pdf`,
       );
       document.body.appendChild(link);
       link.click();
@@ -892,42 +957,42 @@ const OccupationalExam: React.FC = () => {
       console.log("Exam before toggle:", exam);
       console.log("Current requires_follow_up:", exam.requires_follow_up);
       console.log("New requires_follow_up will be:", !exam.requires_follow_up);
-      
+
       // Enviar solo el campo que queremos actualizar
       const updateData = {
-        requires_follow_up: !exam.requires_follow_up
+        requires_follow_up: !exam.requires_follow_up,
       };
-      
+
       console.log("Simplified data being sent to API:", updateData);
       console.log("API URL:", `/occupational-exams/${exam.id}`);
-      
+
       const response = await api.put(
         `/occupational-exams/${exam.id}`,
-        updateData
+        updateData,
       );
-      
+
       console.log("API Response status:", response.status);
       console.log("API Response data:", response.data);
-      
+
       if (response.status === 200) {
         // Actualizar el estado local del examen
-        setExams(prevExams => 
-          prevExams.map(e => 
-            e.id === exam.id 
+        setExams((prevExams) =>
+          prevExams.map((e) =>
+            e.id === exam.id
               ? { ...e, requires_follow_up: !e.requires_follow_up }
-              : e
-          )
+              : e,
+          ),
         );
-        
+
         // Mostrar mensaje de éxito
         console.log(
-          exam.requires_follow_up 
-            ? "Seguimiento desmarcado exitosamente" 
-            : "Examen marcado para seguimiento"
+          exam.requires_follow_up
+            ? "Seguimiento desmarcado exitosamente"
+            : "Examen marcado para seguimiento",
         );
-        
+
         console.log("Local state updated successfully");
-        
+
         // Recargar los datos para verificar que se guardó correctamente
         setTimeout(() => {
           fetchExams();
@@ -936,7 +1001,10 @@ const OccupationalExam: React.FC = () => {
     } catch (error: any) {
       console.error("Error toggling follow-up:", error);
       console.error("Error details:", error.response?.data);
-      showAlert("Error al actualizar el estado de seguimiento. Por favor, intente nuevamente.", 'error');
+      showAlert(
+        "Error al actualizar el estado de seguimiento. Por favor, intente nuevamente.",
+        "error",
+      );
     }
   };
 
@@ -946,31 +1014,38 @@ const OccupationalExam: React.FC = () => {
       const payload = {
         worker_id: exam.worker_id,
         programa: exam.programa,
-        estado: 'iniciado',
-        valoracion_riesgo: 'medio', // Valor por defecto, se puede ajustar
-        fecha_inicio: new Date().toISOString().split('T')[0],
+        estado: "iniciado",
+        valoracion_riesgo: "medio", // Valor por defecto, se puede ajustar
+        fecha_inicio: new Date().toISOString().split("T")[0],
         motivo_inclusion: `Seguimiento requerido por examen ocupacional del ${formatDate(exam.exam_date)}`,
         conclusiones_ocupacionales: exam.occupational_conclusions,
-        conductas_ocupacionales_prevenir: exam.preventive_occupational_behaviors,
+        conductas_ocupacionales_prevenir:
+          exam.preventive_occupational_behaviors,
         recomendaciones_generales: exam.general_recommendations,
         observaciones_examen: exam.observations,
-        comentario: `Seguimiento creado automáticamente desde examen ocupacional ID: ${exam.id}`
+        comentario: `Seguimiento creado automáticamente desde examen ocupacional ID: ${exam.id}`,
       };
 
-      const response = await api.post('/seguimientos/', payload);
-      
+      const response = await api.post("/seguimientos/", payload);
+
       if (response.status === 201) {
         // Marcar el examen como que ya no requiere seguimiento
         await handleToggleFollowUp(exam);
-        
+
         console.log("Seguimiento médico creado exitosamente");
-        
+
         // Opcional: Mostrar notificación de éxito
-        showAlert("Seguimiento médico creado exitosamente. El examen ha sido desmarcado del seguimiento.", 'success');
+        showAlert(
+          "Seguimiento médico creado exitosamente. El examen ha sido desmarcado del seguimiento.",
+          "success",
+        );
       }
     } catch (error) {
       console.error("Error creating follow-up:", error);
-      showAlert("Error al crear el seguimiento médico. Por favor, intente nuevamente.", 'error');
+      showAlert(
+        "Error al crear el seguimiento médico. Por favor, intente nuevamente.",
+        "error",
+      );
     }
   };
 
@@ -979,7 +1054,7 @@ const OccupationalExam: React.FC = () => {
     const expiryDate = new Date(exam.expires_at);
     const today = new Date();
     const daysUntilExpiry = Math.ceil(
-      (expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24)
+      (expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24),
     );
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
   };
@@ -988,8 +1063,6 @@ const OccupationalExam: React.FC = () => {
     if (!exam.expires_at) return false;
     return new Date(exam.expires_at) < new Date();
   };
-
-
 
   useEffect(() => {
     const loadData = async () => {
@@ -1014,32 +1087,36 @@ const OccupationalExam: React.FC = () => {
     .map((e) => {
       const nextDate = new Date(e.next_exam_date!);
       const daysUntil = Math.ceil(
-        (nextDate.getTime() - today.getTime()) / (1000 * 3600 * 24)
+        (nextDate.getTime() - today.getTime()) / (1000 * 3600 * 24),
       );
       return { ...e, _nextDate: nextDate, _daysUntil: daysUntil };
     })
     .sort((a, b) => a._daysUntil - b._daysUntil);
   const scheduleOverdue = scheduleData.filter((e) => e._daysUntil < 0).length;
   const scheduleCritical = scheduleData.filter(
-    (e) => e._daysUntil >= 0 && e._daysUntil <= 30
+    (e) => e._daysUntil >= 0 && e._daysUntil <= 30,
   ).length;
   // Años disponibles y datos filtrados para el cronograma
   const scheduleYearsList = Array.from(
-    new Set(scheduleData.map((e) => e._nextDate.getFullYear()))
+    new Set(scheduleData.map((e) => e._nextDate.getFullYear())),
   ).sort((a, b) => a - b);
 
   const filteredScheduleData = scheduleYear
     ? scheduleData.filter((e) => e._nextDate.getFullYear() === scheduleYear)
     : scheduleData;
 
-  const filteredOverdue = filteredScheduleData.filter((e) => e._daysUntil < 0).length;
+  const filteredOverdue = filteredScheduleData.filter(
+    (e) => e._daysUntil < 0,
+  ).length;
   const filteredCritical = filteredScheduleData.filter(
-    (e) => e._daysUntil >= 0 && e._daysUntil <= 30
+    (e) => e._daysUntil >= 0 && e._daysUntil <= 30,
   ).length;
   const filteredUpcoming = filteredScheduleData.filter(
-    (e) => e._daysUntil > 30 && e._daysUntil <= 90
+    (e) => e._daysUntil > 30 && e._daysUntil <= 90,
   ).length;
-  const filteredFuture = filteredScheduleData.filter((e) => e._daysUntil > 90).length;
+  const filteredFuture = filteredScheduleData.filter(
+    (e) => e._daysUntil > 90,
+  ).length;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
@@ -1206,295 +1283,307 @@ const OccupationalExam: React.FC = () => {
 
         {/* Tab: Lista de Exámenes */}
         {activeTab === 0 && (
-        <Card>
-          <CardContent>
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Trabajador</TableCell>
-                    <TableCell>Tipo</TableCell>
-                    <TableCell>Fecha Examen</TableCell>
-                    <TableCell>Centro Médico</TableCell>
-                    <TableCell>Concepto de Aptitud Médica</TableCell>
-                    <TableCell>Cargo</TableCell>
-                    <TableCell>Próximo Examen</TableCell>
-                    <TableCell>Seguimiento</TableCell>
-                    <TableCell>Acciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
+          <Card>
+            <CardContent>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={9} align="center">
-                        Cargando exámenes...
-                      </TableCell>
+                      <TableCell>Trabajador</TableCell>
+                      <TableCell>Tipo</TableCell>
+                      <TableCell>Fecha Examen</TableCell>
+                      <TableCell>Centro Médico</TableCell>
+                      <TableCell>Concepto de Aptitud Médica</TableCell>
+                      <TableCell>Cargo</TableCell>
+                      <TableCell>Próximo Examen</TableCell>
+                      <TableCell>Seguimiento</TableCell>
+                      <TableCell>Acciones</TableCell>
                     </TableRow>
-                  ) : exams.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} align="center">
-                        No se encontraron exámenes
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    exams.map((exam) => (
-                      <TableRow
-                        key={exam.id}
-                        sx={{
-                          backgroundColor: isExamExpired(exam)
-                            ? "error.light"
-                            : isExamExpiring(exam)
-                              ? "warning.light"
-                              : "inherit",
-                        }}
-                      >
-                        <TableCell>
-                          <Box>
-                            <Typography variant="body2" fontWeight="medium">
-                              {exam.worker_name || "Trabajador no encontrado"}
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={9} align="center">
+                          Cargando exámenes...
+                        </TableCell>
+                      </TableRow>
+                    ) : exams.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} align="center">
+                          No se encontraron exámenes
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      exams.map((exam) => (
+                        <TableRow
+                          key={exam.id}
+                          sx={{
+                            backgroundColor: isExamExpired(exam)
+                              ? "error.light"
+                              : isExamExpiring(exam)
+                                ? "warning.light"
+                                : "inherit",
+                          }}
+                        >
+                          <TableCell>
+                            <Box>
+                              <Typography variant="body2" fontWeight="medium">
+                                {exam.worker_name || "Trabajador no encontrado"}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {exam.worker_document}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={
+                                exam.exam_type
+                                  ? EXAM_TYPE_LABELS[exam.exam_type] ||
+                                    exam.exam_type
+                                  : "N/A"
+                              }
+                              color="primary"
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {formatDate(exam.exam_date)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {exam.medical_center}
                             </Typography>
                             <Typography
                               variant="caption"
                               color="text.secondary"
                             >
-                              {exam.worker_document}
+                              Dr. {exam.examining_doctor}
                             </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={exam.exam_type ? EXAM_TYPE_LABELS[exam.exam_type] || exam.exam_type : "N/A"}
-                            color="primary"
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatDate(exam.exam_date)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {exam.medical_center}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Dr. {exam.examining_doctor}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={
-                              exam.medical_aptitude_concept === "apto"
-                                ? "Apto"
-                                : exam.medical_aptitude_concept ===
-                                    "apto_con_recomendaciones"
-                                  ? "Apto con Recomendaciones"
-                                  : "No Apto"
-                            }
-                            color={
-                              exam.medical_aptitude_concept === "apto"
-                                ? "success"
-                                : exam.medical_aptitude_concept ===
-                                    "apto_con_recomendaciones"
-                                  ? "warning"
-                                  : "error"
-                            }
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {exam.worker_position || "No especificado"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {exam.next_exam_date
-                              ? formatDate(exam.next_exam_date)
-                              : "No programado"}
-                          </Typography>
-                          {exam.expires_at && (
-                            <Typography
-                              variant="caption"
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={
+                                exam.medical_aptitude_concept === "apto"
+                                  ? "Apto"
+                                  : exam.medical_aptitude_concept ===
+                                      "apto_con_recomendaciones"
+                                    ? "Apto con Recomendaciones"
+                                    : "No Apto"
+                              }
                               color={
-                                isExamExpired(exam)
-                                  ? "error"
-                                  : isExamExpiring(exam)
-                                    ? "warning.main"
-                                    : "text.secondary"
-                              }
-                            >
-                              Vence: {formatDate(exam.expires_at)}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            {examSeguimientos[exam.id] ? (
-                              <Chip
-                                icon={<FollowUpActiveIcon />}
-                                label="Con seguimiento"
-                                color="success"
-                                size="small"
-                              />
-                            ) : exam.requires_follow_up ? (
-                              <Chip
-                                icon={<FollowUpIcon />}
-                                label="Requiere seguimiento"
-                                color="warning"
-                                size="small"
-                              />
-                            ) : (
-                              <Chip
-                                label="Sin seguimiento"
-                                color="default"
-                                size="small"
-                              />
-                            )}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Box display="flex" gap={1}>
-                            <Tooltip title="Ver detalles">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleViewExam(exam)}
-                              >
-                                <ViewIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Editar">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenDialog(exam)}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
-                            {exam.certificate_url && (
-                              <Tooltip title="Descargar certificado">
-                                <IconButton
-                                  size="small"
-                                  onClick={() =>
-                                    handleDownloadCertificate(exam)
-                                  }
-                                >
-                                  <DownloadIcon />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {exam.pdf_file_path &&
-                              exam.pdf_file_path.trim() && (
-                                <>
-                                  <Tooltip title="Previsualizar PDF">
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => handlePreviewPdf(exam.id)}
-                                    >
-                                      <ViewIcon />
-                                    </IconButton>
-                                  </Tooltip>
-                                  <Tooltip title="Descargar PDF">
-                                    <IconButton
-                                      size="small"
-                                      onClick={() =>
-                                        handleDownloadPdf(
-                                          exam.id,
-                                          exam.worker_name,
-                                        )
-                                      }
-                                    >
-                                      <DownloadIcon />
-                                    </IconButton>
-                                  </Tooltip>
-                                </>
-                              )}
-                            <Tooltip
-                              title={
-                                sendingEmail === exam.id
-                                  ? "Enviando correo..."
-                                  : "Enviar notificación por correo"
-                              }
-                            >
-                              <IconButton
-                                size="small"
-                                onClick={() => handleSendManualEmail(exam)}
-                                disabled={sendingEmail === exam.id}
-                                color="primary"
-                              >
-                                {sendingEmail === exam.id ? (
-                                  <RefreshIcon />
-                                ) : (
-                                  <EmailIcon />
-                                )}
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip
-                              title={
-                                exam.requires_follow_up
-                                  ? "Desmarcar seguimiento"
-                                  : "Marcar para seguimiento"
-                              }
-                            >
-                              <IconButton
-                                size="small"
-                                onClick={() => handleToggleFollowUp(exam)}
-                                color={
-                                  exam.requires_follow_up
+                                exam.medical_aptitude_concept === "apto"
+                                  ? "success"
+                                  : exam.medical_aptitude_concept ===
+                                      "apto_con_recomendaciones"
                                     ? "warning"
-                                    : "default"
+                                    : "error"
+                              }
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {exam.worker_position || "No especificado"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {exam.next_exam_date
+                                ? formatDate(exam.next_exam_date)
+                                : "No programado"}
+                            </Typography>
+                            {exam.expires_at && (
+                              <Typography
+                                variant="caption"
+                                color={
+                                  isExamExpired(exam)
+                                    ? "error"
+                                    : isExamExpiring(exam)
+                                      ? "warning.main"
+                                      : "text.secondary"
                                 }
                               >
-                                {exam.requires_follow_up ? (
-                                  <FollowUpActiveIcon />
-                                ) : (
-                                  <FollowUpIcon />
-                                )}
-                              </IconButton>
-                            </Tooltip>
-                            {exam.requires_follow_up && (
-                              <Tooltip title="Crear seguimiento médico">
+                                Vence: {formatDate(exam.expires_at)}
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              {examSeguimientos[exam.id] ? (
+                                <Chip
+                                  icon={<FollowUpActiveIcon />}
+                                  label="Con seguimiento"
+                                  color="success"
+                                  size="small"
+                                />
+                              ) : exam.requires_follow_up ? (
+                                <Chip
+                                  icon={<FollowUpIcon />}
+                                  label="Requiere seguimiento"
+                                  color="warning"
+                                  size="small"
+                                />
+                              ) : (
+                                <Chip
+                                  label="Sin seguimiento"
+                                  color="default"
+                                  size="small"
+                                />
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" gap={1}>
+                              <Tooltip title="Ver detalles">
                                 <IconButton
                                   size="small"
-                                  onClick={() => handleCreateFollowUp(exam)}
-                                  color="success"
+                                  onClick={() => handleViewExam(exam)}
                                 >
-                                  <AddIcon />
+                                  <ViewIcon />
                                 </IconButton>
                               </Tooltip>
-                            )}
-                            <Tooltip title="Eliminar">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleDeleteExam(exam)}
-                                color="error"
+                              <Tooltip title="Editar">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleOpenDialog(exam)}
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              </Tooltip>
+                              {exam.certificate_url && (
+                                <Tooltip title="Descargar certificado">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      handleDownloadCertificate(exam)
+                                    }
+                                  >
+                                    <DownloadIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              {exam.pdf_file_path &&
+                                exam.pdf_file_path.trim() && (
+                                  <>
+                                    <Tooltip title="Previsualizar PDF">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() =>
+                                          handlePreviewPdf(exam.id)
+                                        }
+                                      >
+                                        <ViewIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Descargar PDF">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() =>
+                                          handleDownloadPdf(
+                                            exam.id,
+                                            exam.worker_name,
+                                          )
+                                        }
+                                      >
+                                        <DownloadIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </>
+                                )}
+                              <Tooltip
+                                title={
+                                  sendingEmail === exam.id
+                                    ? "Enviando correo..."
+                                    : "Enviar notificación por correo"
+                                }
                               >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleSendManualEmail(exam)}
+                                  disabled={sendingEmail === exam.id}
+                                  color="primary"
+                                >
+                                  {sendingEmail === exam.id ? (
+                                    <RefreshIcon />
+                                  ) : (
+                                    <EmailIcon />
+                                  )}
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip
+                                title={
+                                  exam.requires_follow_up
+                                    ? "Desmarcar seguimiento"
+                                    : "Marcar para seguimiento"
+                                }
+                              >
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleToggleFollowUp(exam)}
+                                  color={
+                                    exam.requires_follow_up
+                                      ? "warning"
+                                      : "default"
+                                  }
+                                >
+                                  {exam.requires_follow_up ? (
+                                    <FollowUpActiveIcon />
+                                  ) : (
+                                    <FollowUpIcon />
+                                  )}
+                                </IconButton>
+                              </Tooltip>
+                              {exam.requires_follow_up && (
+                                <Tooltip title="Crear seguimiento médico">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleCreateFollowUp(exam)}
+                                    color="success"
+                                  >
+                                    <AddIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              <Tooltip title="Eliminar">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleDeleteExam(exam)}
+                                  color="error"
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <Box display="flex" justifyContent="center" mt={2}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, newPage) => setPage(newPage)}
-                  color="primary"
-                />
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <Box display="flex" justifyContent="center" mt={2}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={(_, newPage) => setPage(newPage)}
+                    color="primary"
+                  />
+                </Box>
+              )}
+            </CardContent>
+          </Card>
         )}
+
+        {/* Matriz de Seguimiento eliminada a petición del usuario */}
 
         {/* Tab: Cronograma de Evaluaciones Futuras */}
         {activeTab === 1 && (
@@ -2491,7 +2580,10 @@ const OccupationalExam: React.FC = () => {
                             <ListItemText
                               primary="Tipo"
                               secondary={
-                                viewingExam.exam_type ? EXAM_TYPE_LABELS[viewingExam.exam_type] || viewingExam.exam_type : "N/A"
+                                viewingExam.exam_type
+                                  ? EXAM_TYPE_LABELS[viewingExam.exam_type] ||
+                                    viewingExam.exam_type
+                                  : "N/A"
                               }
                             />
                           </ListItem>
@@ -2669,7 +2761,7 @@ const OccupationalExam: React.FC = () => {
 
         {/* Componente de Confirmación Reutilizable */}
         <ConfirmDialog {...dialogState} />
-        
+
         {/* Diálogo Genérico de Alerta/Info para el Administrador */}
         <Dialog
           open={errorDialog.open}
@@ -2677,15 +2769,23 @@ const OccupationalExam: React.FC = () => {
           maxWidth="sm"
           fullWidth
           PaperProps={{
-            sx: { borderRadius: 2 }
+            sx: { borderRadius: 2 },
           }}
         >
           <DialogTitle>
             <Box display="flex" alignItems="center" gap={1.5}>
-              {errorDialog.severity === 'error' && <ErrorIcon color="error" fontSize="large" />}
-              {errorDialog.severity === 'warning' && <WarningIcon color="warning" fontSize="large" />}
-              {errorDialog.severity === 'success' && <SuccessIcon color="success" fontSize="large" />}
-              {errorDialog.severity === 'info' && <InfoIcon color="info" fontSize="large" />}
+              {errorDialog.severity === "error" && (
+                <ErrorIcon color="error" fontSize="large" />
+              )}
+              {errorDialog.severity === "warning" && (
+                <WarningIcon color="warning" fontSize="large" />
+              )}
+              {errorDialog.severity === "success" && (
+                <SuccessIcon color="success" fontSize="large" />
+              )}
+              {errorDialog.severity === "info" && (
+                <InfoIcon color="info" fontSize="large" />
+              )}
               <Typography variant="h6" component="span" fontWeight="bold">
                 {errorDialog.title}
               </Typography>
@@ -2693,23 +2793,34 @@ const OccupationalExam: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Box sx={{ mt: 1 }}>
-              <Typography variant="body1" sx={{ color: 'text.primary', mb: errorDialog.detail ? 2 : 0 }}>
+              <Typography
+                variant="body1"
+                sx={{ color: "text.primary", mb: errorDialog.detail ? 2 : 0 }}
+              >
                 {errorDialog.message}
               </Typography>
               {errorDialog.detail && (
-                <Alert severity={errorDialog.severity === 'success' ? 'info' : errorDialog.severity} variant="outlined" sx={{ mt: 2 }}>
+                <Alert
+                  severity={
+                    errorDialog.severity === "success"
+                      ? "info"
+                      : errorDialog.severity
+                  }
+                  variant="outlined"
+                  sx={{ mt: 2 }}
+                >
                   {errorDialog.detail}
                 </Alert>
               )}
             </Box>
           </DialogContent>
           <DialogActions sx={{ p: 2.5, pt: 1 }}>
-            <Button 
-                onClick={() => setErrorDialog({ ...errorDialog, open: false })} 
-                color={errorDialog.severity === 'error' ? 'error' : 'primary'} 
-                variant="contained"
-                fullWidth
-                sx={{ py: 1 }}
+            <Button
+              onClick={() => setErrorDialog({ ...errorDialog, open: false })}
+              color={errorDialog.severity === "error" ? "error" : "primary"}
+              variant="contained"
+              fullWidth
+              sx={{ py: 1 }}
             >
               Entendido
             </Button>

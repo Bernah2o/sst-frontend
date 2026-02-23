@@ -50,11 +50,15 @@ export interface ArchivoSoporteResponse {
 }
 
 class SeguimientoActividadesService {
-  private baseUrl = '/seguimiento-actividades';
+  private baseUrl = "/seguimiento-actividades";
 
   // Obtener todas las actividades de un seguimiento
-  async getActividadesBySeguimiento(seguimientoId: number): Promise<SeguimientoActividad[]> {
-    const response = await api.get(`${this.baseUrl}/seguimiento/${seguimientoId}/actividades`);
+  async getActividadesBySeguimiento(
+    seguimientoId: number,
+  ): Promise<SeguimientoActividad[]> {
+    const response = await api.get(
+      `${this.baseUrl}/seguimiento/${seguimientoId}/actividades`,
+    );
     return response.data;
   }
 
@@ -65,14 +69,22 @@ class SeguimientoActividadesService {
   }
 
   // Crear una nueva actividad
-  async createActividad(actividad: SeguimientoActividadCreate): Promise<SeguimientoActividad> {
+  async createActividad(
+    actividad: SeguimientoActividadCreate,
+  ): Promise<SeguimientoActividad> {
     const response = await api.post(`${this.baseUrl}/actividades`, actividad);
     return response.data;
   }
 
   // Actualizar una actividad
-  async updateActividad(id: number, actividad: SeguimientoActividadUpdate): Promise<SeguimientoActividad> {
-    const response = await api.put(`${this.baseUrl}/actividades/${id}`, actividad);
+  async updateActividad(
+    id: number,
+    actividad: SeguimientoActividadUpdate,
+  ): Promise<SeguimientoActividad> {
+    const response = await api.put(
+      `${this.baseUrl}/actividades/${id}`,
+      actividad,
+    );
     return response.data;
   }
 
@@ -82,18 +94,21 @@ class SeguimientoActividadesService {
   }
 
   // Subir archivo de soporte
-  async uploadArchivoSoporte(actividadId: number, file: File): Promise<ArchivoSoporteResponse> {
+  async uploadArchivoSoporte(
+    actividadId: number,
+    file: File,
+  ): Promise<ArchivoSoporteResponse> {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     const response = await api.post(
       `${this.baseUrl}/actividades/${actividadId}/upload-soporte`,
       formData,
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return response.data;
   }
@@ -101,6 +116,19 @@ class SeguimientoActividadesService {
   // Eliminar archivo de soporte
   async deleteArchivoSoporte(actividadId: number): Promise<void> {
     await api.delete(`${this.baseUrl}/actividades/${actividadId}/soporte`);
+  }
+
+  async generateActividadPdf(actividadId: number): Promise<Blob> {
+    const response = await api.get(
+      `${this.baseUrl}/actividades/${actividadId}/pdf`,
+      {
+        responseType: "blob",
+        params: {
+          download: true,
+        },
+      },
+    );
+    return response.data;
   }
 
   // Filtrar actividades
@@ -114,14 +142,16 @@ class SeguimientoActividadesService {
     limit?: number;
   }): Promise<SeguimientoActividad[]> {
     const queryParams = new URLSearchParams();
-    
+
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== "") {
         queryParams.append(key, value.toString());
       }
     });
 
-    const response = await api.get(`${this.baseUrl}/actividades/filtrar?${queryParams.toString()}`);
+    const response = await api.get(
+      `${this.baseUrl}/actividades/filtrar?${queryParams.toString()}`,
+    );
     return response.data;
   }
 }
