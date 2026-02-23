@@ -128,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
     try {
       localStorage.setItem(
         "sidebar-expanded-items",
-        JSON.stringify(expandedItems)
+        JSON.stringify(expandedItems),
       );
     } catch (error) {
       console.warn("Error saving sidebar state to localStorage:", error);
@@ -153,10 +153,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
     setExpandedItems((prev) =>
       prev.includes(itemId)
         ? prev.filter((id) => id !== itemId)
-        : [...prev, itemId]
+        : [...prev, itemId],
     );
   };
-
 
   const isActive = (path: string) => {
     return (
@@ -632,6 +631,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             path: "/admin/estandares-minimos",
             roles: ["admin", "supervisor"],
           },
+          {
+            id: "master-documents",
+            label: "Listado Maestro de Documentos",
+            icon: <Description />,
+            path: "/master-documents",
+            roles: ["admin", "supervisor"],
+          },
         ],
       },
       {
@@ -685,7 +691,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
         roles: ["admin", "supervisor"],
       },
     ],
-    []
+    [],
   );
 
   const filterMenuByRole = React.useCallback(
@@ -746,7 +752,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
               // Course management - permiso del rol personalizado O rol base no-employee
               courses: () => canViewCoursesPage() || isNotEmployee,
               "courses-list": () => canViewCoursesPage() || isNotEmployee,
-              enrollments: () => canViewCoursesPage() || canViewEnrollmentPage() || isNotEmployee,
+              enrollments: () =>
+                canViewCoursesPage() ||
+                canViewEnrollmentPage() ||
+                isNotEmployee,
               reinduction: () => canViewReinductionPage() || isNotEmployee,
               "user-progress": () =>
                 canViewProgressPage() ||
@@ -754,12 +763,16 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
                 user.role === "trainer" ||
                 user.role === "supervisor",
               "interactive-lessons": () =>
-                user.role === "admin" || user.role === "trainer" || canUpdateCourses(),
+                user.role === "admin" ||
+                user.role === "trainer" ||
+                canUpdateCourses(),
 
               // Evaluation management
               evaluations: () => canViewEvaluationsPage() || isNotEmployee,
-              "evaluations-list": () => canViewEvaluationsPage() || isNotEmployee,
-              "evaluation-results": () => canViewEvaluationsPage() || isNotEmployee,
+              "evaluations-list": () =>
+                canViewEvaluationsPage() || isNotEmployee,
+              "evaluation-results": () =>
+                canViewEvaluationsPage() || isNotEmployee,
               surveys: () => canViewSurveysPage() || isNotEmployee,
               "survey-tabulation": () => canViewSurveysPage() || isNotEmployee,
 
@@ -775,16 +788,21 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
                 canViewSeguimientoPage() ||
                 user.role === "admin" ||
                 user.role === "supervisor",
-              "occupational-exams": () => canViewOccupationalExamPage() || isNotEmployee,
+              "occupational-exams": () =>
+                canViewOccupationalExamPage() || isNotEmployee,
               "admin-notifications": () => user.role === "admin",
               seguimientos: () => canViewSeguimientoPage() || isNotEmployee,
               // Profesiogramas
-              profesiogramas: () => user.role === "admin" || user.role === "supervisor",
+              profesiogramas: () =>
+                user.role === "admin" || user.role === "supervisor",
               "profesiogramas-catalogos": () => user.role === "admin",
-              "profesiogramas-cargo": () => user.role === "admin" || user.role === "supervisor",
-              "profesiogramas-trabajador": () => user.role === "admin" || user.role === "supervisor",
+              "profesiogramas-cargo": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "profesiogramas-trabajador": () =>
+                user.role === "admin" || user.role === "supervisor",
               "profesiogramas-admin": () => user.role === "admin",
-              "homework-assessments": () => user.role === "admin" || user.role === "supervisor",
+              "homework-assessments": () =>
+                user.role === "admin" || user.role === "supervisor",
 
               // Certificates - permiso del rol personalizado O rol base no-employee
               certificates: () => canViewCertificatesPage() || isNotEmployee,
@@ -849,6 +867,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
               roles: () => user.role === "admin",
               users: () => canUpdateUsers() || isNotEmployee,
               "system-settings": () => user.role === "admin",
+              "master-documents": () =>
+                user.role === "admin" || user.role === "supervisor",
             };
 
             const permissionCheck = permissionMap[newItem.id];
@@ -896,7 +916,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
       canViewProgressPage,
       canViewAuditPage,
       canViewAbsenteeismPage,
-    ]
+    ],
   );
 
   const renderMenuItem = (item: MenuItem, level: number = 0) => {
@@ -919,7 +939,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
 
     const button = (
       <ListItemButton
-        {...(!hasChildren && item.path ? { component: Link, to: item.path } as any : {})}
+        {...(!hasChildren && item.path
+          ? ({ component: Link, to: item.path } as any)
+          : {})}
         onClick={handleItemClick}
         selected={isItemActive}
         sx={{
@@ -929,7 +951,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
           px: collapsed ? 2.5 : undefined,
           "&.Mui-selected": {
             backgroundColor: theme.palette.primary.main + "20",
-            borderRight: collapsed ? "none" : `3px solid ${theme.palette.primary.main}`,
+            borderRight: collapsed
+              ? "none"
+              : `3px solid ${theme.palette.primary.main}`,
             "&:hover": { backgroundColor: theme.palette.primary.main + "30" },
           },
         }}
@@ -966,7 +990,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             <Tooltip title={item.label} placement="right" arrow>
               {button}
             </Tooltip>
-          ) : button}
+          ) : (
+            button
+          )}
         </ListItem>
         {hasChildren && !collapsed && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -985,7 +1011,14 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
   }, [filterMenuByRole, menuItems]);
 
   const drawerContent = (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflowX: "hidden",
+      }}
+    >
       {/* Header */}
       <Box
         sx={{
@@ -1025,10 +1058,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             {user.role === "admin"
               ? "Administrador"
               : user.role === "trainer"
-              ? "Entrenador"
-              : user.role === "supervisor"
-              ? "Supervisor"
-              : "Empleado"}
+                ? "Entrenador"
+                : user.role === "supervisor"
+                  ? "Supervisor"
+                  : "Empleado"}
           </Typography>
         </Box>
       )}

@@ -97,6 +97,7 @@ import SectorEconomicoList from "./pages/MatrizLegal/SectorEconomicoList";
 import MatrizLegalImport from "./pages/MatrizLegal/MatrizLegalImport";
 import MatrizLegalNormas from "./pages/MatrizLegal/MatrizLegalNormas";
 import MatrizLegalEmpresa from "./pages/MatrizLegal/MatrizLegalEmpresa";
+import MasterDocuments from "./pages/MasterDocuments";
 import InteractiveLessons from "./pages/InteractiveLessons";
 import { LessonBuilder, LessonViewer } from "./components/interactive-lessons";
 import PlanTrabajoAnual from "./pages/PlanTrabajoAnual";
@@ -209,13 +210,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Solo si existe una configuración de permisos para esta ruta (conservador)
     if (user.custom_role_id) {
       const currentPath = location.pathname;
-      const pageConfig = PAGE_PERMISSIONS.find(p => {
-        const routePattern = p.route.replace(/:[^/]+/g, '[^/]+');
+      const pageConfig = PAGE_PERMISSIONS.find((p) => {
+        const routePattern = p.route.replace(/:[^/]+/g, "[^/]+");
         const regex = new RegExp(`^${routePattern}$`);
         return regex.test(currentPath);
       });
       if (pageConfig) {
-        const hasPermission = checkPagePermission(currentPath, user, permissions);
+        const hasPermission = checkPagePermission(
+          currentPath,
+          user,
+          permissions,
+        );
         if (hasPermission) {
           return <>{children}</>;
         }
@@ -586,7 +591,16 @@ const AppContent: React.FC = () => {
                     }
                   />
 
-                  
+                  {/* Rutas de Documentos Maestros */}
+                  <Route
+                    path="/master-documents"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <MasterDocuments />
+                      </ProtectedRoute>
+                    }
+                  />
+
                   {/* Rutas de Profesiograma */}
                   <Route
                     path="/profesiogramas/catalogos"
@@ -623,7 +637,9 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/worker/:workerId/profesiograma"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor", "employee"]}>
+                      <ProtectedRoute
+                        allowedRoles={["admin", "supervisor", "employee"]}
+                      >
                         <WorkerProfesiograma />
                       </ProtectedRoute>
                     }
@@ -646,7 +662,7 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
-                   <Route
+                  <Route
                     path="/admin/matriz-legal/normas"
                     element={
                       <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
@@ -687,7 +703,7 @@ const AppContent: React.FC = () => {
                     }
                   />
 
-{/* Rutas de ausentismo */}
+                  {/* Rutas de ausentismo */}
                   <Route
                     path="/admin/absenteeism"
                     element={
