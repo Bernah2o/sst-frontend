@@ -72,6 +72,7 @@ import { es } from "date-fns/locale";
 import React, { useState, useEffect, useCallback } from "react";
 
 import { adminConfigService } from "../services/adminConfigService";
+import { useNavigate } from "react-router-dom";
 import api, { apiService } from "../services/api";
 import { formatDate } from "../utils/dateUtils";
 import {
@@ -191,6 +192,7 @@ const OccupationalExam: React.FC = () => {
     null,
   );
   const [openViewDialog, setOpenViewDialog] = useState(false);
+  const navigate = useNavigate();
   const { dialogState, showConfirmDialog } = useConfirmDialog();
   const [filters, setFilters] = useState({
     exam_type: "",
@@ -1013,9 +1015,13 @@ const OccupationalExam: React.FC = () => {
     try {
       const payload = {
         worker_id: exam.worker_id,
-        programa: exam.programa,
+        nombre_trabajador: exam.worker_name || "",
+        cedula: exam.worker_document || "",
+        cargo: exam.worker_position || "",
+        fecha_ingreso: exam.worker_hire_date || null,
+        programa: exam.programa || "Seguimiento Médico",
         estado: "iniciado",
-        valoracion_riesgo: "medio", // Valor por defecto, se puede ajustar
+        valoracion_riesgo: "medio",
         fecha_inicio: new Date().toISOString().split("T")[0],
         motivo_inclusion: `Seguimiento requerido por examen ocupacional del ${formatDate(exam.exam_date)}`,
         conclusiones_ocupacionales: exam.occupational_conclusions,
@@ -1039,6 +1045,11 @@ const OccupationalExam: React.FC = () => {
           "Seguimiento médico creado exitosamente. El examen ha sido desmarcado del seguimiento.",
           "success",
         );
+
+        // Redirigir a la vista de seguimientos
+        setTimeout(() => {
+          navigate("/admin/seguimientos");
+        }, 1500);
       }
     } catch (error) {
       console.error("Error creating follow-up:", error);

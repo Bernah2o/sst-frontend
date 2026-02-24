@@ -562,6 +562,8 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
                   onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   multiline
                   rows={3}
+                  helperText="Máximo 40 palabras y 198 caracteres"
+                  inputProps={{ maxLength: 198 }}
                 />
 
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
@@ -653,6 +655,8 @@ const SeguimientoActividadesModal: React.FC<SeguimientoActividadesModalProps> = 
                   onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
                   multiline
                   rows={3}
+                  helperText="Máximo 40 palabras y 198 caracteres"
+                  inputProps={{ maxLength: 198 }}
                 />
               </Box>
 
