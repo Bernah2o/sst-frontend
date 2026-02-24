@@ -9,6 +9,7 @@ import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
   Flag as FlagIcon,
+  Email as EmailIcon,
 } from "@mui/icons-material";
 
 import {
@@ -40,6 +41,8 @@ import {
   Tooltip,
   Avatar,
   Alert,
+  Snackbar,
+  CircularProgress,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -108,6 +111,12 @@ const Seguimiento: React.FC = () => {
     valoracion_riesgo: "",
     worker: "",
     search: "",
+  });
+  const [sendingNotification, setSendingNotification] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error" | "info" | "warning",
   });
   const [formData, setFormData] = useState({
     worker_id: "",
@@ -447,7 +456,38 @@ const Seguimiento: React.FC = () => {
   const isOverdue = (seguimiento: SeguimientoData) => {
     if (!seguimiento.fecha_final || seguimiento.estado === "terminado")
       return false;
-    return new Date(seguimiento.fecha_final) < new Date();
+    return new Date(seguimiento.fecha_final as string) < new Date();
+  };
+
+  const handleNotifyWorker = async () => {
+    if (!viewingSeguimiento) return;
+
+    try {
+      setSendingNotification(true);
+      const response = await api.post(
+        `/seguimientos/${viewingSeguimiento.id}/notify-worker`,
+      );
+      setSnackbar({
+        open: true,
+        message:
+          response.data.message || "Notificación enviada exitosamente",
+        severity: "success",
+      });
+    } catch (error: any) {
+      console.error("Error notifying worker:", error);
+      setSnackbar({
+        open: true,
+        message:
+          error.response?.data?.detail || "Error al enviar la notificación",
+        severity: "error",
+      });
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   return (
@@ -1288,6 +1328,22 @@ const Seguimiento: React.FC = () => {
             )}
           </DialogContent>
           <DialogActions>
+            {viewingSeguimiento && (
+              <Button
+                onClick={handleNotifyWorker}
+                startIcon={
+                  sendingNotification ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <EmailIcon />
+                  )
+                }
+                color="primary"
+                disabled={sendingNotification}
+              >
+                Notificar al Trabajador
+              </Button>
+            )}
             <Button onClick={() => setOpenViewDialog(false)}>Cerrar</Button>
           </DialogActions>
         </Dialog>
@@ -1406,6 +1462,21 @@ const Seguimiento: React.FC = () => {
             seguimientoId={selectedSeguimientoId}
           />
         )}
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </LocalizationProvider>
   );
