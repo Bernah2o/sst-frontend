@@ -452,7 +452,7 @@ const MasterDocuments: React.FC = () => {
                   onChange={formik.handleChange}
                   error={formik.touched.codigo && Boolean(formik.errors.codigo)}
                   helperText={formik.touched.codigo && formik.errors.codigo}
-                  disabled={!!currentDocument} // Usually code shouldn't change
+                  disabled={false}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
