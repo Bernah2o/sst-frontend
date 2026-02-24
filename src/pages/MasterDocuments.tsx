@@ -6,6 +6,10 @@ import {
   Refresh as RefreshIcon,
   Description as DescriptionIcon,
   PictureAsPdf as PictureAsPdfIcon,
+  CloudUpload as UploadIcon,
+  Visibility as ViewIcon,
+  Download as DownloadIcon,
+  AttachFile as AttachFileIcon,
 } from "@mui/icons-material";
 import {
   Autocomplete,
@@ -90,6 +94,8 @@ const MasterDocuments: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] =
     useState<MasterDocument | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [savingFile, setSavingFile] = useState(false);
 
   // Fetch documents
   const fetchDocuments = useCallback(async () => {
@@ -143,9 +149,10 @@ const MasterDocuments: React.FC = () => {
     }),
     onSubmit: async (values) => {
       try {
+        let savedDoc: MasterDocument;
         if (currentDocument) {
           // @ts-ignore
-          await masterDocumentService.updateDocument(
+          savedDoc = await masterDocumentService.updateDocument(
             currentDocument.id,
             values,
           );
@@ -154,12 +161,32 @@ const MasterDocuments: React.FC = () => {
           });
         } else {
           // @ts-ignore
-          await masterDocumentService.createDocument(values);
+          savedDoc = await masterDocumentService.createDocument(values);
           enqueueSnackbar("Documento creado exitosamente", {
             variant: "success",
           });
         }
+
+        // Si hay un archivo seleccionado, subirlo
+        if (selectedFile) {
+          try {
+            setSavingFile(true);
+            await masterDocumentService.uploadSupport(savedDoc.id, selectedFile);
+            enqueueSnackbar("Soporte cargado exitosamente", {
+              variant: "success",
+            });
+          } catch (uploadError) {
+            logger.error("Error uploading support file:", uploadError);
+            enqueueSnackbar("Error al cargar el archivo de soporte", {
+              variant: "error",
+            });
+          } finally {
+            setSavingFile(false);
+          }
+        }
+
         setOpenDialog(false);
+        setSelectedFile(null);
         fetchDocuments();
       } catch (error: any) {
         logger.error("Error saving document:", error);
@@ -195,6 +222,7 @@ const MasterDocuments: React.FC = () => {
       setCurrentDocument(null);
       formik.resetForm();
     }
+    setSelectedFile(null);
     setOpenDialog(true);
   };
 
@@ -247,6 +275,35 @@ const MasterDocuments: React.FC = () => {
     } catch (error) {
       logger.error("Error generating PDF:", error);
       enqueueSnackbar("Error al generar el PDF", { variant: "error" });
+    }
+  };
+
+  const handlePreviewSupport = async (id: number) => {
+    try {
+      const url = await masterDocumentService.previewSupport(id);
+      window.open(url, "_blank");
+    } catch (error) {
+      logger.error("Error previewing document support:", error);
+      enqueueSnackbar("Error al obtener el enlace de previsualización", {
+        variant: "error",
+      });
+    }
+  };
+
+  const handleDownloadSupport = async (id: number, filename: string) => {
+    try {
+      await masterDocumentService.downloadSupport(id, filename);
+    } catch (error) {
+      logger.error("Error downloading document support:", error);
+      enqueueSnackbar("Error al descargar el archivo de soporte", {
+        variant: "error",
+      });
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      setSelectedFile(event.target.files[0]);
     }
   };
 
@@ -397,6 +454,33 @@ const MasterDocuments: React.FC = () => {
                       >
                         <EditIcon />
                       </IconButton>
+                      {doc.support_file_key && (
+                        <>
+                          <Tooltip title="Ver Soporte">
+                            <IconButton
+                              size="small"
+                              color="info"
+                              onClick={() => handlePreviewSupport(doc.id)}
+                            >
+                              <ViewIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Descargar Soporte">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() =>
+                                handleDownloadSupport(
+                                  doc.id,
+                                  `Soporte_${doc.codigo}_${doc.nombre_documento}`,
+                                )
+                              }
+                            >
+                              <DownloadIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
                       <IconButton
                         size="small"
                         color="error"
@@ -555,12 +639,71 @@ const MasterDocuments: React.FC = () => {
                   )}
                 />
               </Grid>
+              <Grid size={12}>
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    border: "1px dashed #ccc",
+                    borderRadius: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <Typography variant="subtitle2" color="textSecondary">
+                    {currentDocument?.support_file_key
+                      ? "Actualizar Soporte (Opcional)"
+                      : "Cargar Soporte (Digital)"}
+                  </Typography>
+                  <input
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls"
+                    style={{ display: "none" }}
+                    id="raised-button-file"
+                    type="file"
+                    onChange={handleFileChange}
+                  />
+                  <label htmlFor="raised-button-file">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      startIcon={<UploadIcon />}
+                    >
+                      {selectedFile ? "Cambiar Archivo" : "Seleccionar Archivo"}
+                    </Button>
+                  </label>
+                  {selectedFile && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mt: 1,
+                      }}
+                    >
+                      <AttachFileIcon fontSize="small" color="primary" />
+                      <Typography variant="body2">{selectedFile.name}</Typography>
+                    </Box>
+                  )}
+                  {currentDocument?.support_file_key && !selectedFile && (
+                    <Typography variant="caption" color="textSecondary">
+                      Ya existe un soporte cargado para este documento.
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-            <Button type="submit" variant="contained" color="primary">
-              Guardar
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={savingFile}
+            >
+              {savingFile ? <CircularProgress size={24} /> : "Guardar"}
             </Button>
           </DialogActions>
         </form>
