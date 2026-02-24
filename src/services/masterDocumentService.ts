@@ -12,6 +12,7 @@ export interface MasterDocument {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  support_file_key?: string;
 }
 
 export interface MasterDocumentCreate {
@@ -101,6 +102,39 @@ export const masterDocumentService = {
       "download",
       `listado_maestro_documentos_${new Date().toISOString().split("T")[0]}.pdf`,
     );
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  },
+
+  async uploadSupport(id: number, file: File): Promise<MasterDocument> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post(
+      `/master-documents/${id}/upload-support`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+    return response.data;
+  },
+
+  async previewSupport(id: number): Promise<string> {
+    const response = await api.get(`/master-documents/${id}/preview-support`);
+    return response.data.url;
+  },
+
+  async downloadSupport(id: number, filename: string): Promise<void> {
+    const response = await api.get(`/master-documents/${id}/download-support`, {
+      responseType: "blob",
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
