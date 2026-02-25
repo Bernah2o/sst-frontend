@@ -83,6 +83,7 @@ const Audit: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [availableActions, setAvailableActions] = useState<string[]>([]);
   const [availableResourceTypes, setAvailableResourceTypes] = useState<string[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,12 +151,14 @@ const Audit: React.FC = () => {
 
   const fetchAvailableFilters = async () => {
     try {
-      const [actionsResponse, resourceTypesResponse] = await Promise.all([
+      const [actionsResponse, resourceTypesResponse, usersResponse] = await Promise.all([
         api.get('/audit/actions/list'),
-        api.get('/audit/resources/list')
+        api.get('/audit/resources/list'),
+        api.get('/users/list')
       ]);
       setAvailableActions(actionsResponse.data.actions || []);
       setAvailableResourceTypes(resourceTypesResponse.data.resource_types || []);
+      setAvailableUsers(usersResponse.data || []);
     } catch (error) {
       console.error('Error fetching filter options:', error);
     }
@@ -254,6 +257,23 @@ const Audit: React.FC = () => {
                     ),
                   }}
                 />
+              </Box>
+              <Box sx={{ minWidth: { xs: '100%', md: '180px' }, flex: { md: '1 1 180px' } }}>
+                <FormControl fullWidth>
+                  <InputLabel>Usuario</InputLabel>
+                  <Select
+                    label="Usuario"
+                    value={filters.user_id}
+                    onChange={(e) => handleFilterChange("user_id", e.target.value)}
+                  >
+                    <MenuItem value="">Todos los usuarios</MenuItem>
+                    {availableUsers.map((user) => (
+                      <MenuItem key={user.id} value={user.id.toString()}>
+                        {user.first_name} {user.last_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Box>
               <Box sx={{ minWidth: { xs: '100%', md: '150px' }, flex: { md: '1 1 150px' } }}>
                 <FormControl fullWidth>
