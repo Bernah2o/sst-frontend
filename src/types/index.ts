@@ -78,21 +78,21 @@ export enum ValoracionRiesgo {
 
 // Audit Enums
 export enum AuditAction {
-  CREATE = "create",
-  READ = "read",
-  UPDATE = "update",
-  DELETE = "delete",
-  LOGIN = "login",
-  LOGOUT = "logout",
-  EXPORT = "export",
-  IMPORT = "import",
-  DOWNLOAD = "download",
-  UPLOAD = "upload",
-  APPROVE = "approve",
-  REJECT = "reject",
-  SUBMIT = "submit",
-  COMPLETE = "complete",
-  CANCEL = "cancel",
+  CREATE = "CREATE",
+  READ = "READ",
+  UPDATE = "UPDATE",
+  DELETE = "DELETE",
+  LOGIN = "LOGIN",
+  LOGOUT = "LOGOUT",
+  EXPORT = "EXPORT",
+  IMPORT = "IMPORT",
+  DOWNLOAD = "DOWNLOAD",
+  UPLOAD = "UPLOAD",
+  APPROVE = "APPROVE",
+  REJECT = "REJECT",
+  SUBMIT = "SUBMIT",
+  COMPLETE = "COMPLETE",
+  CANCEL = "CANCEL",
 }
 
 // Occupational Exam Enums
