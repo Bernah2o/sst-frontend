@@ -36,13 +36,11 @@ import {
   Snackbar,
   Card,
   CardContent,
-
   Grid,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
 
-
-import { formatDate } from '../utils/dateUtils';
+import { formatDate } from "../utils/dateUtils";
 
 import api from "./../services/api";
 import usePermissions from "../hooks/usePermissions";
@@ -53,14 +51,14 @@ enum EnrollmentStatus {
   ACTIVE = "active",
   COMPLETED = "completed",
   CANCELLED = "cancelled",
-  SUSPENDED = "suspended"
+  SUSPENDED = "suspended",
 }
 
 // Interfaces actualizadas
 interface Enrollment {
   id: number;
-  user_id?: number;  // Opcional para compatibilidad
-  worker_id?: number;  // Para inscripciones de trabajadores
+  user_id?: number; // Opcional para compatibilidad
+  worker_id?: number; // Para inscripciones de trabajadores
   course_id: number;
   status: EnrollmentStatus;
   progress: number;
@@ -94,16 +92,16 @@ interface Enrollment {
 }
 
 interface EnrollmentFormData {
-  user_id?: number;  // Opcional para compatibilidad
-  worker_id?: number;  // Para inscripciones de trabajadores
-  course_id: number;
+  user_id?: number; // Opcional para compatibilidad
+  worker_id?: number; // Para inscripciones de trabajadores
+  course_id?: number;
   status: EnrollmentStatus;
   progress: number;
   grade?: number;
   notes?: string;
   // Campos legacy
   usuario_id?: number;
-  curso_id: number;
+  curso_id?: number;
 }
 
 interface User {
@@ -160,20 +158,20 @@ const EnrollmentsManagement: React.FC = () => {
   const [loadingWorkers, setLoadingWorkers] = useState(false);
   const [workerSearchTerm, setWorkerSearchTerm] = useState("");
   const [formData, setFormData] = useState<EnrollmentFormData>({
-    worker_id: 0,
-    course_id: 0,
+    worker_id: undefined,
+    course_id: undefined,
     status: EnrollmentStatus.PENDING,
     progress: 0,
     grade: undefined,
     notes: "",
     // Campos legacy
-    usuario_id: 0,
-    curso_id: 0,
+    usuario_id: undefined,
+    curso_id: undefined,
   });
   const [bulkFormData, setBulkFormData] = useState({
     course_id: 0,
     status: EnrollmentStatus.PENDING,
-    notes: ""
+    notes: "",
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -186,28 +184,29 @@ const EnrollmentsManagement: React.FC = () => {
     in_progress: 0,
     pending: 0,
   });
-  
+
   // Permisos del usuario para evitar llamadas que generan 403 en ciertos roles
   const { canReadEnrollment } = usePermissions();
-  
+
   // Estados para diálogo de confirmación de eliminación
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [enrollmentToDelete, setEnrollmentToDelete] = useState<Enrollment | null>(null);
-  
+  const [enrollmentToDelete, setEnrollmentToDelete] =
+    useState<Enrollment | null>(null);
 
-  
   // Estados para diálogo de edición
   const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [enrollmentToEdit, setEnrollmentToEdit] = useState<Enrollment | null>(null);
+  const [enrollmentToEdit, setEnrollmentToEdit] = useState<Enrollment | null>(
+    null,
+  );
   const [editFormData, setEditFormData] = useState<EnrollmentFormData>({
-    worker_id: 0,
-    course_id: 0,
+    worker_id: undefined,
+    course_id: undefined,
     status: EnrollmentStatus.PENDING,
     progress: 0,
     grade: undefined,
     notes: "",
-    usuario_id: 0,
-    curso_id: 0,
+    usuario_id: undefined,
+    curso_id: undefined,
   });
 
   const fetchEnrollments = useCallback(async () => {
@@ -224,8 +223,10 @@ const EnrollmentsManagement: React.FC = () => {
       // Fallback: filtrar por estado del lado del cliente si el backend ignora el parámetro
       let items: any[] = response.data.items || [];
       if (statusFilter && statusFilter !== "all") {
-        items = items.filter((enrollment: any) =>
-          String(enrollment.status || "").toLowerCase() === String(statusFilter).toLowerCase()
+        items = items.filter(
+          (enrollment: any) =>
+            String(enrollment.status || "").toLowerCase() ===
+            String(statusFilter).toLowerCase(),
         );
       }
 
@@ -250,12 +251,12 @@ const EnrollmentsManagement: React.FC = () => {
         // Crear objetos con los datos del backend para compatibilidad
         worker: enrollment.worker || {
           full_name: enrollment.full_name,
-          first_name: enrollment.full_name?.split(' ')[0] || '',
-          last_name: enrollment.full_name?.split(' ').slice(1).join(' ') || ''
+          first_name: enrollment.full_name?.split(" ")[0] || "",
+          last_name: enrollment.full_name?.split(" ").slice(1).join(" ") || "",
         },
         course: enrollment.course || {
           title: enrollment.course_title,
-          titulo: enrollment.course_title
+          titulo: enrollment.course_title,
         },
         evaluation: enrollment.evaluation,
         // Campos legacy para compatibilidad
@@ -271,18 +272,27 @@ const EnrollmentsManagement: React.FC = () => {
             // 1) Intentar obtener resultado exacto por enrollment_id
             try {
               const params = new URLSearchParams();
-              params.append('limit', '1');
-              params.append('enrollment_id', String(enr.id));
-              if (enr.user_id) params.append('user_id', String(enr.user_id));
-              if (enr.course_id) params.append('course_id', String(enr.course_id));
+              params.append("limit", "1");
+              params.append("enrollment_id", String(enr.id));
+              if (enr.user_id) params.append("user_id", String(enr.user_id));
+              if (enr.course_id)
+                params.append("course_id", String(enr.course_id));
 
-              const res = await api.get(`/evaluations/admin/all-results?${params.toString()}`);
-              const results = res.data?.success ? (res.data.data || []) : (res.data.items || res.data || []);
+              const res = await api.get(
+                `/evaluations/admin/all-results?${params.toString()}`,
+              );
+              const results = res.data?.success
+                ? res.data.data || []
+                : res.data.items || res.data || [];
               const r = Array.isArray(results) ? results[0] : null;
               if (r) {
                 const score = r.score ?? null;
                 const maxPoints = r.max_points ?? r.total_points ?? null;
-                const percentage = r.percentage ?? (score != null && maxPoints ? Math.round((score / maxPoints) * 100) : null);
+                const percentage =
+                  r.percentage ??
+                  (score != null && maxPoints
+                    ? Math.round((score / maxPoints) * 100)
+                    : null);
                 return {
                   ...enr,
                   evaluation: {
@@ -300,7 +310,7 @@ const EnrollmentsManagement: React.FC = () => {
 
             // 2) Fallback: usar /user-progress/ si no hay resultado directo
             try {
-              const resp = await api.get('/user-progress/', {
+              const resp = await api.get("/user-progress/", {
                 params: {
                   // Preferir el id de usuario enlazado al trabajador
                   user_id: enr.user_id ?? enr?.worker?.user_id ?? undefined,
@@ -309,21 +319,30 @@ const EnrollmentsManagement: React.FC = () => {
                 },
               });
               const items = resp.data.items || [];
-              const detail = items.find((it: any) => (
-                it.course_id === enr.course_id && (it.enrollment_id === enr.id)
-              ));
-              if (detail && (detail.evaluation_score != null)) {
+              const detail = items.find(
+                (it: any) =>
+                  it.course_id === enr.course_id && it.enrollment_id === enr.id,
+              );
+              if (detail && detail.evaluation_score != null) {
                 const score = detail.evaluation_score;
-                const maxPoints = detail.max_points ?? detail.total_points ?? null;
-                const percentage = detail.percentage ?? (score != null && maxPoints ? Math.round((score / maxPoints) * 100) : null);
+                const maxPoints =
+                  detail.max_points ?? detail.total_points ?? null;
+                const percentage =
+                  detail.percentage ??
+                  (score != null && maxPoints
+                    ? Math.round((score / maxPoints) * 100)
+                    : null);
                 return {
                   ...enr,
                   evaluation: {
                     score,
                     percentage,
-                    total_points: detail.total_points ?? detail.max_points ?? null,
+                    total_points:
+                      detail.total_points ?? detail.max_points ?? null,
                     max_points: maxPoints,
-                    status: detail.evaluation_status || (detail.evaluation_completed ? 'completed' : undefined),
+                    status:
+                      detail.evaluation_status ||
+                      (detail.evaluation_completed ? "completed" : undefined),
                   },
                 };
               }
@@ -332,7 +351,7 @@ const EnrollmentsManagement: React.FC = () => {
             }
 
             return enr;
-          })
+          }),
         );
         setEnrollments(enriched);
       } catch (e) {
@@ -341,7 +360,10 @@ const EnrollmentsManagement: React.FC = () => {
       setTotalEnrollments(response.data.total);
     } catch (error) {
       console.error("Error fetching enrollments:", error);
-      showSnackbar("No se pudieron cargar las inscripciones. Verifique su conexión e intente nuevamente.", "error");
+      showSnackbar(
+        "No se pudieron cargar las inscripciones. Verifique su conexión e intente nuevamente.",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -350,10 +372,12 @@ const EnrollmentsManagement: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const response = await api.get("/workers/", {
-          params: { is_active: true },
-        });
-        // Filter only workers that are registered
-        const registeredWorkers = (response.data || []).filter((worker: any) => worker.is_registered);
+        params: { is_active: true },
+      });
+      // Filter only workers that are registered
+      const registeredWorkers = (response.data || []).filter(
+        (worker: any) => worker.is_registered,
+      );
       // Mapear campos del backend a campos legacy del frontend
       const mappedUsers = registeredWorkers.map((worker: any) => ({
         ...worker,
@@ -362,12 +386,13 @@ const EnrollmentsManagement: React.FC = () => {
         first_name: worker.first_name,
         last_name: worker.last_name,
         email: worker.email,
-        full_name: worker.full_name || `${worker.first_name} ${worker.last_name}`,
+        full_name:
+          worker.full_name || `${worker.first_name} ${worker.last_name}`,
         // Campos legacy para compatibilidad
-        nombre: worker.first_name || worker.nombre || '',
-        apellido: worker.last_name || worker.apellido || '',
+        nombre: worker.first_name || worker.nombre || "",
+        apellido: worker.last_name || worker.apellido || "",
       }));
-        setUsers(mappedUsers);
+      setUsers(mappedUsers);
     } catch (error) {
       console.error("Error fetching workers:", error);
     }
@@ -391,9 +416,9 @@ const EnrollmentsManagement: React.FC = () => {
         status: course.status,
         duration_hours: course.duration_hours,
         // Campos legacy para compatibilidad
-        titulo: course.title || course.titulo || '',
+        titulo: course.title || course.titulo || "",
       }));
-       setCourses(mappedCourses);
+      setCourses(mappedCourses);
     } catch (error) {
       console.error("Error fetching courses:", error);
     }
@@ -428,49 +453,59 @@ const EnrollmentsManagement: React.FC = () => {
         params: {
           search: workerSearchTerm || undefined,
           limit: 100,
-          is_active: true
+          is_active: true,
         },
       });
       setWorkers(response.data || []);
     } catch (error) {
       console.error("Error fetching workers:", error);
-      showSnackbar("No se pudieron cargar los trabajadores. Verifique su conexión e intente nuevamente.", "error");
+      showSnackbar(
+        "No se pudieron cargar los trabajadores. Verifique su conexión e intente nuevamente.",
+        "error",
+      );
     } finally {
       setLoadingWorkers(false);
     }
   }, [workerSearchTerm]);
 
-  const fetchAvailableWorkersForCourse = useCallback(async (courseId: number) => {
-    try {
-      setLoadingWorkers(true);
-      
-      // Obtener todos los trabajadores activos
-      const workersResponse = await api.get("/workers/basic", {
-        params: {
-          search: workerSearchTerm || undefined,
-          limit: 100,
-          is_active: true
-        },
-      });
-      
-      // Obtener trabajadores ya inscritos en el curso
-      const enrolledResponse = await api.get(`/enrollments/course/${courseId}/workers`);
-      const enrolledWorkerIds = (enrolledResponse.data.enrolled_workers || []).map((worker: any) => worker.worker_id || worker.user_id);
-      
-      // Filtrar trabajadores disponibles (no inscritos)
-      const availableWorkers = (workersResponse.data || []).filter((worker: any) => 
-        !enrolledWorkerIds.includes(worker.id)
-      );
-      
-      setWorkers(availableWorkers);
-    } catch (error) {
-      console.error("Error fetching available workers for course:", error);
-      // Si falla, cargar todos los trabajadores como fallback
-      fetchWorkers();
-    } finally {
-      setLoadingWorkers(false);
-    }
-  }, [workerSearchTerm, fetchWorkers]);
+  const fetchAvailableWorkersForCourse = useCallback(
+    async (courseId: number) => {
+      try {
+        setLoadingWorkers(true);
+
+        // Obtener todos los trabajadores activos
+        const workersResponse = await api.get("/workers/basic", {
+          params: {
+            search: workerSearchTerm || undefined,
+            limit: 100,
+            is_active: true,
+          },
+        });
+
+        // Obtener trabajadores ya inscritos en el curso
+        const enrolledResponse = await api.get(
+          `/enrollments/course/${courseId}/workers`,
+        );
+        const enrolledWorkerIds = (
+          enrolledResponse.data.enrolled_workers || []
+        ).map((worker: any) => worker.worker_id || worker.user_id);
+
+        // Filtrar trabajadores disponibles (no inscritos)
+        const availableWorkers = (workersResponse.data || []).filter(
+          (worker: any) => !enrolledWorkerIds.includes(worker.id),
+        );
+
+        setWorkers(availableWorkers);
+      } catch (error) {
+        console.error("Error fetching available workers for course:", error);
+        // Si falla, cargar todos los trabajadores como fallback
+        fetchWorkers();
+      } finally {
+        setLoadingWorkers(false);
+      }
+    },
+    [workerSearchTerm, fetchWorkers],
+  );
 
   useEffect(() => {
     // Evitar 403 para roles sin permiso de lectura de inscripciones
@@ -484,7 +519,14 @@ const EnrollmentsManagement: React.FC = () => {
     }
     fetchUsers();
     fetchCourses();
-  }, [fetchEnrollments, page, rowsPerPage, searchTerm, statusFilter, canReadEnrollment]);
+  }, [
+    fetchEnrollments,
+    page,
+    rowsPerPage,
+    searchTerm,
+    statusFilter,
+    canReadEnrollment,
+  ]);
 
   // Cargar trabajadores disponibles cuando se selecciona un curso para inscripción masiva
   useEffect(() => {
@@ -493,8 +535,6 @@ const EnrollmentsManagement: React.FC = () => {
     }
   }, [bulkFormData.course_id, openBulkDialog, fetchAvailableWorkersForCourse]);
 
-
-
   const handleCreateEnrollment = () => {
     setFormData({
       worker_id: 0,
@@ -502,7 +542,7 @@ const EnrollmentsManagement: React.FC = () => {
       status: EnrollmentStatus.PENDING,
       progress: 0,
       grade: undefined,
-      notes: '',
+      notes: "",
       // Legacy fields for compatibility
       usuario_id: 0,
       curso_id: 0,
@@ -514,7 +554,7 @@ const EnrollmentsManagement: React.FC = () => {
     setBulkFormData({
       course_id: 0,
       status: EnrollmentStatus.PENDING,
-      notes: ""
+      notes: "",
     });
     setSelectedWorkers([]);
     fetchWorkers();
@@ -522,10 +562,10 @@ const EnrollmentsManagement: React.FC = () => {
   };
 
   const handleWorkerSelection = (workerId: number) => {
-    setSelectedWorkers(prev => 
-      prev.includes(workerId) 
-        ? prev.filter(id => id !== workerId)
-        : [...prev, workerId]
+    setSelectedWorkers((prev) =>
+      prev.includes(workerId)
+        ? prev.filter((id) => id !== workerId)
+        : [...prev, workerId],
     );
   };
 
@@ -533,19 +573,19 @@ const EnrollmentsManagement: React.FC = () => {
     if (selectedWorkers.length === workers.length) {
       setSelectedWorkers([]);
     } else {
-      setSelectedWorkers(workers.map(worker => worker.id));
+      setSelectedWorkers(workers.map((worker) => worker.id));
     }
   };
 
   const handleSaveEnrollment = async () => {
     try {
       const enrollmentData = {
-        worker_id: formData.worker_id || formData.usuario_id,
-        course_id: formData.course_id || formData.curso_id,
+        worker_id: formData.worker_id ?? formData.usuario_id,
+        course_id: formData.course_id ?? formData.curso_id,
         status: formData.status || EnrollmentStatus.PENDING,
         progress: formData.progress || 0,
         grade: formData.grade,
-        notes: formData.notes || '',
+        notes: formData.notes || "",
       };
       await api.post("/enrollments", enrollmentData);
       showSnackbar("Inscripción creada exitosamente", "success");
@@ -554,7 +594,8 @@ const EnrollmentsManagement: React.FC = () => {
       fetchStats();
     } catch (error: any) {
       console.error("Error saving enrollment:", error);
-      const errorMessage = error.response?.data?.detail || "Error al crear inscripción";
+      const errorMessage =
+        error.response?.data?.detail || "Error al crear inscripción";
       showSnackbar(errorMessage, "error");
     }
   };
@@ -564,7 +605,7 @@ const EnrollmentsManagement: React.FC = () => {
       showSnackbar("Debe seleccionar al menos un trabajador", "error");
       return;
     }
-    
+
     if (!bulkFormData.course_id) {
       showSnackbar("Debe seleccionar un curso", "error");
       return;
@@ -575,31 +616,35 @@ const EnrollmentsManagement: React.FC = () => {
         user_ids: selectedWorkers,
         course_id: bulkFormData.course_id,
         status: bulkFormData.status,
-        notes: bulkFormData.notes
+        notes: bulkFormData.notes,
       };
-      
-      const response = await api.post("/enrollments/bulk-assign-workers", bulkData);
-      
+
+      const response = await api.post(
+        "/enrollments/bulk-assign-workers",
+        bulkData,
+      );
+
       const { successful_count, failed_count } = response.data;
-      
+
       if (failed_count > 0) {
         showSnackbar(
           `Inscripción completada: ${successful_count} exitosas, ${failed_count} fallidas`,
-          "error"
+          "error",
         );
       } else {
         showSnackbar(
           `${successful_count} trabajadores inscritos exitosamente`,
-          "success"
+          "success",
         );
       }
-      
+
       setOpenBulkDialog(false);
       fetchEnrollments();
       fetchStats();
     } catch (error: any) {
       console.error("Error saving bulk enrollment:", error);
-      const errorMessage = error.response?.data?.detail || "Error al crear inscripciones masivas";
+      const errorMessage =
+        error.response?.data?.detail || "Error al crear inscripciones masivas";
       showSnackbar(errorMessage, "error");
     }
   };
@@ -611,7 +656,7 @@ const EnrollmentsManagement: React.FC = () => {
 
   const confirmDeleteEnrollment = async () => {
     if (!enrollmentToDelete) return;
-    
+
     try {
       await api.delete(`/enrollments/${enrollmentToDelete.id}`);
       showSnackbar("Inscripción eliminada exitosamente", "success");
@@ -619,7 +664,8 @@ const EnrollmentsManagement: React.FC = () => {
       fetchStats();
     } catch (error: any) {
       console.error("Error deleting enrollment:", error);
-      const errorMessage = error.response?.data?.detail || "Error al eliminar inscripción";
+      const errorMessage =
+        error.response?.data?.detail || "Error al eliminar inscripción";
       showSnackbar(errorMessage, "error");
     } finally {
       setOpenDeleteDialog(false);
@@ -632,36 +678,94 @@ const EnrollmentsManagement: React.FC = () => {
     setEnrollmentToDelete(null);
   };
 
-
-
   const handleEditEnrollment = (enrollment: Enrollment) => {
     setEnrollmentToEdit(enrollment);
+
+    // make sure the current user/worker appears in the dropdown options
+    const selectedId =
+      enrollment.worker_id || enrollment.user_id || enrollment.usuario_id;
+    if (selectedId && !users.find((u) => u.id === selectedId)) {
+      // build a synthetic user object using whatever data is available
+      let newUser: User = {
+        id: selectedId,
+        first_name: "",
+        last_name: "",
+        email: "",
+        full_name: "",
+        nombre: "",
+        apellido: "",
+      };
+
+      if (enrollment.user) {
+        const u = enrollment.user;
+        newUser = {
+          id: u.id,
+          first_name: u.first_name || u.nombre || "",
+          last_name: u.last_name || u.apellido || "",
+          email: u.email,
+          full_name:
+            u.full_name || `${u.first_name || ""} ${u.last_name || ""}`,
+          nombre: u.first_name || u.nombre || "",
+          apellido: u.last_name || u.apellido || "",
+        };
+      } else if (enrollment.worker) {
+        const w = enrollment.worker as any;
+        newUser = {
+          id: selectedId,
+          first_name: w.first_name || w.nombre || "",
+          last_name: w.last_name || w.apellido || "",
+          email: w.email || "",
+          full_name:
+            w.full_name || `${w.first_name || ""} ${w.last_name || ""}`,
+          nombre: w.first_name || w.nombre || "",
+          apellido: w.last_name || w.apellido || "",
+        };
+      } else if (enrollment.usuario) {
+        const u = enrollment.usuario as any;
+        newUser = {
+          id: selectedId,
+          first_name: u.nombre || "",
+          last_name: u.apellido || "",
+          email: "",
+          full_name: `${u.nombre || ""} ${u.apellido || ""}`,
+          nombre: u.nombre || "",
+          apellido: u.apellido || "",
+        };
+      } else {
+        // no additional info available; leave full_name blank
+        newUser.full_name = "";
+      }
+
+      setUsers((prev) => [...prev, newUser]);
+    }
+
     setEditFormData({
-      worker_id: enrollment.worker_id || enrollment.user_id || enrollment.usuario_id || 0,
-      course_id: enrollment.course_id || enrollment.curso_id || 0,
+      // do not default to 0 – leave undefined so the select is empty if we don't know the id
+      worker_id: selectedId,
+      course_id: enrollment.course_id || enrollment.curso_id || undefined,
       status: enrollment.status || EnrollmentStatus.PENDING,
       progress: enrollment.progress || 0,
       grade: enrollment.grade || enrollment.calificacion,
       notes: enrollment.notes || "",
-      usuario_id: enrollment.worker_id || enrollment.user_id || enrollment.usuario_id || 0,
-      curso_id: enrollment.course_id || enrollment.curso_id || 0,
+      usuario_id: selectedId,
+      curso_id: enrollment.course_id || enrollment.curso_id || undefined,
     });
     setOpenEditDialog(true);
   };
 
   const handleSaveEditEnrollment = async () => {
     if (!enrollmentToEdit) return;
-    
+
     try {
       const enrollmentData = {
-        worker_id: editFormData.worker_id || editFormData.usuario_id,
-        course_id: editFormData.course_id || editFormData.curso_id,
+        worker_id: editFormData.worker_id ?? editFormData.usuario_id,
+        course_id: editFormData.course_id ?? editFormData.curso_id,
         status: editFormData.status,
         progress: editFormData.progress || 0,
         grade: editFormData.grade,
-        notes: editFormData.notes || '',
+        notes: editFormData.notes || "",
       };
-      
+
       await api.put(`/enrollments/${enrollmentToEdit.id}`, enrollmentData);
       showSnackbar("Inscripción actualizada exitosamente", "success");
       setOpenEditDialog(false);
@@ -670,7 +774,8 @@ const EnrollmentsManagement: React.FC = () => {
       fetchStats();
     } catch (error: any) {
       console.error("Error updating enrollment:", error);
-      const errorMessage = error.response?.data?.detail || "Error al actualizar inscripción";
+      const errorMessage =
+        error.response?.data?.detail || "Error al actualizar inscripción";
       showSnackbar(errorMessage, "error");
     }
   };
@@ -682,27 +787,29 @@ const EnrollmentsManagement: React.FC = () => {
 
   const handleToggleCompletion = async (
     enrollmentId: number,
-    currentStatus: EnrollmentStatus
+    currentStatus: EnrollmentStatus,
   ) => {
     try {
-      const newStatus = currentStatus === EnrollmentStatus.COMPLETED 
-        ? EnrollmentStatus.ACTIVE 
-        : EnrollmentStatus.COMPLETED;
-      
-      await api.put(`/enrollments/${enrollmentId}`, { 
+      const newStatus =
+        currentStatus === EnrollmentStatus.COMPLETED
+          ? EnrollmentStatus.ACTIVE
+          : EnrollmentStatus.COMPLETED;
+
+      await api.put(`/enrollments/${enrollmentId}`, {
         status: newStatus,
-        progress: newStatus === EnrollmentStatus.COMPLETED ? 100 : undefined
+        progress: newStatus === EnrollmentStatus.COMPLETED ? 100 : undefined,
       });
-      
+
       showSnackbar(
         `Inscripción ${newStatus === EnrollmentStatus.COMPLETED ? "completada" : "marcada como activa"}`,
-        "success"
+        "success",
       );
       fetchEnrollments();
       fetchStats();
     } catch (error: any) {
       console.error("Error updating enrollment:", error);
-      const errorMessage = error.response?.data?.detail || "Error al actualizar inscripción";
+      const errorMessage =
+        error.response?.data?.detail || "Error al actualizar inscripción";
       showSnackbar(errorMessage, "error");
     }
   };
@@ -889,47 +996,71 @@ const EnrollmentsManagement: React.FC = () => {
                   <TableCell>{enrollment.id}</TableCell>
                   <TableCell>
                     {enrollment.worker
-                      ? enrollment.worker.full_name || `${enrollment.worker.first_name || enrollment.worker.nombre || ''} ${enrollment.worker.last_name || enrollment.worker.apellido || ''}`
+                      ? enrollment.worker.full_name ||
+                        `${enrollment.worker.first_name || enrollment.worker.nombre || ""} ${enrollment.worker.last_name || enrollment.worker.apellido || ""}`
                       : enrollment.user
-                      ? enrollment.user.full_name || `${enrollment.user.first_name || enrollment.user.nombre || ''} ${enrollment.user.last_name || enrollment.user.apellido || ''}`
-                      : enrollment.usuario
-                      ? `${enrollment.usuario.nombre} ${enrollment.usuario.apellido}`
-                      : "Trabajador no encontrado"}
+                        ? enrollment.user.full_name ||
+                          `${enrollment.user.first_name || enrollment.user.nombre || ""} ${enrollment.user.last_name || enrollment.user.apellido || ""}`
+                        : enrollment.usuario
+                          ? `${enrollment.usuario.nombre} ${enrollment.usuario.apellido}`
+                          : "Trabajador no encontrado"}
                   </TableCell>
                   <TableCell>
                     {enrollment.course
                       ? enrollment.course.title || enrollment.course.titulo
                       : enrollment.curso
-                      ? enrollment.curso.titulo
-                      : "Curso no encontrado"}
+                        ? enrollment.curso.titulo
+                        : "Curso no encontrado"}
                   </TableCell>
                   <TableCell>
                     {enrollment.enrolled_at || enrollment.fecha_inscripcion
                       ? formatDate(
-                          enrollment.enrolled_at || enrollment.fecha_inscripcion!
+                          enrollment.enrolled_at ||
+                            enrollment.fecha_inscripcion!,
                         )
                       : "Sin fecha"}
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={getStatusLabel(enrollment.status || (enrollment.completado ? EnrollmentStatus.COMPLETED : EnrollmentStatus.PENDING))}
-                      color={getStatusColor(enrollment.status || (enrollment.completado ? EnrollmentStatus.COMPLETED : EnrollmentStatus.PENDING)) as any}
+                      label={getStatusLabel(
+                        enrollment.status ||
+                          (enrollment.completado
+                            ? EnrollmentStatus.COMPLETED
+                            : EnrollmentStatus.PENDING),
+                      )}
+                      color={
+                        getStatusColor(
+                          enrollment.status ||
+                            (enrollment.completado
+                              ? EnrollmentStatus.COMPLETED
+                              : EnrollmentStatus.PENDING),
+                        ) as any
+                      }
                       size="small"
                     />
                   </TableCell>
                   <TableCell>
                     {(() => {
                       const evalData = enrollment.evaluation;
-                      if (evalData && evalData.percentage !== null && evalData.percentage !== undefined) {
+                      if (
+                        evalData &&
+                        evalData.percentage !== null &&
+                        evalData.percentage !== undefined
+                      ) {
                         return `${evalData.percentage}%`;
                       }
-                      if (evalData && evalData.score !== null && evalData.score !== undefined) {
+                      if (
+                        evalData &&
+                        evalData.score !== null &&
+                        evalData.score !== undefined
+                      ) {
                         if (evalData.max_points) {
                           return `${evalData.score}/${evalData.max_points}`;
                         }
                         return `${evalData.score}`;
                       }
-                      const legacy = enrollment.grade ?? enrollment.calificacion;
+                      const legacy =
+                        enrollment.grade ?? enrollment.calificacion;
                       if (legacy !== null && legacy !== undefined) {
                         return `${legacy}`;
                       }
@@ -938,21 +1069,44 @@ const EnrollmentsManagement: React.FC = () => {
                   </TableCell>
                   <TableCell align="center">
                     <IconButton
-                      color={(enrollment.status || (enrollment.completado ? EnrollmentStatus.COMPLETED : EnrollmentStatus.PENDING)) === EnrollmentStatus.COMPLETED ? "warning" : "success"}
+                      color={
+                        (enrollment.status ||
+                          (enrollment.completado
+                            ? EnrollmentStatus.COMPLETED
+                            : EnrollmentStatus.PENDING)) ===
+                        EnrollmentStatus.COMPLETED
+                          ? "warning"
+                          : "success"
+                      }
                       onClick={() =>
                         handleToggleCompletion(
                           enrollment.id,
-                          enrollment.status || (enrollment.completado ? EnrollmentStatus.COMPLETED : EnrollmentStatus.PENDING)
+                          enrollment.status ||
+                            (enrollment.completado
+                              ? EnrollmentStatus.COMPLETED
+                              : EnrollmentStatus.PENDING),
                         )
                       }
                       size="small"
                       title={
-                        (enrollment.status || (enrollment.completado ? EnrollmentStatus.COMPLETED : EnrollmentStatus.PENDING)) === EnrollmentStatus.COMPLETED
+                        (enrollment.status ||
+                          (enrollment.completado
+                            ? EnrollmentStatus.COMPLETED
+                            : EnrollmentStatus.PENDING)) ===
+                        EnrollmentStatus.COMPLETED
                           ? "Marcar como activo"
                           : "Marcar como completado"
                       }
                     >
-                      {(enrollment.status || (enrollment.completado ? EnrollmentStatus.COMPLETED : EnrollmentStatus.PENDING)) === EnrollmentStatus.COMPLETED ? <Cancel /> : <CheckCircle />}
+                      {(enrollment.status ||
+                        (enrollment.completado
+                          ? EnrollmentStatus.COMPLETED
+                          : EnrollmentStatus.PENDING)) ===
+                      EnrollmentStatus.COMPLETED ? (
+                        <Cancel />
+                      ) : (
+                        <CheckCircle />
+                      )}
                     </IconButton>
                     <IconButton
                       color="primary"
@@ -972,7 +1126,6 @@ const EnrollmentsManagement: React.FC = () => {
                     >
                       <Delete />
                     </IconButton>
-
                   </TableCell>
                 </TableRow>
               ))
@@ -1007,7 +1160,7 @@ const EnrollmentsManagement: React.FC = () => {
               <FormControl fullWidth required>
                 <InputLabel>Empleado</InputLabel>
                 <Select
-                  value={formData.worker_id || formData.usuario_id}
+                  value={formData.worker_id ?? formData.usuario_id ?? ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -1019,7 +1172,9 @@ const EnrollmentsManagement: React.FC = () => {
                 >
                   {users.map((user) => (
                     <MenuItem key={user.id} value={user.id}>
-                      {user.full_name || `${user.first_name || user.nombre || ''} ${user.last_name || user.apellido || ''}`} ({user.email})
+                      {user.full_name ||
+                        `${user.first_name || user.nombre || ""} ${user.last_name || user.apellido || ""}`}{" "}
+                      ({user.email})
                     </MenuItem>
                   ))}
                 </Select>
@@ -1029,7 +1184,7 @@ const EnrollmentsManagement: React.FC = () => {
               <FormControl fullWidth required>
                 <InputLabel>Curso</InputLabel>
                 <Select
-                  value={formData.course_id || formData.curso_id}
+                  value={formData.course_id ?? formData.curso_id ?? ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -1060,11 +1215,19 @@ const EnrollmentsManagement: React.FC = () => {
                   }
                   label="Estado"
                 >
-                  <MenuItem value={EnrollmentStatus.PENDING}>Pendiente</MenuItem>
+                  <MenuItem value={EnrollmentStatus.PENDING}>
+                    Pendiente
+                  </MenuItem>
                   <MenuItem value={EnrollmentStatus.ACTIVE}>Activo</MenuItem>
-                  <MenuItem value={EnrollmentStatus.COMPLETED}>Completado</MenuItem>
-                  <MenuItem value={EnrollmentStatus.CANCELLED}>Cancelado</MenuItem>
-                  <MenuItem value={EnrollmentStatus.SUSPENDED}>Suspendido</MenuItem>
+                  <MenuItem value={EnrollmentStatus.COMPLETED}>
+                    Completado
+                  </MenuItem>
+                  <MenuItem value={EnrollmentStatus.CANCELLED}>
+                    Cancelado
+                  </MenuItem>
+                  <MenuItem value={EnrollmentStatus.SUSPENDED}>
+                    Suspendido
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -1077,7 +1240,10 @@ const EnrollmentsManagement: React.FC = () => {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+                    progress: Math.min(
+                      100,
+                      Math.max(0, parseInt(e.target.value) || 0),
+                    ),
                   })
                 }
                 inputProps={{ min: 0, max: 100 }}
@@ -1088,11 +1254,13 @@ const EnrollmentsManagement: React.FC = () => {
                 fullWidth
                 label="Calificación"
                 type="number"
-                value={formData.grade || ''}
+                value={formData.grade || ""}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    grade: e.target.value ? parseFloat(e.target.value) : undefined,
+                    grade: e.target.value
+                      ? parseFloat(e.target.value)
+                      : undefined,
                   })
                 }
                 inputProps={{ min: 0, max: 100, step: 0.1 }}
@@ -1104,7 +1272,7 @@ const EnrollmentsManagement: React.FC = () => {
                 label="Notas"
                 multiline
                 rows={3}
-                value={formData.notes || ''}
+                value={formData.notes || ""}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -1167,7 +1335,9 @@ const EnrollmentsManagement: React.FC = () => {
                   }
                   label="Estado"
                 >
-                  <MenuItem value={EnrollmentStatus.PENDING}>Pendiente</MenuItem>
+                  <MenuItem value={EnrollmentStatus.PENDING}>
+                    Pendiente
+                  </MenuItem>
                   <MenuItem value={EnrollmentStatus.ACTIVE}>Activo</MenuItem>
                 </Select>
               </FormControl>
@@ -1178,9 +1348,11 @@ const EnrollmentsManagement: React.FC = () => {
                 placeholder="Buscar trabajadores..."
                 value={workerSearchTerm}
                 onChange={(e) => setWorkerSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && fetchWorkers()}
+                onKeyPress={(e) => e.key === "Enter" && fetchWorkers()}
                 InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: "text.secondary" }} />,
+                  startAdornment: (
+                    <Search sx={{ mr: 1, color: "text.secondary" }} />
+                  ),
                 }}
               />
             </Grid>
@@ -1200,19 +1372,29 @@ const EnrollmentsManagement: React.FC = () => {
               />
             </Grid>
             <Grid size={12}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
                 <Typography variant="h6">
-                  Seleccionar Trabajadores ({selectedWorkers.length} seleccionados)
+                  Seleccionar Trabajadores ({selectedWorkers.length}{" "}
+                  seleccionados)
                 </Typography>
                 <Button
                   variant="outlined"
                   size="small"
                   onClick={handleSelectAllWorkers}
                 >
-                  {selectedWorkers.length === workers.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                  {selectedWorkers.length === workers.length
+                    ? "Deseleccionar Todos"
+                    : "Seleccionar Todos"}
                 </Button>
               </Box>
-              <Paper sx={{ maxHeight: 300, overflow: 'auto' }}>
+              <Paper sx={{ maxHeight: 300, overflow: "auto" }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
@@ -1251,8 +1433,14 @@ const EnrollmentsManagement: React.FC = () => {
                           <TableCell>{worker.department}</TableCell>
                           <TableCell>
                             <Chip
-                              label={worker.is_registered ? "Registrado" : "No Registrado"}
-                              color={worker.is_registered ? "success" : "warning"}
+                              label={
+                                worker.is_registered
+                                  ? "Registrado"
+                                  : "No Registrado"
+                              }
+                              color={
+                                worker.is_registered ? "success" : "warning"
+                              }
                               size="small"
                             />
                           </TableCell>
@@ -1270,8 +1458,8 @@ const EnrollmentsManagement: React.FC = () => {
           <Button onClick={fetchWorkers} disabled={loadingWorkers}>
             Buscar
           </Button>
-          <Button 
-            onClick={handleSaveBulkEnrollment} 
+          <Button
+            onClick={handleSaveBulkEnrollment}
             variant="contained"
             disabled={selectedWorkers.length === 0 || !bulkFormData.course_id}
           >
@@ -1295,19 +1483,31 @@ const EnrollmentsManagement: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Typography id="delete-enrollment-dialog-description">
-            ¿Estás seguro de que deseas eliminar esta inscripción? Esta acción no se puede deshacer.
+            ¿Estás seguro de que deseas eliminar esta inscripción? Esta acción
+            no se puede deshacer.
             {enrollmentToDelete && (
               <Box mt={2}>
-                <strong>Usuario:</strong> {enrollmentToDelete.worker?.full_name || enrollmentToDelete.user?.full_name || enrollmentToDelete.usuario?.nombre || 'N/A'}<br />
-                <strong>Curso:</strong> {enrollmentToDelete.course?.title || enrollmentToDelete.curso?.titulo || 'N/A'}<br />
-                <strong>Estado:</strong> {getStatusLabel(enrollmentToDelete.status)}<br />
+                <strong>Usuario:</strong>{" "}
+                {enrollmentToDelete.worker?.full_name ||
+                  enrollmentToDelete.user?.full_name ||
+                  enrollmentToDelete.usuario?.nombre ||
+                  "N/A"}
+                <br />
+                <strong>Curso:</strong>{" "}
+                {enrollmentToDelete.course?.title ||
+                  enrollmentToDelete.curso?.titulo ||
+                  "N/A"}
+                <br />
+                <strong>Estado:</strong>{" "}
+                {getStatusLabel(enrollmentToDelete.status)}
+                <br />
                 <strong>Progreso:</strong> {enrollmentToDelete.progress || 0}%
               </Box>
             )}
           </Typography>
-          
+
           <Alert severity="warning" sx={{ mt: 2 }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: "bold", mb: 1 }}>
               Al eliminar esta inscripción también se eliminarán:
             </Typography>
             <Typography variant="body2" component="ul" sx={{ pl: 2, mb: 0 }}>
@@ -1323,13 +1523,15 @@ const EnrollmentsManagement: React.FC = () => {
           <Button onClick={cancelDeleteEnrollment} color="primary">
             Cancelar
           </Button>
-          <Button onClick={confirmDeleteEnrollment} color="error" variant="contained">
+          <Button
+            onClick={confirmDeleteEnrollment}
+            color="error"
+            variant="contained"
+          >
             Eliminar
           </Button>
         </DialogActions>
       </Dialog>
-
-
 
       {/* Diálogo para editar inscripción */}
       <Dialog
@@ -1342,32 +1544,25 @@ const EnrollmentsManagement: React.FC = () => {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={12}>
-              <FormControl fullWidth required>
-                <InputLabel>Empleado</InputLabel>
-                <Select
-                  value={editFormData.worker_id || editFormData.usuario_id}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      worker_id: e.target.value as number,
-                      usuario_id: e.target.value as number,
-                    })
-                  }
-                  label="Empleado"
-                >
-                  {users.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.full_name || `${user.first_name || user.nombre || ''} ${user.last_name || user.apellido || ''}`} ({user.email})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {/* show the current worker/user name instead of allowing change */}
+              <TextField
+                fullWidth
+                label="Empleado"
+                value={
+                  enrollmentToEdit?.worker?.full_name ||
+                  enrollmentToEdit?.user?.full_name ||
+                  (enrollmentToEdit?.usuario
+                    ? `${enrollmentToEdit.usuario.nombre} ${enrollmentToEdit.usuario.apellido}`
+                    : "")
+                }
+                disabled
+              />
             </Grid>
             <Grid size={12}>
               <FormControl fullWidth required>
                 <InputLabel>Curso</InputLabel>
                 <Select
-                  value={editFormData.course_id || editFormData.curso_id}
+                  value={editFormData.course_id ?? editFormData.curso_id ?? ""}
                   onChange={(e) =>
                     setEditFormData({
                       ...editFormData,
@@ -1398,11 +1593,19 @@ const EnrollmentsManagement: React.FC = () => {
                   }
                   label="Estado"
                 >
-                  <MenuItem value={EnrollmentStatus.PENDING}>Pendiente</MenuItem>
+                  <MenuItem value={EnrollmentStatus.PENDING}>
+                    Pendiente
+                  </MenuItem>
                   <MenuItem value={EnrollmentStatus.ACTIVE}>Activo</MenuItem>
-                  <MenuItem value={EnrollmentStatus.COMPLETED}>Completado</MenuItem>
-                  <MenuItem value={EnrollmentStatus.SUSPENDED}>Suspendido</MenuItem>
-                  <MenuItem value={EnrollmentStatus.CANCELLED}>Cancelado</MenuItem>
+                  <MenuItem value={EnrollmentStatus.COMPLETED}>
+                    Completado
+                  </MenuItem>
+                  <MenuItem value={EnrollmentStatus.SUSPENDED}>
+                    Suspendido
+                  </MenuItem>
+                  <MenuItem value={EnrollmentStatus.CANCELLED}>
+                    Cancelado
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -1426,11 +1629,13 @@ const EnrollmentsManagement: React.FC = () => {
                 fullWidth
                 label="Calificación"
                 type="number"
-                value={editFormData.grade || ''}
+                value={editFormData.grade || ""}
                 onChange={(e) =>
                   setEditFormData({
                     ...editFormData,
-                    grade: e.target.value ? parseFloat(e.target.value) : undefined,
+                    grade: e.target.value
+                      ? parseFloat(e.target.value)
+                      : undefined,
                   })
                 }
                 inputProps={{ min: 0, max: 100, step: 0.1 }}
