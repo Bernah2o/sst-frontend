@@ -36,7 +36,7 @@ import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
   Download as DownloadIcon,
-  FilterList as FilterIcon,
+  // FilterList as FilterIcon,
   Visibility as ViewIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
@@ -46,7 +46,7 @@ import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "notistack";
 import matrizLegalService, {
   MatrizLegalNorma,
-  PaginatedResponse,
+  // PaginatedResponse,
 } from "../../services/matrizLegalService";
 
 const MatrizLegalNormas: React.FC = () => {
@@ -76,32 +76,12 @@ const MatrizLegalNormas: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
   // Dialog de detalle
-  const [selectedNorma, setSelectedNorma] = useState<MatrizLegalNorma | null>(null);
+  const [selectedNorma, setSelectedNorma] = useState<MatrizLegalNorma | null>(
+    null,
+  );
   const [openDetail, setOpenDetail] = useState(false);
 
-  // Cargar catálogos
-  useEffect(() => {
-    loadCatalogos();
-  }, []);
-
-  // Cargar normas con filtros
-  useEffect(() => {
-    loadNormas();
-  }, [page, rowsPerPage, clasificacion, temaGeneral, anio, estado]);
-
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (page === 0) {
-        loadNormas();
-      } else {
-        setPage(0);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const loadCatalogos = async () => {
+  const loadCatalogos = useCallback(async () => {
     try {
       const [clasificacionesData, temasData, aniosData] = await Promise.all([
         matrizLegalService.getCatalogosClasificaciones(),
@@ -114,7 +94,31 @@ const MatrizLegalNormas: React.FC = () => {
     } catch (error) {
       console.error("Error loading catalogos:", error);
     }
-  };
+  }, []);
+
+  // Cargar catálogos
+  useEffect(() => {
+    loadCatalogos();
+  }, [loadCatalogos]);
+
+  // Cargar normas con filtros
+  useEffect(() => {
+    loadNormas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, clasificacion, temaGeneral, anio, estado]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (page === 0) {
+        loadNormas();
+      } else {
+        setPage(0);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
   const loadNormas = useCallback(async () => {
     try {
@@ -137,7 +141,16 @@ const MatrizLegalNormas: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchTerm, clasificacion, temaGeneral, anio, estado, enqueueSnackbar]);
+  }, [
+    page,
+    rowsPerPage,
+    searchTerm,
+    clasificacion,
+    temaGeneral,
+    anio,
+    estado,
+    enqueueSnackbar,
+  ]);
 
   const handleExport = async () => {
     try {
@@ -162,7 +175,9 @@ const MatrizLegalNormas: React.FC = () => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -176,7 +191,9 @@ const MatrizLegalNormas: React.FC = () => {
     setPage(0);
   };
 
-  const getEstadoColor = (estadoNorma: string): "success" | "error" | "warning" | "default" => {
+  const getEstadoColor = (
+    estadoNorma: string,
+  ): "success" | "error" | "warning" | "default" => {
     switch (estadoNorma) {
       case "vigente":
         return "success";
@@ -207,7 +224,13 @@ const MatrizLegalNormas: React.FC = () => {
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            flexWrap="wrap"
+            gap={2}
+          >
             <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
               <TextField
                 placeholder="Buscar norma..."
@@ -225,18 +248,26 @@ const MatrizLegalNormas: React.FC = () => {
                 sx={{ width: { xs: "100%", sm: 300 } }}
               />
               <Button
-                startIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                startIcon={
+                  showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />
+                }
                 onClick={() => setShowFilters(!showFilters)}
                 color={hasActiveFilters ? "primary" : "inherit"}
               >
-                Filtros {hasActiveFilters && `(${[clasificacion, temaGeneral, anio, estado].filter(Boolean).length})`}
+                Filtros{" "}
+                {hasActiveFilters &&
+                  `(${[clasificacion, temaGeneral, anio, estado].filter(Boolean).length})`}
               </Button>
             </Box>
             <Box display="flex" gap={1}>
               <Button startIcon={<RefreshIcon />} onClick={loadNormas}>
                 Recargar
               </Button>
-              <Button startIcon={<DownloadIcon />} variant="outlined" onClick={handleExport}>
+              <Button
+                startIcon={<DownloadIcon />}
+                variant="outlined"
+                onClick={handleExport}
+              >
                 Exportar Excel
               </Button>
             </Box>
@@ -253,11 +284,16 @@ const MatrizLegalNormas: React.FC = () => {
                     fullWidth
                     size="small"
                     value={clasificacion}
-                    onChange={(e) => { setClasificacion(e.target.value); setPage(0); }}
+                    onChange={(e) => {
+                      setClasificacion(e.target.value);
+                      setPage(0);
+                    }}
                   >
                     <MenuItem value="">Todas</MenuItem>
                     {clasificaciones.map((c) => (
-                      <MenuItem key={c} value={c}>{c}</MenuItem>
+                      <MenuItem key={c} value={c}>
+                        {c}
+                      </MenuItem>
                     ))}
                   </TextField>
                 </Grid>
@@ -268,11 +304,16 @@ const MatrizLegalNormas: React.FC = () => {
                     fullWidth
                     size="small"
                     value={temaGeneral}
-                    onChange={(e) => { setTemaGeneral(e.target.value); setPage(0); }}
+                    onChange={(e) => {
+                      setTemaGeneral(e.target.value);
+                      setPage(0);
+                    }}
                   >
                     <MenuItem value="">Todos</MenuItem>
                     {temas.map((t) => (
-                      <MenuItem key={t} value={t}>{t}</MenuItem>
+                      <MenuItem key={t} value={t}>
+                        {t}
+                      </MenuItem>
                     ))}
                   </TextField>
                 </Grid>
@@ -283,11 +324,16 @@ const MatrizLegalNormas: React.FC = () => {
                     fullWidth
                     size="small"
                     value={anio}
-                    onChange={(e) => { setAnio(e.target.value as number | ""); setPage(0); }}
+                    onChange={(e) => {
+                      setAnio(e.target.value as number | "");
+                      setPage(0);
+                    }}
                   >
                     <MenuItem value="">Todos</MenuItem>
                     {anios.map((a) => (
-                      <MenuItem key={a} value={a}>{a}</MenuItem>
+                      <MenuItem key={a} value={a}>
+                        {a}
+                      </MenuItem>
                     ))}
                   </TextField>
                 </Grid>
@@ -298,7 +344,10 @@ const MatrizLegalNormas: React.FC = () => {
                     fullWidth
                     size="small"
                     value={estado}
-                    onChange={(e) => { setEstado(e.target.value); setPage(0); }}
+                    onChange={(e) => {
+                      setEstado(e.target.value);
+                      setPage(0);
+                    }}
                   >
                     <MenuItem value="">Todos</MenuItem>
                     <MenuItem value="vigente">Vigente</MenuItem>
@@ -306,7 +355,11 @@ const MatrizLegalNormas: React.FC = () => {
                     <MenuItem value="modificada">Modificada</MenuItem>
                   </TextField>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 2 }} display="flex" alignItems="center">
+                <Grid
+                  size={{ xs: 12, sm: 6, md: 2 }}
+                  display="flex"
+                  alignItems="center"
+                >
                   {hasActiveFilters && (
                     <Button size="small" onClick={clearFilters}>
                       Limpiar Filtros
@@ -407,59 +460,104 @@ const MatrizLegalNormas: React.FC = () => {
       </Paper>
 
       {/* Dialog de Detalle */}
-      <Dialog open={openDetail} onClose={() => setOpenDetail(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={openDetail}
+        onClose={() => setOpenDetail(false)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>
-          {selectedNorma?.tipo_norma} {selectedNorma?.numero_norma} de {selectedNorma?.anio}
+          {selectedNorma?.tipo_norma} {selectedNorma?.numero_norma} de{" "}
+          {selectedNorma?.anio}
         </DialogTitle>
         <DialogContent dividers>
           {selectedNorma && (
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" color="textSecondary">Ámbito de Aplicación</Typography>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Ámbito de Aplicación
+                </Typography>
                 <Typography>{selectedNorma.ambito_aplicacion}</Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" color="textSecondary">Estado</Typography>
-                <Chip size="small" label={selectedNorma.estado} color={getEstadoColor(selectedNorma.estado)} />
+                <Typography variant="subtitle2" color="textSecondary">
+                  Estado
+                </Typography>
+                <Chip
+                  size="small"
+                  label={selectedNorma.estado}
+                  color={getEstadoColor(selectedNorma.estado)}
+                />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" color="textSecondary">Clasificación</Typography>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Clasificación
+                </Typography>
                 <Typography>{selectedNorma.clasificacion_norma}</Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" color="textSecondary">Tema General</Typography>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Tema General
+                </Typography>
                 <Typography>{selectedNorma.tema_general}</Typography>
               </Grid>
               {selectedNorma.subtema_riesgo_especifico && (
                 <Grid size={{ xs: 12 }}>
-                  <Typography variant="subtitle2" color="textSecondary">Subtema / Riesgo Específico</Typography>
-                  <Typography>{selectedNorma.subtema_riesgo_especifico}</Typography>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Subtema / Riesgo Específico
+                  </Typography>
+                  <Typography>
+                    {selectedNorma.subtema_riesgo_especifico}
+                  </Typography>
                 </Grid>
               )}
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" color="textSecondary">Artículo</Typography>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Artículo
+                </Typography>
                 <Typography>{selectedNorma.articulo || "Todo"}</Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" color="textSecondary">Expedida Por</Typography>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Expedida Por
+                </Typography>
                 <Typography>{selectedNorma.expedida_por || "-"}</Typography>
               </Grid>
               {selectedNorma.fecha_expedicion && (
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <Typography variant="subtitle2" color="textSecondary">Fecha de Expedición</Typography>
-                  <Typography>{new Date(selectedNorma.fecha_expedicion).toLocaleDateString()}</Typography>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Fecha de Expedición
+                  </Typography>
+                  <Typography>
+                    {new Date(
+                      selectedNorma.fecha_expedicion,
+                    ).toLocaleDateString()}
+                  </Typography>
                 </Grid>
               )}
               {selectedNorma.descripcion_norma && (
                 <Grid size={{ xs: 12 }}>
-                  <Typography variant="subtitle2" color="textSecondary">Descripción de la Norma</Typography>
-                  <Typography sx={{ whiteSpace: "pre-wrap" }}>{selectedNorma.descripcion_norma}</Typography>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Descripción de la Norma
+                  </Typography>
+                  <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                    {selectedNorma.descripcion_norma}
+                  </Typography>
                 </Grid>
               )}
               {selectedNorma.descripcion_articulo_exigencias && (
                 <Grid size={{ xs: 12 }}>
-                  <Typography variant="subtitle2" color="textSecondary">Exigencias / Descripción del Artículo</Typography>
-                  <Paper sx={{ p: 2, bgcolor: "grey.50", maxHeight: 200, overflow: "auto" }}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Exigencias / Descripción del Artículo
+                  </Typography>
+                  <Paper
+                    sx={{
+                      p: 2,
+                      bgcolor: "grey.50",
+                      maxHeight: 200,
+                      overflow: "auto",
+                    }}
+                  >
                     <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
                       {selectedNorma.descripcion_articulo_exigencias}
                     </Typography>
@@ -468,25 +566,71 @@ const MatrizLegalNormas: React.FC = () => {
               )}
               {selectedNorma.info_adicional && (
                 <Grid size={{ xs: 12 }}>
-                  <Typography variant="subtitle2" color="textSecondary">Información Adicional</Typography>
-                  <Typography variant="body2">{selectedNorma.info_adicional}</Typography>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Información Adicional
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedNorma.info_adicional}
+                  </Typography>
                 </Grid>
               )}
               <Grid size={{ xs: 12 }}>
-                <Typography variant="subtitle2" color="textSecondary">Aplicabilidad</Typography>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Aplicabilidad
+                </Typography>
                 <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
-                  {selectedNorma.aplica_general && <Chip size="small" label="General" color="primary" />}
-                  {selectedNorma.aplica_teletrabajo && <Chip size="small" label="Teletrabajo" variant="outlined" />}
-                  {selectedNorma.aplica_trabajo_alturas && <Chip size="small" label="Alturas" variant="outlined" />}
-                  {selectedNorma.aplica_espacios_confinados && <Chip size="small" label="Esp. Confinados" variant="outlined" />}
-                  {selectedNorma.aplica_sustancias_quimicas && <Chip size="small" label="Químicos" variant="outlined" />}
-                  {selectedNorma.aplica_conductores && <Chip size="small" label="Conductores" variant="outlined" />}
-                  {selectedNorma.aplica_riesgo_electrico && <Chip size="small" label="R. Eléctrico" variant="outlined" />}
-                  {selectedNorma.aplica_riesgo_biologico && <Chip size="small" label="R. Biológico" variant="outlined" />}
-                  {selectedNorma.aplica_trabajo_nocturno && <Chip size="small" label="Nocturno" variant="outlined" />}
-                  {selectedNorma.aplica_menores_edad && <Chip size="small" label="Menores" variant="outlined" />}
-                  {selectedNorma.aplica_mujeres_embarazadas && <Chip size="small" label="Embarazadas" variant="outlined" />}
-                  {selectedNorma.aplica_trabajo_administrativo && <Chip size="small" label="Administrativo" variant="outlined" />}
+                  {selectedNorma.aplica_general && (
+                    <Chip size="small" label="General" color="primary" />
+                  )}
+                  {selectedNorma.aplica_teletrabajo && (
+                    <Chip size="small" label="Teletrabajo" variant="outlined" />
+                  )}
+                  {selectedNorma.aplica_trabajo_alturas && (
+                    <Chip size="small" label="Alturas" variant="outlined" />
+                  )}
+                  {selectedNorma.aplica_espacios_confinados && (
+                    <Chip
+                      size="small"
+                      label="Esp. Confinados"
+                      variant="outlined"
+                    />
+                  )}
+                  {selectedNorma.aplica_sustancias_quimicas && (
+                    <Chip size="small" label="Químicos" variant="outlined" />
+                  )}
+                  {selectedNorma.aplica_conductores && (
+                    <Chip size="small" label="Conductores" variant="outlined" />
+                  )}
+                  {selectedNorma.aplica_riesgo_electrico && (
+                    <Chip
+                      size="small"
+                      label="R. Eléctrico"
+                      variant="outlined"
+                    />
+                  )}
+                  {selectedNorma.aplica_riesgo_biologico && (
+                    <Chip
+                      size="small"
+                      label="R. Biológico"
+                      variant="outlined"
+                    />
+                  )}
+                  {selectedNorma.aplica_trabajo_nocturno && (
+                    <Chip size="small" label="Nocturno" variant="outlined" />
+                  )}
+                  {selectedNorma.aplica_menores_edad && (
+                    <Chip size="small" label="Menores" variant="outlined" />
+                  )}
+                  {selectedNorma.aplica_mujeres_embarazadas && (
+                    <Chip size="small" label="Embarazadas" variant="outlined" />
+                  )}
+                  {selectedNorma.aplica_trabajo_administrativo && (
+                    <Chip
+                      size="small"
+                      label="Administrativo"
+                      variant="outlined"
+                    />
+                  )}
                 </Box>
               </Grid>
             </Grid>

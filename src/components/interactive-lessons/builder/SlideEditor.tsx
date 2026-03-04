@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -21,27 +21,21 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Radio,
-  RadioGroup,
+  // RadioGroup,
   Chip,
-} from '@mui/material';
-import {
-  ExpandMore,
-  Add,
-  Delete,
-  CheckCircle,
-} from '@mui/icons-material';
+} from "@mui/material";
+import { ExpandMore, Add, Delete, CheckCircle } from "@mui/icons-material";
 import {
   LessonSlide,
   LessonSlideUpdate,
-  SlideContentType,
-  InlineQuizCreate,
+  // InlineQuizCreate,
   InlineQuizAnswerCreate,
   InlineQuestionType,
   TextContent,
   ImageContent,
   VideoContent,
   TextImageContent,
-} from '../../../types/interactiveLesson';
+} from "../../../types/interactiveLesson";
 
 interface SlideEditorProps {
   slide: LessonSlide;
@@ -49,22 +43,28 @@ interface SlideEditorProps {
 }
 
 const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
-  const [title, setTitle] = useState(slide.title || '');
+  const [title, setTitle] = useState(slide.title || "");
   const [content, setContent] = useState(slide.content);
   const [isRequired, setIsRequired] = useState(slide.is_required);
-  const [notes, setNotes] = useState(slide.notes || '');
+  const [notes, setNotes] = useState(slide.notes || "");
 
   // Quiz state
   const [hasQuiz, setHasQuiz] = useState(!!slide.inline_quiz);
-  const [quizQuestion, setQuizQuestion] = useState(slide.inline_quiz?.question_text || '');
+  const [quizQuestion, setQuizQuestion] = useState(
+    slide.inline_quiz?.question_text || "",
+  );
   const [quizType, setQuizType] = useState<InlineQuestionType>(
-    slide.inline_quiz?.question_type || 'multiple_choice'
+    slide.inline_quiz?.question_type || "multiple_choice",
   );
   const [quizPoints, setQuizPoints] = useState(slide.inline_quiz?.points || 1);
-  const [quizExplanation, setQuizExplanation] = useState(slide.inline_quiz?.explanation || '');
-  const [quizRequired, setQuizRequired] = useState(slide.inline_quiz?.required_to_continue || false);
+  const [quizExplanation, setQuizExplanation] = useState(
+    slide.inline_quiz?.explanation || "",
+  );
+  const [quizRequired, setQuizRequired] = useState(
+    slide.inline_quiz?.required_to_continue || false,
+  );
   const [quizShowFeedback, setQuizShowFeedback] = useState(
-    slide.inline_quiz?.show_feedback_immediately ?? true
+    slide.inline_quiz?.show_feedback_immediately ?? true,
   );
   const [quizAnswers, setQuizAnswers] = useState<InlineQuizAnswerCreate[]>(
     slide.inline_quiz?.answers.map((a) => ({
@@ -73,23 +73,23 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
       order_index: a.order_index,
       explanation: a.explanation,
     })) || [
-      { answer_text: '', is_correct: true, order_index: 0 },
-      { answer_text: '', is_correct: false, order_index: 1 },
-    ]
+      { answer_text: "", is_correct: true, order_index: 0 },
+      { answer_text: "", is_correct: false, order_index: 1 },
+    ],
   );
 
   // Reset state when slide changes
   useEffect(() => {
-    setTitle(slide.title || '');
+    setTitle(slide.title || "");
     setContent(slide.content);
     setIsRequired(slide.is_required);
-    setNotes(slide.notes || '');
+    setNotes(slide.notes || "");
     setHasQuiz(!!slide.inline_quiz);
     if (slide.inline_quiz) {
       setQuizQuestion(slide.inline_quiz.question_text);
       setQuizType(slide.inline_quiz.question_type);
       setQuizPoints(slide.inline_quiz.points);
-      setQuizExplanation(slide.inline_quiz.explanation || '');
+      setQuizExplanation(slide.inline_quiz.explanation || "");
       setQuizRequired(slide.inline_quiz.required_to_continue);
       setQuizShowFeedback(slide.inline_quiz.show_feedback_immediately);
       setQuizAnswers(
@@ -98,20 +98,21 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
           is_correct: a.is_correct,
           order_index: a.order_index,
           explanation: a.explanation,
-        }))
+        })),
       );
     } else {
-      setQuizQuestion('');
-      setQuizType('multiple_choice');
+      setQuizQuestion("");
+      setQuizType("multiple_choice");
       setQuizPoints(1);
-      setQuizExplanation('');
+      setQuizExplanation("");
       setQuizRequired(false);
       setQuizShowFeedback(true);
       setQuizAnswers([
-        { answer_text: '', is_correct: true, order_index: 0 },
-        { answer_text: '', is_correct: false, order_index: 1 },
+        { answer_text: "", is_correct: true, order_index: 0 },
+        { answer_text: "", is_correct: false, order_index: 1 },
       ]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slide.id]);
 
   const handleSave = () => {
@@ -144,7 +145,7 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
   const handleAddAnswer = () => {
     setQuizAnswers([
       ...quizAnswers,
-      { answer_text: '', is_correct: false, order_index: quizAnswers.length },
+      { answer_text: "", is_correct: false, order_index: quizAnswers.length },
     ]);
   };
 
@@ -154,80 +155,82 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
 
   const handleAnswerChange = (index: number, field: string, value: unknown) => {
     setQuizAnswers(
-      quizAnswers.map((a, i) => (i === index ? { ...a, [field]: value } : a))
+      quizAnswers.map((a, i) => (i === index ? { ...a, [field]: value } : a)),
     );
   };
 
   const handleSetCorrectAnswer = (index: number) => {
     setQuizAnswers(
-      quizAnswers.map((a, i) => ({ ...a, is_correct: i === index }))
+      quizAnswers.map((a, i) => ({ ...a, is_correct: i === index })),
     );
   };
 
   const renderContentEditor = () => {
     switch (slide.slide_type) {
-      case 'text':
+      case "text":
         return (
           <TextField
             label="Contenido HTML"
             multiline
             rows={10}
             fullWidth
-            value={(content as TextContent)?.html || ''}
-            onChange={(e) => handleContentChange('html', e.target.value)}
+            value={(content as TextContent)?.html || ""}
+            onChange={(e) => handleContentChange("html", e.target.value)}
             helperText="Puedes usar HTML básico para formatear el texto"
           />
         );
 
-      case 'image':
+      case "image":
         return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <TextField
               label="URL de la imagen"
               fullWidth
-              value={(content as ImageContent)?.url || ''}
-              onChange={(e) => handleContentChange('url', e.target.value)}
+              value={(content as ImageContent)?.url || ""}
+              onChange={(e) => handleContentChange("url", e.target.value)}
             />
             {(content as ImageContent)?.url && (
-              <Box sx={{ textAlign: 'center' }}>
+              <Box sx={{ textAlign: "center" }}>
                 <img
                   src={(content as ImageContent).url}
                   alt="Preview"
-                  style={{ maxWidth: '100%', maxHeight: 300 }}
+                  style={{ maxWidth: "100%", maxHeight: 300 }}
                 />
               </Box>
             )}
             <TextField
               label="Texto alternativo"
               fullWidth
-              value={(content as ImageContent)?.alt_text || ''}
-              onChange={(e) => handleContentChange('alt_text', e.target.value)}
+              value={(content as ImageContent)?.alt_text || ""}
+              onChange={(e) => handleContentChange("alt_text", e.target.value)}
             />
             <TextField
               label="Pie de imagen"
               fullWidth
-              value={(content as ImageContent)?.caption || ''}
-              onChange={(e) => handleContentChange('caption', e.target.value)}
+              value={(content as ImageContent)?.caption || ""}
+              onChange={(e) => handleContentChange("caption", e.target.value)}
             />
           </Box>
         );
 
-      case 'video':
+      case "video":
         return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <TextField
               label="URL del video"
               fullWidth
-              value={(content as VideoContent)?.url || ''}
-              onChange={(e) => handleContentChange('url', e.target.value)}
+              value={(content as VideoContent)?.url || ""}
+              onChange={(e) => handleContentChange("url", e.target.value)}
               helperText="YouTube, Vimeo o URL directa"
             />
             <FormControl fullWidth>
               <InputLabel>Proveedor</InputLabel>
               <Select
-                value={(content as VideoContent)?.provider || 'youtube'}
+                value={(content as VideoContent)?.provider || "youtube"}
                 label="Proveedor"
-                onChange={(e) => handleContentChange('provider', e.target.value)}
+                onChange={(e) =>
+                  handleContentChange("provider", e.target.value)
+                }
               >
                 <MenuItem value="youtube">YouTube</MenuItem>
                 <MenuItem value="vimeo">Vimeo</MenuItem>
@@ -238,7 +241,9 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
               control={
                 <Switch
                   checked={(content as VideoContent)?.autoplay || false}
-                  onChange={(e) => handleContentChange('autoplay', e.target.checked)}
+                  onChange={(e) =>
+                    handleContentChange("autoplay", e.target.checked)
+                  }
                 />
               }
               label="Reproducir automáticamente"
@@ -246,29 +251,29 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
           </Box>
         );
 
-      case 'text_image':
+      case "text_image":
         return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <TextField
               label="Texto"
               multiline
               rows={4}
               fullWidth
-              value={(content as TextImageContent)?.text || ''}
-              onChange={(e) => handleContentChange('text', e.target.value)}
+              value={(content as TextImageContent)?.text || ""}
+              onChange={(e) => handleContentChange("text", e.target.value)}
             />
             <TextField
               label="URL de la imagen"
               fullWidth
-              value={(content as TextImageContent)?.image_url || ''}
-              onChange={(e) => handleContentChange('image_url', e.target.value)}
+              value={(content as TextImageContent)?.image_url || ""}
+              onChange={(e) => handleContentChange("image_url", e.target.value)}
             />
             <FormControl fullWidth>
               <InputLabel>Disposición</InputLabel>
               <Select
-                value={(content as TextImageContent)?.layout || 'left'}
+                value={(content as TextImageContent)?.layout || "left"}
                 label="Disposición"
-                onChange={(e) => handleContentChange('layout', e.target.value)}
+                onChange={(e) => handleContentChange("layout", e.target.value)}
               >
                 <MenuItem value="left">Imagen a la izquierda</MenuItem>
                 <MenuItem value="right">Imagen a la derecha</MenuItem>
@@ -290,9 +295,9 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
 
   return (
     <Paper sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
         {/* Title and Settings */}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
           <TextField
             label="Título del slide"
             value={title}
@@ -310,7 +315,11 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
           />
         </Box>
 
-        <Chip label={slide.slide_type} size="small" sx={{ alignSelf: 'flex-start' }} />
+        <Chip
+          label={slide.slide_type}
+          size="small"
+          sx={{ alignSelf: "flex-start" }}
+        />
 
         <Divider />
 
@@ -321,12 +330,15 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
         {renderContentEditor()}
 
         {/* Quiz Section */}
-        <Accordion expanded={hasQuiz} onChange={(_, expanded) => setHasQuiz(expanded)}>
+        <Accordion
+          expanded={hasQuiz}
+          onChange={(_, expanded) => setHasQuiz(expanded)}
+        >
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Typography>Quiz Integrado</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <TextField
                 label="Pregunta"
                 multiline
@@ -341,7 +353,9 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
                 <Select
                   value={quizType}
                   label="Tipo de pregunta"
-                  onChange={(e) => setQuizType(e.target.value as InlineQuestionType)}
+                  onChange={(e) =>
+                    setQuizType(e.target.value as InlineQuestionType)
+                  }
                 >
                   <MenuItem value="multiple_choice">Opción múltiple</MenuItem>
                   <MenuItem value="true_false">Verdadero/Falso</MenuItem>
@@ -364,7 +378,13 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
                         fullWidth
                         size="small"
                         value={answer.answer_text}
-                        onChange={(e) => handleAnswerChange(index, 'answer_text', e.target.value)}
+                        onChange={(e) =>
+                          handleAnswerChange(
+                            index,
+                            "answer_text",
+                            e.target.value,
+                          )
+                        }
                         placeholder={`Respuesta ${index + 1}`}
                         InputProps={{
                           endAdornment: answer.is_correct && (
@@ -405,12 +425,14 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
                 onChange={(e) => setQuizExplanation(e.target.value)}
               />
 
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="Puntos"
                   type="number"
                   value={quizPoints}
-                  onChange={(e) => setQuizPoints(parseFloat(e.target.value) || 1)}
+                  onChange={(e) =>
+                    setQuizPoints(parseFloat(e.target.value) || 1)
+                  }
                   sx={{ width: 120 }}
                   inputProps={{ min: 0, step: 0.5 }}
                 />
@@ -449,7 +471,7 @@ const SlideEditor: React.FC<SlideEditorProps> = ({ slide, onUpdate }) => {
         />
 
         {/* Save Button */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
           <Button variant="contained" onClick={handleSave}>
             Guardar cambios
           </Button>

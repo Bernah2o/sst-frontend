@@ -39,8 +39,8 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   MoreVert as MoreVertIcon,
-  CheckCircle as ActivateIcon,
-  Block as DeactivateIcon,
+  // CheckCircle as ActivateIcon,
+  // Block as DeactivateIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { committeeService } from '../services/committeeService';

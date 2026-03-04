@@ -55,7 +55,7 @@ import {
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
-import PDFViewer from '../components/PDFViewerNew';
+import PDFViewer from "../components/PDFViewerNew";
 import UppercaseTextField from "../components/UppercaseTextField";
 import { getApiUrl } from "../config/env";
 import { useAuth } from "../contexts/AuthContext";
@@ -174,9 +174,9 @@ const CoursesManagement: React.FC = () => {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [editingModule, setEditingModule] =
     useState<ExtendedCourseModuleResponse | null>(null);
-  const [courseModules, setCourseModules] = useState<ExtendedCourseModuleResponse[]>(
-    []
-  );
+  const [courseModules, setCourseModules] = useState<
+    ExtendedCourseModuleResponse[]
+  >([]);
   const [moduleFormData, setModuleFormData] = useState<ModuleFormData>({
     title: "",
     description: "",
@@ -210,8 +210,6 @@ const CoursesManagement: React.FC = () => {
     content: string;
     title: string;
   }>({ type: "pdf", content: "", title: "" });
-
-
 
   // Estados para diálogos de edición
   const [openModuleEditDialog, setOpenModuleEditDialog] = useState(false);
@@ -258,15 +256,15 @@ const CoursesManagement: React.FC = () => {
   });
 
   // Estados para lecciones interactivas
-  const [moduleLessons, setModuleLessons] = useState<any[]>([]);
+  // Integrado en courseModules (interactive_lessons)
 
   // Función helper para construir URLs de previsualización
   const getPreviewUrl = (content: string): string => {
     const apiUrl = getApiUrl();
-    const baseUrl = apiUrl.replace('/api/v1', '');
-    return content.startsWith('http') 
-      ? content 
-      : `${baseUrl}/uploads/${content.replace(/^\/uploads\//, '')}`;
+    const baseUrl = apiUrl.replace("/api/v1", "");
+    return content.startsWith("http")
+      ? content
+      : `${baseUrl}/uploads/${content.replace(/^\/uploads\//, "")}`;
   };
 
   // Función para manejar la subida de archivos
@@ -280,30 +278,33 @@ const CoursesManagement: React.FC = () => {
         name: file.name,
         size: file.size,
         type: file.type,
-        url: URL.createObjectURL(file)
+        url: URL.createObjectURL(file),
       });
-      
+
       // Actualizar el tipo de material basado en el archivo
       const fileType = file.type;
       let materialType = MaterialType.PDF;
-      
-      if (fileType.startsWith('video/')) {
+
+      if (fileType.startsWith("video/")) {
         materialType = MaterialType.VIDEO;
-      } else if (fileType === 'application/pdf') {
+      } else if (fileType === "application/pdf") {
         materialType = MaterialType.PDF;
       }
-      
-      setMaterialFormData(prev => ({
+
+      setMaterialFormData((prev) => ({
         ...prev,
         material_type: materialType,
-        title: prev.title || file.name.split('.')[0] // Usar nombre del archivo como título si está vacío
+        title: prev.title || file.name.split(".")[0], // Usar nombre del archivo como título si está vacío
       }));
-      
-      showSnackbar("Archivo cargado. Complete la información y haga clic en CREAR.", "success");
+
+      showSnackbar(
+        "Archivo cargado. Complete la información y haga clic en CREAR.",
+        "success",
+      );
     } catch (error) {
       showErrorDialog(
         "Error al subir archivo",
-        "No se pudo subir el archivo. Por favor, intente nuevamente."
+        "No se pudo subir el archivo. Por favor, intente nuevamente.",
       );
       showSnackbar("Error al subir archivo", "error");
     } finally {
@@ -324,7 +325,36 @@ const CoursesManagement: React.FC = () => {
     // Monitorear cambios en selectedCourse
   }, [selectedCourse]);
 
-
+  // Función auxiliar para mapear datos del curso
+  const mapToCourse = (data: any): Course => ({
+    ...data,
+    // Campos del nuevo schema
+    id: data.id,
+    title: data.title || data.titulo || "",
+    description: data.description || data.descripcion || "",
+    course_type: data.course_type || CourseType.TRAINING,
+    status: data.status || CourseStatus.DRAFT,
+    duration_hours: data.duration_hours || data.duracion_horas || 0,
+    passing_score: data.passing_score || 70.0,
+    max_attempts: data.max_attempts || 3,
+    is_mandatory: data.is_mandatory || false,
+    thumbnail: data.thumbnail || "",
+    expires_at: data.expires_at || "",
+    order_index: data.order_index || 0,
+    created_by: data.created_by,
+    created_at: data.created_at || "",
+    updated_at: data.updated_at || "",
+    published_at: data.published_at || "",
+    modules: data.modules || [],
+    // Campos legacy para compatibilidad
+    titulo: data.title || data.titulo || "",
+    descripcion: data.description || data.descripcion || "",
+    duracion_horas: data.duration_hours || data.duracion_horas || 0,
+    fecha_inicio: data.created_at || "",
+    fecha_fin: data.expires_at || "",
+    activo: data.status === "published",
+    fecha_creacion: data.created_at || "",
+  });
 
   const fetchCourses = useCallback(async () => {
     try {
@@ -337,43 +367,18 @@ const CoursesManagement: React.FC = () => {
         },
       });
       // Mapear campos del backend a campos legacy del frontend
-      const mappedCourses = (response.data.items || []).map((course: any) => ({
-        ...course,
-        // Campos del nuevo schema
-        id: course.id,
-        title: course.title || "",
-        description: course.description || "",
-        course_type: course.course_type || CourseType.TRAINING,
-        status: course.status || CourseStatus.DRAFT,
-        duration_hours: course.duration_hours || 0,
-        passing_score: course.passing_score || 70.0,
-        max_attempts: course.max_attempts || 3,
-        is_mandatory: course.is_mandatory || false,
-        thumbnail: course.thumbnail || "",
-        expires_at: course.expires_at || "",
-        order_index: course.order_index || 0,
-        created_by: course.created_by,
-        created_at: course.created_at || "",
-        updated_at: course.updated_at || "",
-        published_at: course.published_at || "",
-        modules: course.modules || [],
-        // Campos legacy para compatibilidad
-        titulo: course.title || "",
-        descripcion: course.description || "",
-        duracion_horas: course.duration_hours || 0,
-        fecha_inicio: course.created_at || "",
-        fecha_fin: course.expires_at || "",
-        activo: course.status === "published",
-        fecha_creacion: course.created_at || "",
-      }));
+      const mappedCourses = (response.data.items || []).map(mapToCourse);
       setCourses(mappedCourses);
       setTotalCourses(response.data.total || 0);
     } catch (error) {
       showErrorDialog(
         "Error al cargar cursos",
-        "No se pudieron cargar los cursos. Por favor, verifique su conexión e intente nuevamente."
+        "No se pudieron cargar los cursos. Por favor, verifique su conexión e intente nuevamente.",
       );
-      showSnackbar("No se pudieron cargar los cursos. Verifique su conexión e intente nuevamente.", "error");
+      showSnackbar(
+        "No se pudieron cargar los cursos. Verifique su conexión e intente nuevamente.",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -390,31 +395,23 @@ const CoursesManagement: React.FC = () => {
         },
       });
       // Mapear los datos de inscripciones para asegurar que los campos del curso estén disponibles
-      const mappedEnrollments = (response.data.items || []).map((enrollment: any) => ({
-        ...enrollment,
-        course: enrollment.course ? {
-          ...enrollment.course,
-          // Asegurar que los campos title y description estén disponibles
-          title: enrollment.course.title || enrollment.course.titulo || "",
-          description: enrollment.course.description || enrollment.course.descripcion || "",
-          // Mapear otros campos importantes
-          duration_hours: enrollment.course.duration_hours || enrollment.course.duracion_horas || 0,
-          course_type: enrollment.course.course_type || "training",
-          status: enrollment.course.status || "draft",
-          // Campos legacy para compatibilidad
-          titulo: enrollment.course.title || enrollment.course.titulo || "",
-          descripcion: enrollment.course.description || enrollment.course.descripcion || "",
-          duracion_horas: enrollment.course.duration_hours || enrollment.course.duracion_horas || 0,
-        } : null
-      }));
+      const mappedEnrollments = (response.data.items || []).map(
+        (enrollment: any) => ({
+          ...enrollment,
+          course: enrollment.course ? mapToCourse(enrollment.course) : null,
+        }),
+      );
       setEnrolledCourses(mappedEnrollments);
       setTotalCourses(response.data.total || 0);
     } catch (error) {
       showErrorDialog(
         "Error al cargar mis cursos",
-        "No se pudieron cargar sus cursos inscritos. Por favor, verifique su conexión e intente nuevamente."
+        "No se pudieron cargar sus cursos inscritos. Por favor, verifique su conexión e intente nuevamente.",
       );
-      showSnackbar("No se pudieron cargar sus cursos inscritos. Verifique su conexión e intente nuevamente.", "error");
+      showSnackbar(
+        "No se pudieron cargar sus cursos inscritos. Verifique su conexión e intente nuevamente.",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -474,13 +471,13 @@ const CoursesManagement: React.FC = () => {
       fecha_inicio: course.fecha_inicio
         ? course.fecha_inicio.split("T")[0]
         : course.created_at
-        ? course.created_at.split("T")[0]
-        : "",
+          ? course.created_at.split("T")[0]
+          : "",
       fecha_fin: course.fecha_fin
         ? course.fecha_fin.split("T")[0]
         : course.expires_at
-        ? course.expires_at.split("T")[0]
-        : "",
+          ? course.expires_at.split("T")[0]
+          : "",
       activo:
         course.activo !== undefined
           ? course.activo
@@ -489,11 +486,50 @@ const CoursesManagement: React.FC = () => {
     setOpenDialog(true);
   };
 
+  const handleSaveCourseAfterConfirm = async () => {
+    try {
+      // Mapear datos del formulario al formato del backend
+      const backendData = {
+        title: formData.title || formData.titulo,
+        description: formData.description || formData.descripcion,
+        course_type: formData.course_type,
+        status: formData.status,
+        duration_hours: formData.duration_hours || formData.duracion_horas,
+        passing_score: formData.passing_score,
+        max_attempts: formData.max_attempts,
+        is_mandatory: formData.is_mandatory,
+        thumbnail: formData.thumbnail,
+        expires_at: formData.expires_at
+          ? new Date(formData.expires_at).toISOString()
+          : formData.fecha_fin
+            ? new Date(formData.fecha_fin).toISOString()
+            : null,
+        order_index: formData.order_index,
+      };
+
+      if (editingCourse) {
+        await api.put(`/courses/${editingCourse.id}`, backendData);
+        showSnackbar("Curso actualizado exitosamente", "success");
+      } else {
+        await api.post("/courses", backendData);
+        showSnackbar("Curso creado exitosamente", "success");
+      }
+      setOpenDialog(false);
+      fetchCourses();
+    } catch (error) {
+      showErrorDialog(
+        "Error al guardar curso",
+        "No se pudo guardar el curso. Por favor, verifique los datos ingresados e intente nuevamente.",
+      );
+      showSnackbar("Error al guardar curso", "error");
+    }
+  };
+
   const handleSaveCourse = async () => {
     // Validaciones para cursos que requieren encuesta, evaluación y certificación
     const requiresFullProcess =
       [CourseType.INDUCTION, CourseType.REINDUCTION].includes(
-        formData.course_type
+        formData.course_type,
       ) || formData.is_mandatory;
 
     if (requiresFullProcess && formData.status === CourseStatus.PUBLISHED) {
@@ -501,13 +537,13 @@ const CoursesManagement: React.FC = () => {
       if (editingCourse?.id) {
         try {
           const response = await api.get(
-            `/courses/${editingCourse.id}/validation`
+            `/courses/${editingCourse.id}/validation`,
           );
           const validation = response.data;
 
           if (!validation.can_publish) {
             const missingItems = validation.missing_requirements.filter(
-              (item: string | null) => item !== null
+              (item: string | null) => item !== null,
             );
             const missingText = missingItems
               .map((item: string) => {
@@ -539,7 +575,7 @@ const CoursesManagement: React.FC = () => {
           warningMessage + "\n\n¿Desea continuar con la publicación?",
           () => {
             handleSaveCourseAfterConfirm();
-          }
+          },
         );
         return;
       }
@@ -547,45 +583,6 @@ const CoursesManagement: React.FC = () => {
 
     // Si no requiere confirmación, guardar directamente
     await handleSaveCourseAfterConfirm();
-  };
-
-  const handleSaveCourseAfterConfirm = async () => {
-    try {
-      // Mapear datos del formulario al formato del backend
-      const backendData = {
-        title: formData.title || formData.titulo,
-        description: formData.description || formData.descripcion,
-        course_type: formData.course_type,
-        status: formData.status,
-        duration_hours: formData.duration_hours || formData.duracion_horas,
-        passing_score: formData.passing_score,
-        max_attempts: formData.max_attempts,
-        is_mandatory: formData.is_mandatory,
-        thumbnail: formData.thumbnail,
-        expires_at: formData.expires_at
-          ? new Date(formData.expires_at).toISOString()
-          : formData.fecha_fin
-          ? new Date(formData.fecha_fin).toISOString()
-          : null,
-        order_index: formData.order_index,
-      };
-
-      if (editingCourse) {
-        await api.put(`/courses/${editingCourse.id}`, backendData);
-        showSnackbar("Curso actualizado exitosamente", "success");
-      } else {
-        await api.post("/courses", backendData);
-        showSnackbar("Curso creado exitosamente", "success");
-      }
-      setOpenDialog(false);
-      fetchCourses();
-    } catch (error) {
-      showErrorDialog(
-        "Error al guardar curso",
-        "No se pudo guardar el curso. Por favor, verifique los datos ingresados e intente nuevamente."
-      );
-      showSnackbar("Error al guardar curso", "error");
-    }
   };
 
   const handleDeleteCourse = (course: Course) => {
@@ -614,7 +611,7 @@ const CoursesManagement: React.FC = () => {
       } else {
         showErrorDialog(
           "Error al eliminar curso",
-          "No se pudo eliminar el curso. Por favor, intente nuevamente."
+          "No se pudo eliminar el curso. Por favor, intente nuevamente.",
         );
         showSnackbar("Error al eliminar curso", "error");
       }
@@ -630,7 +627,7 @@ const CoursesManagement: React.FC = () => {
         `/courses/${course.id}/attendance-report`,
         {
           responseType: "blob",
-        }
+        },
       );
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -642,7 +639,7 @@ const CoursesManagement: React.FC = () => {
           course.titulo ||
           course.title ||
           "curso"
-        ).replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`
+        ).replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`,
       );
       document.body.appendChild(link);
       link.click();
@@ -654,25 +651,25 @@ const CoursesManagement: React.FC = () => {
       if (error.response?.status === 400) {
         showErrorDialog(
           "Reporte no disponible",
-          "Los reportes de asistencia solo están disponibles para cursos OPCIONALES y de TRAINING"
+          "Los reportes de asistencia solo están disponibles para cursos OPCIONALES y de TRAINING",
         );
         showSnackbar(
           "Los reportes de asistencia solo están disponibles para cursos OPCIONALES y de TRAINING",
-          "error"
+          "error",
         );
       } else if (error.response?.status === 404) {
         showErrorDialog(
           "Sin datos para el reporte",
-          "No se encontraron trabajadores inscritos en este curso"
+          "No se encontraron trabajadores inscritos en este curso",
         );
         showSnackbar(
           "No se encontraron trabajadores inscritos en este curso",
-          "error"
+          "error",
         );
       } else {
         showErrorDialog(
           "Error al generar reporte",
-          "No se pudo generar el reporte de asistencia. Por favor, intente nuevamente."
+          "No se pudo generar el reporte de asistencia. Por favor, intente nuevamente.",
         );
         showSnackbar("Error al generar el reporte de asistencia", "error");
       }
@@ -697,7 +694,7 @@ const CoursesManagement: React.FC = () => {
   const showConfirmDialog = (
     title: string,
     message: string,
-    onConfirm: () => void
+    onConfirm: () => void,
   ) => {
     setConfirmDialog({ open: true, title, message, onConfirm });
   };
@@ -711,7 +708,7 @@ const CoursesManagement: React.FC = () => {
     } catch (error) {
       showErrorDialog(
         "Módulos no disponibles",
-        "No se pudieron cargar los módulos del curso. Verifique su conexión e intente nuevamente."
+        "No se pudieron cargar los módulos del curso. Verifique su conexión e intente nuevamente.",
       );
       setCourseModules([]);
     }
@@ -721,12 +718,24 @@ const CoursesManagement: React.FC = () => {
   const fetchModuleLessons = async (moduleId: number) => {
     try {
       const response = await api.get(`/interactive-lessons`, {
-        params: { module_id: moduleId }
+        params: { module_id: moduleId },
       });
-      setModuleLessons(response.data.items || []);
+      setCourseModules((prevModules) =>
+        prevModules.map((module) =>
+          module.id === moduleId
+            ? { ...module, interactive_lessons: response.data.items || [] }
+            : module,
+        ),
+      );
     } catch (error) {
       console.error("Error fetching module lessons:", error);
-      setModuleLessons([]);
+      setCourseModules((prevModules) =>
+        prevModules.map((module) =>
+          module.id === moduleId
+            ? { ...module, interactive_lessons: [] }
+            : module,
+        ),
+      );
     }
   };
 
@@ -746,7 +755,7 @@ const CoursesManagement: React.FC = () => {
         } catch (error) {
           showSnackbar("Error al eliminar la lección", "error");
         }
-      }
+      },
     );
   };
 
@@ -803,7 +812,7 @@ const CoursesManagement: React.FC = () => {
     } catch (error) {
       showErrorDialog(
         "Error al guardar módulo",
-        "No se pudo guardar el módulo. Por favor, verifique los datos ingresados e intente nuevamente."
+        "No se pudo guardar el módulo. Por favor, verifique los datos ingresados e intente nuevamente.",
       );
       showSnackbar("Error al guardar módulo", "error");
     }
@@ -827,7 +836,7 @@ const CoursesManagement: React.FC = () => {
     } catch (error) {
       showErrorDialog(
         "Error al eliminar módulo",
-        "No se pudo eliminar el módulo. Por favor, intente nuevamente."
+        "No se pudo eliminar el módulo. Por favor, intente nuevamente.",
       );
       showSnackbar("Error al eliminar módulo", "error");
     } finally {
@@ -854,13 +863,13 @@ const CoursesManagement: React.FC = () => {
       for (const module of modules) {
         try {
           const materialsResponse = await api.get(
-            `/courses/modules/${module.id}/materials`
+            `/courses/modules/${module.id}/materials`,
           );
           allMaterials.push(...materialsResponse.data);
         } catch (error) {
           console.warn(
             `Error loading materials for module ${module.id}:`,
-            error
+            error,
           );
         }
       }
@@ -870,7 +879,7 @@ const CoursesManagement: React.FC = () => {
     } catch (error) {
       showErrorDialog(
         "Materiales no disponibles",
-        "No se pudieron cargar los materiales del curso. Verifique su conexión e intente nuevamente."
+        "No se pudieron cargar los materiales del curso. Verifique su conexión e intente nuevamente.",
       );
       setModuleMaterials([]);
       setCourseModules([]);
@@ -881,20 +890,22 @@ const CoursesManagement: React.FC = () => {
   // Funciones para gestión de materiales de módulo
   const handleOpenMaterials = async (module: CourseModule) => {
     setSelectedModule(module);
-    
+
     // Buscar y establecer el curso correspondiente al módulo
-    const modulesCourse = courses.find(course => course.id === module.course_id);
+    const modulesCourse = courses.find(
+      (course) => course.id === module.course_id,
+    );
     if (modulesCourse) {
       setSelectedCourse(modulesCourse);
     }
-    
+
     try {
       const response = await api.get(`/courses/modules/${module.id}/materials`);
       setModuleMaterials(response.data);
     } catch (error) {
       showErrorDialog(
         "Materiales no disponibles",
-        "No se pudieron cargar los materiales del módulo. Verifique su conexión e intente nuevamente."
+        "No se pudieron cargar los materiales del módulo. Verifique su conexión e intente nuevamente.",
       );
       setModuleMaterials([]);
     }
@@ -904,10 +915,13 @@ const CoursesManagement: React.FC = () => {
   const handleCreateMaterial = () => {
     // Validar que selectedModule y selectedCourse estén establecidos
     if (!selectedModule || !selectedCourse) {
-      showSnackbar("Debe seleccionar un módulo y curso. Intente abrir los materiales del módulo primero.", "error");
+      showSnackbar(
+        "Debe seleccionar un módulo y curso. Intente abrir los materiales del módulo primero.",
+        "error",
+      );
       return;
     }
-    
+
     setEditingMaterial(null);
     setMaterialFormData({
       title: "",
@@ -926,16 +940,20 @@ const CoursesManagement: React.FC = () => {
     // Si no están establecidos, buscarlos basándose en el material
     if (!selectedModule || !selectedCourse) {
       // Buscar el módulo que contiene este material
-      const foundModule = courseModules.find((module: CourseModuleResponse) => 
-        module.materials?.some((mat: CourseMaterialResponse) => mat.id === material.id)
+      const foundModule = courseModules.find((module: CourseModuleResponse) =>
+        module.materials?.some(
+          (mat: CourseMaterialResponse) => mat.id === material.id,
+        ),
       );
-      
+
       if (foundModule && selectedCourse) {
         setSelectedModule(foundModule);
       } else if (foundModule && courses.length > 0) {
         // Si no hay curso seleccionado, buscar el curso que contiene este módulo
-        const foundCourse = courses.find((course: Course) => 
-          course.modules?.some((mod: CourseModuleResponse) => mod.id === foundModule.id)
+        const foundCourse = courses.find((course: Course) =>
+          course.modules?.some(
+            (mod: CourseModuleResponse) => mod.id === foundModule.id,
+          ),
         );
         if (foundCourse) {
           setSelectedCourse(foundCourse);
@@ -943,7 +961,7 @@ const CoursesManagement: React.FC = () => {
         }
       }
     }
-    
+
     setEditingMaterial(material);
     setMaterialFormData({
       title: material.title,
@@ -986,7 +1004,7 @@ const CoursesManagement: React.FC = () => {
       showSnackbar("Material marcado como completado", "success");
 
       // Actualizar el estado del material en la interfaz
-      const updatedMaterials = moduleMaterials.map(m => {
+      const updatedMaterials = moduleMaterials.map((m) => {
         if (m.id === material.id) {
           return { ...m, completed: true };
         }
@@ -997,36 +1015,48 @@ const CoursesManagement: React.FC = () => {
       // Verificar si el curso está completado después de marcar el material
       if (selectedCourse) {
         try {
-          const progressResponse = await api.get(`/progress/course/${selectedCourse.id}`);
+          const progressResponse = await api.get(
+            `/progress/course/${selectedCourse.id}`,
+          );
           const courseProgress = progressResponse.data;
-          
+
           // Si el curso está completado (100% de progreso)
           if (courseProgress.overall_progress === 100) {
             // Obtener el ID de la inscripción del usuario en este curso
             try {
-              const enrollmentResponse = await api.get(`/enrollments/my-enrollments?course_id=${selectedCourse.id}`);
+              const enrollmentResponse = await api.get(
+                `/enrollments/my-enrollments?course_id=${selectedCourse.id}`,
+              );
               const enrollments = enrollmentResponse.data.items || [];
-              
+
               if (enrollments.length > 0) {
                 const enrollmentId = enrollments[0].id;
                 // Actualizar el estado de la inscripción a completado usando el endpoint correcto
                 await api.put(`/enrollments/${enrollmentId}`, {
                   status: "COMPLETED",
-                  progress: 100
+                  progress: 100,
                 });
               } else {
-                console.error('No se encontró la inscripción para este curso');
+                console.error("No se encontró la inscripción para este curso");
               }
             } catch (enrollmentError) {
-              console.error('Error al obtener la inscripción:', enrollmentError);
+              console.error(
+                "Error al obtener la inscripción:",
+                enrollmentError,
+              );
             }
-            
-            showSnackbar("¡Curso completado! Ahora puedes acceder a la encuesta", "success");
-            
+
+            showSnackbar(
+              "¡Curso completado! Ahora puedes acceder a la encuesta",
+              "success",
+            );
+
             // Verificar si hay encuestas disponibles para este curso
-            const surveysResponse = await api.get(`/surveys/?course_id=${selectedCourse.id}`);
+            const surveysResponse = await api.get(
+              `/surveys/?course_id=${selectedCourse.id}`,
+            );
             const availableSurveys = surveysResponse.data.items || [];
-            
+
             if (availableSurveys.length > 0) {
               // Habilitar encuestas para el usuario
               await api.post(`/surveys/enable-for-user/${selectedCourse.id}`);
@@ -1040,23 +1070,27 @@ const CoursesManagement: React.FC = () => {
       // Recargar materiales para actualizar el estado completo desde el servidor
       if (selectedModule) {
         const response = await api.get(
-          `/courses/modules/${selectedModule.id}/materials`
+          `/courses/modules/${selectedModule.id}/materials`,
         );
         // Combinar los datos del servidor con el estado local actualizado
         const serverMaterials = response.data;
-        const updatedFromServer = serverMaterials.map((serverMaterial: CourseMaterial) => {
-          // Buscar si ya tenemos este material marcado como completado localmente
-          const localMaterial = updatedMaterials.find(m => m.id === serverMaterial.id);
-          if (localMaterial && localMaterial.completed) {
-            return { ...serverMaterial, completed: true };
-          }
-          return serverMaterial;
-        });
+        const updatedFromServer = serverMaterials.map(
+          (serverMaterial: CourseMaterial) => {
+            // Buscar si ya tenemos este material marcado como completado localmente
+            const localMaterial = updatedMaterials.find(
+              (m) => m.id === serverMaterial.id,
+            );
+            if (localMaterial && localMaterial.completed) {
+              return { ...serverMaterial, completed: true };
+            }
+            return serverMaterial;
+          },
+        );
         setModuleMaterials(updatedFromServer);
       } else if (selectedCourse) {
         // Si estamos viendo materiales de todo el curso, recargar todos
         const modulesResponse = await api.get(
-          `/courses/${selectedCourse.id}/modules`
+          `/courses/${selectedCourse.id}/modules`,
         );
         const modules = modulesResponse.data;
 
@@ -1064,22 +1098,26 @@ const CoursesManagement: React.FC = () => {
         for (const module of modules) {
           try {
             const materialsResponse = await api.get(
-              `/courses/modules/${module.id}/materials`
+              `/courses/modules/${module.id}/materials`,
             );
             // Combinar con el estado local actualizado
-            const moduleMats = materialsResponse.data.map((serverMaterial: CourseMaterial) => {
-              // Buscar si ya tenemos este material marcado como completado localmente
-              const localMaterial = updatedMaterials.find(m => m.id === serverMaterial.id);
-              if (localMaterial && localMaterial.completed) {
-                return { ...serverMaterial, completed: true };
-              }
-              return serverMaterial;
-            });
+            const moduleMats = materialsResponse.data.map(
+              (serverMaterial: CourseMaterial) => {
+                // Buscar si ya tenemos este material marcado como completado localmente
+                const localMaterial = updatedMaterials.find(
+                  (m) => m.id === serverMaterial.id,
+                );
+                if (localMaterial && localMaterial.completed) {
+                  return { ...serverMaterial, completed: true };
+                }
+                return serverMaterial;
+              },
+            );
             allMaterials.push(...moduleMats);
           } catch (error) {
             console.warn(
               `Error loading materials for module ${module.id}:`,
-              error
+              error,
             );
           }
         }
@@ -1093,30 +1131,33 @@ const CoursesManagement: React.FC = () => {
 
   const handleSaveMaterial = async () => {
     setSavingMaterial(true);
-    
+
     try {
       // Validación mejorada: intentar recuperar selectedModule y selectedCourse si no están disponibles
       if (!selectedModule || !selectedCourse) {
-
-      
         // Si estamos editando un material, intentar recuperar el contexto
         if (editingMaterial) {
           // Buscar el módulo que contiene este material
-          const foundModule = courseModules.find((module: CourseModuleResponse) => 
-            module.materials?.some((mat: CourseMaterialResponse) => mat.id === editingMaterial.id)
+          const foundModule = courseModules.find(
+            (module: CourseModuleResponse) =>
+              module.materials?.some(
+                (mat: CourseMaterialResponse) => mat.id === editingMaterial.id,
+              ),
           );
-          
+
           if (foundModule) {
             setSelectedModule(foundModule);
-            
+
             // Buscar el curso que contiene este módulo
             if (!selectedCourse) {
-              const foundCourse = courses.find((course: Course) => 
-                course.modules?.some((mod: CourseModuleResponse) => mod.id === foundModule.id)
+              const foundCourse = courses.find((course: Course) =>
+                course.modules?.some(
+                  (mod: CourseModuleResponse) => mod.id === foundModule.id,
+                ),
               );
               if (foundCourse) {
                 setSelectedCourse(foundCourse);
-                
+
                 // Reintentar el guardado después de establecer el contexto
                 setTimeout(() => handleSaveMaterial(), 100);
                 return;
@@ -1128,8 +1169,11 @@ const CoursesManagement: React.FC = () => {
             }
           }
         }
-        
-        showSnackbar("Error: Debe seleccionar un módulo y curso. Intente abrir los materiales del módulo primero.", "error");
+
+        showSnackbar(
+          "Error: Debe seleccionar un módulo y curso. Intente abrir los materiales del módulo primero.",
+          "error",
+        );
         setSavingMaterial(false);
         return;
       }
@@ -1138,14 +1182,20 @@ const CoursesManagement: React.FC = () => {
       if (editingMaterial) {
         // Validar que el título no esté vacío
         if (!materialFormData.title.trim()) {
-          showSnackbar("Por favor, ingresa un título para el material", "error");
+          showSnackbar(
+            "Por favor, ingresa un título para el material",
+            "error",
+          );
           setSavingMaterial(false);
           return;
         }
       } else {
         // Validar que el título no esté vacío
         if (!materialFormData.title.trim()) {
-          showSnackbar("Por favor, ingresa un título para el material", "error");
+          showSnackbar(
+            "Por favor, ingresa un título para el material",
+            "error",
+          );
           setSavingMaterial(false);
           return;
         }
@@ -1161,15 +1211,37 @@ const CoursesManagement: React.FC = () => {
         } else {
           // Para archivos PDF y VIDEO, validar que se haya subido un archivo
           if (!uploadedFileInfo || !selectedFile) {
-            showSnackbar("Por favor, sube un archivo antes de crear el material", "error");
+            showSnackbar(
+              "Por favor, sube un archivo antes de crear el material",
+              "error",
+            );
             setSavingMaterial(false);
             return;
           }
         }
       }
 
-        if (editingMaterial && editingMaterial.id) {
-          // Actualizar material existente
+      if (editingMaterial && editingMaterial.id) {
+        // Actualizar material existente
+        const materialData = {
+          title: materialFormData.title,
+          description: materialFormData.description,
+          material_type: materialFormData.material_type,
+          order_index: materialFormData.order_index,
+          is_downloadable: materialFormData.is_downloadable,
+          is_required: materialFormData.is_required,
+          file_url:
+            materialFormData.material_type === MaterialType.LINK
+              ? materialFormData.file_url
+              : undefined,
+        };
+
+        await api.put(`/courses/materials/${editingMaterial.id}`, materialData);
+        showSnackbar("Material actualizado exitosamente", "success");
+      } else {
+        // Crear nuevo material
+        if (materialFormData.material_type === MaterialType.LINK) {
+          // Para enlaces, usar la API de materiales
           const materialData = {
             title: materialFormData.title,
             description: materialFormData.description,
@@ -1177,107 +1249,20 @@ const CoursesManagement: React.FC = () => {
             order_index: materialFormData.order_index,
             is_downloadable: materialFormData.is_downloadable,
             is_required: materialFormData.is_required,
-            file_url: materialFormData.material_type === MaterialType.LINK ? materialFormData.file_url : undefined,
+            module_id: selectedModule.id,
+            file_url: materialFormData.file_url,
           };
-          
-          await api.put(`/courses/materials/${editingMaterial.id}`, materialData);
-          showSnackbar("Material actualizado exitosamente", "success");
-        } else {
-          // Crear nuevo material
-          if (materialFormData.material_type === MaterialType.LINK) {
-            // Para enlaces, usar la API de materiales
-            const materialData = {
-              title: materialFormData.title,
-              description: materialFormData.description,
-              material_type: materialFormData.material_type,
-              order_index: materialFormData.order_index,
-              is_downloadable: materialFormData.is_downloadable,
-              is_required: materialFormData.is_required,
-              module_id: selectedModule.id,
-              file_url: materialFormData.file_url,
-            };
-            
-            await api.post(`/courses/modules/${selectedModule.id}/materials`, materialData);
-            
-            showSnackbar("Material creado exitosamente", "success");
-            
-            // Recargar materiales después de crear
-            const reloadResponse = await api.get(
-              `/courses/modules/${selectedModule.id}/materials`
-            );
-            setModuleMaterials(reloadResponse.data);
 
-            // Cerrar diálogo y limpiar formulario
-            setOpenMaterialEditDialog(false);
-            setEditingMaterial(null);
-            setMaterialFormData({
-              title: "",
-              description: "",
-              material_type: MaterialType.PDF,
-              file_url: "",
-              order_index: 0,
-              is_downloadable: true,
-              is_required: true,
-            });
-            setUploadedFileInfo(null);
-            setSelectedFile(null);
-            
-            setSavingMaterial(false);
-            return; // Salir aquí para evitar continuar con la lógica de edición
-          } else {
-            // Para archivos PDF y VIDEO, usar la API de subida de archivos
-            if (!selectedFile) {
-              showSnackbar("No hay archivo seleccionado", "error");
-              setSavingMaterial(false);
-              return;
-            }
-            
-            const formData = new FormData();
-            formData.append("file", selectedFile);
-          
-            const response = await api.post(`/files/course-material/${selectedModule.id}`, formData, {
-              headers: {
-                "Content-Type": "multipart/form-data",
-              },
-            });
-            
-            // Establecer editingMaterial con el material recién creado
-            const createdMaterial = {
-              id: response.data.id,
-              module_id: selectedModule.id,
-              title: response.data.title || materialFormData.title,
-              description: response.data.description || materialFormData.description,
-              material_type: response.data.material_type,
-              file_url: response.data.file_url,
-              order_index: response.data.order_index || materialFormData.order_index,
-              is_downloadable: response.data.is_downloadable !== undefined ? response.data.is_downloadable : materialFormData.is_downloadable,
-              is_required: response.data.is_required !== undefined ? response.data.is_required : materialFormData.is_required,
-              created_at: response.data.created_at,
-              updated_at: response.data.updated_at
-            };
-            setEditingMaterial(createdMaterial);
-            
-            // Actualizar el título y descripción si es necesario
-            if (materialFormData.title !== selectedFile.name.split('.')[0] || materialFormData.description) {
-              const materialId = response.data.id;
-              
-              const updateData = {
-                title: materialFormData.title,
-                description: materialFormData.description,
-                order_index: materialFormData.order_index,
-                is_downloadable: materialFormData.is_downloadable,
-                is_required: materialFormData.is_required,
-              };
-              
-              await api.put(`/courses/materials/${materialId}`, updateData);
-            }
-          }
-          
+          await api.post(
+            `/courses/modules/${selectedModule.id}/materials`,
+            materialData,
+          );
+
           showSnackbar("Material creado exitosamente", "success");
-          
+
           // Recargar materiales después de crear
           const reloadResponse = await api.get(
-            `/courses/modules/${selectedModule.id}/materials`
+            `/courses/modules/${selectedModule.id}/materials`,
           );
           setModuleMaterials(reloadResponse.data);
 
@@ -1295,16 +1280,80 @@ const CoursesManagement: React.FC = () => {
           });
           setUploadedFileInfo(null);
           setSelectedFile(null);
-          
+
           setSavingMaterial(false);
           return; // Salir aquí para evitar continuar con la lógica de edición
+        } else {
+          // Para archivos PDF y VIDEO, usar la API de subida de archivos
+          if (!selectedFile) {
+            showSnackbar("No hay archivo seleccionado", "error");
+            setSavingMaterial(false);
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append("file", selectedFile);
+
+          const response = await api.post(
+            `/files/course-material/${selectedModule.id}`,
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            },
+          );
+
+          // Establecer editingMaterial con el material recién creado
+          const createdMaterial = {
+            id: response.data.id,
+            module_id: selectedModule.id,
+            title: response.data.title || materialFormData.title,
+            description:
+              response.data.description || materialFormData.description,
+            material_type: response.data.material_type,
+            file_url: response.data.file_url,
+            order_index:
+              response.data.order_index || materialFormData.order_index,
+            is_downloadable:
+              response.data.is_downloadable !== undefined
+                ? response.data.is_downloadable
+                : materialFormData.is_downloadable,
+            is_required:
+              response.data.is_required !== undefined
+                ? response.data.is_required
+                : materialFormData.is_required,
+            created_at: response.data.created_at,
+            updated_at: response.data.updated_at,
+          };
+          setEditingMaterial(createdMaterial);
+
+          // Actualizar el título y descripción si es necesario
+          if (
+            materialFormData.title !== selectedFile.name.split(".")[0] ||
+            materialFormData.description
+          ) {
+            const materialId = response.data.id;
+
+            const updateData = {
+              title: materialFormData.title,
+              description: materialFormData.description,
+              order_index: materialFormData.order_index,
+              is_downloadable: materialFormData.is_downloadable,
+              is_required: materialFormData.is_required,
+            };
+
+            await api.put(`/courses/materials/${materialId}`, updateData);
+          }
         }
 
-        // Recargar materiales
-        const response = await api.get(
-          `/courses/modules/${selectedModule.id}/materials`
+        showSnackbar("Material creado exitosamente", "success");
+
+        // Recargar materiales después de crear
+        const reloadResponse = await api.get(
+          `/courses/modules/${selectedModule.id}/materials`,
         );
-        setModuleMaterials(response.data);
+        setModuleMaterials(reloadResponse.data);
 
         // Cerrar diálogo y limpiar formulario
         setOpenMaterialEditDialog(false);
@@ -1320,12 +1369,35 @@ const CoursesManagement: React.FC = () => {
         });
         setUploadedFileInfo(null);
         setSelectedFile(null);
-      
+
+        setSavingMaterial(false);
+        return; // Salir aquí para evitar continuar con la lógica de edición
+      }
+
+      // Recargar materiales
+      const response = await api.get(
+        `/courses/modules/${selectedModule.id}/materials`,
+      );
+      setModuleMaterials(response.data);
+
+      // Cerrar diálogo y limpiar formulario
+      setOpenMaterialEditDialog(false);
+      setEditingMaterial(null);
+      setMaterialFormData({
+        title: "",
+        description: "",
+        material_type: MaterialType.PDF,
+        file_url: "",
+        order_index: 0,
+        is_downloadable: true,
+        is_required: true,
+      });
+      setUploadedFileInfo(null);
+      setSelectedFile(null);
     } catch (error: any) {
-      
       showErrorDialog(
         "Error al guardar material",
-        "No se pudo guardar el material. Por favor, verifique los datos ingresados e intente nuevamente."
+        "No se pudo guardar el material. Por favor, verifique los datos ingresados e intente nuevamente.",
       );
       showSnackbar("Error al guardar material", "error");
     } finally {
@@ -1345,24 +1417,26 @@ const CoursesManagement: React.FC = () => {
 
     // Validación mejorada: intentar recuperar selectedModule y selectedCourse si no están disponibles
     if (!selectedModule || !selectedCourse) {
-      
       // Buscar el módulo que contiene este material
-      const foundModule = courseModules.find((module: CourseModuleResponse) => 
-        module.materials?.some((mat: CourseMaterialResponse) => mat.id === materialToDelete.id)
+      const foundModule = courseModules.find((module: CourseModuleResponse) =>
+        module.materials?.some(
+          (mat: CourseMaterialResponse) => mat.id === materialToDelete.id,
+        ),
       );
-      
-      if (foundModule) {
 
+      if (foundModule) {
         setSelectedModule(foundModule);
-        
+
         // Buscar el curso que contiene este módulo
         if (!selectedCourse) {
-          const foundCourse = courses.find((course: Course) => 
-            course.modules?.some((mod: CourseModuleResponse) => mod.id === foundModule.id)
+          const foundCourse = courses.find((course: Course) =>
+            course.modules?.some(
+              (mod: CourseModuleResponse) => mod.id === foundModule.id,
+            ),
           );
           if (foundCourse) {
             setSelectedCourse(foundCourse);
-            
+
             // Reintentar la eliminación después de establecer el contexto
             setTimeout(() => confirmDeleteMaterial(), 100);
             return;
@@ -1373,8 +1447,11 @@ const CoursesManagement: React.FC = () => {
           return;
         }
       }
-      
-      showSnackbar("Error: No se puede eliminar el material. Intente abrir los materiales del módulo primero.", "error");
+
+      showSnackbar(
+        "Error: No se puede eliminar el material. Intente abrir los materiales del módulo primero.",
+        "error",
+      );
       return;
     }
 
@@ -1384,13 +1461,13 @@ const CoursesManagement: React.FC = () => {
 
       // Recargar materiales
       const response = await api.get(
-        `/courses/modules/${selectedModule.id}/materials`
+        `/courses/modules/${selectedModule.id}/materials`,
       );
       setModuleMaterials(response.data);
     } catch (error) {
       showErrorDialog(
         "Error al eliminar material",
-        "No se pudo eliminar el material. Por favor, intente nuevamente."
+        "No se pudo eliminar el material. Por favor, intente nuevamente.",
       );
       showSnackbar("Error al eliminar material", "error");
     } finally {
@@ -1417,13 +1494,12 @@ const CoursesManagement: React.FC = () => {
 
   // Funciones para previsualización de contenido
   const handlePreviewMaterial = (material: CourseMaterialResponse) => {
-    
     if (material.material_type === MaterialType.PDF && material.file_url) {
       const newPreviewContent = {
-         type: "pdf" as const,
-         content: material.file_url,
-         title: material.title,
-       };
+        type: "pdf" as const,
+        content: material.file_url,
+        title: material.title,
+      };
       setPreviewContent(newPreviewContent);
       setOpenPreviewDialog(true);
     } else if (
@@ -1431,10 +1507,10 @@ const CoursesManagement: React.FC = () => {
       material.file_url
     ) {
       const newPreviewContent = {
-         type: "video" as const,
-         content: material.file_url,
-         title: material.title,
-       };
+        type: "video" as const,
+        content: material.file_url,
+        title: material.title,
+      };
       setPreviewContent(newPreviewContent);
       setOpenPreviewDialog(true);
     } else if (
@@ -1445,31 +1521,28 @@ const CoursesManagement: React.FC = () => {
       const youtubeEmbedUrl = getYouTubeEmbedUrl(material.file_url);
       if (youtubeEmbedUrl) {
         const newPreviewContent = {
-           type: "youtube" as const,
-           content: youtubeEmbedUrl,
-           title: material.title,
-         };
+          type: "youtube" as const,
+          content: youtubeEmbedUrl,
+          title: material.title,
+        };
 
         setPreviewContent(newPreviewContent);
       } else {
-
         const newPreviewContent = {
-           type: "url" as const,
-           content: material.file_url,
-           title: material.title,
-         };
+          type: "url" as const,
+          content: material.file_url,
+          title: material.title,
+        };
 
         setPreviewContent(newPreviewContent);
       }
       setOpenPreviewDialog(true);
     } else {
-
       showSnackbar(
         "Este tipo de material no se puede previsualizar o no tiene URL/archivo configurado",
-        "error"
+        "error",
       );
     }
-
   };
 
   const handleClosePreview = () => {
@@ -1709,7 +1782,7 @@ const CoursesManagement: React.FC = () => {
               <Typography variant="caption" display="block">
                 {course.fecha_inicio && course.fecha_fin
                   ? `${formatDate(course.fecha_inicio)} - ${formatDate(
-                      course.fecha_fin
+                      course.fecha_fin,
                     )}`
                   : "Fechas no definidas"}
               </Typography>
@@ -1875,13 +1948,13 @@ const CoursesManagement: React.FC = () => {
                       const label = isCompleted
                         ? "Completado"
                         : isInProgress
-                        ? "En Progreso"
-                        : "No Iniciado";
+                          ? "En Progreso"
+                          : "No Iniciado";
                       const color: any = isCompleted
                         ? "success"
                         : isInProgress
-                        ? "primary"
-                        : "default";
+                          ? "primary"
+                          : "default";
                       const icon = isCompleted ? (
                         <CheckCircle />
                       ) : isInProgress ? (
@@ -1905,24 +1978,25 @@ const CoursesManagement: React.FC = () => {
                     )}
                     {(() => {
                       const evaluation: any = (enrollment as any).evaluation;
-                      const hasPercentage = evaluation && evaluation.percentage != null;
+                      const hasPercentage =
+                        evaluation && evaluation.percentage != null;
                       const hasScore = evaluation && evaluation.score != null;
-                      const hasGradeField = (enrollment as any).grade != null || (enrollment as any).calificacion != null;
-                      if (!hasPercentage && !hasScore && !hasGradeField) return null;
+                      const hasGradeField =
+                        (enrollment as any).grade != null ||
+                        (enrollment as any).calificacion != null;
+                      if (!hasPercentage && !hasScore && !hasGradeField)
+                        return null;
                       const label = hasPercentage
                         ? `Calificación: ${evaluation.percentage}%`
                         : hasScore
-                        ? `Calificación: ${evaluation.score}/100`
-                        : `Calificación: ${(enrollment as any).grade ?? (enrollment as any).calificacion}/100`;
-                      const statusLower = (enrollment.status || '').toLowerCase();
-                      const color: any = statusLower === 'completed' ? 'success' : 'default';
-                      return (
-                        <Chip
-                          label={label}
-                          color={color}
-                          size="small"
-                        />
-                      );
+                          ? `Calificación: ${evaluation.score}/100`
+                          : `Calificación: ${(enrollment as any).grade ?? (enrollment as any).calificacion}/100`;
+                      const statusLower = (
+                        enrollment.status || ""
+                      ).toLowerCase();
+                      const color: any =
+                        statusLower === "completed" ? "success" : "default";
+                      return <Chip label={label} color={color} size="small" />;
                     })()}
                   </Box>
 
@@ -1965,7 +2039,10 @@ const CoursesManagement: React.FC = () => {
                       if (enrollment.course?.id) {
                         window.location.href = `/employee/courses/${enrollment.course.id}`;
                       } else {
-                        console.error('Course ID is undefined for enrollment:', enrollment);
+                        console.error(
+                          "Course ID is undefined for enrollment:",
+                          enrollment,
+                        );
                       }
                     }}
                   >
@@ -2339,13 +2416,27 @@ const CoursesManagement: React.FC = () => {
                           <Edit />
                         </IconButton>
                       )}
-                      
+
                       {/* Sub-tabla de Lecciones Interactivas */}
                       <TableRow>
                         <TableCell colSpan={6} sx={{ py: 0, px: 4 }}>
                           <Box sx={{ my: 1 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                              <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 1,
+                              }}
+                            >
+                              <Typography
+                                variant="subtitle2"
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
                                 <Slideshow fontSize="small" color="primary" />
                                 Lecciones Interactivas
                               </Typography>
@@ -2357,49 +2448,74 @@ const CoursesManagement: React.FC = () => {
                                 Nueva Lección
                               </Button>
                             </Box>
-                            
-                            {module.interactive_lessons && module.interactive_lessons.length > 0 ? (
+
+                            {module.interactive_lessons &&
+                            module.interactive_lessons.length > 0 ? (
                               <Table size="small">
                                 <TableHead>
                                   <TableRow>
                                     <TableCell>Título</TableCell>
                                     <TableCell>Estado</TableCell>
-                                    <TableCell align="center">Acciones</TableCell>
+                                    <TableCell align="center">
+                                      Acciones
+                                    </TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                  {module.interactive_lessons.map((lesson: any) => (
-                                    <TableRow key={lesson.id}>
-                                      <TableCell>{lesson.title}</TableCell>
-                                      <TableCell>
-                                        <Chip 
-                                          label={lesson.status === 'published' ? 'Publicado' : 'Borrador'} 
-                                          size="small"
-                                          color={lesson.status === 'published' ? 'success' : 'warning'}
-                                        />
-                                      </TableCell>
-                                      <TableCell align="center">
-                                        <IconButton
-                                          size="small"
-                                          color="primary"
-                                          onClick={() => navigate(`/admin/lesson/${lesson.id}/edit`)}
-                                        >
-                                          <Edit fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                          size="small"
-                                          color="error"
-                                          onClick={() => handleDeleteLesson(lesson.id, module.id)}
-                                        >
-                                          <Delete fontSize="small" />
-                                        </IconButton>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
+                                  {module.interactive_lessons.map(
+                                    (lesson: any) => (
+                                      <TableRow key={lesson.id}>
+                                        <TableCell>{lesson.title}</TableCell>
+                                        <TableCell>
+                                          <Chip
+                                            label={
+                                              lesson.status === "published"
+                                                ? "Publicado"
+                                                : "Borrador"
+                                            }
+                                            size="small"
+                                            color={
+                                              lesson.status === "published"
+                                                ? "success"
+                                                : "warning"
+                                            }
+                                          />
+                                        </TableCell>
+                                        <TableCell align="center">
+                                          <IconButton
+                                            size="small"
+                                            color="primary"
+                                            onClick={() =>
+                                              navigate(
+                                                `/admin/lesson/${lesson.id}/edit`,
+                                              )
+                                            }
+                                          >
+                                            <Edit fontSize="small" />
+                                          </IconButton>
+                                          <IconButton
+                                            size="small"
+                                            color="error"
+                                            onClick={() =>
+                                              handleDeleteLesson(
+                                                lesson.id,
+                                                module.id,
+                                              )
+                                            }
+                                          >
+                                            <Delete fontSize="small" />
+                                          </IconButton>
+                                        </TableCell>
+                                      </TableRow>
+                                    ),
+                                  )}
                                 </TableBody>
                               </Table>
                             ) : (
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 No hay lecciones interactivas en este módulo.
                               </Typography>
                             )}
@@ -2635,18 +2751,18 @@ const CoursesManagement: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      {user?.role === 'admin' ? (
-                        <Chip
-                          label="N/A"
-                          color="default"
-                          size="small"
-                        />
+                      {user?.role === "admin" ? (
+                        <Chip label="N/A" color="default" size="small" />
                       ) : (
                         <Chip
-                          label={material.completed ? "Completado" : "Pendiente"}
+                          label={
+                            material.completed ? "Completado" : "Pendiente"
+                          }
                           color={material.completed ? "success" : "warning"}
                           size="small"
-                          icon={material.completed ? <CheckCircle /> : undefined}
+                          icon={
+                            material.completed ? <CheckCircle /> : undefined
+                          }
                         />
                       )}
                     </TableCell>
@@ -2697,7 +2813,7 @@ const CoursesManagement: React.FC = () => {
                           <Delete />
                         </IconButton>
                       )}
-                      {user?.role !== 'admin' && (
+                      {user?.role !== "admin" && (
                         <IconButton
                           color="success"
                           onClick={() => handleMaterialComplete(material)}
@@ -2907,7 +3023,7 @@ const CoursesManagement: React.FC = () => {
                               <Typography variant="body2">
                                 <strong>Tamaño:</strong>{" "}
                                 {(uploadedFileInfo.size / 1024 / 1024).toFixed(
-                                  2
+                                  2,
                                 )}{" "}
                                 MB
                               </Typography>
@@ -2988,15 +3104,19 @@ const CoursesManagement: React.FC = () => {
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={() => {
               handleSaveMaterial();
-            }} 
+            }}
             variant="contained"
             disabled={savingMaterial}
             startIcon={savingMaterial ? <CircularProgress size={20} /> : null}
           >
-            {savingMaterial ? "Guardando..." : (editingMaterial ? "Actualizar" : "Crear")}
+            {savingMaterial
+              ? "Guardando..."
+              : editingMaterial
+                ? "Actualizar"
+                : "Crear"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -3041,23 +3161,23 @@ const CoursesManagement: React.FC = () => {
                 poster={`${getPreviewUrl(previewContent.content)}.jpg`}
                 width="100%"
                 height="auto"
-                style={{ 
-                  maxHeight: "100%", 
+                style={{
+                  maxHeight: "100%",
                   maxWidth: "100%",
                   borderRadius: "8px",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
                 }}
                 title={previewContent.title}
                 onError={(e) => {
-                  logger.error('Error loading video:', e);
+                  logger.error("Error loading video:", e);
                   // Fallback: remove poster if it fails
-                  e.currentTarget.removeAttribute('poster');
+                  e.currentTarget.removeAttribute("poster");
                 }}
                 onLoadStart={() => {
-                  logger.debug('Video loading started');
+                  logger.debug("Video loading started");
                 }}
                 onCanPlay={() => {
-                  logger.debug('Video can start playing');
+                  logger.debug("Video can start playing");
                 }}
               >
                 <source
@@ -3072,12 +3192,7 @@ const CoursesManagement: React.FC = () => {
                   src={getPreviewUrl(previewContent.content)}
                   type="video/ogg"
                 />
-                <track
-                  kind="captions"
-                  srcLang="es"
-                  label="Español"
-                  default
-                />
+                <track kind="captions" srcLang="es" label="Español" default />
                 <Box
                   sx={{
                     p: 3,
@@ -3091,7 +3206,8 @@ const CoursesManagement: React.FC = () => {
                     Tu navegador no soporta la reproducción de video
                   </Typography>
                   <Typography variant="body2">
-                    Por favor, actualiza tu navegador o descarga el archivo para verlo.
+                    Por favor, actualiza tu navegador o descarga el archivo para
+                    verlo.
                   </Typography>
                   <Button
                     variant="contained"
@@ -3352,7 +3468,7 @@ const CoursesManagement: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Error color="error" />
           {errorDialog.title}
         </DialogTitle>
@@ -3377,7 +3493,7 @@ const CoursesManagement: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Warning color="warning" />
           {confirmDialog.title}
         </DialogTitle>

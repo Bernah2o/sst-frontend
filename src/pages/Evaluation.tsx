@@ -496,7 +496,7 @@ const EvaluationsManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [evaluationToRespond, user, employeeAnswers, showSnackbar, timerInterval, fetchEmployeeResponses, fetchEvaluations]);
+  }, [evaluationToRespond, user, employeeAnswers, showSnackbar, timerInterval, fetchEmployeeResponses, fetchEvaluations, navigate]);
 
   const fetchEvaluationToRespond = useCallback(async (evaluationId: number) => {
     try {
