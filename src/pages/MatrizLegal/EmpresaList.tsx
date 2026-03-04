@@ -2,7 +2,7 @@
  * Gestión de Empresas para la Matriz Legal SST.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Button,
@@ -42,7 +42,7 @@ import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
   ExpandMore as ExpandMoreIcon,
-  Business as BusinessIcon,
+  // Business as BusinessIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import matrizLegalService, {
@@ -103,7 +103,10 @@ const initialFormData: EmpresaFormData = {
 };
 
 const caracteristicasConfig = [
-  { key: "tiene_trabajadores_independientes", label: "Trabajadores Independientes" },
+  {
+    key: "tiene_trabajadores_independientes",
+    label: "Trabajadores Independientes",
+  },
   { key: "tiene_teletrabajo", label: "Teletrabajo" },
   { key: "tiene_trabajo_alturas", label: "Trabajo en Alturas" },
   { key: "tiene_trabajo_espacios_confinados", label: "Espacios Confinados" },
@@ -143,11 +146,7 @@ const EmpresaList: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [empresasData, sectoresData] = await Promise.all([
@@ -162,16 +161,20 @@ const EmpresaList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [enqueueSnackbar]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const loadEmpresas = async () => {
-     try {
+    try {
       const data = await matrizLegalService.listEmpresas();
       setEmpresas(data);
     } catch (error) {
-       console.error("Error reloading empresas:", error);
+      console.error("Error reloading empresas:", error);
     }
-  }
+  };
 
   const handleOpenDialog = async (empresaResumen?: EmpresaResumen) => {
     if (empresaResumen) {
@@ -181,31 +184,35 @@ const EmpresaList: React.FC = () => {
       try {
         const empresa = await matrizLegalService.getEmpresa(empresaResumen.id);
         setFormData({
-            nombre: empresa.nombre,
-            nit: empresa.nit || "",
-            sector_economico_id: empresa.sector_economico_id || "",
-            activo: empresa.activo,
-            tiene_trabajadores_independientes: empresa.tiene_trabajadores_independientes,
-            tiene_teletrabajo: empresa.tiene_teletrabajo,
-            tiene_trabajo_alturas: empresa.tiene_trabajo_alturas,
-            tiene_trabajo_espacios_confinados: empresa.tiene_trabajo_espacios_confinados,
-            tiene_trabajo_caliente: empresa.tiene_trabajo_caliente,
-            tiene_sustancias_quimicas: empresa.tiene_sustancias_quimicas,
-            tiene_radiaciones: empresa.tiene_radiaciones,
-            tiene_trabajo_nocturno: empresa.tiene_trabajo_nocturno,
-            tiene_menores_edad: empresa.tiene_menores_edad,
-            tiene_mujeres_embarazadas: empresa.tiene_mujeres_embarazadas,
-            tiene_conductores: empresa.tiene_conductores,
-            tiene_manipulacion_alimentos: empresa.tiene_manipulacion_alimentos,
-            tiene_maquinaria_pesada: empresa.tiene_maquinaria_pesada,
-            tiene_riesgo_electrico: empresa.tiene_riesgo_electrico,
-            tiene_riesgo_biologico: empresa.tiene_riesgo_biologico,
-            tiene_trabajo_excavaciones: empresa.tiene_trabajo_excavaciones,
-            tiene_trabajo_administrativo: empresa.tiene_trabajo_administrativo,
+          nombre: empresa.nombre,
+          nit: empresa.nit || "",
+          sector_economico_id: empresa.sector_economico_id || "",
+          activo: empresa.activo,
+          tiene_trabajadores_independientes:
+            empresa.tiene_trabajadores_independientes,
+          tiene_teletrabajo: empresa.tiene_teletrabajo,
+          tiene_trabajo_alturas: empresa.tiene_trabajo_alturas,
+          tiene_trabajo_espacios_confinados:
+            empresa.tiene_trabajo_espacios_confinados,
+          tiene_trabajo_caliente: empresa.tiene_trabajo_caliente,
+          tiene_sustancias_quimicas: empresa.tiene_sustancias_quimicas,
+          tiene_radiaciones: empresa.tiene_radiaciones,
+          tiene_trabajo_nocturno: empresa.tiene_trabajo_nocturno,
+          tiene_menores_edad: empresa.tiene_menores_edad,
+          tiene_mujeres_embarazadas: empresa.tiene_mujeres_embarazadas,
+          tiene_conductores: empresa.tiene_conductores,
+          tiene_manipulacion_alimentos: empresa.tiene_manipulacion_alimentos,
+          tiene_maquinaria_pesada: empresa.tiene_maquinaria_pesada,
+          tiene_riesgo_electrico: empresa.tiene_riesgo_electrico,
+          tiene_riesgo_biologico: empresa.tiene_riesgo_biologico,
+          tiene_trabajo_excavaciones: empresa.tiene_trabajo_excavaciones,
+          tiene_trabajo_administrativo: empresa.tiene_trabajo_administrativo,
         });
       } catch (error) {
         console.error("Error loading details:", error);
-        enqueueSnackbar("Error al cargar detalles de la empresa", { variant: "error" });
+        enqueueSnackbar("Error al cargar detalles de la empresa", {
+          variant: "error",
+        });
         handleCloseDialog();
       } finally {
         setLoadingDetails(false);
@@ -233,13 +240,18 @@ const EmpresaList: React.FC = () => {
     try {
       setSaving(true);
       const dataToSend: Partial<Empresa> = {
-          ...formData,
-          sector_economico_id: formData.sector_economico_id === "" ? null : Number(formData.sector_economico_id)
+        ...formData,
+        sector_economico_id:
+          formData.sector_economico_id === ""
+            ? null
+            : Number(formData.sector_economico_id),
       };
 
       if (editingId) {
         await matrizLegalService.updateEmpresa(editingId, dataToSend);
-        enqueueSnackbar("Empresa actualizada correctamente", { variant: "success" });
+        enqueueSnackbar("Empresa actualizada correctamente", {
+          variant: "success",
+        });
       } else {
         await matrizLegalService.createEmpresa(dataToSend);
         enqueueSnackbar("Empresa creada correctamente", { variant: "success" });
@@ -255,20 +267,22 @@ const EmpresaList: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    const empresa = empresas.find(e => e.id === id);
+    const empresa = empresas.find((e) => e.id === id);
     const confirmed = await showConfirmDialog({
-      title: 'Eliminar Empresa',
+      title: "Eliminar Empresa",
       message: `¿Está seguro de eliminar la empresa "${empresa?.nombre}"? Se eliminarán también sus evaluaciones y esta acción no se puede deshacer.`,
-      severity: 'error',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar'
+      severity: "error",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
     });
 
     if (!confirmed) return;
 
     try {
       await matrizLegalService.deleteEmpresa(id);
-      enqueueSnackbar("Empresa eliminada correctamente", { variant: "success" });
+      enqueueSnackbar("Empresa eliminada correctamente", {
+        variant: "success",
+      });
       loadEmpresas();
     } catch (error) {
       console.error("Error deleting empresa:", error);
@@ -276,15 +290,17 @@ const EmpresaList: React.FC = () => {
     }
   };
 
-  const handleCheckChange = (key: keyof EmpresaFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [key]: event.target.checked });
-  };
-
+  const handleCheckChange =
+    (key: keyof EmpresaFormData) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData({ ...formData, [key]: event.target.checked });
+    };
 
   // Filtrado
-  const filteredEmpresas = empresas.filter((empresa) =>
-    empresa.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (empresa.nit && empresa.nit.includes(searchTerm))
+  const filteredEmpresas = empresas.filter(
+    (empresa) =>
+      empresa.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (empresa.nit && empresa.nit.includes(searchTerm)),
   );
 
   // Paginación
@@ -292,14 +308,16 @@ const EmpresaList: React.FC = () => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
   const paginatedEmpresas = filteredEmpresas.slice(
     page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
+    page * rowsPerPage + rowsPerPage,
   );
 
   return (
@@ -310,7 +328,13 @@ const EmpresaList: React.FC = () => {
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            flexWrap="wrap"
+            gap={2}
+          >
             <TextField
               placeholder="Buscar por nombre o NIT..."
               variant="outlined"
@@ -326,21 +350,21 @@ const EmpresaList: React.FC = () => {
               }}
               sx={{ width: { xs: "100%", sm: 300 } }}
             />
-             <Box>
-                <Button 
-                    startIcon={<RefreshIcon />} 
-                    onClick={() => loadEmpresas()}
-                    sx={{ mr: 1 }}
-                >
-                    Recargar
-                </Button>
-                <Button
+            <Box>
+              <Button
+                startIcon={<RefreshIcon />}
+                onClick={() => loadEmpresas()}
+                sx={{ mr: 1 }}
+              >
+                Recargar
+              </Button>
+              <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => handleOpenDialog()}
-                >
+              >
                 Nueva Empresa
-                </Button>
+              </Button>
             </Box>
           </Box>
         </CardContent>
@@ -376,60 +400,79 @@ const EmpresaList: React.FC = () => {
                 paginatedEmpresas.map((empresa) => (
                   <TableRow key={empresa.id} hover>
                     <TableCell>{empresa.nit || "-"}</TableCell>
-                    <TableCell sx={{ fontWeight: 500 }}>{empresa.nombre}</TableCell>
+                    <TableCell sx={{ fontWeight: 500 }}>
+                      {empresa.nombre}
+                    </TableCell>
                     <TableCell>
-                         <Chip 
-                            size="small" 
-                            label={empresa.sector_economico_nombre || "Sin Asignar"} 
-                            variant="outlined"
-                        />
+                      <Chip
+                        size="small"
+                        label={empresa.sector_economico_nombre || "Sin Asignar"}
+                        variant="outlined"
+                      />
                     </TableCell>
                     <TableCell align="center">
-                         <Tooltip title={`Cumple: ${empresa.normas_cumple} | No Cumple: ${empresa.normas_no_cumple} | Pendientes: ${empresa.normas_pendientes}`}>
-                            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                                <CircularProgress 
-                                    variant="determinate" 
-                                    value={empresa.total_normas_aplicables > 0 ? empresa.porcentaje_cumplimiento : 0} 
-                                    color={
-                                        empresa.porcentaje_cumplimiento >= 80 ? "success" :
-                                        empresa.porcentaje_cumplimiento >= 50 ? "warning" : "error"
-                                    }
-                                    size={40}
-                                />
-                                <Box
-                                    sx={{
-                                        top: 0,
-                                        left: 0,
-                                        bottom: 0,
-                                        right: 0,
-                                        position: 'absolute',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                >
-                                    <Typography variant="caption" component="div" color="text.secondary">
-                                    {Math.round(empresa.porcentaje_cumplimiento)}%
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </Tooltip>
-                    </TableCell>
-                    <TableCell align="center">
-                         <Box
-                            sx={{
-                            py: 0.5,
-                            px: 1,
-                            borderRadius: 1,
-                            bgcolor: empresa.activo ? "success.light" : "error.light",
-                            color: empresa.activo ? "success.dark" : "error.dark",
-                            display: "inline-block",
-                            fontSize: "0.75rem",
-                            fontWeight: "bold",
-                            }}
+                      <Tooltip
+                        title={`Cumple: ${empresa.normas_cumple} | No Cumple: ${empresa.normas_no_cumple} | Pendientes: ${empresa.normas_pendientes}`}
+                      >
+                        <Box
+                          sx={{ position: "relative", display: "inline-flex" }}
                         >
-                            {empresa.activo ? "ACTIVO" : "INACTIVO"}
+                          <CircularProgress
+                            variant="determinate"
+                            value={
+                              empresa.total_normas_aplicables > 0
+                                ? empresa.porcentaje_cumplimiento
+                                : 0
+                            }
+                            color={
+                              empresa.porcentaje_cumplimiento >= 80
+                                ? "success"
+                                : empresa.porcentaje_cumplimiento >= 50
+                                  ? "warning"
+                                  : "error"
+                            }
+                            size={40}
+                          />
+                          <Box
+                            sx={{
+                              top: 0,
+                              left: 0,
+                              bottom: 0,
+                              right: 0,
+                              position: "absolute",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              component="div"
+                              color="text.secondary"
+                            >
+                              {Math.round(empresa.porcentaje_cumplimiento)}%
+                            </Typography>
+                          </Box>
                         </Box>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Box
+                        sx={{
+                          py: 0.5,
+                          px: 1,
+                          borderRadius: 1,
+                          bgcolor: empresa.activo
+                            ? "success.light"
+                            : "error.light",
+                          color: empresa.activo ? "success.dark" : "error.dark",
+                          display: "inline-block",
+                          fontSize: "0.75rem",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {empresa.activo ? "ACTIVO" : "INACTIVO"}
+                      </Box>
                     </TableCell>
                     <TableCell align="right">
                       <Box display="flex" justifyContent="flex-end">
@@ -471,97 +514,127 @@ const EmpresaList: React.FC = () => {
       </Paper>
 
       {/* Dialogo de Creación/Edición */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>
           {editingId ? "Editar Empresa" : "Nueva Empresa"}
         </DialogTitle>
         <DialogContent dividers>
           {loadingDetails ? (
-              <Box display="flex" justifyContent="center" p={3}>
-                  <CircularProgress />
-              </Box>
+            <Box display="flex" justifyContent="center" p={3}>
+              <CircularProgress />
+            </Box>
           ) : (
             <Box display="flex" flexDirection="column" gap={3} pt={1}>
-                {/* Información General */}
-                <Typography variant="h6" color="primary">Información General</Typography>
-                <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                        label="Nombre de la Empresa"
-                        fullWidth
-                        required
-                        value={formData.nombre}
-                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                        label="NIT"
-                        fullWidth
-                        value={formData.nit}
-                        onChange={(e) => setFormData({ ...formData, nit: e.target.value })}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            select
-                            label="Sector Económico"
-                            fullWidth
-                            value={formData.sector_economico_id}
-                            onChange={(e) => setFormData({ ...formData, sector_economico_id: e.target.value as number | "" })}
-                        >
-                            <MenuItem value="">
-                                <em>Seleccione un sector</em>
-                            </MenuItem>
-                            {sectores.map((sector) => (
-                                <MenuItem key={sector.id} value={sector.id}>
-                                    {sector.nombre}
-                                </MenuItem>
-                            ))}
-                        </TextField>
-                    </Grid>
-                     <Grid size={{ xs: 12, md: 6 }}>
-                         <FormControlLabel
-                            control={
-                                <Switch
-                                checked={formData.activo}
-                                onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
-                                color="primary"
-                                />
-                            }
-                            label="Empresa Activa"
-                            />
-                    </Grid>
+              {/* Información General */}
+              <Typography variant="h6" color="primary">
+                Información General
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Nombre de la Empresa"
+                    fullWidth
+                    required
+                    value={formData.nombre}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nombre: e.target.value })
+                    }
+                  />
                 </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="NIT"
+                    fullWidth
+                    value={formData.nit}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nit: e.target.value })
+                    }
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    select
+                    label="Sector Económico"
+                    fullWidth
+                    value={formData.sector_economico_id}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        sector_economico_id: e.target.value as number | "",
+                      })
+                    }
+                  >
+                    <MenuItem value="">
+                      <em>Seleccione un sector</em>
+                    </MenuItem>
+                    {sectores.map((sector) => (
+                      <MenuItem key={sector.id} value={sector.id}>
+                        {sector.nombre}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.activo}
+                        onChange={(e) =>
+                          setFormData({ ...formData, activo: e.target.checked })
+                        }
+                        color="primary"
+                      />
+                    }
+                    label="Empresa Activa"
+                  />
+                </Grid>
+              </Grid>
 
-                {/* Características de Riesgo */}
-                <Accordion defaultExpanded>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography variant="h6" color="primary">Características y Riesgos</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Typography variant="body2" color="textSecondary" paragraph>
-                            Seleccione las características que aplican a la empresa. Esto determinará automáticamente qué normas legales debe cumplir.
-                        </Typography>
-                        <Grid container spacing={1}>
-                            {caracteristicasConfig.map((item) => (
-                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.key}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={!!formData[item.key as keyof EmpresaFormData]}
-                                                onChange={handleCheckChange(item.key as keyof EmpresaFormData)}
-                                                color="secondary"
-                                                size="small"
-                                            />
-                                        }
-                                        label={<Typography variant="body2">{item.label}</Typography>}
-                                    />
-                                </Grid>
-                            ))}
-                        </Grid>
-                    </AccordionDetails>
-                </Accordion>
+              {/* Características de Riesgo */}
+              <Accordion defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6" color="primary">
+                    Características y Riesgos
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" color="textSecondary" paragraph>
+                    Seleccione las características que aplican a la empresa.
+                    Esto determinará automáticamente qué normas legales debe
+                    cumplir.
+                  </Typography>
+                  <Grid container spacing={1}>
+                    {caracteristicasConfig.map((item) => (
+                      <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.key}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={
+                                !!formData[item.key as keyof EmpresaFormData]
+                              }
+                              onChange={handleCheckChange(
+                                item.key as keyof EmpresaFormData,
+                              )}
+                              color="secondary"
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2">
+                              {item.label}
+                            </Typography>
+                          }
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </AccordionDetails>
+              </Accordion>
             </Box>
           )}
         </DialogContent>
@@ -569,7 +642,11 @@ const EmpresaList: React.FC = () => {
           <Button onClick={handleCloseDialog} color="inherit">
             Cancelar
           </Button>
-          <Button onClick={handleSave} variant="contained" disabled={saving || loadingDetails}>
+          <Button
+            onClick={handleSave}
+            variant="contained"
+            disabled={saving || loadingDetails}
+          >
             {saving ? "Guardando..." : "Guardar"}
           </Button>
         </DialogActions>

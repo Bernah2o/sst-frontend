@@ -7,7 +7,7 @@ import {
   Grid,
   TextField,
   Button,
-  FormControlLabel,
+  // FormControlLabel,
   Checkbox,
   Table,
   TableBody,
@@ -15,22 +15,22 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Divider,
+  // Divider,
   Alert,
   CircularProgress,
   Autocomplete,
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
+  // InputLabel,
 } from "@mui/material";
 import { 
   Save, 
-  Download, 
+  // Download, 
   PhotoCamera, 
   Clear, 
   CheckCircle,
-  AssignmentTurnedIn as ActionIcon,
+  // AssignmentTurnedIn as ActionIcon,
   Timeline as FollowUpIcon
 } from "@mui/icons-material";
 import SignatureCanvas from "react-signature-canvas";

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Paper,
@@ -27,11 +27,10 @@ import {
   Chip,
   Tooltip,
   CircularProgress,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add,
   Delete,
-  Edit,
   DragIndicator,
   TextFields,
   Image,
@@ -44,72 +43,76 @@ import {
   Visibility,
   Settings,
   AutoAwesome,
-} from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
+} from "@mui/icons-material";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   InteractiveLesson,
   InteractiveLessonCreate,
   InteractiveLessonUpdate,
-  LessonSlide,
   LessonSlideCreate,
   LessonSlideUpdate,
   SlideContentType,
   LessonNavigationType,
-  LessonStatus,
-} from '../../../types/interactiveLesson';
-import interactiveLessonApi from '../../../services/interactiveLessonApi';
-import SlideEditor from './SlideEditor';
+} from "../../../types/interactiveLesson";
+import interactiveLessonApi from "../../../services/interactiveLessonApi";
+import SlideEditor from "./SlideEditor";
 
 interface LessonBuilderProps {
   moduleId?: number;
   lessonId?: number;
 }
 
-const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, lessonId: propLessonId }) => {
+const LessonBuilder: React.FC<LessonBuilderProps> = ({
+  moduleId: propModuleId,
+  lessonId: propLessonId,
+}) => {
   const navigate = useNavigate();
   const params = useParams<{ moduleId?: string; lessonId?: string }>();
 
-  const moduleId = propModuleId || (params.moduleId ? parseInt(params.moduleId) : undefined);
-  const lessonId = propLessonId || (params.lessonId ? parseInt(params.lessonId) : undefined);
+  const moduleId =
+    propModuleId || (params.moduleId ? parseInt(params.moduleId) : undefined);
+  const lessonId =
+    propLessonId || (params.lessonId ? parseInt(params.lessonId) : undefined);
 
   // State
   const [lesson, setLesson] = useState<InteractiveLesson | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedSlideIndex, setSelectedSlideIndex] = useState<number | null>(null);
+  const [selectedSlideIndex, setSelectedSlideIndex] = useState<number | null>(
+    null,
+  );
   const [showSettings, setShowSettings] = useState(false);
   const [showAddSlideDialog, setShowAddSlideDialog] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
+  });
 
   // AI Generation State
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiFormData, setAiFormData] = useState({
-    tema: '',
-    descripcion: '',
+    tema: "",
+    descripcion: "",
     num_slides: 5,
     incluir_quiz: true,
     incluir_actividad: true,
   });
 
   // Form state for new/edit lesson
-  const [formData, setFormData] = useState<InteractiveLessonCreate | InteractiveLessonUpdate>({
-    title: '',
-    description: '',
-    navigation_type: 'sequential' as LessonNavigationType,
+  const [formData, setFormData] = useState<
+    InteractiveLessonCreate | InteractiveLessonUpdate
+  >({
+    title: "",
+    description: "",
+    navigation_type: "sequential" as LessonNavigationType,
     is_required: true,
     estimated_duration_minutes: undefined,
     passing_score: 70,
   });
 
-  // Load lesson if editing
-  useEffect(() => {
-    if (lessonId) {
-      loadLesson();
-    }
-  }, [lessonId]);
-
-  const loadLesson = async () => {
+  const loadLesson = useCallback(async () => {
     if (!lessonId) return;
 
     setLoading(true);
@@ -118,7 +121,7 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
       setLesson(data);
       setFormData({
         title: data.title,
-        description: data.description || '',
+        description: data.description || "",
         navigation_type: data.navigation_type,
         is_required: data.is_required,
         estimated_duration_minutes: data.estimated_duration_minutes,
@@ -128,21 +131,39 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
         setSelectedSlideIndex(0);
       }
     } catch (error) {
-      console.error('Error loading lesson:', error);
-      setSnackbar({ open: true, message: 'Error al cargar la lección', severity: 'error' });
+      console.error("Error loading lesson:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al cargar la lección",
+        severity: "error",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [lessonId]);
+
+  // Load lesson if editing
+  useEffect(() => {
+    if (lessonId) {
+      loadLesson();
+    }
+  }, [lessonId, loadLesson]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       if (lessonId && lesson) {
         // Update existing lesson
-        const updated = await interactiveLessonApi.updateLesson(lessonId, formData);
+        const updated = await interactiveLessonApi.updateLesson(
+          lessonId,
+          formData,
+        );
         setLesson({ ...lesson, ...updated });
-        setSnackbar({ open: true, message: 'Lección guardada exitosamente', severity: 'success' });
+        setSnackbar({
+          open: true,
+          message: "Lección guardada exitosamente",
+          severity: "success",
+        });
       } else if (moduleId) {
         // Create new lesson
         const created = await interactiveLessonApi.createLesson({
@@ -151,11 +172,19 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
         } as InteractiveLessonCreate);
         setLesson(created);
         navigate(`/admin/lesson/${created.id}/edit`, { replace: true });
-        setSnackbar({ open: true, message: 'Lección creada exitosamente', severity: 'success' });
+        setSnackbar({
+          open: true,
+          message: "Lección creada exitosamente",
+          severity: "success",
+        });
       }
     } catch (error) {
-      console.error('Error saving lesson:', error);
-      setSnackbar({ open: true, message: 'Error al guardar la lección', severity: 'error' });
+      console.error("Error saving lesson:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al guardar la lección",
+        severity: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -167,11 +196,19 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
     setSaving(true);
     try {
       const updated = await interactiveLessonApi.publishLesson(lessonId);
-      setLesson((prev) => prev ? { ...prev, status: updated.status } : null);
-      setSnackbar({ open: true, message: 'Lección publicada exitosamente', severity: 'success' });
+      setLesson((prev) => (prev ? { ...prev, status: updated.status } : null));
+      setSnackbar({
+        open: true,
+        message: "Lección publicada exitosamente",
+        severity: "success",
+      });
     } catch (error) {
-      console.error('Error publishing lesson:', error);
-      setSnackbar({ open: true, message: 'Error al publicar la lección', severity: 'error' });
+      console.error("Error publishing lesson:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al publicar la lección",
+        severity: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -188,7 +225,10 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
     };
 
     try {
-      const created = await interactiveLessonApi.createSlide(lesson.id, newSlide);
+      const created = await interactiveLessonApi.createSlide(
+        lesson.id,
+        newSlide,
+      );
       setLesson({
         ...lesson,
         slides: [...lesson.slides, created],
@@ -196,12 +236,19 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
       setSelectedSlideIndex(lesson.slides.length);
       setShowAddSlideDialog(false);
     } catch (error) {
-      console.error('Error creating slide:', error);
-      setSnackbar({ open: true, message: 'Error al crear el slide', severity: 'error' });
+      console.error("Error creating slide:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al crear el slide",
+        severity: "error",
+      });
     }
   };
 
-  const handleUpdateSlide = async (slideId: number, data: LessonSlideUpdate) => {
+  const handleUpdateSlide = async (
+    slideId: number,
+    data: LessonSlideUpdate,
+  ) => {
     if (!lesson) return;
 
     try {
@@ -211,8 +258,12 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
         slides: lesson.slides.map((s) => (s.id === slideId ? updated : s)),
       });
     } catch (error) {
-      console.error('Error updating slide:', error);
-      setSnackbar({ open: true, message: 'Error al actualizar el slide', severity: 'error' });
+      console.error("Error updating slide:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al actualizar el slide",
+        severity: "error",
+      });
     }
   };
 
@@ -224,12 +275,21 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
       const newSlides = lesson.slides.filter((s) => s.id !== slideId);
       setLesson({ ...lesson, slides: newSlides });
 
-      if (selectedSlideIndex !== null && selectedSlideIndex >= newSlides.length) {
-        setSelectedSlideIndex(newSlides.length > 0 ? newSlides.length - 1 : null);
+      if (
+        selectedSlideIndex !== null &&
+        selectedSlideIndex >= newSlides.length
+      ) {
+        setSelectedSlideIndex(
+          newSlides.length > 0 ? newSlides.length - 1 : null,
+        );
       }
     } catch (error) {
-      console.error('Error deleting slide:', error);
-      setSnackbar({ open: true, message: 'Error al eliminar el slide', severity: 'error' });
+      console.error("Error deleting slide:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al eliminar el slide",
+        severity: "error",
+      });
     }
   };
 
@@ -253,42 +313,45 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
       setSnackbar({
         open: true,
         message: result.message,
-        severity: 'success',
+        severity: "success",
       });
 
       // Reset AI form
       setAiFormData({
-        tema: '',
-        descripcion: '',
+        tema: "",
+        descripcion: "",
         num_slides: 5,
         incluir_quiz: true,
         incluir_actividad: true,
       });
     } catch (error: any) {
-      console.error('Error generating content:', error);
+      console.error("Error generating content:", error);
       setSnackbar({
         open: true,
-        message: error.response?.data?.detail || 'Error al generar contenido con IA',
-        severity: 'error',
+        message:
+          error.response?.data?.detail || "Error al generar contenido con IA",
+        severity: "error",
       });
     } finally {
       setGenerating(false);
     }
   };
 
-  const getDefaultContentForType = (type: SlideContentType): Record<string, unknown> => {
+  const getDefaultContentForType = (
+    type: SlideContentType,
+  ): Record<string, unknown> => {
     switch (type) {
-      case 'text':
-        return { html: '<p>Escribe tu contenido aquí...</p>' };
-      case 'image':
-        return { url: '', alt_text: '', caption: '' };
-      case 'video':
-        return { url: '', provider: 'youtube', autoplay: false };
-      case 'text_image':
-        return { text: '', image_url: '', layout: 'left' };
-      case 'quiz':
-        return { html: '' };
-      case 'interactive':
+      case "text":
+        return { html: "<p>Escribe tu contenido aquí...</p>" };
+      case "image":
+        return { url: "", alt_text: "", caption: "" };
+      case "video":
+        return { url: "", provider: "youtube", autoplay: false };
+      case "text_image":
+        return { text: "", image_url: "", layout: "left" };
+      case "quiz":
+        return { html: "" };
+      case "interactive":
         return {};
       default:
         return {};
@@ -297,55 +360,63 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
 
   const getSlideIcon = (type: SlideContentType) => {
     switch (type) {
-      case 'text':
+      case "text":
         return <TextFields />;
-      case 'image':
+      case "image":
         return <Image />;
-      case 'video':
+      case "video":
         return <VideoLibrary />;
-      case 'text_image':
+      case "text_image":
         return <TextFields />;
-      case 'quiz':
+      case "quiz":
         return <Quiz />;
-      case 'interactive':
+      case "interactive":
         return <TouchApp />;
       default:
         return <TextFields />;
     }
   };
 
-  const selectedSlide = selectedSlideIndex !== null && lesson ? lesson.slides[selectedSlideIndex] : null;
+  const selectedSlide =
+    selectedSlideIndex !== null && lesson
+      ? lesson.slides[selectedSlideIndex]
+      : null;
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Paper sx={{ p: 2, display: "flex", alignItems: "center", gap: 2 }}>
         <IconButton onClick={() => navigate(-1)}>
           <ArrowBack />
         </IconButton>
 
         <TextField
-          value={formData.title || ''}
+          value={formData.title || ""}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
           placeholder="Título de la lección"
           variant="standard"
           sx={{ flex: 1 }}
-          InputProps={{ sx: { fontSize: '1.5rem' } }}
+          InputProps={{ sx: { fontSize: "1.5rem" } }}
         />
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {lesson?.status === 'draft' && (
+        <Box sx={{ display: "flex", gap: 1 }}>
+          {lesson?.status === "draft" && (
             <Chip label="Borrador" color="warning" size="small" />
           )}
-          {lesson?.status === 'published' && (
+          {lesson?.status === "published" && (
             <Chip label="Publicado" color="success" size="small" />
           )}
 
@@ -357,7 +428,11 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
 
           {lesson && (
             <Tooltip title="Vista previa">
-              <IconButton onClick={() => window.open(`/admin/lesson/${lesson.id}/preview`, '_blank')}>
+              <IconButton
+                onClick={() =>
+                  window.open(`/admin/lesson/${lesson.id}/preview`, "_blank")
+                }
+              >
                 <Visibility />
               </IconButton>
             </Tooltip>
@@ -386,7 +461,7 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
             Guardar
           </Button>
 
-          {lesson && lesson.status === 'draft' && (
+          {lesson && lesson.status === "draft" && (
             <Button
               variant="contained"
               startIcon={<Publish />}
@@ -400,10 +475,24 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
       </Paper>
 
       {/* Main Content */}
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {/* Sidebar - Slide List */}
-        <Paper sx={{ width: 280, borderRight: 1, borderColor: 'divider', overflow: 'auto' }}>
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Paper
+          sx={{
+            width: 280,
+            borderRight: 1,
+            borderColor: "divider",
+            overflow: "auto",
+          }}
+        >
+          <Box
+            sx={{
+              p: 2,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Typography variant="subtitle1" fontWeight="bold">
               Slides ({lesson?.slides.length || 0})
             </Typography>
@@ -427,11 +516,13 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
                 onClick={() => setSelectedSlideIndex(index)}
                 sx={{
                   borderLeft: selectedSlideIndex === index ? 3 : 0,
-                  borderColor: 'primary.main',
+                  borderColor: "primary.main",
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 36 }}>
-                  <DragIndicator sx={{ cursor: 'grab', color: 'text.disabled' }} />
+                  <DragIndicator
+                    sx={{ cursor: "grab", color: "text.disabled" }}
+                  />
                 </ListItemIcon>
                 <ListItemIcon sx={{ minWidth: 36 }}>
                   {getSlideIcon(slide.slide_type)}
@@ -457,17 +548,19 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
           </List>
 
           {lesson && lesson.slides.length === 0 && (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Box sx={{ p: 3, textAlign: "center" }}>
               <Typography color="text.secondary" gutterBottom>
                 No hay slides
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+              <Box
+                sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 2 }}
+              >
                 <Button
                   variant="contained"
                   color="secondary"
                   startIcon={<AutoAwesome />}
                   onClick={() => setShowAIDialog(true)}
-                  sx={{ bgcolor: 'secondary.main' }}
+                  sx={{ bgcolor: "secondary.main" }}
                 >
                   Generar con IA
                 </Button>
@@ -487,7 +580,7 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
         </Paper>
 
         {/* Main Editor Area */}
-        <Box sx={{ flex: 1, p: 3, overflow: 'auto', bgcolor: 'grey.100' }}>
+        <Box sx={{ flex: 1, p: 3, overflow: "auto", bgcolor: "grey.100" }}>
           {selectedSlide ? (
             <SlideEditor
               slide={selectedSlide}
@@ -496,14 +589,16 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
           ) : (
             <Box
               sx={{
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <Typography color="text.secondary">
-                {lesson ? 'Selecciona un slide para editar' : 'Guarda la lección para agregar slides'}
+                {lesson
+                  ? "Selecciona un slide para editar"
+                  : "Guarda la lección para agregar slides"}
               </Typography>
             </Box>
           )}
@@ -511,24 +606,54 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
       </Box>
 
       {/* Add Slide Dialog */}
-      <Dialog open={showAddSlideDialog} onClose={() => setShowAddSlideDialog(false)}>
+      <Dialog
+        open={showAddSlideDialog}
+        onClose={() => setShowAddSlideDialog(false)}
+      >
         <DialogTitle>Agregar Slide</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, pt: 1 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: 2,
+              pt: 1,
+            }}
+          >
             {[
-              { type: 'text' as SlideContentType, label: 'Texto', icon: <TextFields /> },
-              { type: 'image' as SlideContentType, label: 'Imagen', icon: <Image /> },
-              { type: 'video' as SlideContentType, label: 'Video', icon: <VideoLibrary /> },
-              { type: 'text_image' as SlideContentType, label: 'Texto + Imagen', icon: <TextFields /> },
-              { type: 'quiz' as SlideContentType, label: 'Quiz', icon: <Quiz /> },
+              {
+                type: "text" as SlideContentType,
+                label: "Texto",
+                icon: <TextFields />,
+              },
+              {
+                type: "image" as SlideContentType,
+                label: "Imagen",
+                icon: <Image />,
+              },
+              {
+                type: "video" as SlideContentType,
+                label: "Video",
+                icon: <VideoLibrary />,
+              },
+              {
+                type: "text_image" as SlideContentType,
+                label: "Texto + Imagen",
+                icon: <TextFields />,
+              },
+              {
+                type: "quiz" as SlideContentType,
+                label: "Quiz",
+                icon: <Quiz />,
+              },
             ].map(({ type, label, icon }) => (
               <Paper
                 key={type}
                 sx={{
                   p: 2,
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: 'action.hover' },
+                  textAlign: "center",
+                  cursor: "pointer",
+                  "&:hover": { bgcolor: "action.hover" },
                 }}
                 onClick={() => handleAddSlide(type)}
               >
@@ -546,14 +671,21 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
       </Dialog>
 
       {/* Settings Dialog */}
-      <Dialog open={showSettings} onClose={() => setShowSettings(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Configuración de la Lección</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
             <TextField
               label="Descripción"
-              value={formData.description || ''}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              value={formData.description || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               multiline
               rows={3}
               fullWidth
@@ -562,13 +694,18 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
             <FormControl fullWidth>
               <InputLabel>Tipo de Navegación</InputLabel>
               <Select
-                value={formData.navigation_type || 'sequential'}
+                value={formData.navigation_type || "sequential"}
                 label="Tipo de Navegación"
                 onChange={(e) =>
-                  setFormData({ ...formData, navigation_type: e.target.value as LessonNavigationType })
+                  setFormData({
+                    ...formData,
+                    navigation_type: e.target.value as LessonNavigationType,
+                  })
                 }
               >
-                <MenuItem value="sequential">Secuencial (siguiente/anterior)</MenuItem>
+                <MenuItem value="sequential">
+                  Secuencial (siguiente/anterior)
+                </MenuItem>
                 <MenuItem value="free">Libre (navegación libre)</MenuItem>
               </Select>
             </FormControl>
@@ -576,11 +713,13 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
             <TextField
               label="Duración estimada (minutos)"
               type="number"
-              value={formData.estimated_duration_minutes || ''}
+              value={formData.estimated_duration_minutes || ""}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  estimated_duration_minutes: e.target.value ? parseInt(e.target.value) : undefined,
+                  estimated_duration_minutes: e.target.value
+                    ? parseInt(e.target.value)
+                    : undefined,
                 })
               }
               fullWidth
@@ -591,7 +730,10 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
               type="number"
               value={formData.passing_score || 70}
               onChange={(e) =>
-                setFormData({ ...formData, passing_score: parseInt(e.target.value) || 70 })
+                setFormData({
+                  ...formData,
+                  passing_score: parseInt(e.target.value) || 70,
+                })
               }
               fullWidth
               inputProps={{ min: 0, max: 100 }}
@@ -601,7 +743,9 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
               control={
                 <Switch
                   checked={formData.is_required ?? true}
-                  onChange={(e) => setFormData({ ...formData, is_required: e.target.checked })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, is_required: e.target.checked })
+                  }
                 />
               }
               label="Lección requerida"
@@ -614,24 +758,31 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
       </Dialog>
 
       {/* AI Generation Dialog */}
-      <Dialog open={showAIDialog} onClose={() => !generating && setShowAIDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={showAIDialog}
+        onClose={() => !generating && setShowAIDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <AutoAwesome color="secondary" />
             Generar Contenido con IA
           </Box>
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
             <Alert severity="info" sx={{ mb: 1 }}>
-              Ingresa el tema y la IA generará automáticamente slides, quizzes y actividades
-              interactivas para tu lección.
+              Ingresa el tema y la IA generará automáticamente slides, quizzes y
+              actividades interactivas para tu lección.
             </Alert>
 
             <TextField
               label="Tema principal *"
               value={aiFormData.tema}
-              onChange={(e) => setAiFormData({ ...aiFormData, tema: e.target.value })}
+              onChange={(e) =>
+                setAiFormData({ ...aiFormData, tema: e.target.value })
+              }
               placeholder="Ej: Uso correcto de EPP, Trabajo en alturas, Ergonomía..."
               fullWidth
               required
@@ -641,7 +792,9 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
             <TextField
               label="Descripción adicional (opcional)"
               value={aiFormData.descripcion}
-              onChange={(e) => setAiFormData({ ...aiFormData, descripcion: e.target.value })}
+              onChange={(e) =>
+                setAiFormData({ ...aiFormData, descripcion: e.target.value })
+              }
               placeholder="Detalles específicos que deseas incluir..."
               multiline
               rows={2}
@@ -656,7 +809,10 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
               onChange={(e) =>
                 setAiFormData({
                   ...aiFormData,
-                  num_slides: Math.max(3, Math.min(10, parseInt(e.target.value) || 5)),
+                  num_slides: Math.max(
+                    3,
+                    Math.min(10, parseInt(e.target.value) || 5),
+                  ),
                 })
               }
               fullWidth
@@ -669,7 +825,12 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
               control={
                 <Switch
                   checked={aiFormData.incluir_quiz}
-                  onChange={(e) => setAiFormData({ ...aiFormData, incluir_quiz: e.target.checked })}
+                  onChange={(e) =>
+                    setAiFormData({
+                      ...aiFormData,
+                      incluir_quiz: e.target.checked,
+                    })
+                  }
                   disabled={generating}
                 />
               }
@@ -680,7 +841,12 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
               control={
                 <Switch
                   checked={aiFormData.incluir_actividad}
-                  onChange={(e) => setAiFormData({ ...aiFormData, incluir_actividad: e.target.checked })}
+                  onChange={(e) =>
+                    setAiFormData({
+                      ...aiFormData,
+                      incluir_actividad: e.target.checked,
+                    })
+                  }
                   disabled={generating}
                 />
               }
@@ -697,9 +863,15 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
             color="secondary"
             onClick={handleGenerateContent}
             disabled={generating || !aiFormData.tema.trim()}
-            startIcon={generating ? <CircularProgress size={20} color="inherit" /> : <AutoAwesome />}
+            startIcon={
+              generating ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <AutoAwesome />
+              )
+            }
           >
-            {generating ? 'Generando...' : 'Generar Contenido'}
+            {generating ? "Generando..." : "Generar Contenido"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -710,7 +882,10 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({ moduleId: propModuleId, l
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
