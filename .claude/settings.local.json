@@ -20,7 +20,8 @@
       "Bash(fi:*)",
       "Bash(done)",
       "Bash(npm install:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(grep -l \"HTMLToPDFConverter\\\\|html_to_pdf\" /e/DH2OCOL/python/sst-app/sst-backend/app/api/*.py)"
     ],
     "additionalDirectories": [
       "e:\\DH2OCOL\\python\\sst-app\\sst-backend\\app\\api"
