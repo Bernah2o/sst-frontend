@@ -632,6 +632,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             roles: ["admin", "supervisor"],
           },
           {
+            id: "programa-inspecciones",
+            label: "Programa de Inspecciones",
+            icon: <Assignment />,
+            path: "/admin/programa-inspecciones",
+            roles: ["admin", "supervisor"],
+          },
+          {
             id: "master-documents",
             label: "Listado Maestro de Documentos",
             icon: <Description />,
@@ -858,6 +865,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
               "presupuesto-sst": () =>
                 user.role === "admin" || user.role === "supervisor",
               "estandares-minimos": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "programa-inspecciones": () =>
                 user.role === "admin" || user.role === "supervisor",
 
               // Administration (check individual permissions or role)
