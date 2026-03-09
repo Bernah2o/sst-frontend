@@ -54,6 +54,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemButton,
   Alert,
   LinearProgress,
   Rating,
@@ -133,6 +134,7 @@ interface EmployeeResponse {
   employee_email: string;
   cargo?: string;
   telefono?: string;
+  response_date?: string;
   submission_date?: string;
   submission_status: string;
   response_time_minutes?: number;
@@ -199,18 +201,24 @@ const Survey: React.FC = () => {
   // Estados para modo de respuesta de empleado
   const [isEmployeeResponseMode, setIsEmployeeResponseMode] = useState(false);
   const [surveyToRespond, setSurveyToRespond] = useState<SurveyData | null>(
-    null
+    null,
   );
   const [employeeAnswers, setEmployeeAnswers] = useState<{
     [key: number]: any;
   }>({});
   const [submittingResponse, setSubmittingResponse] = useState(false);
   const [loadingSurvey, setLoadingSurvey] = useState(false);
+  const [employeeResponseDate, setEmployeeResponseDate] = useState<Date | null>(
+    new Date(),
+  );
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success" as "success" | "error" | "warning" | "info",
   });
+  const [responsesYear, setResponsesYear] = useState<number | "">("");
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [questionStats, setQuestionStats] = useState<any[]>([]);
   const [filters, setFilters] = useState({
     status: "",
     course_id: "",
@@ -246,7 +254,9 @@ const Survey: React.FC = () => {
 
   // Estados para asignación de encuestas generales
   const [openAssignDialog, setOpenAssignDialog] = useState(false);
-  const [assigningSurvey, setAssigningSurvey] = useState<SurveyData | null>(null);
+  const [assigningSurvey, setAssigningSurvey] = useState<SurveyData | null>(
+    null,
+  );
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [assignmentLoading, setAssignmentLoading] = useState(false);
 
@@ -277,8 +287,6 @@ const Survey: React.FC = () => {
     { value: "yes_no", label: "Sí/No" },
     { value: "scale", label: "Escala de valoración" },
   ];
-
-  
 
   const fetchSurveys = useCallback(async () => {
     try {
@@ -315,7 +323,7 @@ const Survey: React.FC = () => {
         const response = await api.get(`${endpoint}?${params.toString()}`);
         setSurveys(response.data.items || []);
         setTotalPages(
-          response.data.pages || Math.ceil((response.data.total || 0) / 20)
+          response.data.pages || Math.ceil((response.data.total || 0) / 20),
         );
       }
     } catch (error) {
@@ -326,26 +334,26 @@ const Survey: React.FC = () => {
   }, [page, filters, user]);
 
   // Re-run initial data fetches after fetchSurveys is defined to avoid use-before-define
-useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const surveyId = urlParams.get("survey_id");
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const surveyId = urlParams.get("survey_id");
 
-  if (surveyId && user?.role === "employee") {
-    setIsEmployeeResponseMode(true);
-    fetchSurveyForResponse(parseInt(surveyId));
-  } else {
-    setIsEmployeeResponseMode(false);
-    // Empleado: solo cargar sus encuestas, evitar llamadas extra innecesarias
-    if (user?.role === "employee") {
-      fetchSurveys();
+    if (surveyId && user?.role === "employee") {
+      setIsEmployeeResponseMode(true);
+      fetchSurveyForResponse(parseInt(surveyId));
     } else {
-      // Otros roles: cargar datos completos necesarios para gestión
-      fetchSurveys();
-      fetchWorkers();
-      fetchCourses();
+      setIsEmployeeResponseMode(false);
+      // Empleado: solo cargar sus encuestas, evitar llamadas extra innecesarias
+      if (user?.role === "employee") {
+        fetchSurveys();
+      } else {
+        // Otros roles: cargar datos completos necesarios para gestión
+        fetchSurveys();
+        fetchWorkers();
+        fetchCourses();
+      }
     }
-  }
-}, [page, filters, user, fetchSurveys]);
+  }, [page, filters, user, fetchSurveys]);
 
   const fetchWorkers = async () => {
     try {
@@ -371,13 +379,29 @@ useEffect(() => {
     }
   };
 
-  const fetchUserSurveys = async (surveyId: number) => {
+  const fetchUserSurveys = async (surveyId: number, year?: number) => {
     try {
-      const response = await api.get(`/surveys/${surveyId}/detailed-results`);
+      const url = year
+        ? `/surveys/${surveyId}/detailed-results?year=${year}`
+        : `/surveys/${surveyId}/detailed-results`;
+      const response = await api.get(url);
       setUserSurveys(response.data.employee_responses || []);
     } catch (error) {
       console.error("Error fetching user surveys:", error);
       setUserSurveys([]);
+    }
+  };
+
+  const fetchSurveyStatistics = async (surveyId: number, year?: number) => {
+    try {
+      const url = year
+        ? `/surveys/${surveyId}/statistics?year=${year}`
+        : `/surveys/${surveyId}/statistics`;
+      const resp = await api.get(url);
+      setQuestionStats(resp.data.question_statistics || []);
+    } catch (error) {
+      console.error("Error fetching survey statistics:", error);
+      setQuestionStats([]);
     }
   };
 
@@ -386,13 +410,16 @@ useEffect(() => {
       setLoadingSurvey(true);
       const response = await api.get(`/surveys/${surveyId}`);
       setSurveyToRespond(response.data);
+      setEmployeeResponseDate(new Date());
       // Inicializar respuestas vacías para cada pregunta
       const initialAnswers: { [key: number]: any } = {};
       response.data.questions?.forEach((question: SurveyQuestion) => {
+        const initialValue =
+          question.question_type === "scale" ? (question.min_value ?? 0) : null;
         initialAnswers[question.id] = {
           question_id: question.id,
           answer_text: null,
-          answer_value: null,
+          answer_value: initialValue,
           selected_options: null,
         };
       });
@@ -409,20 +436,91 @@ useEffect(() => {
   const submitEmployeeResponse = async () => {
     if (!surveyToRespond) return;
 
+    if (!employeeResponseDate) {
+      setSnackbar({
+        open: true,
+        message: "Debe diligenciar la fecha de la encuesta antes de enviar",
+        severity: "warning",
+      });
+      return;
+    }
+
+    const missing: number[] = [];
+    surveyToRespond.questions?.forEach(
+      (question: SurveyQuestion, index: number) => {
+        const answer = employeeAnswers[question.id];
+        const qt = question.question_type;
+
+        const hasText = Boolean((answer?.answer_text || "").trim());
+        const hasValue =
+          answer?.answer_value !== null && answer?.answer_value !== undefined;
+        const hasOptions = (() => {
+          if (!answer?.selected_options) return false;
+          try {
+            const parsed = JSON.parse(answer.selected_options);
+            return Array.isArray(parsed) && parsed.length > 0;
+          } catch {
+            return Boolean(String(answer.selected_options).trim());
+          }
+        })();
+
+        let ok = false;
+        if (
+          qt === "text" ||
+          qt === "textarea" ||
+          qt === "single_choice" ||
+          qt === "yes_no"
+        ) {
+          ok = hasText;
+        } else if (qt === "multiple_choice") {
+          ok = hasOptions || hasText;
+        } else if (qt === "rating" || qt === "scale") {
+          ok = hasValue;
+          if (ok && typeof answer.answer_value === "number") {
+            if (
+              question.min_value !== undefined &&
+              answer.answer_value < question.min_value
+            )
+              ok = false;
+            if (
+              question.max_value !== undefined &&
+              answer.answer_value > question.max_value
+            )
+              ok = false;
+          }
+        } else {
+          ok = hasText || hasValue || hasOptions;
+        }
+
+        if (!ok) missing.push(index + 1);
+      },
+    );
+
+    if (missing.length > 0) {
+      setSnackbar({
+        open: true,
+        message: `Debe contestar todas las preguntas antes de enviar. Faltan: ${missing.join(", ")}`,
+        severity: "warning",
+      });
+      return;
+    }
+
     setSubmittingResponse(true);
     try {
-      // Prepare answers array for submission
-      const answers = Object.values(employeeAnswers).filter((answer: any) => {
-        // Only include answers that have some value
-        return (
-          answer.answer_text ||
-          answer.answer_value !== null ||
-          answer.selected_options
-        );
-      });
+      const pad2 = (n: number) => String(n).padStart(2, "0");
+      const responseDateStr = `${employeeResponseDate.getFullYear()}-${pad2(
+        employeeResponseDate.getMonth() + 1,
+      )}-${pad2(employeeResponseDate.getDate())}`;
+
+      const answers = (surveyToRespond.questions || []).map(
+        (q: SurveyQuestion) => {
+          return employeeAnswers[q.id];
+        },
+      );
 
       const submissionData = {
         answers: answers,
+        response_date: responseDateStr,
       };
 
       await api.post(`/surveys/${surveyToRespond.id}/submit`, submissionData);
@@ -443,7 +541,7 @@ useEffect(() => {
         try {
           // Obtener el progreso del curso para verificar el estado de las encuestas
           const progressResponse = await api.get(
-            `/progress/course/${surveyToRespond.course_id}`
+            `/progress/course/${surveyToRespond.course_id}`,
           );
           const courseProgress = progressResponse.data;
 
@@ -455,14 +553,15 @@ useEffect(() => {
             // Si no hay encuestas pendientes, habilitar la evaluación
             setSnackbar({
               open: true,
-              message: "Su encuesta ha sido guardada ya pueden realizar la evaluación",
+              message:
+                "Su encuesta ha sido guardada ya pueden realizar la evaluación",
               severity: "success",
             });
 
             // Habilitar la evaluación para el usuario
             try {
               await api.post(
-                `/evaluations/enable-for-user/${surveyToRespond.course_id}`
+                `/evaluations/enable-for-user/${surveyToRespond.course_id}`,
               );
             } catch (evalError) {
               console.error("Error habilitando evaluación:", evalError);
@@ -740,7 +839,7 @@ useEffect(() => {
       question_text: newQuestion.question_text,
       question_type: newQuestion.question_type,
       options: ["multiple_choice", "single_choice"].includes(
-        newQuestion.question_type
+        newQuestion.question_type,
       )
         ? newQuestion.options
         : undefined,
@@ -802,7 +901,7 @@ useEffect(() => {
       question_text: newQuestion.question_text,
       question_type: newQuestion.question_type,
       options: ["multiple_choice", "single_choice"].includes(
-        newQuestion.question_type
+        newQuestion.question_type,
       )
         ? newQuestion.options
         : undefined,
@@ -959,8 +1058,64 @@ useEffect(() => {
 
   const handleViewResponses = async (survey: SurveyData) => {
     setViewingSurvey(survey);
-    await fetchUserSurveys(survey.id);
+    try {
+      const yearsResp = await api.get(`/surveys/${survey.id}/available-years`);
+      const years = (yearsResp.data || []) as number[];
+      setAvailableYears(years);
+
+      const defaultYear = years.length > 0 ? years[0] : "";
+      setResponsesYear(defaultYear as any);
+
+      if (defaultYear) {
+        await fetchUserSurveys(survey.id, Number(defaultYear));
+        await fetchSurveyStatistics(survey.id, Number(defaultYear));
+      } else {
+        await fetchUserSurveys(survey.id);
+        await fetchSurveyStatistics(survey.id);
+      }
+    } catch (e) {
+      setAvailableYears([]);
+      setResponsesYear("");
+      await fetchUserSurveys(survey.id);
+      await fetchSurveyStatistics(survey.id);
+    }
     setOpenResponsesDialog(true);
+  };
+
+  const downloadSurveyPdf = async () => {
+    if (!viewingSurvey) return;
+    if (!responsesYear) {
+      setSnackbar({
+        open: true,
+        message: "Seleccione un año para generar el PDF",
+        severity: "warning",
+      });
+      return;
+    }
+
+    try {
+      const resp = await api.get(
+        `/surveys/${viewingSurvey.id}/report/pdf?year=${responsesYear}`,
+        { responseType: "blob" },
+      );
+
+      const blob = new Blob([resp.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `reporte_encuesta_${viewingSurvey.id}_${responsesYear}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error("Error downloading survey PDF:", error);
+      setSnackbar({
+        open: true,
+        message: error?.response?.data?.detail || "Error al descargar el PDF",
+        severity: "error",
+      });
+    }
   };
 
   const handleViewDetailedResponse = (employeeResponse: EmployeeResponse) => {
@@ -994,7 +1149,7 @@ useEffect(() => {
   const removeOption = (index: number) => {
     const currentOptions = JSON.parse(newQuestion.options || "[]");
     const updatedOptions = currentOptions.filter(
-      (_: string, i: number) => i !== index
+      (_: string, i: number) => i !== index,
     );
     setNewQuestion({
       ...newQuestion,
@@ -1033,6 +1188,15 @@ useEffect(() => {
                 </CardContent>
               </Card>
             )}
+
+            <Box sx={{ mb: 3, maxWidth: 320 }}>
+              <DatePicker
+                label="Fecha de diligenciamiento"
+                value={employeeResponseDate}
+                onChange={(date) => setEmployeeResponseDate(date)}
+                slotProps={{ textField: { fullWidth: true, required: true } }}
+              />
+            </Box>
 
             <Card>
               <CardContent>
@@ -1117,7 +1281,7 @@ useEffect(() => {
                                 control={<Radio />}
                                 label={option}
                               />
-                            )
+                            ),
                           )}
                         </RadioGroup>
                       )}
@@ -1132,7 +1296,7 @@ useEffect(() => {
                               ]?.selected_options
                                 ? JSON.parse(
                                     employeeAnswers[question.id]
-                                      .selected_options
+                                      .selected_options,
                                   )
                                 : [];
 
@@ -1151,7 +1315,7 @@ useEffect(() => {
                                         } else {
                                           newSelectedOptions =
                                             newSelectedOptions.filter(
-                                              (o) => o !== option
+                                              (o) => o !== option,
                                             );
                                         }
 
@@ -1161,7 +1325,7 @@ useEffect(() => {
                                             ...prev[question.id],
                                             selected_options:
                                               JSON.stringify(
-                                                newSelectedOptions
+                                                newSelectedOptions,
                                               ),
                                           },
                                         }));
@@ -1171,7 +1335,7 @@ useEffect(() => {
                                   label={option}
                                 />
                               );
-                            }
+                            },
                           )}
                         </FormGroup>
                       )}
@@ -1180,7 +1344,7 @@ useEffect(() => {
                       <Box>
                         <Rating
                           value={
-                            employeeAnswers[question.id]?.answer_value || 0
+                            employeeAnswers[question.id]?.answer_value ?? 0
                           }
                           max={question.max_value || 5}
                           onChange={(event, newValue) => {
@@ -1199,7 +1363,7 @@ useEffect(() => {
                           sx={{ mt: 1 }}
                         >
                           Calificación:{" "}
-                          {employeeAnswers[question.id]?.answer_value || 0} de{" "}
+                          {employeeAnswers[question.id]?.answer_value ?? 0} de{" "}
                           {question.max_value || 5}
                         </Typography>
                       </Box>
@@ -1209,12 +1373,12 @@ useEffect(() => {
                       <Box>
                         <Slider
                           value={
-                            employeeAnswers[question.id]?.answer_value ||
-                            question.min_value ||
+                            employeeAnswers[question.id]?.answer_value ??
+                            question.min_value ??
                             0
                           }
-                          min={question.min_value || 0}
-                          max={question.max_value || 10}
+                          min={question.min_value ?? 0}
+                          max={question.max_value ?? 10}
                           step={1}
                           marks
                           valueLabelDisplay="on"
@@ -1461,7 +1625,7 @@ useEffect(() => {
                                   {employeeSurvey.survey?.description
                                     ? employeeSurvey.survey.description.substring(
                                         0,
-                                        50
+                                        50,
                                       ) + "..."
                                     : "Sin descripción"}
                                 </Typography>
@@ -1473,17 +1637,17 @@ useEffect(() => {
                                   employeeSurvey.status === "completed"
                                     ? "Completada"
                                     : employeeSurvey.status === "in_progress"
-                                    ? "En progreso"
-                                    : employeeSurvey.status === "expired"
-                                    ? "Expirada"
-                                    : "No iniciada"
+                                      ? "En progreso"
+                                      : employeeSurvey.status === "expired"
+                                        ? "Expirada"
+                                        : "No iniciada"
                                 }
                                 color={
                                   employeeSurvey.status === "completed"
                                     ? "success"
                                     : employeeSurvey.status === "in_progress"
-                                    ? "warning"
-                                    : "error"
+                                      ? "warning"
+                                      : "error"
                                 }
                                 size="small"
                               />
@@ -1528,7 +1692,7 @@ useEffect(() => {
                                       // Navegar al modo de respuesta de encuesta
                                       setIsEmployeeResponseMode(true);
                                       fetchSurveyForResponse(
-                                        employeeSurvey.survey_id
+                                        employeeSurvey.survey_id,
                                       );
                                     }}
                                     disabled={
@@ -2034,7 +2198,7 @@ useEffect(() => {
                                     const filteredUsers =
                                       getFormFilteredUsers();
                                     setFormSelectedUsers(
-                                      filteredUsers.map((u) => u.id)
+                                      filteredUsers.map((u) => u.id),
                                     );
                                   }}
                                 >
@@ -2056,7 +2220,7 @@ useEffect(() => {
                                     control={
                                       <Checkbox
                                         checked={formSelectedUsers.includes(
-                                          worker.id
+                                          worker.id,
                                         )}
                                         onChange={(e) => {
                                           if (e.target.checked) {
@@ -2067,8 +2231,8 @@ useEffect(() => {
                                           } else {
                                             setFormSelectedUsers((prev) =>
                                               prev.filter(
-                                                (id) => id !== worker.id
-                                              )
+                                                (id) => id !== worker.id,
+                                              ),
                                             );
                                           }
                                         }}
@@ -2137,7 +2301,7 @@ useEffect(() => {
                                 Tipo:{" "}
                                 {
                                   questionTypes.find(
-                                    (t) => t.value === question.question_type
+                                    (t) => t.value === question.question_type,
                                   )?.label
                                 }
                                 {question.is_required && " • Obligatoria"}
@@ -2264,7 +2428,7 @@ useEffect(() => {
 
                           {/* Opciones para preguntas de selección */}
                           {["multiple_choice", "single_choice"].includes(
-                            newQuestion.question_type
+                            newQuestion.question_type,
                           ) && (
                             <Grid size={12}>
                               <Typography variant="subtitle2" gutterBottom>
@@ -2298,7 +2462,7 @@ useEffect(() => {
                                       <DeleteIcon />
                                     </IconButton>
                                   </Box>
-                                )
+                                ),
                               )}
                               <Button
                                 size="small"
@@ -2483,7 +2647,7 @@ useEffect(() => {
                                 Tipo:{" "}
                                 {
                                   questionTypes.find(
-                                    (t) => t.value === question.question_type
+                                    (t) => t.value === question.question_type,
                                   )?.label
                                 }
                                 {question.is_required && " • Obligatoria"}
@@ -2499,7 +2663,7 @@ useEffect(() => {
                                         <ListItem key={optIndex}>
                                           <ListItemText primary={option} />
                                         </ListItem>
-                                      )
+                                      ),
                                     )}
                                   </List>
                                 </Box>
@@ -2537,6 +2701,59 @@ useEffect(() => {
                 {viewingSurvey && ` - ${viewingSurvey.title}`}
               </DialogTitle>
               <DialogContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 2,
+                    alignItems: "center",
+                    mb: 2,
+                  }}
+                >
+                  <FormControl size="small" sx={{ minWidth: 160 }}>
+                    <InputLabel>Año</InputLabel>
+                    <Select
+                      label="Año"
+                      value={responsesYear}
+                      onChange={(e) => setResponsesYear(e.target.value as any)}
+                    >
+                      <MenuItem value="">Todos</MenuItem>
+                      {(availableYears.length > 0
+                        ? availableYears
+                        : Array.from({ length: 8 }).map(
+                            (_, i) => new Date().getFullYear() - i,
+                          )
+                      ).map((y) => (
+                        <MenuItem key={y} value={y}>
+                          {y}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={() => {
+                      if (!viewingSurvey) return;
+                      const y = responsesYear
+                        ? Number(responsesYear)
+                        : undefined;
+                      fetchUserSurveys(viewingSurvey.id, y);
+                      fetchSurveyStatistics(viewingSurvey.id, y);
+                    }}
+                    disabled={!viewingSurvey}
+                  >
+                    Aplicar
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<CopyIcon />}
+                    onClick={downloadSurveyPdf}
+                    disabled={!viewingSurvey || !responsesYear}
+                  >
+                    PDF del año
+                  </Button>
+                </Box>
                 {userSurveys && userSurveys.length > 0 ? (
                   <TableContainer component={Paper}>
                     <Table>
@@ -2546,6 +2763,7 @@ useEffect(() => {
                           <TableCell>Email</TableCell>
                           <TableCell>Cargo</TableCell>
                           <TableCell>Estado</TableCell>
+                          <TableCell>Fecha Diligenciada</TableCell>
                           <TableCell>Fecha Completado</TableCell>
                           <TableCell>Tiempo Respuesta</TableCell>
                           <TableCell>Completitud</TableCell>
@@ -2574,29 +2792,34 @@ useEffect(() => {
                                     "completed"
                                       ? "Completada"
                                       : employeeResponse.submission_status ===
-                                        "in_progress"
-                                      ? "En progreso"
-                                      : employeeResponse.submission_status ===
-                                        "expired"
-                                      ? "Expirada"
-                                      : "No iniciada"
+                                          "in_progress"
+                                        ? "En progreso"
+                                        : employeeResponse.submission_status ===
+                                            "expired"
+                                          ? "Expirada"
+                                          : "No iniciada"
                                   }
                                   color={
                                     employeeResponse.submission_status ===
                                     "completed"
                                       ? "success"
                                       : employeeResponse.submission_status ===
-                                        "in_progress"
-                                      ? "warning"
-                                      : "error"
+                                          "in_progress"
+                                        ? "warning"
+                                        : "error"
                                   }
                                   size="small"
                                 />
                               </TableCell>
                               <TableCell>
+                                {employeeResponse.response_date
+                                  ? formatDate(employeeResponse.response_date)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell>
                                 {employeeResponse.submission_date
                                   ? formatDateTime(
-                                      employeeResponse.submission_date
+                                      employeeResponse.submission_date,
                                     )
                                   : "-"}
                               </TableCell>
@@ -2614,7 +2837,7 @@ useEffect(() => {
                                     size="small"
                                     onClick={() =>
                                       handleViewDetailedResponse(
-                                        employeeResponse
+                                        employeeResponse,
                                       )
                                     }
                                   >
@@ -2635,6 +2858,83 @@ useEffect(() => {
                   >
                     No hay respuestas registradas para esta encuesta
                   </Typography>
+                )}
+
+                {questionStats && questionStats.length > 0 && (
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                      Análisis por pregunta
+                    </Typography>
+                    {questionStats.map((q: any, idx: number) => (
+                      <Accordion key={q.question_id || idx}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                          <Typography variant="subtitle1">
+                            {idx + 1}. {q.question_text}
+                          </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Typography variant="body2" color="text.secondary">
+                            Tipo: {q.question_type} • Respuestas:{" "}
+                            {q.total_answers}
+                            {q.missing_answers
+                              ? ` • Sin respuesta: ${q.missing_answers}`
+                              : ""}
+                            {q.average !== null && q.average !== undefined
+                              ? ` • Promedio: ${q.average}`
+                              : ""}
+                          </Typography>
+
+                          {q.counts && (
+                            <Table size="small" sx={{ mt: 2 }}>
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Opción / Valor</TableCell>
+                                  <TableCell align="right">Conteo</TableCell>
+                                  <TableCell align="right">%</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {Object.entries(q.counts).map(
+                                  ([key, value]: any) => (
+                                    <TableRow key={key}>
+                                      <TableCell>{key}</TableCell>
+                                      <TableCell align="right">
+                                        {value as any}
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {q.total_answers
+                                          ? `${(
+                                              (Number(value) /
+                                                Number(q.total_answers)) *
+                                              100
+                                            ).toFixed(1)}%`
+                                          : "0.0%"}
+                                      </TableCell>
+                                    </TableRow>
+                                  ),
+                                )}
+                              </TableBody>
+                            </Table>
+                          )}
+
+                          {q.samples && q.samples.length > 0 && (
+                            <Box sx={{ mt: 2 }}>
+                              <Typography variant="subtitle2" gutterBottom>
+                                Respuestas (muestra)
+                              </Typography>
+                              <List dense>
+                                {q.samples.map((s: string, i: number) => (
+                                  <ListItem key={i}>
+                                    <ListItemText primary={s} />
+                                  </ListItem>
+                                ))}
+                              </List>
+                            </Box>
+                          )}
+                        </AccordionDetails>
+                      </Accordion>
+                    ))}
+                  </Box>
                 )}
               </DialogContent>
               <DialogActions>
@@ -2735,7 +3035,7 @@ useEffect(() => {
                               <Typography variant="body1">
                                 {selectedEmployeeResponse.submission_date
                                   ? formatDateTime(
-                                      selectedEmployeeResponse.submission_date
+                                      selectedEmployeeResponse.submission_date,
                                     )
                                   : "No completado"}
                               </Typography>
@@ -2766,7 +3066,7 @@ useEffect(() => {
                                 }
                                 sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
                                 color={getCompletionColor(
-                                  selectedEmployeeResponse.completion_percentage
+                                  selectedEmployeeResponse.completion_percentage,
                                 )}
                               />
                               <Typography variant="body2">
@@ -2814,7 +3114,7 @@ useEffect(() => {
                                 </Box>
                               </CardContent>
                             </Card>
-                          )
+                          ),
                         )}
                       </Box>
                     ) : (
@@ -2982,8 +3282,8 @@ useEffect(() => {
                                 } else {
                                   setSelectedUsers(
                                     selectedUsers.filter(
-                                      (id) => id !== worker.id
-                                    )
+                                      (id) => id !== worker.id,
+                                    ),
                                   );
                                 }
                               }}
