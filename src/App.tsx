@@ -110,6 +110,8 @@ import EstandaresMinimos from "./pages/EstandaresMinimos";
 import EstandaresMinimosDetalle from "./pages/EstandaresMinimosDetalle";
 import CronogramaPyp from "./pages/CronogramaPyp";
 import CronogramaPypDetail from "./pages/CronogramaPypDetail";
+import ProgramaInspecciones from "./pages/ProgramaInspecciones";
+import ProgramaInspeccionesDetail from "./pages/ProgramaInspeccionesDetail";
 import { UserRole } from "./types";
 import { checkPagePermission, PAGE_PERMISSIONS } from "./utils/pagePermissions";
 
@@ -813,6 +815,23 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
                         <CronogramaPypDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Rutas de Programa de Inspecciones */}
+                  <Route
+                    path="/admin/programa-inspecciones"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <ProgramaInspecciones />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/programa-inspecciones/:programaId"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                        <ProgramaInspeccionesDetail />
                       </ProtectedRoute>
                     }
                   />
