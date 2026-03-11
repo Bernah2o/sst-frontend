@@ -601,12 +601,32 @@ const Survey: React.FC = () => {
 
   const handleSaveSurvey = async () => {
     try {
-      const payload = {
+      const basePayload = {
         ...formData,
-        questions: questions,
         closes_at: formData.closes_at?.toISOString(),
         expires_at: formData.expires_at?.toISOString(),
       };
+
+      const normalizeQuestions = (qs: SurveyQuestion[]) =>
+        qs.map((q, idx) => ({
+          question_text: q.question_text,
+          question_type: q.question_type,
+          options: q.options ?? null,
+          is_required: q.is_required,
+          min_value: q.min_value ?? null,
+          max_value: q.max_value ?? null,
+          placeholder_text: q.placeholder_text ?? null,
+          order_index: idx,
+        }));
+
+      const questionsChanged =
+        !editingSurvey ||
+        JSON.stringify(normalizeQuestions(questions)) !==
+          JSON.stringify(normalizeQuestions(editingSurvey.questions || []));
+
+      const payload = questionsChanged
+        ? { ...basePayload, questions }
+        : basePayload;
 
       let surveyResponse;
       if (editingSurvey) {
