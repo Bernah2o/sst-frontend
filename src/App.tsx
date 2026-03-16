@@ -35,6 +35,8 @@ import Report from "./pages/Report";
 
 import Survey from "./pages/Survey";
 import SurveyTabulation from "./pages/SurveyTabulation";
+import NordicoTabulation from "./pages/NordicoTabulation";
+import BurnoutTabulation from "./pages/BurnoutTabulation";
 import UserProgress from "./pages/UserProgress";
 import Certificate from "./pages/Certificate";
 import Notification from "./pages/Notification";
@@ -898,6 +900,22 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/survey-tabulation">
                         <SurveyTabulation />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/nordico-tabulation"
+                    element={
+                      <ProtectedRoute route="/admin/nordico-tabulation">
+                        <NordicoTabulation />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/burnout-tabulation"
+                    element={
+                      <ProtectedRoute route="/admin/burnout-tabulation">
+                        <BurnoutTabulation />
                       </ProtectedRoute>
                     }
                   />

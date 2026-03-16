@@ -21,7 +21,14 @@
       "Bash(done)",
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
-      "Bash(grep -l \"HTMLToPDFConverter\\\\|html_to_pdf\" /e/DH2OCOL/python/sst-app/sst-backend/app/api/*.py)"
+      "Bash(grep -l \"HTMLToPDFConverter\\\\|html_to_pdf\" /e/DH2OCOL/python/sst-app/sst-backend/app/api/*.py)",
+      "Bash(grep -n \"send.*certificate\\\\|send.*email.*cert\\\\|Certificate.*email\" /e/DH2OCOL/python/sst-app/sst-backend/app/api/*.py)",
+      "Bash(xargs cat:*)",
+      "Bash(grep -rn \"test_smtp\\\\|send_email\\\\|test.*email\" /e/DH2OCOL/python/sst-app/sst-backend/app/ --include=*.py)",
+      "Bash(python scripts/send_test_emails.py)",
+      "Bash(python -X utf8 scripts/send_test_emails.py)",
+      "Bash(find e:DH2OCOLpythonsst-appsst-frontend -name *survey* -o -name *encuesta*)",
+      "Bash(xargs grep:*)"
     ],
     "additionalDirectories": [
       "e:\\DH2OCOL\\python\\sst-app\\sst-backend\\app\\api"

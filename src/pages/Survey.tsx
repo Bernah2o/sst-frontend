@@ -14,6 +14,7 @@ import {
   PlayArrow as StartIcon,
   Stop as StopIcon,
   FileCopy as CopyIcon,
+  LibraryBooks as TemplatesIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -251,6 +252,13 @@ const Survey: React.FC = () => {
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<
     number | null
   >(null);
+
+  // Estados para plantillas de encuesta
+  const [openTemplatesDialog, setOpenTemplatesDialog] = useState(false);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [surveyTemplates, setSurveyTemplates] = useState<
+    { id: string; name: string; description: string; question_count: number }[]
+  >([]);
 
   // Estados para asignación de encuestas generales
   const [openAssignDialog, setOpenAssignDialog] = useState(false);
@@ -701,6 +709,45 @@ const Survey: React.FC = () => {
   };
 
   // (Función de actualización de estado removida por no uso)
+
+  const handleOpenTemplatesDialog = async () => {
+    try {
+      const response = await api.get("/surveys/templates");
+      setSurveyTemplates(response.data);
+      setOpenTemplatesDialog(true);
+    } catch (error) {
+      console.error("Error fetching survey templates:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al cargar las plantillas de encuesta",
+        severity: "error",
+      });
+    }
+  };
+
+  const handleCreateFromTemplate = async (templateId: string) => {
+    try {
+      setLoadingTemplate(true);
+      const response = await api.post(`/surveys/from-template/${templateId}`);
+      setOpenTemplatesDialog(false);
+      await handleOpenDialog(response.data);
+      setSnackbar({
+        open: true,
+        message:
+          "Encuesta creada desde plantilla. Revise y publique cuando esté lista.",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error creating survey from template:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al crear la encuesta desde plantilla",
+        severity: "error",
+      });
+    } finally {
+      setLoadingTemplate(false);
+    }
+  };
 
   const handleDuplicateSurvey = async (survey: SurveyData) => {
     try {
@@ -1560,21 +1607,30 @@ const Survey: React.FC = () => {
                     </FormControl>
                   </Grid>
 
-                  <Grid size={{ xs: 12, md: 2 }}>
-                    <Box display="flex" gap={1}>
-                      <Tooltip title="Actualizar">
-                        <IconButton onClick={fetchSurveys}>
+                  <Grid size={{ xs: 12 }}>
+                    <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} flexWrap="wrap">
+                      <Tooltip title="Actualizar lista">
+                        <IconButton onClick={fetchSurveys} size="small">
                           <RefreshIcon />
                         </IconButton>
                       </Tooltip>
                       {canCreateSurveys() && (
-                        <Button
-                          variant="contained"
-                          startIcon={<AddIcon />}
-                          onClick={() => handleOpenDialog()}
-                        >
-                          Nueva Encuesta
-                        </Button>
+                        <>
+                          <Button
+                            variant="outlined"
+                            startIcon={<TemplatesIcon />}
+                            onClick={handleOpenTemplatesDialog}
+                          >
+                            Plantillas
+                          </Button>
+                          <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={() => handleOpenDialog()}
+                          >
+                            Nueva Encuesta
+                          </Button>
+                        </>
                       )}
                     </Box>
                   </Grid>
@@ -3443,6 +3499,79 @@ const Survey: React.FC = () => {
             </Dialog>
           </Box>
         )}
+
+        {/* Dialog de Plantillas de Encuesta */}
+        <Dialog
+          open={openTemplatesDialog}
+          onClose={() => setOpenTemplatesDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box display="flex" alignItems="center" gap={1}>
+              <TemplatesIcon color="primary" />
+              <Typography variant="h6">Plantillas de Encuesta</Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Seleccione una plantilla estandarizada para crear una encuesta
+              pre-configurada con todas sus preguntas. La encuesta se creará en
+              estado <strong>Borrador</strong> para que pueda revisarla antes de
+              publicar.
+            </Typography>
+            {loadingTemplate ? (
+              <Box display="flex" justifyContent="center" py={3}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <List disablePadding>
+                {surveyTemplates.map((template) => (
+                  <ListItemButton
+                    key={template.id}
+                    onClick={() => handleCreateFromTemplate(template.id)}
+                    disabled={loadingTemplate}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      mb: 1,
+                      "&:hover": {
+                        borderColor: "primary.main",
+                        bgcolor: "primary.50",
+                      },
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Typography variant="subtitle1" fontWeight="medium">
+                          {template.name}
+                        </Typography>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            {template.description}
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={`${template.question_count} preguntas`}
+                            sx={{ mt: 0.5 }}
+                          />
+                        </Box>
+                      }
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenTemplatesDialog(false)}>
+              Cerrar
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Snackbar for notifications */}
         <Snackbar
