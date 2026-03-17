@@ -147,6 +147,7 @@ interface EmployeeResponse {
 
 interface Worker {
   id: number;
+  user_id?: number;
   first_name: string;
   last_name: string;
   document_number: string;
@@ -643,21 +644,23 @@ const Survey: React.FC = () => {
         surveyResponse = await api.post("/surveys/", payload);
       }
 
-      // Si es una encuesta general y hay usuarios seleccionados, asignarlos
-      if (formData.survey_type === "general" && formSelectedUsers.length > 0) {
-        const surveyId = editingSurvey
-          ? editingSurvey.id
-          : surveyResponse.data.id;
-        await api.post("/surveys/assign", {
-          survey_id: surveyId,
-          user_ids: formSelectedUsers,
-        });
-      }
-
+setSnackbar({
+        open: true,
+        message: editingSurvey
+          ? "Encuesta actualizada exitosamente"
+          : "Encuesta creada exitosamente",
+        severity: "success",
+      });
       fetchSurveys();
       handleCloseDialog();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving survey:", error);
+      setSnackbar({
+        open: true,
+        message:
+          error?.response?.data?.detail || "Error al guardar la encuesta",
+        severity: "error",
+      });
     }
   };
 
@@ -853,7 +856,7 @@ const Survey: React.FC = () => {
   // Función para seleccionar todos los usuarios filtrados
   const handleSelectAllFiltered = () => {
     const filteredUsers = getFilteredUsers();
-    const filteredUserIds = filteredUsers.map((worker) => worker.id);
+    const filteredUserIds = filteredUsers.filter((w) => w.user_id).map((worker) => worker.user_id!);
     setSelectedUsers(filteredUserIds);
   };
 
@@ -2188,163 +2191,6 @@ const Survey: React.FC = () => {
                     />
                   </Grid>
 
-                  {/* Selección de Usuarios - Solo para encuestas generales */}
-                  {formData.survey_type === "general" && (
-                    <>
-                      <Grid size={12}>
-                        <Typography variant="h6" gutterBottom>
-                          Selección de Usuarios
-                        </Typography>
-                      </Grid>
-
-                      {/* Filtros de búsqueda */}
-                      <Grid size={{ xs: 12, md: 4 }}>
-                        <TextField
-                          fullWidth
-                          label="Buscar usuarios"
-                          value={formUserSearch}
-                          onChange={(e) => setFormUserSearch(e.target.value)}
-                          InputProps={{
-                            startAdornment: (
-                              <SearchIcon
-                                sx={{ mr: 1, color: "text.secondary" }}
-                              />
-                            ),
-                          }}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 4 }}>
-                        <FormControl fullWidth>
-                          <InputLabel>Filtrar por Área</InputLabel>
-                          <Select
-                            value={formUserAreaFilter}
-                            onChange={(e) =>
-                              setFormUserAreaFilter(e.target.value)
-                            }
-                          >
-                            <MenuItem value="">Todas las áreas</MenuItem>
-                            {getUniqueAreas().map((area) => (
-                              <MenuItem key={area} value={area}>
-                                {area}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 4 }}>
-                        <FormControl fullWidth>
-                          <InputLabel>Filtrar por Cargo</InputLabel>
-                          <Select
-                            value={formUserCargoFilter}
-                            onChange={(e) =>
-                              setFormUserCargoFilter(e.target.value)
-                            }
-                          >
-                            <MenuItem value="">Todos los cargos</MenuItem>
-                            {getUniqueCargos().map((cargo) => (
-                              <MenuItem key={cargo} value={cargo}>
-                                {cargo}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-
-                      {/* Lista de usuarios */}
-                      <Grid size={12}>
-                        <Card
-                          variant="outlined"
-                          sx={{ maxHeight: 400, overflow: "auto" }}
-                        >
-                          <CardContent>
-                            <Box
-                              display="flex"
-                              justifyContent="space-between"
-                              alignItems="center"
-                              mb={2}
-                            >
-                              <Typography variant="subtitle1">
-                                Usuarios Disponibles (
-                                {getFormFilteredUsers().length})
-                              </Typography>
-                              <Box display="flex" gap={1}>
-                                <Button
-                                  size="small"
-                                  onClick={() => {
-                                    const filteredUsers =
-                                      getFormFilteredUsers();
-                                    setFormSelectedUsers(
-                                      filteredUsers.map((u) => u.id),
-                                    );
-                                  }}
-                                >
-                                  Seleccionar Todos
-                                </Button>
-                                <Button
-                                  size="small"
-                                  onClick={() => setFormSelectedUsers([])}
-                                >
-                                  Deseleccionar Todos
-                                </Button>
-                              </Box>
-                            </Box>
-
-                            <List dense>
-                              {getFormFilteredUsers().map((worker) => (
-                                <ListItem key={worker.id} disablePadding>
-                                  <FormControlLabel
-                                    control={
-                                      <Checkbox
-                                        checked={formSelectedUsers.includes(
-                                          worker.id,
-                                        )}
-                                        onChange={(e) => {
-                                          if (e.target.checked) {
-                                            setFormSelectedUsers((prev) => [
-                                              ...prev,
-                                              worker.id,
-                                            ]);
-                                          } else {
-                                            setFormSelectedUsers((prev) =>
-                                              prev.filter(
-                                                (id) => id !== worker.id,
-                                              ),
-                                            );
-                                          }
-                                        }}
-                                      />
-                                    }
-                                    label={
-                                      <Box>
-                                        <Typography variant="body2">
-                                          {worker.first_name} {worker.last_name}
-                                        </Typography>
-                                        <Typography
-                                          variant="caption"
-                                          color="text.secondary"
-                                        >
-                                          {worker.position || "Sin cargo"} -{" "}
-                                          {worker.department || "Sin área"}
-                                        </Typography>
-                                      </Box>
-                                    }
-                                    sx={{ width: "100%" }}
-                                  />
-                                </ListItem>
-                              ))}
-                            </List>
-
-                            {formSelectedUsers.length > 0 && (
-                              <Alert severity="info" sx={{ mt: 2 }}>
-                                {formSelectedUsers.length} usuario(s)
-                                seleccionado(s)
-                              </Alert>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    </>
-                  )}
 
                   {/* Preguntas */}
                   <Grid size={12}>
@@ -3345,20 +3191,23 @@ const Survey: React.FC = () => {
                             "&:hover": {
                               bgcolor: "action.hover",
                             },
+                            opacity: worker.user_id ? 1 : 0.5,
                           }}
                           control={
                             <Checkbox
-                              checked={selectedUsers.includes(worker.id)}
+                              disabled={!worker.user_id}
+                              checked={!!worker.user_id && selectedUsers.includes(worker.user_id)}
                               onChange={(e) => {
+                                if (!worker.user_id) return;
                                 if (e.target.checked) {
                                   setSelectedUsers([
                                     ...selectedUsers,
-                                    worker.id,
+                                    worker.user_id,
                                   ]);
                                 } else {
                                   setSelectedUsers(
                                     selectedUsers.filter(
-                                      (id) => id !== worker.id,
+                                      (id) => id !== worker.user_id,
                                     ),
                                   );
                                 }
