@@ -235,6 +235,22 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     customCheck: (permissions) => permissions.canViewSurveysPage(),
   },
   {
+    route: '/admin/nordico-tabulation',
+    name: 'Tabulación Cuestionario Nórdico',
+    description: 'Análisis de síntomas musculoesqueléticos por región corporal',
+    requiredPermissions: ['canViewSurveysPage'],
+    allowedRoles: ['admin', 'trainer'],
+    customCheck: (permissions) => permissions.canViewSurveysPage(),
+  },
+  {
+    route: '/admin/burnout-tabulation',
+    name: 'Tabulación Síndrome de Burnout',
+    description: 'Análisis MBI de agotamiento emocional, despersonalización y realización personal',
+    requiredPermissions: ['canViewSurveysPage'],
+    allowedRoles: ['admin', 'trainer'],
+    customCheck: (permissions) => permissions.canViewSurveysPage(),
+  },
+  {
     route: '/employee/courses/:id/surveys',
     name: 'Encuestas del Curso',
     description: 'Encuestas asociadas a un curso específico',

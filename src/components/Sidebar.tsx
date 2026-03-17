@@ -29,6 +29,8 @@ import {
   Poll,
   Refresh,
   TrendingUp,
+  AccessibilityNew,
+  Psychology,
   ManageAccounts,
   PersonSearch,
   BeachAccess,
@@ -383,6 +385,20 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             label: "Tabulación de Encuestas",
             icon: <TrendingUp />,
             path: "/admin/survey-tabulation",
+            roles: ["admin"],
+          },
+          {
+            id: "nordico-tabulation",
+            label: "Tabulación Nórdico",
+            icon: <AccessibilityNew />,
+            path: "/admin/nordico-tabulation",
+            roles: ["admin"],
+          },
+          {
+            id: "burnout-tabulation",
+            label: "Tabulación Burnout",
+            icon: <Psychology />,
+            path: "/admin/burnout-tabulation",
             roles: ["admin"],
           },
           {
@@ -782,6 +798,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
                 canViewEvaluationsPage() || isNotEmployee,
               surveys: () => canViewSurveysPage() || isNotEmployee,
               "survey-tabulation": () => canViewSurveysPage() || isNotEmployee,
+              "nordico-tabulation": () => canViewSurveysPage() || isNotEmployee,
+              "burnout-tabulation": () => canViewSurveysPage() || isNotEmployee,
 
               // Attendance
               attendance: () => canViewAttendancePage() || isNotEmployee,
