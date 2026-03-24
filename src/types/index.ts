@@ -1003,6 +1003,7 @@ export interface WorkerBase {
   profession?: string;
   risk_level: RiskLevel;
   position: string;
+  cargo_id?: number;
   occupation?: string;
   salary_ibc?: number;
   fecha_de_ingreso?: string; // date in backend
@@ -1064,6 +1065,7 @@ export interface WorkerUpdate {
   profession?: string;
   risk_level?: RiskLevel;
   position?: string;
+  cargo_id?: number;
   occupation?: string;
   salary_ibc?: number;
   fecha_de_ingreso?: string; // date field
@@ -1088,6 +1090,7 @@ export interface WorkerList {
   document_number: string;
   email: string;
   position: string;
+  cargo_id?: number;
   department?: string;
   age: number;
   risk_level: RiskLevel;

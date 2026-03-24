@@ -28,7 +28,8 @@
       "Bash(python scripts/send_test_emails.py)",
       "Bash(python -X utf8 scripts/send_test_emails.py)",
       "Bash(find e:DH2OCOLpythonsst-appsst-frontend -name *survey* -o -name *encuesta*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"userrole\\\\|UserRole\\\\|employee\" /e/DH2OCOL/python/sst-app/sst-backend/alembic/versions/ --include=*.py -l)"
     ],
     "additionalDirectories": [
       "e:\\DH2OCOL\\python\\sst-app\\sst-backend\\app\\api"
