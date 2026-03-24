@@ -1105,7 +1105,16 @@ const WorkersManagement: React.FC = () => {
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Edad (años)"
-                value={editingWorker?.age ?? ""}
+                value={(() => {
+                  const bd = formData.birth_date;
+                  if (!bd) return "";
+                  const today = new Date();
+                  const birth = new Date(bd);
+                  let age = today.getFullYear() - birth.getFullYear();
+                  const m = today.getMonth() - birth.getMonth();
+                  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+                  return age >= 0 ? age : "";
+                })()}
                 fullWidth
                 InputProps={{ readOnly: true }}
                 disabled
