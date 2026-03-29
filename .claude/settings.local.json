@@ -29,7 +29,14 @@
       "Bash(python -X utf8 scripts/send_test_emails.py)",
       "Bash(find e:DH2OCOLpythonsst-appsst-frontend -name *survey* -o -name *encuesta*)",
       "Bash(xargs grep:*)",
-      "Bash(grep -r \"userrole\\\\|UserRole\\\\|employee\" /e/DH2OCOL/python/sst-app/sst-backend/alembic/versions/ --include=*.py -l)"
+      "Bash(grep -r \"userrole\\\\|UserRole\\\\|employee\" /e/DH2OCOL/python/sst-app/sst-backend/alembic/versions/ --include=*.py -l)",
+      "Bash(grep -E \"package\\\\.json$\")",
+      "Bash(grep -r \"SignatureCanvas\\\\|signature_pad\" e:DH2OCOLpythonsst-appsst-frontend/src --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"worker_signature\\\\|firma.*worker\\\\|signature.*canvas\" e:DH2OCOLpythonsst-appsst-frontend/src --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"worker_signature\\\\|Signature\" e:DH2OCOLpythonsst-appsst-frontend/src/services --include=*.ts)",
+      "Bash(grep -l \"firma\\\\|signature\" e:DH2OCOLpythonsst-appsst-frontend/src/pages/*.tsx)",
+      "Bash(npm list:*)",
+      "Bash(grep -r \"Tabs\\\\|Tab\\\\b\" e:/DH2OCOL/python/sst-app/sst-frontend/src/pages/ --include=*.tsx -l)"
     ],
     "additionalDirectories": [
       "e:\\DH2OCOL\\python\\sst-app\\sst-backend\\app\\api"

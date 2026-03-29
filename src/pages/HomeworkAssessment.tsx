@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -33,7 +33,7 @@ import {
   // AssignmentTurnedIn as ActionIcon,
   Timeline as FollowUpIcon
 } from "@mui/icons-material";
-import SignatureCanvas from "react-signature-canvas";
+import SignaturePad from "../components/SignaturePad";
 import { useSnackbar } from "notistack";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -71,7 +71,6 @@ const HomeworkAssessment: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const sigCanvas = useRef<SignatureCanvas>(null);
   
   const [loading, setLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -248,11 +247,6 @@ const HomeworkAssessment: React.FC = () => {
     setFormData(prev => ({ ...prev, [`${id}_obs`]: value }));
   };
 
-  const clearSignature = () => {
-    sigCanvas.current?.clear();
-  };
-
-
   const resolveImageUrl = (url: string) => {
     if (!url) return "";
     // Usar proxy del backend para URLs externas (Contabo) para evitar problemas de CORS/Auth
@@ -271,7 +265,7 @@ const HomeworkAssessment: React.FC = () => {
       return;
     }
 
-    if (sigCanvas.current?.isEmpty()) {
+    if (!formData.worker_signature) {
       enqueueSnackbar("La firma del trabajador es obligatoria", { variant: "warning" });
       return;
     }
@@ -305,7 +299,7 @@ const HomeworkAssessment: React.FC = () => {
         ...formData,
         photos: photos,
         worker_id: selectedWorker.id,
-        worker_signature: sigCanvas.current?.getTrimmedCanvas().toDataURL("image/png"),
+        worker_signature: formData.worker_signature,
       };
 
       if (formData.id) {
@@ -314,9 +308,6 @@ const HomeworkAssessment: React.FC = () => {
         await api.post("/assessments/homework", payload);
       }
       enqueueSnackbar("Autoevaluación guardada exitosamente", { variant: "success" });
-
-      // Limpiar firma
-      clearSignature();
 
       // Recargar datos para reflejar el nuevo estado
       await fetchInitialData();
@@ -583,24 +574,12 @@ const HomeworkAssessment: React.FC = () => {
           </ul>
         </Alert>
         
-        <Box sx={{ border: "1px dashed grey", borderRadius: 2, p: 2, bgcolor: "#f9f9f9", maxWidth: 500 }}>
-          <Typography variant="subtitle2" gutterBottom>Firma del Trabajador:</Typography>
-          {isReadOnly && formData.worker_signature ? (
-              <img src={resolveImageUrl(formData.worker_signature)} alt="Firma" style={{ maxWidth: "100%", maxHeight: 150 }} />
-          ) : (
-              <>
-                  <SignatureCanvas
-                    ref={sigCanvas}
-                    penColor="black"
-                    canvasProps={{ width: 450, height: 150, className: "sigCanvas" }}
-                    backgroundColor="white"
-                  />
-                  <Button size="small" onClick={clearSignature} startIcon={<Clear />} sx={{ mt: 1 }} disabled={isReadOnly}>
-                    Borrar Firma
-                  </Button>
-              </>
-          )}
-        </Box>
+        <SignaturePad
+          value={formData.worker_signature ?? null}
+          onChange={(dataUrl) => setFormData(prev => ({ ...prev, worker_signature: dataUrl }))}
+          disabled={isReadOnly}
+          resolveUrl={resolveImageUrl}
+        />
       </Paper>
 
       {/* Gestión SST y Plan de Acción (Solo para Admin/Supervisor y cuando ya está completada por el trabajador) */}
