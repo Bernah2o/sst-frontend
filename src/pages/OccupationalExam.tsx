@@ -175,6 +175,25 @@ const EXAM_TYPE_LABELS: Record<string, string> = {
   RETIRO: "Examen de Retiro",
 };
 
+const calculateDurationInMonths = (
+  hireDateStr: string,
+  examDate: Date | null,
+): string => {
+  if (!hireDateStr || !examDate) return "";
+
+  const ingreso = new Date(hireDateStr);
+  if (Number.isNaN(ingreso.getTime())) return "";
+
+  let months = (examDate.getFullYear() - ingreso.getFullYear()) * 12;
+  months -= ingreso.getMonth();
+  months += examDate.getMonth();
+  if (examDate.getDate() < ingreso.getDate()) {
+    months--;
+  }
+
+  return Math.max(0, months).toString();
+};
+
 const OccupationalExam: React.FC = () => {
   const [exams, setExams] = useState<OccupationalExamData[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -688,18 +707,7 @@ const OccupationalExam: React.FC = () => {
   ) => {
     if (!examDate) return;
 
-    // Calcular duración si hay fecha de ingreso
-    let duracionMesesStr = "";
-    if (hireDateStr) {
-      const ingreso = new Date(hireDateStr);
-      let months = (examDate.getFullYear() - ingreso.getFullYear()) * 12;
-      months -= ingreso.getMonth();
-      months += examDate.getMonth();
-      if (examDate.getDate() < ingreso.getDate()) {
-        months--;
-      }
-      duracionMesesStr = Math.max(0, months).toString();
-    }
+    const duracionMesesStr = calculateDurationInMonths(hireDateStr, examDate);
 
     try {
       const examDateStr = examDate.toISOString().split("T")[0];
@@ -823,14 +831,27 @@ const OccupationalExam: React.FC = () => {
   const handleOpenDialog = (exam?: OccupationalExamData) => {
     if (exam) {
       setEditingExam(exam);
+      const workerFromList = workers.find((w) => w.id === exam.worker_id);
+      const resolvedHireDate =
+        exam.worker_hire_date || workerFromList?.fecha_de_ingreso || "";
+      const examDateValue = exam.exam_date ? new Date(exam.exam_date) : null;
+      const persistedDuration =
+        (exam as any).duracion_cargo_actual_meses !== null &&
+        (exam as any).duracion_cargo_actual_meses !== undefined
+          ? String((exam as any).duracion_cargo_actual_meses)
+          : "";
+      const calculatedDuration = calculateDurationInMonths(
+        resolvedHireDate,
+        examDateValue,
+      );
 
       const formDataToSet = {
         worker_id: exam.worker_id ? exam.worker_id.toString() : "",
         worker_name: exam.worker_name || "",
         worker_position: exam.worker_position || "",
-        worker_hire_date: exam.worker_hire_date || "",
+        worker_hire_date: resolvedHireDate,
         exam_type: exam.exam_type || "",
-        exam_date: exam.exam_date ? new Date(exam.exam_date) : null,
+        exam_date: examDateValue,
         programa: exam.programa || "",
         occupational_conclusions: exam.occupational_conclusions || "",
         preventive_occupational_behaviors:
@@ -842,9 +863,7 @@ const OccupationalExam: React.FC = () => {
         medical_center: exam.medical_center || "",
         supplier_id: exam.supplier_id?.toString() || "",
         doctor_id: exam.doctor_id?.toString() || "",
-        duracion_cargo_actual_meses: (exam as any).duracion_cargo_actual_meses
-          ? String((exam as any).duracion_cargo_actual_meses)
-          : "",
+        duracion_cargo_actual_meses: persistedDuration || calculatedDuration,
         factores_riesgo_evaluados:
           (exam as any).factores_riesgo_evaluados || [],
         departamento: (exam as any).departamento || "",
@@ -865,6 +884,13 @@ const OccupationalExam: React.FC = () => {
       // Si hay un supplier_id, cargar los médicos de ese proveedor
       if (exam.supplier_id) {
         fetchDoctorsBySupplier(exam.supplier_id);
+      }
+      if (exam.worker_id && examDateValue) {
+        void fetchAndSetExamCalculations(
+          exam.worker_id.toString(),
+          resolvedHireDate,
+          examDateValue,
+        );
       }
     } else {
       setEditingExam(null);
@@ -2246,9 +2272,21 @@ const OccupationalExam: React.FC = () => {
                     })
                   }
                   InputProps={{
-                    readOnly: true,
-                    style: { backgroundColor: "#f5f5f5" },
+                    readOnly: Boolean(
+                      formData.worker_hire_date && formData.exam_date,
+                    ),
+                    style: {
+                      backgroundColor:
+                        formData.worker_hire_date && formData.exam_date
+                          ? "#f5f5f5"
+                          : "inherit",
+                    },
                   }}
+                  helperText={
+                    formData.worker_hire_date && formData.exam_date
+                      ? "Se calcula automáticamente con la fecha de ingreso y la fecha del examen"
+                      : "Si no hay fecha de ingreso disponible, ingrese el valor manualmente"
+                  }
                 />
               </Grid>
               <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
