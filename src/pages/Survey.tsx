@@ -101,8 +101,10 @@ interface SurveyData {
   expires_at?: string;
   status: SurveyStatus;
   course_id?: number;
+  course_ids?: number[];
   required_for_completion: boolean;
   course?: { id: number; title: string } | null;
+  courses?: { id: number; title: string }[];
   created_by: number;
   created_at: string;
   updated_at: string;
@@ -237,6 +239,7 @@ const Survey: React.FC = () => {
     expires_at: null as Date | null,
     status: "draft" as SurveyStatus,
     course_id: undefined as number | undefined,
+    course_ids: [] as number[],
     required_for_completion: false,
     survey_type: "course" as "general" | "course", // Nuevo campo para tipo de encuesta
   });
@@ -273,12 +276,6 @@ const Survey: React.FC = () => {
   const [userSearch, setUserSearch] = useState("");
   const [userAreaFilter, setUserAreaFilter] = useState("");
   const [userCargoFilter, setUserCargoFilter] = useState("");
-
-  // Estados para selección de usuarios en formulario de creación
-  const [formSelectedUsers, setFormSelectedUsers] = useState<number[]>([]);
-  const [formUserSearch, setFormUserSearch] = useState("");
-  const [formUserAreaFilter, setFormUserAreaFilter] = useState("");
-  const [formUserCargoFilter, setFormUserCargoFilter] = useState("");
 
   const statusConfig = {
     draft: { label: "Borrador", color: "default", icon: <EditIcon /> },
@@ -546,11 +543,15 @@ const Survey: React.FC = () => {
       setEmployeeAnswers({});
 
       // Verificar si todas las encuestas requeridas para el curso están completadas
-      if (surveyToRespond.course_id) {
+      const surveyPrimaryCourseId =
+        surveyToRespond.course_id ||
+        surveyToRespond.course_ids?.[0] ||
+        undefined;
+      if (surveyPrimaryCourseId) {
         try {
           // Obtener el progreso del curso para verificar el estado de las encuestas
           const progressResponse = await api.get(
-            `/progress/course/${surveyToRespond.course_id}`,
+            `/progress/course/${surveyPrimaryCourseId}`,
           );
           const courseProgress = progressResponse.data;
 
@@ -570,7 +571,7 @@ const Survey: React.FC = () => {
             // Habilitar la evaluación para el usuario
             try {
               await api.post(
-                `/evaluations/enable-for-user/${surveyToRespond.course_id}`,
+                `/evaluations/enable-for-user/${surveyPrimaryCourseId}`,
               );
             } catch (evalError) {
               console.error("Error habilitando evaluación:", evalError);
@@ -610,10 +611,28 @@ const Survey: React.FC = () => {
 
   const handleSaveSurvey = async () => {
     try {
+      if (
+        formData.survey_type === "course" &&
+        formData.course_ids.length === 0
+      ) {
+        setSnackbar({
+          open: true,
+          message: "Debe seleccionar al menos un curso",
+          severity: "warning",
+        });
+        return;
+      }
+
       const basePayload = {
         ...formData,
         closes_at: formData.closes_at?.toISOString(),
         expires_at: formData.expires_at?.toISOString(),
+        course_ids:
+          formData.survey_type === "course" ? formData.course_ids : [],
+        course_id:
+          formData.survey_type === "course"
+            ? formData.course_ids[0]
+            : undefined,
       };
 
       const normalizeQuestions = (qs: SurveyQuestion[]) =>
@@ -637,14 +656,13 @@ const Survey: React.FC = () => {
         ? { ...basePayload, questions }
         : basePayload;
 
-      let surveyResponse;
       if (editingSurvey) {
-        surveyResponse = await api.put(`/surveys/${editingSurvey.id}`, payload);
+        await api.put(`/surveys/${editingSurvey.id}`, payload);
       } else {
-        surveyResponse = await api.post("/surveys/", payload);
+        await api.post("/surveys/", payload);
       }
 
-setSnackbar({
+      setSnackbar({
         open: true,
         message: editingSurvey
           ? "Encuesta actualizada exitosamente"
@@ -856,31 +874,10 @@ setSnackbar({
   // Función para seleccionar todos los usuarios filtrados
   const handleSelectAllFiltered = () => {
     const filteredUsers = getFilteredUsers();
-    const filteredUserIds = filteredUsers.filter((w) => w.user_id).map((worker) => worker.user_id!);
+    const filteredUserIds = filteredUsers
+      .filter((w) => w.user_id)
+      .map((worker) => worker.user_id!);
     setSelectedUsers(filteredUserIds);
-  };
-
-  // Función para filtrar usuarios en el formulario de creación
-  const getFormFilteredUsers = () => {
-    return workers.filter((worker) => {
-      const matchesSearch =
-        formUserSearch === "" ||
-        `${worker.first_name} ${worker.last_name}`
-          .toLowerCase()
-          .includes(formUserSearch.toLowerCase()) ||
-        worker.document_number
-          ?.toLowerCase()
-          .includes(formUserSearch.toLowerCase());
-
-      const matchesArea =
-        formUserAreaFilter === "" ||
-        (worker.department || "") === formUserAreaFilter;
-      const matchesCargo =
-        formUserCargoFilter === "" ||
-        (worker.position || "") === formUserCargoFilter;
-
-      return matchesSearch && matchesArea && matchesCargo;
-    });
   };
 
   // Función para deseleccionar todos los usuarios
@@ -1053,8 +1050,18 @@ setSnackbar({
             : null,
           status: surveyData.status,
           course_id: surveyData.course_id,
+          course_ids:
+            surveyData.course_ids && surveyData.course_ids.length > 0
+              ? surveyData.course_ids
+              : surveyData.course_id
+                ? [surveyData.course_id]
+                : [],
           required_for_completion: surveyData.required_for_completion,
-          survey_type: surveyData.course_id ? "course" : "general",
+          survey_type:
+            surveyData.course_id ||
+            (surveyData.course_ids && surveyData.course_ids.length > 0)
+              ? "course"
+              : "general",
         });
 
         setQuestions(surveyData.questions || []);
@@ -1071,8 +1078,18 @@ setSnackbar({
           expires_at: survey.expires_at ? new Date(survey.expires_at) : null,
           status: survey.status,
           course_id: survey.course_id,
+          course_ids:
+            survey.course_ids && survey.course_ids.length > 0
+              ? survey.course_ids
+              : survey.course_id
+                ? [survey.course_id]
+                : [],
           required_for_completion: survey.required_for_completion,
-          survey_type: survey.course_id ? "course" : "general",
+          survey_type:
+            survey.course_id ||
+            (survey.course_ids && survey.course_ids.length > 0)
+              ? "course"
+              : "general",
         });
         setQuestions([]);
       }
@@ -1088,6 +1105,7 @@ setSnackbar({
         expires_at: null,
         status: "draft",
         course_id: undefined,
+        course_ids: [],
         required_for_completion: false,
         survey_type: "course",
       });
@@ -1109,11 +1127,6 @@ setSnackbar({
       max_value: undefined as number | undefined,
       placeholder_text: "",
     });
-    // Limpiar estados de selección de usuarios del formulario
-    setFormSelectedUsers([]);
-    setFormUserSearch("");
-    setFormUserAreaFilter("");
-    setFormUserCargoFilter("");
   };
 
   const handleViewSurvey = async (survey: SurveyData) => {
@@ -1611,7 +1624,13 @@ setSnackbar({
                   </Grid>
 
                   <Grid size={{ xs: 12 }}>
-                    <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} flexWrap="wrap">
+                    <Box
+                      display="flex"
+                      justifyContent="flex-end"
+                      alignItems="center"
+                      gap={1}
+                      flexWrap="wrap"
+                    >
                       <Tooltip title="Actualizar lista">
                         <IconButton onClick={fetchSurveys} size="small">
                           <RefreshIcon />
@@ -1905,7 +1924,11 @@ setSnackbar({
                                       </IconButton>
                                     </Tooltip>
                                     {/* Botón de asignación solo para encuestas generales */}
-                                    {!survey.course_id &&
+                                    {!(
+                                      survey.course_ids &&
+                                      survey.course_ids.length > 0
+                                    ) &&
+                                      !survey.course_id &&
                                       survey.status === "published" && (
                                         <Tooltip title="Asignar a usuarios">
                                           <IconButton
@@ -2010,7 +2033,9 @@ setSnackbar({
                             course_id:
                               newType === "general"
                                 ? undefined
-                                : formData.course_id,
+                                : formData.course_ids[0],
+                            course_ids:
+                              newType === "general" ? [] : formData.course_ids,
                           });
                         }}
                       >
@@ -2081,20 +2106,31 @@ setSnackbar({
                       <Grid size={{ xs: 12, md: 6 }}>
                         <FormControl fullWidth>
                           <InputLabel>
-                            Curso{" "}
+                            Cursos{" "}
                             {formData.survey_type === "course"
                               ? "(Requerido)"
                               : "(Opcional)"}
                           </InputLabel>
                           <Select
-                            value={formData.course_id || ""}
-                            onChange={(e) =>
+                            multiple
+                            value={formData.course_ids}
+                            onChange={(e) => {
+                              const selectedCourseIds = (
+                                e.target.value as number[]
+                              ).map(Number);
                               setFormData({
                                 ...formData,
-                                course_id: e.target.value
-                                  ? Number(e.target.value)
-                                  : undefined,
-                              })
+                                course_ids: selectedCourseIds,
+                                course_id: selectedCourseIds[0],
+                              });
+                            }}
+                            renderValue={(selected) =>
+                              courses
+                                .filter((course) =>
+                                  (selected as number[]).includes(course.id),
+                                )
+                                .map((course) => course.title)
+                                .join(", ")
                             }
                             required={formData.survey_type === "course"}
                           >
@@ -2190,7 +2226,6 @@ setSnackbar({
                       label="Requerida para completar curso"
                     />
                   </Grid>
-
 
                   {/* Preguntas */}
                   <Grid size={12}>
@@ -2525,9 +2560,24 @@ setSnackbar({
                         </Typography>
                       </Grid>
                       <Grid size={{ xs: 12, md: 6 }}>
-                        <Typography variant="subtitle2">Curso:</Typography>
+                        <Typography variant="subtitle2">Curso(s):</Typography>
                         <Typography variant="body2">
-                          {viewingSurvey.course?.title || "No asignado"}
+                          {viewingSurvey.courses &&
+                          viewingSurvey.courses.length > 0
+                            ? viewingSurvey.courses
+                                .map((course) => course.title)
+                                .join(", ")
+                            : viewingSurvey.course_ids &&
+                                viewingSurvey.course_ids.length > 0
+                              ? viewingSurvey.course_ids
+                                  .map(
+                                    (courseId) =>
+                                      courses.find(
+                                        (course) => course.id === courseId,
+                                      )?.title || `Curso #${courseId}`,
+                                  )
+                                  .join(", ")
+                              : viewingSurvey.course?.title || "No asignado"}
                         </Typography>
                       </Grid>
                       <Grid size={{ xs: 12, md: 6 }}>
@@ -3196,7 +3246,10 @@ setSnackbar({
                           control={
                             <Checkbox
                               disabled={!worker.user_id}
-                              checked={!!worker.user_id && selectedUsers.includes(worker.user_id)}
+                              checked={
+                                !!worker.user_id &&
+                                selectedUsers.includes(worker.user_id)
+                              }
                               onChange={(e) => {
                                 if (!worker.user_id) return;
                                 if (e.target.checked) {
