@@ -3,6 +3,8 @@ import {
   Delete,
   Edit,
   Quiz,
+  People,
+  PersonRemove,
   Refresh,
   RestartAlt,
   Save,
@@ -13,37 +15,45 @@ import {
   Visibility,
 } from "@mui/icons-material";
 import {
+  Autocomplete,
+  Avatar,
   Box,
+  Checkbox,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControl,
+  FormControlLabel,
+  Grid,
+  IconButton,
+  InputLabel,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  MenuItem,
   Paper,
-  Typography,
-  Button,
+  Radio,
+  RadioGroup,
+  Select,
+  Alert,
+  Snackbar,
+  Switch,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
   TablePagination,
-  IconButton,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  TableRow,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-  Snackbar,
-  Divider,
-  FormControlLabel,
-  Switch,
-  Radio,
-  RadioGroup,
-  Grid,
-  CircularProgress,
+  Tooltip,
+  Button,
+  Typography,
   useTheme,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback, useRef } from "react";
@@ -52,7 +62,7 @@ import { useNavigate } from "react-router-dom";
 import UppercaseTextField from "../components/UppercaseTextField";
 import { useAuth } from "../contexts/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
-import { UserRole } from "../types";
+import { UserRole, EvaluationAssignment } from "../types";
 import { formatDateTime } from "../utils/dateUtils";
 
 import api from "./../services/api";
@@ -62,7 +72,7 @@ interface Evaluation {
   title: string;
   description?: string;
   instructions?: string;
-  course_id: number;
+  course_id?: number;
   course?: {
     title: string;
   };
@@ -116,7 +126,7 @@ interface EvaluationFormData {
   title: string;
   description?: string;
   instructions?: string;
-  course_id: number;
+  course_id?: number;
   status: "draft" | "published" | "archived";
   time_limit_minutes?: number;
   passing_score: number;
@@ -186,7 +196,7 @@ const EvaluationsManagement: React.FC = () => {
     title: "",
     description: "",
     instructions: "",
-    course_id: 0,
+    course_id: undefined,
     status: "draft",
     passing_score: 70,
     max_attempts: 3,
@@ -220,6 +230,24 @@ const EvaluationsManagement: React.FC = () => {
   const [employeeResponses, setEmployeeResponses] = useState<{
     [key: number]: any;
   }>({});
+
+  // Assignment states
+  const [assignDialog, setAssignDialog] = useState<{
+    open: boolean;
+    evaluation: Evaluation | null;
+  }>({ open: false, evaluation: null });
+  const [assignToAll, setAssignToAll] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<
+    { id: number; first_name: string; last_name: string; email: string }[]
+  >([]);
+  const [assignDeadline, setAssignDeadline] = useState("");
+  const [currentAssignees, setCurrentAssignees] = useState<
+    EvaluationAssignment[]
+  >([]);
+  const [allUsers, setAllUsers] = useState<
+    { id: number; first_name: string; last_name: string; email: string }[]
+  >([]);
+  const [assignLoading, setAssignLoading] = useState(false);
 
   // Timer states
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
@@ -318,6 +346,110 @@ const EvaluationsManagement: React.FC = () => {
       console.error("Error fetching courses:", error);
     }
   }, []);
+
+  const fetchAllUsers = useCallback(async () => {
+    try {
+      const response = await api.get("/workers/basic", {
+        params: { limit: 500, is_active: true },
+      });
+      const activeWorkers = response.data || [];
+      const mappedUsers: {
+        id: number;
+        first_name: string;
+        last_name: string;
+        email: string;
+      }[] = activeWorkers
+        .filter((worker: any) => worker.user_id)
+        .map((worker: any) => ({
+          id: worker.user_id as number,
+          first_name: worker.first_name,
+          last_name: worker.last_name,
+          email: worker.email,
+        }));
+
+      // Evitar duplicados por user_id
+      const deduped: {
+        id: number;
+        first_name: string;
+        last_name: string;
+        email: string;
+      }[] = Array.from(
+        new Map<number, (typeof mappedUsers)[number]>(
+          mappedUsers.map((user) => [user.id, user]),
+        ).values(),
+      );
+      setAllUsers(deduped);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, []);
+
+  const openAssignDialog = useCallback(async (evaluation: Evaluation) => {
+    setAssignDialog({ open: true, evaluation });
+    setAssignToAll(false);
+    setSelectedUsers([]);
+    setAssignDeadline("");
+    setAssignLoading(true);
+    try {
+      const res = await api.get(`/evaluations/${evaluation.id}/assignments`);
+      const assignments: EvaluationAssignment[] = res.data;
+      setCurrentAssignees(assignments);
+      const hasAll = assignments.some((a) => a.user_id === null);
+      setAssignToAll(hasAll);
+      if (!hasAll) {
+        const users = assignments
+          .filter((a) => a.user_id !== null && a.user)
+          .map((a) => a.user!);
+        setSelectedUsers(users);
+      }
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+    } finally {
+      setAssignLoading(false);
+    }
+  }, []);
+
+  const handleSaveAssignment = useCallback(async () => {
+    if (!assignDialog.evaluation) return;
+    setAssignLoading(true);
+    try {
+      await api.post(`/evaluations/${assignDialog.evaluation.id}/assign`, {
+        user_ids: assignToAll ? [] : selectedUsers.map((u) => u.id),
+        assign_to_all: assignToAll,
+        deadline: assignDeadline || null,
+      });
+      showSnackbar("Asignación guardada exitosamente", "success");
+      setAssignDialog({ open: false, evaluation: null });
+    } catch (e: any) {
+      showSnackbar(
+        e.response?.data?.detail || "Error al guardar la asignación",
+        "error",
+      );
+    } finally {
+      setAssignLoading(false);
+    }
+  }, [
+    assignDialog.evaluation,
+    assignToAll,
+    selectedUsers,
+    assignDeadline,
+    showSnackbar,
+  ]);
+
+  const handleRemoveAssignment = useCallback(
+    async (evaluationId: number, userId: number | null) => {
+      try {
+        await api.delete(
+          `/evaluations/${evaluationId}/assign/${userId ?? "all"}`,
+        );
+        const res = await api.get(`/evaluations/${evaluationId}/assignments`);
+        setCurrentAssignees(res.data);
+      } catch (error) {
+        showSnackbar("Error al eliminar la asignación", "error");
+      }
+    },
+    [showSnackbar],
+  );
 
   const fetchEvaluations = useCallback(async () => {
     try {
@@ -709,6 +841,9 @@ const EvaluationsManagement: React.FC = () => {
       setIsEmployeeResponseMode(false);
       fetchEvaluations();
       fetchCourses();
+      if (user?.role !== "employee") {
+        fetchAllUsers();
+      }
       if (user?.role === "employee") {
         fetchEmployeeResponses();
       }
@@ -722,6 +857,7 @@ const EvaluationsManagement: React.FC = () => {
     user?.role,
     fetchEvaluations,
     fetchCourses,
+    fetchAllUsers,
     fetchEmployeeResponses,
   ]);
 
@@ -823,7 +959,7 @@ const EvaluationsManagement: React.FC = () => {
       title: "",
       description: "",
       instructions: "",
-      course_id: 0,
+      course_id: undefined,
       status: "draft",
       passing_score: 70,
       max_attempts: 3,
@@ -1262,7 +1398,9 @@ const EvaluationsManagement: React.FC = () => {
                         <TableCell>
                           {evaluation.course
                             ? evaluation.course.title
-                            : "Curso no encontrado"}
+                            : evaluation.course_id
+                              ? "Curso no encontrado"
+                              : "Sin curso"}
                         </TableCell>
                         <TableCell>
                           <Chip
@@ -1415,6 +1553,18 @@ const EvaluationsManagement: React.FC = () => {
 
                           {user?.role !== "employee" && (
                             <>
+                              {!evaluation.course_id && (
+                                <Tooltip title="Asignar a trabajadores">
+                                  <IconButton
+                                    color="secondary"
+                                    onClick={() => openAssignDialog(evaluation)}
+                                    size="small"
+                                  >
+                                    <People />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+
                               {canUpdateEvaluations() && (
                                 <IconButton
                                   color="primary"
@@ -1487,17 +1637,21 @@ const EvaluationsManagement: React.FC = () => {
                     />
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
-                    <FormControl fullWidth required>
-                      <InputLabel>Curso</InputLabel>
+                    <FormControl fullWidth>
+                      <InputLabel>Curso (opcional)</InputLabel>
                       <Select
-                        value={formData.course_id}
-                        onChange={(e) =>
+                        value={formData.course_id ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value as number | "";
                           setFormData({
                             ...formData,
-                            course_id: e.target.value as number,
-                          })
-                        }
+                            course_id: val === "" ? undefined : val,
+                          });
+                        }}
                       >
+                        <MenuItem value="">
+                          <em>Sin curso</em>
+                        </MenuItem>
                         {courses.map((course) => (
                           <MenuItem key={course.id} value={course.id}>
                             {course.title}
@@ -2572,6 +2726,155 @@ const EvaluationsManagement: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* ── Dialog de Asignación ─────────────────────────────────────── */}
+      <Dialog
+        open={assignDialog.open}
+        onClose={() => setAssignDialog({ open: false, evaluation: null })}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Asignar evaluación: {assignDialog.evaluation?.title}
+        </DialogTitle>
+        <DialogContent dividers>
+          {assignLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={assignToAll}
+                    onChange={(e) => {
+                      setAssignToAll(e.target.checked);
+                      if (e.target.checked) setSelectedUsers([]);
+                    }}
+                  />
+                }
+                label="Asignar a todos los empleados"
+              />
+
+              {!assignToAll && (
+                <Autocomplete
+                  multiple
+                  options={allUsers}
+                  getOptionLabel={(u) =>
+                    `${u.first_name} ${u.last_name} (${u.email})`
+                  }
+                  value={selectedUsers}
+                  onChange={(_, value) => setSelectedUsers(value)}
+                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  renderOption={(props, option, { selected }) => (
+                    <li {...props} key={option.id}>
+                      <Checkbox checked={selected} sx={{ mr: 1 }} />
+                      <Avatar
+                        sx={{ width: 28, height: 28, mr: 1, fontSize: 12 }}
+                      >
+                        {option.first_name[0]}
+                      </Avatar>
+                      {option.first_name} {option.last_name}
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ ml: 1 }}
+                      >
+                        {option.email}
+                      </Typography>
+                    </li>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Seleccionar trabajadores"
+                      placeholder="Buscar por nombre o correo..."
+                    />
+                  )}
+                />
+              )}
+
+              <TextField
+                type="datetime-local"
+                label="Fecha límite (opcional)"
+                value={assignDeadline}
+                onChange={(e) => setAssignDeadline(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+
+              {currentAssignees.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Asignaciones activas:
+                  </Typography>
+                  <List dense disablePadding>
+                    {currentAssignees.map((a) => (
+                      <ListItem
+                        key={a.id}
+                        secondaryAction={
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() =>
+                              handleRemoveAssignment(
+                                assignDialog.evaluation!.id,
+                                a.user_id,
+                              )
+                            }
+                          >
+                            <PersonRemove fontSize="small" />
+                          </IconButton>
+                        }
+                      >
+                        <ListItemAvatar>
+                          <Avatar sx={{ width: 32, height: 32, fontSize: 14 }}>
+                            {a.user_id === null
+                              ? "T"
+                              : (a.user?.first_name?.[0] ?? "?")}
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            a.user_id === null
+                              ? "Todos los empleados"
+                              : `${a.user?.first_name} ${a.user?.last_name}`
+                          }
+                          secondary={
+                            a.deadline
+                              ? `Límite: ${formatDateTime(a.deadline)}`
+                              : "Sin fecha límite"
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setAssignDialog({ open: false, evaluation: null })}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveAssignment}
+            disabled={
+              assignLoading || (!assignToAll && selectedUsers.length === 0)
+            }
+            startIcon={
+              assignLoading ? <CircularProgress size={16} /> : <People />
+            }
+          >
+            Guardar asignación
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

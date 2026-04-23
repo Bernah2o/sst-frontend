@@ -899,7 +899,7 @@ export interface EvaluationBase {
 }
 
 export interface EvaluationCreate extends EvaluationBase {
-  course_id: number;
+  course_id?: number;
   questions: QuestionCreateForEvaluation[];
 }
 
@@ -919,7 +919,7 @@ export interface EvaluationUpdate {
 
 export interface EvaluationResponse extends EvaluationBase {
   id: number;
-  course_id: number;
+  course_id?: number;
   status: EvaluationStatus;
   created_by: number;
   created_at: string;
@@ -932,13 +932,24 @@ export interface EvaluationListResponse {
   id: number;
   title: string;
   description?: string;
-  course_id: number;
+  course_id?: number;
   status: EvaluationStatus;
   time_limit_minutes?: number;
   passing_score: number;
   max_attempts: number;
   created_at: string;
   published_at?: string;
+}
+
+export interface EvaluationAssignment {
+  id: number;
+  evaluation_id: number;
+  user_id: number | null;
+  user?: { id: number; first_name: string; last_name: string; email: string };
+  assigned_by: number;
+  assigned_at: string;
+  deadline?: string;
+  is_active: boolean;
 }
 
 // Evaluation Submission Schema
