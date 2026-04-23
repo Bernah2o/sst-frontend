@@ -4,6 +4,7 @@ import {
   RestartAlt,
   CheckCircle,
   Cancel,
+  Visibility,
 } from '@mui/icons-material';
 import {
   Box,
@@ -49,6 +50,7 @@ interface UserEvaluationResult {
   evaluation_id: number;
   evaluation_title: string;
   course_title: string;
+  attempts_count?: number;
   attempt_number: number;
   status: string;
   score: number | null;
@@ -91,6 +93,12 @@ const EvaluationResults: React.FC = () => {
   const [openReassignDialog, setOpenReassignDialog] = useState(false);
   const [reassigningResult, setReassigningResult] = useState<UserEvaluationResult | null>(null);
   const [reassignLoading, setReassignLoading] = useState(false);
+  const [openHistoryDialog, setOpenHistoryDialog] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<UserEvaluationResult | null>(
+    null,
+  );
+  const [attemptHistory, setAttemptHistory] = useState<UserEvaluationResult[]>([]);
   
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -101,6 +109,8 @@ const EvaluationResults: React.FC = () => {
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   }, []);
+
+  const normalizeStatus = useCallback((status: string) => status.toLowerCase(), []);
 
   const fetchEvaluationResults = useCallback(async () => {
     try {
@@ -122,10 +132,10 @@ const EvaluationResults: React.FC = () => {
         const allResults = response.data.data || [];
         const statsData = {
           total: allResults.length,
-          completed: allResults.filter((r: UserEvaluationResult) => r.status === 'COMPLETED').length,
-          in_progress: allResults.filter((r: UserEvaluationResult) => r.status === 'IN_PROGRESS').length,
+          completed: allResults.filter((r: UserEvaluationResult) => normalizeStatus(r.status) === 'completed').length,
+          in_progress: allResults.filter((r: UserEvaluationResult) => normalizeStatus(r.status) === 'in_progress').length,
           passed: allResults.filter((r: UserEvaluationResult) => r.passed === true).length,
-          failed: allResults.filter((r: UserEvaluationResult) => r.status === 'COMPLETED' && r.passed === false).length,
+          failed: allResults.filter((r: UserEvaluationResult) => normalizeStatus(r.status) === 'completed' && r.passed === false).length,
         };
         setStats(statsData);
       }
@@ -135,7 +145,7 @@ const EvaluationResults: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchTerm, statusFilter, showSnackbar]);
+  }, [page, rowsPerPage, searchTerm, statusFilter, showSnackbar, normalizeStatus]);
 
   useEffect(() => {
     fetchEvaluationResults();
@@ -171,13 +181,36 @@ const EvaluationResults: React.FC = () => {
     }
   };
 
+  const handleOpenAttemptHistory = useCallback(async (result: UserEvaluationResult) => {
+    setHistoryTarget(result);
+    setOpenHistoryDialog(true);
+    setHistoryLoading(true);
+    try {
+      const response = await api.get(
+        `/evaluations/admin/attempt-history?evaluation_id=${result.evaluation_id}&user_id=${result.user_id}`,
+      );
+      if (response.data.success) {
+        setAttemptHistory(response.data.data || []);
+      } else {
+        setAttemptHistory([]);
+        showSnackbar('No se pudo cargar el historial de intentos.', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching attempt history:', error);
+      setAttemptHistory([]);
+      showSnackbar('Error al cargar historial de intentos.', 'error');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [showSnackbar]);
+
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
+    switch (normalizeStatus(status)) {
+      case 'completed':
         return 'success';
-      case 'IN_PROGRESS':
+      case 'in_progress':
         return 'warning';
-      case 'NOT_STARTED':
+      case 'not_started':
         return 'default';
       default:
         return 'default';
@@ -208,7 +241,9 @@ const EvaluationResults: React.FC = () => {
       result.evaluation_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       result.course_title.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = !statusFilter || result.status === statusFilter;
+    const matchesStatus =
+      !statusFilter ||
+      normalizeStatus(result.status) === normalizeStatus(statusFilter);
     
     return matchesSearch && matchesStatus;
   });
@@ -379,6 +414,13 @@ const EvaluationResults: React.FC = () => {
                     <Typography variant="body2">
                       {result.evaluation_title}
                     </Typography>
+                    <Chip
+                      size="small"
+                      color="default"
+                      variant="outlined"
+                      sx={{ mt: 0.5 }}
+                      label={`${result.attempts_count || 1} intento${(result.attempts_count || 1) > 1 ? 's' : ''}`}
+                    />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
@@ -399,7 +441,7 @@ const EvaluationResults: React.FC = () => {
                     {result.percentage !== null ? `${result.percentage.toFixed(1)}%` : '-'}
                   </TableCell>
                   <TableCell>
-                    {result.status === 'COMPLETED' && (
+                    {normalizeStatus(result.status) === 'completed' && (
                       <Chip
                         label={result.passed ? 'Aprobada' : 'Reprobada'}
                         color={result.passed ? 'success' : 'error'}
@@ -413,8 +455,16 @@ const EvaluationResults: React.FC = () => {
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <IconButton
+                        color="primary"
+                        onClick={() => handleOpenAttemptHistory(result)}
+                        size="small"
+                        title="Ver historial de intentos"
+                      >
+                        <Visibility />
+                      </IconButton>
                       {/* Botón de reasignar solo para evaluaciones completadas y usuarios con permisos */}
-                      {result.status === 'completed' && (user?.role === 'admin' || user?.role === 'trainer') && (
+                      {normalizeStatus(result.status) === 'completed' && (user?.role === 'admin' || user?.role === 'trainer') && (
                         <IconButton
                           color="warning"
                           onClick={() => handleReassignEvaluation(result)}
@@ -486,6 +536,94 @@ const EvaluationResults: React.FC = () => {
             startIcon={reassignLoading ? <CircularProgress size={20} /> : <RestartAlt />}
           >
             {reassignLoading ? 'Reasignando...' : 'Reasignar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openHistoryDialog}
+        onClose={() => setOpenHistoryDialog(false)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>
+          Historial de Intentos
+        </DialogTitle>
+        <DialogContent>
+          {historyTarget && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Usuario:</strong> {historyTarget.full_name} ({historyTarget.email})
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Evaluación:</strong> {historyTarget.evaluation_title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Curso:</strong> {historyTarget.course_title}
+              </Typography>
+            </Box>
+          )}
+
+          {historyLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : attemptHistory.length === 0 ? (
+            <Alert severity="info">No hay historial de intentos para mostrar.</Alert>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Intento</TableCell>
+                    <TableCell>Estado</TableCell>
+                    <TableCell>Puntuación</TableCell>
+                    <TableCell>Porcentaje</TableCell>
+                    <TableCell>Resultado</TableCell>
+                    <TableCell>Fecha</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {attemptHistory.map((attempt) => (
+                    <TableRow key={attempt.id}>
+                      <TableCell>#{attempt.attempt_number}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getStatusLabel(attempt.status)}
+                          color={getStatusColor(attempt.status) as any}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {attempt.score !== null ? `${attempt.score}/${attempt.max_points}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {attempt.percentage !== null ? `${attempt.percentage.toFixed(1)}%` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {normalizeStatus(attempt.status) === 'completed' ? (
+                          <Chip
+                            label={attempt.passed ? 'Aprobada' : 'Reprobada'}
+                            color={attempt.passed ? 'success' : 'error'}
+                            size="small"
+                          />
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {attempt.completed_at ? formatDateTime(attempt.completed_at) : '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenHistoryDialog(false)} variant="contained">
+            Cerrar
           </Button>
         </DialogActions>
       </Dialog>

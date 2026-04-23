@@ -288,6 +288,31 @@ const EvaluationsManagement: React.FC = () => {
   const [openMaxAttemptsDialog, setOpenMaxAttemptsDialog] = useState(false);
   const [maxAttemptsEvaluation, setMaxAttemptsEvaluation] =
     useState<Evaluation | null>(null);
+  const [attemptsInfo, setAttemptsInfo] = useState<{
+    status: "AVAILABLE" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED" | "";
+    attempts_used: number;
+    max_attempts: number;
+    attempts_remaining: number;
+    message?: string;
+  }>({
+    status: "",
+    attempts_used: 0,
+    max_attempts: 0,
+    attempts_remaining: 0,
+  });
+  const [evaluationResultDialog, setEvaluationResultDialog] = useState<{
+    open: boolean;
+    passed: boolean;
+    scoreText: string;
+    message: string;
+    autoSubmitted: boolean;
+  }>({
+    open: false,
+    passed: false,
+    scoreText: "",
+    message: "",
+    autoSubmitted: false,
+  });
 
   // Loading state for evaluation buttons
   const [loadingEvaluation, setLoadingEvaluation] = useState(false);
@@ -619,10 +644,33 @@ const EvaluationsManagement: React.FC = () => {
         );
 
         if (response.data.success) {
-          const message = isAutoSubmit
-            ? "Evaluación guardada automáticamente por tiempo expirado"
-            : "Evaluación enviada exitosamente";
-          showSnackbar(message, "success");
+          const results = response.data.results || {};
+          const passed = Boolean(results.passed);
+          const score = results.score;
+          const maxPoints = results.max_points;
+          const percentage = results.percentage;
+
+          const scoreMessage =
+            score !== null &&
+            score !== undefined &&
+            maxPoints !== null &&
+            maxPoints !== undefined
+              ? `${Number(score).toFixed(1)}/${Number(maxPoints).toFixed(1)} (${Number(percentage ?? 0).toFixed(1)}%)`
+              : percentage !== null && percentage !== undefined
+                ? `${Number(percentage).toFixed(1)}%`
+                : "N/D";
+
+          const resultMessage = passed
+            ? `¡Felicitaciones! Aprobaste la evaluación. Puntaje obtenido: ${scoreMessage}.`
+            : `Has completado la evaluación. Puntaje obtenido: ${scoreMessage}. Sigue estudiando para mejorar.`;
+
+          setEvaluationResultDialog({
+            open: true,
+            passed,
+            scoreText: scoreMessage,
+            message: resultMessage,
+            autoSubmitted: isAutoSubmit,
+          });
 
           // Clear timer
           if (timerInterval) {
@@ -634,7 +682,7 @@ const EvaluationsManagement: React.FC = () => {
 
           // Verificar si el usuario aprobó la evaluación y generar certificado
           if (
-            response.data.passed &&
+            passed &&
             evaluationToRespond.course_id &&
             user.rol === "employee"
           ) {
@@ -656,47 +704,26 @@ const EvaluationsManagement: React.FC = () => {
               // No mostrar error al usuario para no afectar la experiencia
             }
           }
-
-          if (response.data.passed) {
-            showSnackbar(
-              "¡Felicitaciones! Ha aprobado la evaluación",
-              "success",
-            );
-          } else {
-            showSnackbar(
-              "Has completado la evaluación. Sigue estudiando para mejorar tu puntaje.",
-              "info",
-            );
-          }
-
-          // Return to evaluation list after delay
-          setTimeout(async () => {
-            setIsEmployeeResponseMode(false);
-            setEvaluationToRespond(null);
-            setEmployeeAnswers({});
-
-            // Redirect to evaluations menu
-            navigate("/employee/evaluations");
-
-            // Refresh data
-            if (user.role === "employee") {
-              await fetchEmployeeResponses();
-            }
-            await fetchEvaluations();
-          }, 2000);
         } else {
-          showSnackbar(
-            "Debe completar todo el material del curso y las encuestas antes de realizar la evaluación",
-            "error",
-          );
+          const genericErrorMessage = evaluationToRespond.course_id
+            ? "Debe completar todo el material del curso y las encuestas antes de realizar la evaluación"
+            : "No se pudo enviar la evaluación. Intente nuevamente.";
+          showSnackbar(genericErrorMessage, "error");
         }
       } catch (error: any) {
         console.error("Error submitting evaluation:", error);
-        showSnackbar(
-          error.response?.data?.detail ||
-            "Debe completar todo el material del curso y las encuestas antes de realizar la evaluación",
-          "error",
-        );
+        const backendDetail: string | undefined = error.response?.data?.detail;
+        const fallbackMessage = evaluationToRespond.course_id
+          ? "Debe completar todo el material del curso y las encuestas antes de realizar la evaluación"
+          : "No se pudo enviar la evaluación. Intente nuevamente.";
+        const contextualMessage =
+          !evaluationToRespond.course_id &&
+          backendDetail &&
+          (backendDetail.toLowerCase().includes("curso") ||
+            backendDetail.toLowerCase().includes("encuesta"))
+            ? "No se pudo enviar la evaluación. Esta evaluación no requiere curso."
+            : backendDetail || fallbackMessage;
+        showSnackbar(contextualMessage, "error");
       } finally {
         setLoading(false);
       }
@@ -715,6 +742,8 @@ const EvaluationsManagement: React.FC = () => {
 
   const fetchEvaluationToRespond = useCallback(
     async (evaluationId: number) => {
+      const selectedEvaluation =
+        evaluations.find((e) => e.id === evaluationId) || null;
       try {
         setLoadingEvaluation(true);
         setLoading(true);
@@ -724,14 +753,19 @@ const EvaluationsManagement: React.FC = () => {
           `/evaluations/${evaluationId}/user-status`,
         );
         const userStatus = userStatusResponse.data;
+        setAttemptsInfo({
+          status: userStatus.status || "",
+          attempts_used: Number(userStatus.attempts_used || 0),
+          max_attempts: Number(userStatus.max_attempts || 0),
+          attempts_remaining: Number(userStatus.attempts_remaining || 0),
+          message: userStatus.message,
+        });
 
         // If user is blocked, show error message
         if (userStatus.status === "BLOCKED") {
-          setError(
-            userStatus.message ||
-              "Has agotado todos los intentos disponibles para esta evaluación.",
-          );
+          setMaxAttemptsEvaluation(selectedEvaluation);
           setLoading(false);
+          setOpenMaxAttemptsDialog(true);
           return;
         }
 
@@ -798,7 +832,7 @@ const EvaluationsManagement: React.FC = () => {
           errorDetail.includes("exceeded")
         ) {
           // Show custom dialog for maximum attempts
-          setMaxAttemptsEvaluation(evaluationToRespond);
+          setMaxAttemptsEvaluation(selectedEvaluation);
           setOpenMaxAttemptsDialog(true);
         } else {
           showSnackbar(
@@ -813,12 +847,25 @@ const EvaluationsManagement: React.FC = () => {
     },
     [
       employeeResponses,
-      evaluationToRespond,
+      evaluations,
       timerInterval,
       showSnackbar,
       handleSubmitEvaluation,
     ],
   );
+
+  const closeEvaluationResultDialog = useCallback(async () => {
+    setEvaluationResultDialog((prev) => ({ ...prev, open: false }));
+    setIsEmployeeResponseMode(false);
+    setEvaluationToRespond(null);
+    setEmployeeAnswers({});
+    navigate("/employee/evaluations");
+
+    if (user?.role === "employee") {
+      await fetchEmployeeResponses();
+    }
+    await fetchEvaluations();
+  }, [fetchEmployeeResponses, fetchEvaluations, navigate, user?.role]);
 
   // Efecto 1: manejar evaluación por parámetro en modo empleado
   useEffect(() => {
@@ -2413,6 +2460,21 @@ const EvaluationsManagement: React.FC = () => {
             </Paper>
           )}
 
+          <Alert
+            severity={attemptsInfo.attempts_remaining <= 1 ? "warning" : "info"}
+            sx={{ mb: 3 }}
+          >
+            <Typography variant="body1" fontWeight={600}>
+              Intentos disponibles: {attemptsInfo.attempts_remaining} de{" "}
+              {evaluationToRespond.max_attempts}
+            </Typography>
+            <Typography variant="body2">
+              Intentos usados: {attemptsInfo.attempts_used}. Al superar el
+              máximo permitido, la evaluación se bloqueará y deberás contactar a
+              administración.
+            </Typography>
+          </Alert>
+
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
               <CircularProgress />
@@ -2620,7 +2682,7 @@ const EvaluationsManagement: React.FC = () => {
                 Máximo de Intentos Alcanzado
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                No se pueden realizar más intentos
+                Esta evaluación quedó bloqueada por límite de intentos
               </Typography>
             </Box>
           </Box>
@@ -2646,7 +2708,11 @@ const EvaluationsManagement: React.FC = () => {
                 📋 {maxAttemptsEvaluation?.title}
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                Intentos máximos: 3 | Estado: Completado
+                Intentos usados: {attemptsInfo.attempts_used} /{" "}
+                {attemptsInfo.max_attempts ||
+                  maxAttemptsEvaluation?.max_attempts ||
+                  0}{" "}
+                | Estado: Bloqueada
               </Typography>
             </Paper>
 
@@ -2668,8 +2734,8 @@ const EvaluationsManagement: React.FC = () => {
                 color="text.secondary"
                 sx={{ lineHeight: 1.5 }}
               >
-                Si consideras que necesitas realizar la evaluación nuevamente,
-                contacta con tu supervisor o administrador del sistema.
+                Para habilitar un nuevo intento, comunícate con el administrador
+                de la plataforma o con tu supervisor inmediato.
               </Typography>
             </Box>
 
@@ -2689,8 +2755,8 @@ const EvaluationsManagement: React.FC = () => {
                 color="text.secondary"
                 sx={{ lineHeight: 1.5 }}
               >
-                Puedes revisar tus resultados anteriores en la sección de
-                historial de evaluaciones.
+                {attemptsInfo.message ||
+                  "Puedes revisar tus resultados anteriores en el historial de evaluaciones."}
               </Typography>
             </Box>
           </Box>
@@ -2709,6 +2775,49 @@ const EvaluationsManagement: React.FC = () => {
             }}
           >
             Entendido
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={evaluationResultDialog.open}
+        onClose={closeEvaluationResultDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {evaluationResultDialog.passed
+            ? "Resultado de la Evaluación: Aprobada"
+            : "Resultado de la Evaluación"}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {evaluationResultDialog.autoSubmitted && (
+              <Alert severity="warning">
+                El tiempo de la evaluación expiró y fue enviada automáticamente.
+              </Alert>
+            )}
+            <Alert
+              severity={evaluationResultDialog.passed ? "success" : "info"}
+            >
+              {evaluationResultDialog.message}
+            </Alert>
+            <Paper
+              variant="outlined"
+              sx={{ p: 2, borderRadius: 2, bgcolor: "background.default" }}
+            >
+              <Typography variant="subtitle2" color="text.secondary">
+                Puntaje Obtenido
+              </Typography>
+              <Typography variant="h5" fontWeight={700}>
+                {evaluationResultDialog.scoreText}
+              </Typography>
+            </Paper>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={closeEvaluationResultDialog}>
+            Volver a Evaluaciones
           </Button>
         </DialogActions>
       </Dialog>
