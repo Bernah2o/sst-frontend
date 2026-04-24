@@ -26,6 +26,7 @@ import {
   ArrowBack as BackIcon,
   Info as InfoIcon,
   Assignment as ActionIcon,
+  PictureAsPdf as PdfIcon,
 } from "@mui/icons-material";
 import {
   BarChart,
@@ -65,6 +66,28 @@ const HomeworkAssessmentDashboard: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const response = await api.get("/assessments/homework/stats/pdf", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `informe_trabajo_en_casa_${new Date().toISOString().slice(0, 10)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      enqueueSnackbar("Error al generar el informe PDF", { variant: "error" });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -150,13 +173,24 @@ const HomeworkAssessmentDashboard: React.FC = () => {
             Análisis de Autoevaluaciones (Trabajo en Casa)
           </Typography>
         </Box>
-        <Button
-          startIcon={<RefreshIcon />}
-          onClick={fetchStats}
-          variant="outlined"
-        >
-          Actualizar
-        </Button>
+        <Box display="flex" gap={1}>
+          <Button
+            startIcon={downloadingPdf ? <CircularProgress size={16} /> : <PdfIcon />}
+            onClick={handleDownloadPdf}
+            variant="contained"
+            color="error"
+            disabled={downloadingPdf}
+          >
+            Informe PDF Gerencial
+          </Button>
+          <Button
+            startIcon={<RefreshIcon />}
+            onClick={fetchStats}
+            variant="outlined"
+          >
+            Actualizar
+          </Button>
+        </Box>
       </Box>
 
       {/* Resumen General */}

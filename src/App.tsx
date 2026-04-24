@@ -47,6 +47,11 @@ import Reinduction from "./pages/Reinduction";
 import HomeworkAssessment from "./pages/HomeworkAssessment";
 import HomeworkAssessmentAdmin from "./pages/HomeworkAssessmentAdmin";
 import HomeworkAssessmentDashboard from "./pages/HomeworkAssessmentDashboard";
+import ErgonomicSelfInspection from "./pages/ErgonomicSelfInspection";
+import ErgonomicSelfInspectionAdmin from "./pages/ErgonomicSelfInspectionAdmin";
+import ErgonomicSelfInspectionDashboard from "./pages/ErgonomicSelfInspectionDashboard";
+import ErgonomicActionPlanList from "./pages/ErgonomicActionPlanList";
+import ErgonomicActionPlanPage from "./pages/ErgonomicActionPlan";
 import Suppliers from "./pages/Suppliers";
 import SystemSettings from "./pages/SystemSettings";
 import Contractors from "./pages/Contractors";
@@ -980,6 +985,31 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
+
+                  <Route
+                    path="/admin/ergonomic-self-inspections"
+                    element={
+                      <ProtectedRoute route="/admin/ergonomic-self-inspections">
+                        <ErgonomicSelfInspectionAdmin />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ergonomic-self-inspections/dashboard"
+                    element={
+                      <ProtectedRoute route="/admin/ergonomic-self-inspections">
+                        <ErgonomicSelfInspectionDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ergonomic-self-inspections/:id"
+                    element={
+                      <ProtectedRoute route="/admin/ergonomic-self-inspections">
+                        <ErgonomicSelfInspection />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route
                     path="/admin/homework-assessments/dashboard"
                     element={
@@ -993,6 +1023,32 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/homework-assessments">
                         <HomeworkAssessment />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Plan de Acción Ergonómico */}
+                  <Route
+                    path="/admin/ergonomic-plans"
+                    element={
+                      <ProtectedRoute route="/admin/homework-assessments">
+                        <ErgonomicActionPlanList />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ergonomic-plans/new"
+                    element={
+                      <ProtectedRoute route="/admin/homework-assessments">
+                        <ErgonomicActionPlanPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ergonomic-plans/:planId"
+                    element={
+                      <ProtectedRoute route="/admin/homework-assessments">
+                        <ErgonomicActionPlanPage />
                       </ProtectedRoute>
                     }
                   />
@@ -1184,6 +1240,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["employee"]}>
                         <HomeworkAssessment />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/employee/ergonomic-self-inspections"
+                    element={
+                      <ProtectedRoute allowedRoles={["employee"]}>
+                        <ErgonomicSelfInspection />
                       </ProtectedRoute>
                     }
                   />

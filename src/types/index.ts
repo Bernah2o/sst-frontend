@@ -2438,3 +2438,127 @@ export type CommitteePermission = CommitteePermissionResponse;
 
 // Export contractor types
 export * from './contractor';
+
+// ────────────────────────────────────────────────────────────
+// Plan de Acción Ergonómico Individual
+// ────────────────────────────────────────────────────────────
+
+export interface ErgonomicMeasure {
+  id?: number;
+  plan_id?: number;
+  measure_type: string;
+  description: string;
+  responsible: string;
+  commitment_date?: string | null;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ErgonomicActionPlan {
+  id?: number;
+  assessment_id: number;
+  worker_id: number;
+  created_by?: number | null;
+  non_compliant_items?: string | null;
+  primary_risk?: string | null;
+  finding_description?: string | null;
+  work_frequency?: string | null;
+  sst_conclusion?: string | null;
+  sst_conclusion_custom?: string | null;
+  worker_accepts: boolean;
+  worker_agreement_name?: string | null;
+  worker_agreement_date?: string | null;
+  worker_signature?: string | null;
+  sst_approver_name?: string | null;
+  sst_approval_date?: string | null;
+  sst_signature?: string | null;
+  verification_date?: string | null;
+  verification_method?: string | null;
+  followup_result?: string | null;
+  followup_decision?: string | null;
+  final_observations?: string | null;
+  plan_status: string;
+  created_at?: string;
+  updated_at?: string;
+  measures: ErgonomicMeasure[];
+  worker?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    document_number: string;
+    position?: string | null;
+  } | null;
+}
+
+export type ErgonomicPlanStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
+
+export const ERGONOMIC_ITEMS_LABELS: Record<string, string> = {
+  chair_check: 'Silla ergonómica con respaldo lumbar',
+  screen_check: 'Posición pantalla a nivel de ojos',
+  desk_check: 'Mesa o superficie de trabajo',
+  mouse_keyboard_check: 'Teclado y ratón en posición adecuada',
+  active_breaks_check: 'Pausas activas / micropausas',
+};
+
+export const PRIMARY_RISK_OPTIONS = [
+  { value: 'posturas_cuello', label: 'Posturas forzadas – cuello/hombros' },
+  { value: 'posturas_espalda', label: 'Posturas forzadas – espalda dorsal/lumbar' },
+  { value: 'esfuerzo_visual', label: 'Esfuerzo visual / fatiga ocular' },
+  { value: 'combinado', label: 'Combinado (varios riesgos ergonómicos)' },
+  { value: 'otro', label: 'Otro riesgo ergonómico' },
+];
+
+export const WORK_FREQUENCY_OPTIONS = [
+  { value: 'ocasional', label: 'Ocasional (≤ 1 día/mes)' },
+  { value: 'frecuente_semanal', label: 'Frecuente (≥ 1 día/semana)' },
+  { value: 'teletrabajo_total', label: 'Teletrabajo total (100% remoto)' },
+];
+
+export const SST_CONCLUSION_OPTIONS = [
+  {
+    value: 'ajustes_bajo_costo',
+    label: 'Ajustes de bajo costo por parte del trabajador',
+    description:
+      'Se recomiendan ajustes de bajo costo a cargo del trabajador; no se considera necesario suministro de mobiliario por la empresa dado el nivel de exposición.',
+  },
+  {
+    value: 'empresa_debe_suministrar',
+    label: 'Empresa debe suministrar elementos ergonómicos',
+    description:
+      'Por la frecuencia y carga de trabajo, la empresa debe suministrar elementos mínimos de ergonomía (silla ergonómica / soporte de portátil) para cumplir el deber de protección.',
+  },
+  { value: 'otro', label: 'Otro (especifique)', description: '' },
+];
+
+export const MEASURE_TYPE_OPTIONS = [
+  { value: 'inmediata_sin_costo', label: 'Inmediata – sin costo (trabajador)' },
+  { value: 'corto_plazo_empresa', label: 'A corto plazo – empresa suministra' },
+  { value: 'formacion_capacitacion', label: 'Formación / capacitación' },
+  { value: 'otro', label: 'Otro' },
+];
+
+export const MEASURE_RESPONSIBLE_OPTIONS = [
+  { value: 'trabajador', label: 'Trabajador' },
+  { value: 'empresa_sst', label: 'Empresa – SST' },
+  { value: 'empresa_th_gerencia', label: 'Empresa – TH / Gerencia' },
+];
+
+export const MEASURE_STATUS_OPTIONS = [
+  { value: 'pendiente', label: 'Pendiente' },
+  { value: 'en_ejecucion', label: 'En ejecución' },
+  { value: 'cerrada', label: 'Cerrada' },
+];
+
+export const FOLLOWUP_RESULT_OPTIONS = [
+  { value: 'controlado', label: 'Hallazgo controlado' },
+  { value: 'parcialmente_controlado', label: 'Parcialmente controlado' },
+  { value: 'no_controlado', label: 'No controlado' },
+];
+
+export const FOLLOWUP_DECISION_OPTIONS = [
+  { value: 'mantener', label: 'Mantener trabajo en casa' },
+  { value: 'mantener_seguimiento', label: 'Mantener trabajo en casa con seguimiento periódico' },
+  { value: 'restringir', label: 'Restringir trabajo en casa hasta adecuar el puesto' },
+  { value: 'escalar_arl', label: 'Escalar caso a ARL (asesoría / visita virtual)' },
+];

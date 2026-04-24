@@ -223,6 +223,41 @@ class ApiService {
     });
     return response.data;
   }
+
+  // ── Plan de Acción Ergonómico ────────────────────────────────
+  async listErgonomicPlans(params?: { worker_id?: number; plan_status?: string }): Promise<any[]> {
+    const response = await this.api.get('/ergonomic-plans', { params });
+    return response.data;
+  }
+
+  async getErgonomicPlan(planId: number): Promise<any> {
+    const response = await this.api.get(`/ergonomic-plans/${planId}`);
+    return response.data;
+  }
+
+  async getErgonomicPlanByAssessment(assessmentId: number): Promise<any> {
+    const response = await this.api.get(`/ergonomic-plans/by-assessment/${assessmentId}`);
+    return response.data;
+  }
+
+  async createErgonomicPlan(data: any): Promise<any> {
+    const response = await this.api.post('/ergonomic-plans', data);
+    return response.data;
+  }
+
+  async updateErgonomicPlan(planId: number, data: any): Promise<any> {
+    const response = await this.api.put(`/ergonomic-plans/${planId}`, data);
+    return response.data;
+  }
+
+  async registerErgonomicFollowup(planId: number, data: any): Promise<any> {
+    const response = await this.api.post(`/ergonomic-plans/${planId}/followup`, data);
+    return response.data;
+  }
+
+  async deleteErgonomicPlan(planId: number): Promise<void> {
+    await this.api.delete(`/ergonomic-plans/${planId}`);
+  }
 }
 
 export const apiService = new ApiService();

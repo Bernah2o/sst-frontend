@@ -24,18 +24,19 @@ import {
   FormControl,
   // InputLabel,
 } from "@mui/material";
-import { 
-  Save, 
-  // Download, 
-  PhotoCamera, 
-  Clear, 
+import {
+  Save,
+  // Download,
+  PhotoCamera,
+  Clear,
   CheckCircle,
   // AssignmentTurnedIn as ActionIcon,
-  Timeline as FollowUpIcon
+  Timeline as FollowUpIcon,
+  ArrowBack as BackIcon,
 } from "@mui/icons-material";
 import SignaturePad from "../components/SignaturePad";
 import { useSnackbar } from "notistack";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import { getApiUrl } from "../config/env";
@@ -67,10 +68,186 @@ const CHECKLIST_ITEMS = [
   { id: "psychosocial", label: "14. Riesgos Psicosociales Reporte de estrés" },
 ];
 
+// Opciones predefinidas de observación por ítem (cuando No Cumple)
+const CHECKLIST_OBS_OPTIONS: Record<string, Array<{ value: string; label: string }>> = {
+  lighting: [
+    { value: "insuf_natural", label: "Luz natural insuficiente" },
+    { value: "reflejos_pantalla", label: "Reflejos en pantalla" },
+    { value: "sin_lampara", label: "Sin lámpara auxiliar" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  ventilation: [
+    { value: "sin_ventana", label: "Sin ventana o sin ventilación natural" },
+    { value: "temperatura_inadecuada", label: "Temperatura inadecuada (frío/calor excesivo)" },
+    { value: "olores", label: "Presencia de olores o contaminantes" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  desk: [
+    { value: "altura_incorrecta", label: "Altura incorrecta (muy alta o muy baja)" },
+    { value: "superficie_inestable", label: "Superficie inestable o inadecuada" },
+    { value: "poco_espacio", label: "Poco espacio para trabajar cómodamente" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  chair: [
+    { value: "silla_comedor", label: "Silla de comedor o plástica" },
+    { value: "sin_respaldo", label: "Sin respaldo lumbar" },
+    { value: "sin_regulacion", label: "Sin regulación de altura" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  screen: [
+    { value: "pantalla_baja", label: "Pantalla muy baja (portátil en mesa)" },
+    { value: "pantalla_alta", label: "Pantalla demasiado alta" },
+    { value: "pantalla_lateral", label: "Pantalla en posición lateral" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  mouse_keyboard: [
+    { value: "sin_mouse_externo", label: "Sin mouse externo" },
+    { value: "teclado_lejos", label: "Teclado lejos del cuerpo" },
+    { value: "posicion_torcida", label: "Torsión de muñecas / posición inadecuada" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  space: [
+    { value: "espacio_reducido", label: "Espacio reducido para los pies" },
+    { value: "objetos_obstruyendo", label: "Objetos o cajas obstruyendo el espacio" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  floor: [
+    { value: "piso_resbaladizo", label: "Piso resbaladizo o irregular" },
+    { value: "cables_en_piso", label: "Cables u objetos en el piso (riesgo de caída)" },
+    { value: "sin_alfombra", label: "Sin alfombra antideslizante" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  noise: [
+    { value: "ruido_vecinos", label: "Ruido de vecinos o calle" },
+    { value: "ruido_familia", label: "Ruido de familia o convivientes" },
+    { value: "musica_tv", label: "Música o televisión en el ambiente" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  connectivity: [
+    { value: "internet_lento", label: "Internet lento o inestable" },
+    { value: "cortes_frecuentes", label: "Cortes frecuentes de conexión" },
+    { value: "solo_wifi", label: "Solo WiFi, sin cable ethernet disponible" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  equipment: [
+    { value: "cables_danados", label: "Cables dañados o sin protección" },
+    { value: "sin_cargador", label: "Sin cargador adecuado o en mal estado" },
+    { value: "equipos_sin_soporte", label: "Equipos sin protección o sin soporte fijo" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  confidentiality: [
+    { value: "espacio_compartido", label: "Espacio compartido con otras personas" },
+    { value: "pantalla_visible", label: "Pantalla visible para terceros" },
+    { value: "conversaciones_audibles", label: "Conversaciones de trabajo audibles para terceros" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  active_breaks: [
+    { value: "no_realiza", label: "No realiza pausas activas" },
+    { value: "sin_guia", label: "Las realiza pero sin guía ni rutina establecida" },
+    { value: "olvida", label: "Olvida realizarlas durante la jornada" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  psychosocial: [
+    { value: "carga_alta", label: "Carga de trabajo elevada" },
+    { value: "aislamiento", label: "Sensación de aislamiento o soledad" },
+    { value: "dificultad_desconexion", label: "Dificultad para desconectarse fuera del horario" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+};
+
+// Opciones predefinidas de acción correctiva por ítem (para el admin)
+const ACTION_OPTIONS: Record<string, Array<{ value: string; label: string }>> = {
+  lighting: [
+    { value: "Instalar lámpara de escritorio con luz blanca fría (mínimo 500 lux)", label: "Instalar lámpara de escritorio con luz blanca fría (mínimo 500 lux)" },
+    { value: "Reorientar el monitor para eliminar reflejos en pantalla", label: "Reorientar el monitor para eliminar reflejos en pantalla" },
+    { value: "Informar al trabajador sobre uso adecuado de persianas o cortinas", label: "Informar al trabajador sobre uso adecuado de persianas o cortinas" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  ventilation: [
+    { value: "Indicar al trabajador abrir ventanas periódicamente durante la jornada", label: "Indicar al trabajador abrir ventanas periódicamente durante la jornada" },
+    { value: "Recomendar uso de ventilador o purificador de aire", label: "Recomendar uso de ventilador o purificador de aire" },
+    { value: "Solicitar cambio de lugar de trabajo dentro del hogar", label: "Solicitar cambio de lugar de trabajo dentro del hogar" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  desk: [
+    { value: "Capacitar al trabajador sobre ajuste correcto de la altura de la mesa", label: "Capacitar al trabajador sobre ajuste correcto de la altura de la mesa" },
+    { value: "Evaluar suministro de mesa de trabajo adecuada por la empresa", label: "Evaluar suministro de mesa de trabajo adecuada por la empresa" },
+    { value: "Indicar uso de superficies estables y despejar área de trabajo", label: "Indicar uso de superficies estables y despejar área de trabajo" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  chair: [
+    { value: "Evaluar préstamo o dotación de silla ergonómica por la empresa", label: "Evaluar préstamo o dotación de silla ergonómica por la empresa" },
+    { value: "Indicar uso de cojín lumbar provisional mientras se gestiona silla adecuada", label: "Indicar uso de cojín lumbar provisional mientras se gestiona silla adecuada" },
+    { value: "Capacitar sobre postura correcta y ajustes con silla disponible", label: "Capacitar sobre postura correcta y ajustes con silla disponible" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  screen: [
+    { value: "Indicar elevar pantalla con soporte, libros o resma de papel a nivel de ojos", label: "Indicar elevar pantalla con soporte, libros o resma de papel a nivel de ojos" },
+    { value: "Evaluar suministro de soporte de portátil + teclado y mouse externos", label: "Evaluar suministro de soporte de portátil + teclado y mouse externos" },
+    { value: "Verificar distancia visual adecuada (50-70 cm) frente a pantalla", label: "Verificar distancia visual adecuada (50-70 cm) frente a pantalla" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  mouse_keyboard: [
+    { value: "Evaluar suministro de teclado y mouse externos por la empresa", label: "Evaluar suministro de teclado y mouse externos por la empresa" },
+    { value: "Capacitar sobre posición neutra de muñecas y codos en ángulo de 90°", label: "Capacitar sobre posición neutra de muñecas y codos en ángulo de 90°" },
+    { value: "Indicar uso de apoyamuñecas mientras se gestiona material adecuado", label: "Indicar uso de apoyamuñecas mientras se gestiona material adecuado" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  space: [
+    { value: "Indicar al trabajador reorganizar mobiliario para liberar espacio bajo la mesa", label: "Indicar al trabajador reorganizar mobiliario para liberar espacio bajo la mesa" },
+    { value: "Solicitar cambio de lugar de trabajo con mayor espacio disponible", label: "Solicitar cambio de lugar de trabajo con mayor espacio disponible" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  floor: [
+    { value: "Indicar retirar cables del piso y fijarlos con canaletas o cinta", label: "Indicar retirar cables del piso y fijarlos con canaletas o cinta" },
+    { value: "Recomendar uso de alfombra antideslizante bajo la silla", label: "Recomendar uso de alfombra antideslizante bajo la silla" },
+    { value: "Solicitar inspección del estado del piso y correcciones necesarias", label: "Solicitar inspección del estado del piso y correcciones necesarias" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  noise: [
+    { value: "Recomendar uso de auriculares con cancelación de ruido durante reuniones", label: "Recomendar uso de auriculares con cancelación de ruido durante reuniones" },
+    { value: "Indicar acuerdo con convivientes sobre respeto a horarios de trabajo", label: "Indicar acuerdo con convivientes sobre respeto a horarios de trabajo" },
+    { value: "Solicitar cambio de espacio de trabajo a zona más silenciosa del hogar", label: "Solicitar cambio de espacio de trabajo a zona más silenciosa del hogar" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  connectivity: [
+    { value: "Recomendar conexión por cable ethernet en lugar de WiFi", label: "Recomendar conexión por cable ethernet en lugar de WiFi" },
+    { value: "Solicitar al proveedor mejora del plan de internet", label: "Solicitar al proveedor mejora del plan de internet" },
+    { value: "Evaluar apoyo económico de la empresa para mejora de conectividad (teletrabajo)", label: "Evaluar apoyo económico de la empresa para mejora de conectividad (teletrabajo)" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  equipment: [
+    { value: "Indicar revisión y reemplazo de cables dañados de forma inmediata", label: "Indicar revisión y reemplazo de cables dañados de forma inmediata" },
+    { value: "Gestionar con TI el suministro de cargadores y accesorios en buen estado", label: "Gestionar con TI el suministro de cargadores y accesorios en buen estado" },
+    { value: "Capacitar sobre identificación de riesgos eléctricos en el hogar", label: "Capacitar sobre identificación de riesgos eléctricos en el hogar" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  confidentiality: [
+    { value: "Capacitar sobre uso de bloqueador de pantalla y manejo seguro de información", label: "Capacitar sobre uso de bloqueador de pantalla y manejo seguro de información" },
+    { value: "Indicar reubicación del puesto para evitar exposición de pantalla a terceros", label: "Indicar reubicación del puesto para evitar exposición de pantalla a terceros" },
+    { value: "Recordar política de confidencialidad y firma de acuerdo de teletrabajo", label: "Recordar política de confidencialidad y firma de acuerdo de teletrabajo" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  active_breaks: [
+    { value: "Programar alarmas o recordatorios cada 50 minutos para pausas activas", label: "Programar alarmas o recordatorios cada 50 minutos para pausas activas" },
+    { value: "Compartir rutina guiada de pausas activas (infografía o video SST)", label: "Compartir rutina guiada de pausas activas (infografía o video SST)" },
+    { value: "Incluir en capacitación virtual de ergonomía en casa", label: "Incluir en capacitación virtual de ergonomía en casa" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+  psychosocial: [
+    { value: "Programar seguimiento con bienestar laboral o psicología empresarial", label: "Programar seguimiento con bienestar laboral o psicología empresarial" },
+    { value: "Revisar carga de trabajo y redistribuir tareas con el jefe directo", label: "Revisar carga de trabajo y redistribuir tareas con el jefe directo" },
+    { value: "Informar sobre canales de apoyo: línea de bienestar, ARL, EPS", label: "Informar sobre canales de apoyo: línea de bienestar, ARL, EPS" },
+    { value: "Escalar caso a ARL para asesoría en riesgo psicosocial", label: "Escalar caso a ARL para asesoría en riesgo psicosocial" },
+    { value: "otro", label: "Otro (especifique...)" },
+  ],
+};
+
 const HomeworkAssessment: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const [loading, setLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -86,6 +263,8 @@ const HomeworkAssessment: React.FC = () => {
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [managementData, setManagementData] = useState<Record<string, any>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
+  const [obsPresets, setObsPresets] = useState<Record<string, string>>({});
+  const [actionPresets, setActionPresets] = useState<Record<string, string>>({});
   
   // Función reutilizable para cargar datos
   const fetchInitialData = useCallback(async () => {
@@ -157,7 +336,17 @@ const HomeworkAssessment: React.FC = () => {
                   
                   if (targetAssessment.sst_management_data) {
                     try {
-                        setManagementData(JSON.parse(targetAssessment.sst_management_data));
+                        const parsed = JSON.parse(targetAssessment.sst_management_data);
+                        setManagementData(parsed);
+                        // Inicializar actionPresets: si la acción guardada coincide con una opción → seleccionarla, si no → "otro"
+                        const presets: Record<string, string> = {};
+                        Object.keys(parsed).forEach(itemId => {
+                          const action = parsed[itemId]?.action || "";
+                          const opts = ACTION_OPTIONS[itemId] || [];
+                          const match = opts.find(o => o.value !== "otro" && o.value === action);
+                          presets[itemId] = match ? match.value : (action ? "otro" : "");
+                        });
+                        setActionPresets(presets);
                     } catch (e) {
                         console.error("Error parsing management data", e);
                     }
@@ -239,12 +428,43 @@ const HomeworkAssessment: React.FC = () => {
     }
   };
 
+  // Inicializar obsPresets cuando cambia la evaluación cargada
+  useEffect(() => {
+    const presets: Record<string, string> = {};
+    CHECKLIST_ITEMS.forEach(item => {
+      const storedObs = formData[`${item.id}_obs`] || '';
+      if (!storedObs) { presets[item.id] = ''; return; }
+      const options = CHECKLIST_OBS_OPTIONS[item.id] || [];
+      const match = options.find(o => o.value !== 'otro' && o.label === storedObs);
+      presets[item.id] = match ? match.value : 'otro';
+    });
+    setObsPresets(presets);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.id]);
+
   const handleCheckChange = (id: string, checked: boolean) => {
     setFormData(prev => ({ ...prev, [`${id}_check`]: checked }));
+    if (!checked) {
+      // Re-derivar preset según el texto actual al pasar a No Cumple
+      const currentObs = formData[`${id}_obs`] || '';
+      const options = CHECKLIST_OBS_OPTIONS[id] || [];
+      const match = options.find(o => o.value !== 'otro' && o.label === currentObs);
+      setObsPresets(prev => ({ ...prev, [id]: match ? match.value : (currentObs ? 'otro' : '') }));
+    }
   };
 
   const handleObsChange = (id: string, value: string) => {
     setFormData(prev => ({ ...prev, [`${id}_obs`]: value }));
+  };
+
+  const handlePresetChange = (id: string, presetValue: string) => {
+    setObsPresets(prev => ({ ...prev, [id]: presetValue }));
+    if (presetValue === 'otro') {
+      handleObsChange(id, '');
+    } else {
+      const option = (CHECKLIST_OBS_OPTIONS[id] || []).find(o => o.value === presetValue);
+      if (option) handleObsChange(id, option.label);
+    }
   };
 
   const resolveImageUrl = (url: string) => {
@@ -351,6 +571,15 @@ const HomeworkAssessment: React.FC = () => {
     }));
   };
 
+  const handleActionPresetChange = (itemId: string, presetValue: string) => {
+    setActionPresets(prev => ({ ...prev, [itemId]: presetValue }));
+    if (presetValue !== "otro") {
+      handleManagementChange(itemId, 'action', presetValue);
+    } else {
+      handleManagementChange(itemId, 'action', '');
+    }
+  };
+
   if (isInitializing) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" sx={{ minHeight: "60vh" }}>
@@ -378,9 +607,16 @@ const HomeworkAssessment: React.FC = () => {
 
   return (
     <Box p={3}>
-      <Typography variant="h4" gutterBottom color="primary">
-        Autoevaluación Trabajo en Casa
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4" color="primary">
+          Autoevaluación Trabajo en Casa
+        </Typography>
+        {(user?.role === 'admin' || user?.role === 'supervisor') && (
+          <Button startIcon={<BackIcon />} variant="outlined" onClick={() => navigate("/admin/homework-assessments")}>
+            Volver
+          </Button>
+        )}
+      </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="subtitle2" gutterBottom>Instrucciones:</Typography>
@@ -475,13 +711,43 @@ const HomeworkAssessment: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      placeholder="Observaciones o acciones correctivas..."
-                      value={formData[`${item.id}_obs`] || ""}
-                      onChange={(e) => handleObsChange(item.id, e.target.value)} disabled={isReadOnly}
-                    />
+                    {!formData[`${item.id}_check`] && CHECKLIST_OBS_OPTIONS[item.id] ? (
+                      <Box>
+                        <Select
+                          size="small"
+                          fullWidth
+                          displayEmpty
+                          value={obsPresets[item.id] || ""}
+                          onChange={(e) => handlePresetChange(item.id, e.target.value as string)}
+                          disabled={isReadOnly}
+                          sx={{ mb: obsPresets[item.id] === "otro" ? 1 : 0 }}
+                        >
+                          <MenuItem value=""><em>Seleccione el motivo...</em></MenuItem>
+                          {CHECKLIST_OBS_OPTIONS[item.id].map((o) => (
+                            <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                          ))}
+                        </Select>
+                        {obsPresets[item.id] === "otro" && (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            placeholder="Describa el motivo específico..."
+                            value={formData[`${item.id}_obs`] || ""}
+                            onChange={(e) => handleObsChange(item.id, e.target.value)}
+                            disabled={isReadOnly}
+                          />
+                        )}
+                      </Box>
+                    ) : (
+                      <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="Observación opcional..."
+                        value={formData[`${item.id}_obs`] || ""}
+                        onChange={(e) => handleObsChange(item.id, e.target.value)}
+                        disabled={isReadOnly}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -610,15 +876,30 @@ const HomeworkAssessment: React.FC = () => {
                       {formData[`${item.id}_obs`] || "Sin observación"}
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={2}
-                        size="small"
-                        placeholder="Describa la acción correctiva..."
-                        value={managementData[item.id]?.action || ""}
-                        onChange={(e) => handleManagementChange(item.id, 'action', e.target.value)}
-                      />
+                      <FormControl fullWidth size="small" sx={{ mb: actionPresets[item.id] === 'otro' ? 1 : 0 }}>
+                        <Select
+                          displayEmpty
+                          value={actionPresets[item.id] || ""}
+                          onChange={(e) => handleActionPresetChange(item.id, e.target.value)}
+                          renderValue={(v) => v ? (ACTION_OPTIONS[item.id]?.find(o => o.value === v)?.label ?? v) : <em style={{ color: '#9e9e9e' }}>Seleccione acción...</em>}
+                        >
+                          <MenuItem value="" disabled><em>Seleccione acción...</em></MenuItem>
+                          {(ACTION_OPTIONS[item.id] || []).map(opt => (
+                            <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      {actionPresets[item.id] === 'otro' && (
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={2}
+                          size="small"
+                          placeholder="Describa la acción correctiva..."
+                          value={managementData[item.id]?.action || ""}
+                          onChange={(e) => handleManagementChange(item.id, 'action', e.target.value)}
+                        />
+                      )}
                     </TableCell>
                     <TableCell>
                       <FormControl fullWidth size="small">

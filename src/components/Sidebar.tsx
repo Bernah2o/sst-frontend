@@ -240,6 +240,14 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
       },
 
       {
+        id: "employee-ergonomic-self-inspections",
+        label: "Autoinspección Puesto Ergonómico",
+        icon: <Assessment />,
+        path: "/employee/ergonomic-self-inspections",
+        roles: ["employee"],
+      },
+
+      {
         id: "employee-certificates",
         label: "Mis Certificados",
         icon: <CardMembership />,
@@ -523,6 +531,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             path: "/admin/homework-assessments",
             roles: ["admin", "supervisor"],
           },
+          {
+            id: "ergonomic-self-inspections",
+            label: "Autoinspección Ergonómica",
+            icon: <Assessment />,
+            path: "/admin/ergonomic-self-inspections",
+            roles: ["admin", "supervisor"],
+          },
         ],
         roles: ["admin", "supervisor"],
       },
@@ -753,6 +768,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
               "employee-evaluations": () => user.role === "employee",
               "employee-attendance": () => user.role === "employee",
               "employee-homework-assessments": () => user.role === "employee",
+              "employee-ergonomic-self-inspections": () =>
+                user.role === "employee",
               "employee-certificates": () => user.role === "employee",
               "employee-vacations": () => user.role === "employee",
               "employee-votings": () => user.role === "employee",
@@ -827,6 +844,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
                 user.role === "admin" || user.role === "supervisor",
               "profesiogramas-admin": () => user.role === "admin",
               "homework-assessments": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "ergonomic-self-inspections": () =>
                 user.role === "admin" || user.role === "supervisor",
 
               // Certificates - permiso del rol personalizado O rol base no-employee
