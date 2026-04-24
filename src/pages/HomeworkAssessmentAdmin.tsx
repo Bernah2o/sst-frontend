@@ -40,6 +40,7 @@ import {
   Delete,
   PictureAsPdf,
   Assessment as AssessmentIcon,
+  HealthAndSafety as ErgonomicIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import api from "../services/api";
@@ -58,6 +59,12 @@ interface Assessment {
   worker_id: number;
   evaluation_date: string;
   status: string;
+  // Ergonomic check fields
+  chair_check?: boolean;
+  screen_check?: boolean;
+  desk_check?: boolean;
+  mouse_keyboard_check?: boolean;
+  active_breaks_check?: boolean;
   worker?: {
     first_name: string;
     last_name: string;
@@ -65,6 +72,13 @@ interface Assessment {
     email: string;
   };
 }
+
+const hasErgonomicFindings = (a: Assessment): boolean =>
+  a.chair_check === false ||
+  a.screen_check === false ||
+  a.desk_check === false ||
+  a.mouse_keyboard_check === false ||
+  a.active_breaks_check === false;
 
 const HomeworkAssessmentAdmin: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
@@ -458,6 +472,21 @@ const HomeworkAssessmentAdmin: React.FC = () => {
                               ) : (
                                 <PictureAsPdf />
                               )}
+                            </IconButton>
+                          </Tooltip>
+                        )}
+
+                        {assessment.status === "COMPLETED" && hasErgonomicFindings(assessment) && (
+                          <Tooltip title="Crear / Ver Plan Ergonómico">
+                            <IconButton
+                              color="success"
+                              onClick={() =>
+                                navigate(
+                                  `/admin/ergonomic-plans/new?assessment_id=${assessment.id}&worker_id=${assessment.worker_id}`
+                                )
+                              }
+                            >
+                              <ErgonomicIcon />
                             </IconButton>
                           </Tooltip>
                         )}
