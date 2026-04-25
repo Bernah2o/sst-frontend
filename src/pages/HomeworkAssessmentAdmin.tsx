@@ -73,6 +73,14 @@ interface Assessment {
   };
 }
 
+interface HomeworkStats {
+  action_stats?: {
+    OPEN?: number;
+    IN_PROGRESS?: number;
+    CLOSED?: number;
+  };
+}
+
 const hasErgonomicFindings = (a: Assessment): boolean =>
   a.chair_check === false ||
   a.screen_check === false ||
@@ -104,6 +112,7 @@ const HomeworkAssessmentAdmin: React.FC = () => {
   const [selectedWorkers, setSelectedWorkers] = useState<Worker[]>([]);
   const [assignDate, setAssignDate] = useState(new Date().toISOString().split("T")[0]);
   const [assigning, setAssigning] = useState(false);
+  const [homeworkStats, setHomeworkStats] = useState<HomeworkStats | null>(null);
 
   const fetchAssessments = useCallback(async () => {
     setLoading(true);
@@ -131,10 +140,21 @@ const HomeworkAssessmentAdmin: React.FC = () => {
     }
   }, [enqueueSnackbar]);
 
+  const fetchHomeworkStats = useCallback(async () => {
+    try {
+      const response = await api.get("/assessments/homework/stats");
+      setHomeworkStats(response.data);
+    } catch (error) {
+      console.error("Error loading homework stats:", error);
+      setHomeworkStats(null);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAssessments();
     fetchWorkers();
-  }, [fetchAssessments, fetchWorkers]);
+    fetchHomeworkStats();
+  }, [fetchAssessments, fetchWorkers, fetchHomeworkStats]);
 
   // Filtrar evaluaciones por estado y búsqueda
   useEffect(() => {
@@ -203,6 +223,7 @@ const HomeworkAssessmentAdmin: React.FC = () => {
       setOpenAssignDialog(false);
       setSelectedWorkers([]);
       fetchAssessments();
+      fetchHomeworkStats();
     } catch (error: any) {
       console.error("Error bulk assigning:", error);
       const errorMsg = error.response?.data?.detail || "Error al asignar evaluaciones";
@@ -227,6 +248,7 @@ const HomeworkAssessmentAdmin: React.FC = () => {
       setDeleteDialogOpen(false);
       setAssessmentToDelete(null);
       fetchAssessments();
+      fetchHomeworkStats();
     } catch (error: any) {
       console.error("Error deleting assessment:", error);
       const errorMsg = error.response?.data?.detail || "Error al eliminar la evaluación";
@@ -283,6 +305,12 @@ const HomeworkAssessmentAdmin: React.FC = () => {
     pending: assessments.filter((a) => a.status === "PENDING").length,
   };
 
+  const actionStats = {
+    OPEN: homeworkStats?.action_stats?.OPEN || 0,
+    IN_PROGRESS: homeworkStats?.action_stats?.IN_PROGRESS || 0,
+    CLOSED: homeworkStats?.action_stats?.CLOSED || 0,
+  };
+
   return (
     <Box p={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -306,7 +334,14 @@ const HomeworkAssessmentAdmin: React.FC = () => {
           >
             Asignar Evaluaciones
           </Button>
-          <Button startIcon={<Refresh />} onClick={fetchAssessments} variant="outlined">
+          <Button
+            startIcon={<Refresh />}
+            onClick={() => {
+              fetchAssessments();
+              fetchHomeworkStats();
+            }}
+            variant="outlined"
+          >
             Actualizar
           </Button>
         </Box>
@@ -345,6 +380,41 @@ const HomeworkAssessmentAdmin: React.FC = () => {
               <Typography variant="h4" color="warning.main">
                 {stats.pending}
               </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <Card sx={{ borderLeft: 6, borderLeftColor: "info.main" }}>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Estados Seguimiento SST
+              </Typography>
+              <Box display="flex" gap={4} flexWrap="wrap">
+                <Box textAlign="center">
+                  <Typography variant="h5" color="error.main">
+                    {actionStats.OPEN}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Abierto / Pendiente
+                  </Typography>
+                </Box>
+                <Box textAlign="center">
+                  <Typography variant="h5" color="warning.main">
+                    {actionStats.IN_PROGRESS}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    En Ejecución
+                  </Typography>
+                </Box>
+                <Box textAlign="center">
+                  <Typography variant="h5" color="success.main">
+                    {actionStats.CLOSED}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Cerrado / Verificado
+                  </Typography>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
