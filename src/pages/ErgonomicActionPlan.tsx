@@ -37,6 +37,7 @@ import {
   Warning as WarningIcon,
 } from "@mui/icons-material";
 import apiService from "../services/api";
+import { getApiUrl } from "../config/env";
 import {
   ErgonomicActionPlan as ErgonomicActionPlanType,
   ErgonomicMeasure,
@@ -121,6 +122,7 @@ const ErgonomicActionPlanPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      const apiBase = getApiUrl();
       if (!isNew && planId) {
         const existingPlan = await apiService.getErgonomicPlan(Number(planId));
         setPlan((prev) => ({
@@ -134,14 +136,11 @@ const ErgonomicActionPlanPage: React.FC = () => {
         }));
         if (existingPlan.assessment_id) {
           try {
-            const res = await fetch(
-              `${process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1"}/assessments/homework`,
-              {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
+            const res = await fetch(`${apiBase}/assessments/homework`, {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
-            );
+            });
             if (res.ok) {
               const all = await res.json();
               const found = all.find(
@@ -153,14 +152,11 @@ const ErgonomicActionPlanPage: React.FC = () => {
         }
       } else if (assessmentIdParam) {
         try {
-          const res = await fetch(
-            `${process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1"}/assessments/homework`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
+          const res = await fetch(`${apiBase}/assessments/homework`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          );
+          });
           if (res.ok) {
             const all = await res.json();
             const found = all.find(
