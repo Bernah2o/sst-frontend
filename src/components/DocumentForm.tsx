@@ -175,12 +175,15 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
     const labels = {
       [CommitteeDocumentType.MEETING_MINUTES]: 'Actas de Reunión',
       [CommitteeDocumentType.VOTING_RECORD]: 'Registros de Votación',
+      [CommitteeDocumentType.REGULATION]: 'Reglamentos',
+      [CommitteeDocumentType.REPORT]: 'Reportes',
+      [CommitteeDocumentType.INVESTIGATION]: 'Investigaciones',
+      [CommitteeDocumentType.PROCEDURE]: 'Procedimientos',
+      [CommitteeDocumentType.FORM]: 'Formatos',
+      [CommitteeDocumentType.CERTIFICATE]: 'Certificados',
       [CommitteeDocumentType.ACTIVITY_REPORT]: 'Informes de Actividad',
       [CommitteeDocumentType.PRESENTATION]: 'Presentaciones',
       [CommitteeDocumentType.AGREEMENT]: 'Acuerdos',
-      [CommitteeDocumentType.VOTING_RESULTS]: 'Resultados de Votación',
-      [CommitteeDocumentType.REPORTS]: 'Informes',
-      [CommitteeDocumentType.POLICIES]: 'Políticas',
       [CommitteeDocumentType.OTHER]: 'Otros',
     };
     return labels[type] || type;

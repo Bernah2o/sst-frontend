@@ -6,6 +6,14 @@ import {
 } from '../types';
 
 const BASE_URL = '/committee-permissions';
+type BackendPermissionType = 'view' | 'edit' | 'manage_members' | 'delete';
+
+const PERMISSION_MAP = {
+  view: 'view' as BackendPermissionType,
+  edit: 'edit' as BackendPermissionType,
+  manageMembers: 'manage_members' as BackendPermissionType,
+  delete: 'delete' as BackendPermissionType,
+} as const;
 
 export const committeePermissionService = {
   // Permission CRUD operations
@@ -39,7 +47,11 @@ export const committeePermissionService = {
   },
 
   // Permission checking
-  async checkUserPermission(committeeId: number, userId: number, permission: string): Promise<boolean> {
+  async checkUserPermission(
+    committeeId: number,
+    userId: number,
+    permission: BackendPermissionType
+  ): Promise<boolean> {
     try {
       const response = await api.get(`${BASE_URL}/check`, {
         params: {
@@ -54,7 +66,10 @@ export const committeePermissionService = {
     }
   },
 
-  async checkCurrentUserPermission(committeeId: number, permission: string): Promise<boolean> {
+  async checkCurrentUserPermission(
+    committeeId: number,
+    permission: BackendPermissionType
+  ): Promise<boolean> {
     try {
       // Validate committee_id to prevent NaN errors
       if (!committeeId || isNaN(committeeId) || committeeId <= 0) {
@@ -75,88 +90,40 @@ export const committeePermissionService = {
     }
   },
 
-  // Bulk permission operations
-  async grantMultiplePermissions(permissions: CommitteePermissionCreate[]): Promise<CommitteePermission[]> {
-    const response = await api.post(`${BASE_URL}/bulk`, { permissions });
-    return response.data;
-  },
-
-  async updateMultiplePermissions(updates: { id: number; permission: CommitteePermissionUpdate }[]): Promise<CommitteePermission[]> {
-    const response = await api.put(`${BASE_URL}/bulk`, { updates });
-    return response.data;
-  },
-
-  async revokeMultiplePermissions(permissionIds: number[]): Promise<void> {
-    await api.delete(`${BASE_URL}/bulk`, {
-      data: { permission_ids: permissionIds },
-    });
-  },
-
-  // Permission templates
-  async applyPermissionTemplate(committeeId: number, userId: number, template: 'admin' | 'member' | 'viewer'): Promise<CommitteePermission> {
-    const response = await api.post(`${BASE_URL}/apply-template`, {
-      committee_id: committeeId,
-      user_id: userId,
-      template,
-    });
-    return response.data;
-  },
-
-  async getPermissionTemplates(): Promise<{ [key: string]: CommitteePermissionCreate }> {
+  // Permission templates aligned to backend `permission_type`
+  getPermissionTemplates(): { [key: string]: Omit<CommitteePermissionCreate, 'committee_id' | 'user_id'>[] } {
     return {
-      admin: {
-        committee_id: 0, // Will be set when applying
-        user_id: 0, // Will be set when applying
-        can_view: true,
-        can_edit: true,
-        can_manage_members: true,
-        can_create_meetings: true,
-        can_manage_votings: true,
-        can_upload_documents: true,
-      },
-      member: {
-        committee_id: 0,
-        user_id: 0,
-        can_view: true,
-        can_edit: false,
-        can_manage_members: false,
-        can_create_meetings: false,
-        can_manage_votings: false,
-        can_upload_documents: true,
-      },
-      viewer: {
-        committee_id: 0,
-        user_id: 0,
-        can_view: true,
-        can_edit: false,
-        can_manage_members: false,
-        can_create_meetings: false,
-        can_manage_votings: false,
-        can_upload_documents: false,
-      },
+      admin: [
+        { permission_type: PERMISSION_MAP.view, is_active: true },
+        { permission_type: PERMISSION_MAP.edit, is_active: true },
+        { permission_type: PERMISSION_MAP.manageMembers, is_active: true },
+        { permission_type: PERMISSION_MAP.delete, is_active: true },
+      ],
+      member: [
+        { permission_type: PERMISSION_MAP.view, is_active: true },
+        { permission_type: PERMISSION_MAP.edit, is_active: true },
+      ],
+      viewer: [{ permission_type: PERMISSION_MAP.view, is_active: true }],
     };
   },
 
-  // Permission inheritance from committee membership
-  async syncMembershipPermissions(committeeId: number): Promise<void> {
-    await api.post(`${BASE_URL}/sync-membership`, { committee_id: committeeId });
-  },
-
-  // Permission audit
-  async getPermissionAuditLog(committeeId: number): Promise<any[]> {
-    const response = await api.get(`${BASE_URL}/audit/${committeeId}`);
-    return response.data;
-  },
-
-  async getUserPermissionHistory(userId: number): Promise<any[]> {
-    const response = await api.get(`${BASE_URL}/user/${userId}/history`);
-    return response.data;
-  },
-
-  // Permission validation
-  async validatePermissions(committeeId: number): Promise<{ valid: boolean; issues: string[] }> {
-    const response = await api.get(`${BASE_URL}/validate/${committeeId}`);
-    return response.data;
+  async applyPermissionTemplate(
+    committeeId: number,
+    userId: number,
+    template: 'admin' | 'member' | 'viewer'
+  ): Promise<CommitteePermission[]> {
+    const templatePermissions = this.getPermissionTemplates()[template];
+    const createdPermissions = await Promise.all(
+      templatePermissions.map((permission) =>
+        this.createPermission({
+          committee_id: committeeId,
+          user_id: userId,
+          permission_type: permission.permission_type,
+          is_active: true,
+        })
+      )
+    );
+    return createdPermissions;
   },
 
   // Committee access control
@@ -178,12 +145,10 @@ export const committeePermissionService = {
   // Permission helpers
   getPermissionLabels(): { [key: string]: string } {
     return {
-      can_view: 'Ver contenido del comité',
-      can_edit: 'Editar información del comité',
-      can_manage_members: 'Gestionar miembros',
-      can_create_meetings: 'Crear reuniones',
-      can_manage_votings: 'Gestionar votaciones',
-      can_upload_documents: 'Subir documentos',
+      [PERMISSION_MAP.view]: 'Ver contenido del comité',
+      [PERMISSION_MAP.edit]: 'Editar comité y recursos',
+      [PERMISSION_MAP.manageMembers]: 'Gestionar miembros',
+      [PERMISSION_MAP.delete]: 'Eliminar comité y recursos',
     };
   },
 
@@ -193,7 +158,7 @@ export const committeePermissionService = {
       console.warn(`canView: Invalid committee_id provided: ${committeeId}`);
       return false;
     }
-    return this.checkCurrentUserPermission(committeeId, 'can_view');
+    return this.checkCurrentUserPermission(committeeId, PERMISSION_MAP.view);
   },
 
   async canEdit(committeeId: number): Promise<boolean> {
@@ -201,7 +166,7 @@ export const committeePermissionService = {
       console.warn(`canEdit: Invalid committee_id provided: ${committeeId}`);
       return false;
     }
-    return this.checkCurrentUserPermission(committeeId, 'can_edit');
+    return this.checkCurrentUserPermission(committeeId, PERMISSION_MAP.edit);
   },
 
   async canManageMembers(committeeId: number): Promise<boolean> {
@@ -209,7 +174,7 @@ export const committeePermissionService = {
       console.warn(`canManageMembers: Invalid committee_id provided: ${committeeId}`);
       return false;
     }
-    return this.checkCurrentUserPermission(committeeId, 'can_manage_members');
+    return this.checkCurrentUserPermission(committeeId, PERMISSION_MAP.manageMembers);
   },
 
   async canCreateMeetings(committeeId: number): Promise<boolean> {
@@ -217,7 +182,8 @@ export const committeePermissionService = {
       console.warn(`canCreateMeetings: Invalid committee_id provided: ${committeeId}`);
       return false;
     }
-    return this.checkCurrentUserPermission(committeeId, 'can_create_meetings');
+    // Backend no expone permiso específico para reuniones; "edit" cubre gestión operativa.
+    return this.checkCurrentUserPermission(committeeId, PERMISSION_MAP.edit);
   },
 
   async canManageVotings(committeeId: number): Promise<boolean> {
@@ -225,7 +191,8 @@ export const committeePermissionService = {
       console.warn(`canManageVotings: Invalid committee_id provided: ${committeeId}`);
       return false;
     }
-    return this.checkCurrentUserPermission(committeeId, 'can_manage_votings');
+    // Backend no expone permiso específico para votaciones; "edit" cubre gestión operativa.
+    return this.checkCurrentUserPermission(committeeId, PERMISSION_MAP.edit);
   },
 
   async canUploadDocuments(committeeId: number): Promise<boolean> {
@@ -233,7 +200,8 @@ export const committeePermissionService = {
       console.warn(`canUploadDocuments: Invalid committee_id provided: ${committeeId}`);
       return false;
     }
-    return this.checkCurrentUserPermission(committeeId, 'can_upload_documents');
+    // Backend no expone permiso específico para documentos; "edit" cubre gestión operativa.
+    return this.checkCurrentUserPermission(committeeId, PERMISSION_MAP.edit);
   },
 
   async canManageActivities(committeeId: number): Promise<boolean> {
@@ -241,7 +209,7 @@ export const committeePermissionService = {
       console.warn(`canManageActivities: Invalid committee_id provided: ${committeeId}`);
       return false;
     }
-    return this.checkCurrentUserPermission(committeeId, 'can_edit');
+    return this.checkCurrentUserPermission(committeeId, PERMISSION_MAP.edit);
   },
 
   async hasAnyCommitteePermissions(): Promise<boolean> {

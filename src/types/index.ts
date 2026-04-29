@@ -1858,12 +1858,15 @@ export enum ActivityPriority {
 export enum CommitteeDocumentType {
   MEETING_MINUTES = "meeting_minutes",
   VOTING_RECORD = "voting_record",
+  REGULATION = "regulation",
+  REPORT = "report",
+  INVESTIGATION = "investigation",
+  PROCEDURE = "procedure",
+  FORM = "form",
+  CERTIFICATE = "certificate",
   ACTIVITY_REPORT = "activity_report",
   PRESENTATION = "presentation",
   AGREEMENT = "agreement",
-  VOTING_RESULTS = "voting_results",
-  REPORTS = "reports",
-  POLICIES = "policies",
   OTHER = "other",
 }
 
@@ -2174,23 +2177,21 @@ export interface CommitteeDocumentResponse extends CommitteeDocumentBase {
 export interface CommitteePermissionBase {
   committee_id: number;
   user_id: number;
-  can_view: boolean;
-  can_edit: boolean;
-  can_manage_members: boolean;
-  can_create_meetings: boolean;
-  can_manage_votings: boolean;
-  can_upload_documents: boolean;
+  permission_type: string;
+  granted_by?: number;
+  granted_at?: string;
+  expires_at?: string;
+  is_active: boolean;
+  notes?: string;
 }
 
 export interface CommitteePermissionCreate extends CommitteePermissionBase {}
 
 export interface CommitteePermissionUpdate {
-  can_view?: boolean;
-  can_edit?: boolean;
-  can_manage_members?: boolean;
-  can_create_meetings?: boolean;
-  can_manage_votings?: boolean;
-  can_upload_documents?: boolean;
+  permission_type?: string;
+  expires_at?: string;
+  is_active?: boolean;
+  notes?: string;
 }
 
 export interface CommitteePermissionResponse extends CommitteePermissionBase {

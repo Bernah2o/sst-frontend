@@ -4,7 +4,6 @@ import {
   CommitteeCreate,
   CommitteeUpdate,
   CommitteeListFilters,
-  CommitteeDashboard,
   CommitteeType,
 } from "../types";
 
@@ -27,12 +26,20 @@ export const committeeService = {
     if (filters?.is_active !== undefined)
       params.append("is_active", filters.is_active.toString());
     if (filters?.search) params.append("search", filters.search);
-    if (filters?.page) params.append("page", filters.page.toString());
-    if (filters?.page_size)
-      params.append("page_size", filters.page_size.toString());
+    if (filters?.page && filters?.page_size) {
+      params.append("skip", ((filters.page - 1) * filters.page_size).toString());
+      params.append("limit", filters.page_size.toString());
+    }
 
     const response = await api.get(`${BASE_URL}?${params.toString()}`);
-    return response.data;
+    const data = response.data;
+    return {
+      items: data.items || [],
+      total: data.total || 0,
+      page: data.page || filters?.page || 1,
+      page_size: data.size || filters?.page_size || 10,
+      total_pages: data.pages || 0,
+    };
   },
 
   async getCommittee(id: number): Promise<Committee> {
@@ -58,8 +65,8 @@ export const committeeService = {
   },
 
   // Committee dashboard
-  async getCommitteeDashboard(id: number): Promise<CommitteeDashboard> {
-    const response = await api.get(`${BASE_URL}${id}/dashboard`);
+  async getCommitteeDashboard(id: number): Promise<any> {
+    const response = await api.get(`${BASE_URL}${id}/stats`);
     return response.data;
   },
 
@@ -122,8 +129,8 @@ export const committeeService = {
   // Check user access to committee
   async checkUserAccess(committeeId: number): Promise<boolean> {
     try {
-      const response = await api.get(`${BASE_URL}${committeeId}/access`);
-      return response.data.has_access;
+      await this.getCommittee(committeeId);
+      return true;
     } catch (error) {
       return false;
     }
@@ -131,7 +138,16 @@ export const committeeService = {
 
   // Get committees accessible to current user
   async getUserCommittees(): Promise<Committee[]> {
-    const response = await api.get(`${BASE_URL}user/committees`);
-    return response.data;
+    const { committeePermissionService } = await import('./committeePermissionService');
+    const accessibleCommittees = await committeePermissionService.getUserAccessibleCommittees();
+
+    const uniqueCommitteeIds = Array.from(
+      new Set(accessibleCommittees.map((item) => item.committee_id))
+    );
+    const committees = await Promise.all(
+      uniqueCommitteeIds.map((committeeId) => this.getCommittee(committeeId))
+    );
+
+    return committees;
   },
 };
