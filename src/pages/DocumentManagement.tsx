@@ -341,7 +341,7 @@ const DocumentManagement: React.FC = () => {
     }
     
     try {
-      await committeeDocumentService.deleteDocument(selectedDocument.committee_id, selectedDocument.id);
+      await committeeDocumentService.deleteDocument(selectedDocument.id, selectedDocument.committee_id);
       
       setDeleteDialogOpen(false);
       
@@ -374,7 +374,12 @@ const DocumentManagement: React.FC = () => {
     try {
       if (editingDocument) {
         // Editing existing document
-        await committeeDocumentService.updateDocument(editingDocument.id, data as CommitteeDocumentUpdate, file);
+        await committeeDocumentService.updateDocument(
+          editingDocument.id,
+          editingDocument.committee_id,
+          data as CommitteeDocumentUpdate,
+          file
+        );
       } else {
         // Creating new document
         await committeeDocumentService.createDocument(data as CommitteeDocumentCreate, file!);

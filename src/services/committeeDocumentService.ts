@@ -172,7 +172,13 @@ export const committeeDocumentService = {
     return response.data;
   },
 
-  async updateDocument(id: number, document: CommitteeDocumentUpdate, file?: File): Promise<CommitteeDocument> {
+  async updateDocument(
+    id: number,
+    committee_id: number,
+    document: CommitteeDocumentUpdate,
+    file?: File
+  ): Promise<CommitteeDocument> {
+    const updateUrl = `${BASE_URL}/${id}?committee_id=${committee_id}`;
     if (file) {
       // If file is provided, use FormData for file upload
       const formData = new FormData();
@@ -185,7 +191,7 @@ export const committeeDocumentService = {
       if (document.expiry_date) formData.append('expiry_date', document.expiry_date);
       if (document.notes) formData.append('notes', document.notes);
 
-      const response = await api.put(`${BASE_URL}/${id}`, formData, {
+      const response = await api.put(updateUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -193,7 +199,7 @@ export const committeeDocumentService = {
       return response.data;
     } else {
       // If no file, just update metadata
-      const response = await api.put(`${BASE_URL}/${id}`, document);
+      const response = await api.put(updateUrl, document);
       return response.data;
     }
   },
