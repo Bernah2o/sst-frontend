@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -26,7 +26,7 @@ import {
   TextField,
   FormControlLabel,
   Switch,
-} from '@mui/material';
+} from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
@@ -41,18 +41,18 @@ import {
   MoreVert as MoreVertIcon,
   // CheckCircle as ActivateIcon,
   // Block as DeactivateIcon,
-} from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
-import { committeeService } from '../services/committeeService';
-import { committeeMemberService } from '../services/committeeMemberService';
-import { meetingService } from '../services/meetingService';
-import { votingService } from '../services/votingService';
-import { committeeActivityService } from '../services/committeeActivityService';
-import { committeeDocumentService } from '../services/committeeDocumentService';
-import { committeePermissionService } from '../services/committeePermissionService';
-import ActivityForm from '../components/ActivityForm';
-import ConfirmDialog from '../components/ConfirmDialog';
-import { useConfirmDialog } from '../hooks/useConfirmDialog';
+} from "@mui/icons-material";
+import { useNavigate, useParams } from "react-router-dom";
+import { committeeService } from "../services/committeeService";
+import { committeeMemberService } from "../services/committeeMemberService";
+import { meetingService } from "../services/meetingService";
+import { votingService } from "../services/votingService";
+import { committeeActivityService } from "../services/committeeActivityService";
+import { committeeDocumentService } from "../services/committeeDocumentService";
+import { committeePermissionService } from "../services/committeePermissionService";
+import ActivityForm from "../components/ActivityForm";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import {
   Committee,
   CommitteeMember,
@@ -64,7 +64,7 @@ import {
   CommitteeDocument,
   CommitteeType,
   CommitteeRole,
-} from '../types';
+} from "../types";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -102,13 +102,19 @@ const CommitteeDetail: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activityFormOpen, setActivityFormOpen] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
-  
+  const [editingActivity, setEditingActivity] = useState<Activity | undefined>(
+    undefined,
+  );
+
   // Member action state
   const [memberActionOpen, setMemberActionOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<CommitteeMember | null>(null);
-  const [memberActionType, setMemberActionType] = useState<'activate' | 'deactivate' | null>(null);
-  const [memberActionReason, setMemberActionReason] = useState('');
+  const [selectedMember, setSelectedMember] = useState<CommitteeMember | null>(
+    null,
+  );
+  const [memberActionType, setMemberActionType] = useState<
+    "activate" | "deactivate" | null
+  >(null);
+  const [memberActionReason, setMemberActionReason] = useState("");
   const [showInactiveMembers, setShowInactiveMembers] = useState(false);
 
   const [permissions, setPermissions] = useState({
@@ -128,13 +134,17 @@ const CommitteeDetail: React.FC = () => {
       const committeeId = parseInt(id);
       // Only show error for clearly invalid IDs
       if (isNaN(committeeId) || committeeId <= 0) {
-        setError('El identificador del comité no es válido. Por favor, verifica la URL e intenta nuevamente.');
+        setError(
+          "El identificador del comité no es válido. Por favor, verifica la URL e intenta nuevamente.",
+        );
         setLoading(false);
         return;
       }
       loadCommitteeData(committeeId);
     } else {
-      setError('No se ha especificado qué comité mostrar. Por favor, selecciona un comité desde el listado.');
+      setError(
+        "No se ha especificado qué comité mostrar. Por favor, selecciona un comité desde el listado.",
+      );
       setLoading(false);
     }
   }, [id]);
@@ -147,16 +157,22 @@ const CommitteeDetail: React.FC = () => {
       // Check permissions first
       const canView = await committeePermissionService.canView(committeeId);
       if (!canView) {
-        setError('No tienes los permisos necesarios para acceder a este comité. Contacta al administrador si necesitas acceso.');
+        setError(
+          "No tienes los permisos necesarios para acceder a este comité. Contacta al administrador si necesitas acceso.",
+        );
         return;
       }
 
       // Load permissions
       const canEdit = await committeePermissionService.canEdit(committeeId);
-      const canManageMembers = await committeePermissionService.canManageMembers(committeeId);
-      const canCreateMeetings = await committeePermissionService.canCreateMeetings(committeeId);
-      const canManageVotings = await committeePermissionService.canManageVotings(committeeId);
-      const canUploadDocuments = await committeePermissionService.canUploadDocuments(committeeId);
+      const canManageMembers =
+        await committeePermissionService.canManageMembers(committeeId);
+      const canCreateMeetings =
+        await committeePermissionService.canCreateMeetings(committeeId);
+      const canManageVotings =
+        await committeePermissionService.canManageVotings(committeeId);
+      const canUploadDocuments =
+        await committeePermissionService.canUploadDocuments(committeeId);
 
       setPermissions({
         canView,
@@ -172,12 +188,21 @@ const CommitteeDetail: React.FC = () => {
       setCommittee(committeeData);
 
       // Load related data
-      const [membersData, meetingsData, votingsData, activitiesData, documentsData] = await Promise.all([
+      const [
+        membersData,
+        meetingsData,
+        votingsData,
+        activitiesData,
+        documentsData,
+      ] = await Promise.all([
         committeeMemberService.getCommitteeMembers(committeeId),
         meetingService.getMeetings({ committee_id: committeeId }),
         votingService.getVotings({ committee_id: committeeId, page_size: 10 }),
         committeeActivityService.getActivities(committeeId, { limit: 10 }),
-        committeeDocumentService.getDocuments({ committee_id: committeeId, page_size: 10 }),
+        committeeDocumentService.getDocuments({
+          committee_id: committeeId,
+          page_size: 10,
+        }),
       ]);
 
       setMembers(membersData);
@@ -186,8 +211,10 @@ const CommitteeDetail: React.FC = () => {
       setActivities(activitiesData.activities || []); // getActivities returns { activities: Activity[], ... }
       setDocuments(documentsData.items || []); // getDocuments returns { items: CommitteeDocument[], ... }
     } catch (err) {
-      setError('Hubo un problema al cargar la información del comité. Por favor, intenta recargar la página o contacta al soporte técnico si el problema persiste.');
-      console.error('Committee detail loading error:', err);
+      setError(
+        "Hubo un problema al cargar la información del comité. Por favor, intenta recargar la página o contacta al soporte técnico si el problema persiste.",
+      );
+      console.error("Committee detail loading error:", err);
     } finally {
       setLoading(false);
     }
@@ -200,58 +227,67 @@ const CommitteeDetail: React.FC = () => {
   const getCommitteeTypeLabel = (type: CommitteeType): string => {
     switch (type) {
       case CommitteeType.CONVIVENCIA:
-        return 'Convivencia';
+        return "Convivencia";
       case CommitteeType.COPASST:
-        return 'COPASST';
+        return "COPASST";
       default:
         return type;
     }
   };
 
-  const getCommitteeTypeColor = (type: CommitteeType): 'primary' | 'secondary' => {
+  const getCommitteeTypeColor = (
+    type: CommitteeType,
+  ): "primary" | "secondary" => {
     switch (type) {
       case CommitteeType.CONVIVENCIA:
-        return 'primary';
+        return "primary";
       case CommitteeType.COPASST:
-        return 'secondary';
+        return "secondary";
       default:
-        return 'primary';
+        return "primary";
     }
   };
 
   const getRoleLabel = (role: CommitteeRole): string => {
     switch (role) {
       case CommitteeRole.PRESIDENT:
-        return 'Presidente';
+        return "Presidente";
       case CommitteeRole.VICE_PRESIDENT:
-        return 'Vicepresidente';
+        return "Vicepresidente";
       case CommitteeRole.SECRETARY:
-        return 'Secretario';
+        return "Secretario";
       case CommitteeRole.MEMBER:
-        return 'Miembro';
+        return "Miembro";
       default:
         return role;
     }
   };
 
-  const getRoleColor = (role: CommitteeRole): 'primary' | 'secondary' | 'success' | 'warning' => {
+  const getRoleColor = (
+    role: CommitteeRole,
+  ): "primary" | "secondary" | "success" | "warning" => {
     switch (role) {
       case CommitteeRole.PRESIDENT:
-        return 'primary';
+        return "primary";
       case CommitteeRole.VICE_PRESIDENT:
-        return 'secondary';
+        return "secondary";
       case CommitteeRole.SECRETARY:
-        return 'success';
+        return "success";
       case CommitteeRole.MEMBER:
-        return 'warning';
+        return "warning";
       default:
-        return 'primary';
+        return "primary";
     }
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress />
       </Box>
     );
@@ -263,7 +299,7 @@ const CommitteeDetail: React.FC = () => {
         <Alert severity="error">{error}</Alert>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/admin/committees')}
+          onClick={() => navigate("/admin/committees")}
           sx={{ mt: 2 }}
         >
           Volver a Comités
@@ -278,7 +314,7 @@ const CommitteeDetail: React.FC = () => {
         <Alert severity="warning">Comité no encontrado</Alert>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/admin/committees')}
+          onClick={() => navigate("/admin/committees")}
           sx={{ mt: 2 }}
         >
           Volver a Comités
@@ -296,10 +332,10 @@ const CommitteeDetail: React.FC = () => {
       try {
         await committeeService.deleteCommittee(committee.id);
         setDeleteDialogOpen(false);
-        navigate('/admin/committees');
+        navigate("/admin/committees");
       } catch (err) {
-        setError('Error al eliminar el comité');
-        console.error('Committee deletion error:', err);
+        setError("Error al eliminar el comité");
+        console.error("Committee deletion error:", err);
       }
     }
   };
@@ -324,23 +360,32 @@ const CommitteeDetail: React.FC = () => {
     setEditingActivity(undefined);
   };
 
-  const handleActivitySubmit = async (data: ActivityCreate | ActivityUpdate) => {
+  const handleActivitySubmit = async (
+    data: ActivityCreate | ActivityUpdate,
+  ) => {
     try {
       if (editingActivity && committee) {
         // Editing existing activity
-        await committeeActivityService.updateActivity(committee.id, editingActivity.id, data as ActivityUpdate);
+        await committeeActivityService.updateActivity(
+          committee.id,
+          editingActivity.id,
+          data as ActivityUpdate,
+        );
       } else if (committee) {
         // Creating new activity
-        await committeeActivityService.createActivity(committee.id, { ...data, committee_id: committee.id } as ActivityCreate);
+        await committeeActivityService.createActivity(committee.id, {
+          ...data,
+          committee_id: committee.id,
+        } as ActivityCreate);
       }
-      
+
       if (committee) {
         loadCommitteeData(committee.id);
       }
       setActivityFormOpen(false);
       setEditingActivity(undefined);
     } catch (err) {
-      console.error('Activity submit error:', err);
+      console.error("Activity submit error:", err);
       throw err; // Let the form handle the error display
     }
   };
@@ -351,27 +396,31 @@ const CommitteeDetail: React.FC = () => {
     try {
       const confirmed = await showConfirmDialog({
         title: "Confirmar eliminación",
-        message: "¿Estás seguro de que quieres eliminar esta actividad? Esta acción no se puede deshacer.",
+        message:
+          "¿Estás seguro de que quieres eliminar esta actividad? Esta acción no se puede deshacer.",
         confirmText: "Eliminar",
         cancelText: "Cancelar",
-        severity: "warning"
+        severity: "warning",
       });
 
       if (!confirmed) return;
 
-      await committeeActivityService.deleteActivity(activityId, committee.id);
+      await committeeActivityService.deleteActivity(committee.id, activityId);
       loadCommitteeData(committee.id);
     } catch (err) {
-      setError('Error al eliminar la actividad');
-      console.error('Activity deletion error:', err);
+      setError("Error al eliminar la actividad");
+      console.error("Activity deletion error:", err);
     }
   };
 
   // Member management functions
-  const handleMemberAction = (member: CommitteeMember, type: 'activate' | 'deactivate') => {
+  const handleMemberAction = (
+    member: CommitteeMember,
+    type: "activate" | "deactivate",
+  ) => {
     setSelectedMember(member);
     setMemberActionType(type);
-    setMemberActionReason('');
+    setMemberActionReason("");
     setMemberActionOpen(true);
   };
 
@@ -379,36 +428,50 @@ const CommitteeDetail: React.FC = () => {
     setMemberActionOpen(false);
     setSelectedMember(null);
     setMemberActionType(null);
-    setMemberActionReason('');
+    setMemberActionReason("");
   };
 
   const handleMemberActionSubmit = async () => {
     if (!selectedMember || !memberActionType || !committee) return;
 
     try {
-      if (memberActionType === 'activate') {
-        await committeeMemberService.activateMember(selectedMember.id, memberActionReason);
+      if (memberActionType === "activate") {
+        await committeeMemberService.activateMember(
+          selectedMember.id,
+          memberActionReason,
+        );
       } else {
-        await committeeMemberService.deactivateMember(selectedMember.id, memberActionReason);
+        await committeeMemberService.deactivateMember(
+          selectedMember.id,
+          memberActionReason,
+        );
       }
-      
+
       // Reload details to get updated list
       loadCommitteeData(committee.id);
       handleMemberActionClose();
     } catch (err) {
-      console.error('Error changing member status:', err);
-      // Here you might want to set an error state to show in the UI, 
+      console.error("Error changing member status:", err);
+      // Here you might want to set an error state to show in the UI,
       // but for now we'll just rely on the console
-      alert('Error al actualizar el estado del miembro');
+      alert("Error al actualizar el estado del miembro");
     }
   };
 
   return (
     <Box p={3}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
         <Box display="flex" alignItems="center">
-          <IconButton onClick={() => navigate('/admin/committees')} sx={{ mr: 2 }}>
+          <IconButton
+            onClick={() => navigate("/admin/committees")}
+            sx={{ mr: 2 }}
+          >
             <ArrowBackIcon />
           </IconButton>
           <Box>
@@ -423,42 +486,42 @@ const CommitteeDetail: React.FC = () => {
                 sx={{ mr: 1 }}
               />
               <Chip
-                label={committee.is_active ? 'Activo' : 'Inactivo'}
+                label={committee.is_active ? "Activo" : "Inactivo"}
                 size="small"
-                color={committee.is_active ? 'success' : 'default'}
+                color={committee.is_active ? "success" : "default"}
               />
             </Box>
           </Box>
         </Box>
         <Box>
-           <Button
-             variant="outlined"
-             startIcon={<SettingsIcon />}
-             onClick={() => navigate(`/admin/committees/${committee.id}`)}
-             disabled={!permissions.canManageMembers}
-             sx={{ mr: 2 }}
-           >
-             Configuración
-           </Button>
-           <Button
-             variant="contained"
-             startIcon={<EditIcon />}
-             onClick={() => navigate(`/admin/committees/${committee.id}/edit`)}
-             disabled={!permissions.canEdit}
-             sx={{ mr: 2 }}
-           >
-             Editar
-           </Button>
-           <Button
-             variant="outlined"
-             color="error"
-             startIcon={<DeleteIcon />}
-             onClick={handleDeleteClick}
-             disabled={!permissions.canEdit}
-           >
-             Eliminar
-           </Button>
-         </Box>
+          <Button
+            variant="outlined"
+            startIcon={<SettingsIcon />}
+            onClick={() => navigate(`/admin/committees/${committee.id}`)}
+            disabled={!permissions.canManageMembers}
+            sx={{ mr: 2 }}
+          >
+            Configuración
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<EditIcon />}
+            onClick={() => navigate(`/admin/committees/${committee.id}/edit`)}
+            disabled={!permissions.canEdit}
+            sx={{ mr: 2 }}
+          >
+            Editar
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={handleDeleteClick}
+            disabled={!permissions.canEdit}
+          >
+            Eliminar
+          </Button>
+        </Box>
       </Box>
 
       {/* Committee Info */}
@@ -476,7 +539,7 @@ const CommitteeDetail: React.FC = () => {
                 Fecha de Creación
               </Typography>
               <Typography variant="body2">
-                {new Date(committee.created_at).toLocaleDateString('es-ES')}
+                {new Date(committee.created_at).toLocaleDateString("es-ES")}
               </Typography>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -484,7 +547,7 @@ const CommitteeDetail: React.FC = () => {
                 Última Actualización
               </Typography>
               <Typography variant="body2">
-                {new Date(committee.updated_at).toLocaleDateString('es-ES')}
+                {new Date(committee.updated_at).toLocaleDateString("es-ES")}
               </Typography>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -492,7 +555,7 @@ const CommitteeDetail: React.FC = () => {
                 Total de Miembros
               </Typography>
               <Typography variant="body2">
-                {members.filter(m => m.is_active).length} activos
+                {members.filter((m) => m.is_active).length} activos
               </Typography>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -500,7 +563,7 @@ const CommitteeDetail: React.FC = () => {
                 Estado
               </Typography>
               <Typography variant="body2">
-                {committee.is_active ? 'Activo' : 'Inactivo'}
+                {committee.is_active ? "Activo" : "Inactivo"}
               </Typography>
             </Grid>
           </Grid>
@@ -509,7 +572,11 @@ const CommitteeDetail: React.FC = () => {
 
       {/* Tabs */}
       <Paper sx={{ mb: 3 }}>
-        <Tabs value={tabValue} onChange={handleTabChange} aria-label="committee tabs">
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          aria-label="committee tabs"
+        >
           <Tab label="Miembros" />
           <Tab label="Reuniones" />
           <Tab label="Votaciones" />
@@ -521,7 +588,12 @@ const CommitteeDetail: React.FC = () => {
       {/* Tab Panels */}
       <TabPanel value={tabValue} index={0}>
         {/* Members Tab */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
           <Typography variant="h6">Miembros del Comité</Typography>
           <Box display="flex" alignItems="center">
             <FormControlLabel
@@ -537,7 +609,9 @@ const CommitteeDetail: React.FC = () => {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => navigate(`/admin/committees/${committee.id}/members`)}
+              onClick={() =>
+                navigate(`/admin/committees/${committee.id}/members`)
+              }
               disabled={!permissions.canManageMembers}
             >
               Agregar Miembro
@@ -548,126 +622,188 @@ const CommitteeDetail: React.FC = () => {
           <CardContent>
             <List>
               {members
-                .filter(m => showInactiveMembers || m.is_active)
+                .filter((m) => showInactiveMembers || m.is_active)
                 .map((member, index, filteredMembers) => (
-                <React.Fragment key={member.id}>
-                  <ListItem
-                    secondaryAction={
-                      permissions.canManageMembers && (
-                        <IconButton
-                          edge="end"
-                          onClick={(event) => {
-                            const menu = document.createElement('div');
-                            menu.style.position = 'absolute';
-                            menu.style.zIndex = '1000';
-                            menu.innerHTML = `
+                  <React.Fragment key={member.id}>
+                    <ListItem
+                      secondaryAction={
+                        permissions.canManageMembers && (
+                          <IconButton
+                            edge="end"
+                            onClick={(event) => {
+                              const menu = document.createElement("div");
+                              menu.style.position = "absolute";
+                              menu.style.zIndex = "1000";
+                              menu.innerHTML = `
                               <div style="background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-                                ${member.is_active 
-                                  ? '<button id="deactivate-member" style="display: block; width: 100%; padding: 8px 16px; border: none; background: none; text-align: left; cursor: pointer; color: orange;">Desactivar</button>'
-                                  : '<button id="activate-member" style="display: block; width: 100%; padding: 8px 16px; border: none; background: none; text-align: left; cursor: pointer; color: green;">Activar</button>'
+                                ${
+                                  member.is_active
+                                    ? '<button id="deactivate-member" style="display: block; width: 100%; padding: 8px 16px; border: none; background: none; text-align: left; cursor: pointer; color: orange;">Desactivar</button>'
+                                    : '<button id="activate-member" style="display: block; width: 100%; padding: 8px 16px; border: none; background: none; text-align: left; cursor: pointer; color: green;">Activar</button>'
                                 }
                                 <div style="border-top: 1px solid #eee;"></div>
                                 <button id="delete-member" style="display: block; width: 100%; padding: 8px 16px; border: none; background: none; text-align: left; cursor: pointer; color: red;">Eliminar</button>
                               </div>
                             `;
-                            document.body.appendChild(menu);
-                            
-                            const rect = event.currentTarget.getBoundingClientRect();
-                            menu.style.left = `${rect.left - 100}px`;
-                            menu.style.top = `${rect.bottom}px`;
-                            
-                            const deactivateBtn = menu.querySelector('#deactivate-member');
-                            const activateBtn = menu.querySelector('#activate-member');
-                            const deleteBtn = menu.querySelector('#delete-member');
-                            
-                            deactivateBtn?.addEventListener('click', () => {
-                              handleMemberAction(member, 'deactivate');
-                              menu.remove();
-                            });
+                              document.body.appendChild(menu);
 
-                            activateBtn?.addEventListener('click', () => {
-                              handleMemberAction(member, 'activate');
-                              menu.remove();
-                            });
+                              const rect =
+                                event.currentTarget.getBoundingClientRect();
+                              menu.style.left = `${rect.left - 100}px`;
+                              menu.style.top = `${rect.bottom}px`;
 
-                            deleteBtn?.addEventListener('click', async () => {
-                              menu.remove();
-                              const confirmed = await showConfirmDialog({
-                                title: "Eliminar miembro",
-                                message: "¿Estás seguro de que deseas eliminar este miembro del comité?",
-                                confirmText: "Eliminar",
-                                severity: "error"
+                              const deactivateBtn =
+                                menu.querySelector("#deactivate-member");
+                              const activateBtn =
+                                menu.querySelector("#activate-member");
+                              const deleteBtn =
+                                menu.querySelector("#delete-member");
+
+                              deactivateBtn?.addEventListener("click", () => {
+                                handleMemberAction(member, "deactivate");
+                                menu.remove();
                               });
-                              if (confirmed) {
-                                try {
-                                  await committeeMemberService.deleteCommitteeMember(member.id);
-                                  loadCommitteeData(committee.id);
-                                } catch (error) {
-                                  console.error("Error deleting member", error);
-                                  alert("Error al eliminar el miembro");
+
+                              activateBtn?.addEventListener("click", () => {
+                                handleMemberAction(member, "activate");
+                                menu.remove();
+                              });
+
+                              deleteBtn?.addEventListener("click", async () => {
+                                menu.remove();
+                                const confirmed = await showConfirmDialog({
+                                  title: "Eliminar miembro",
+                                  message:
+                                    "¿Estás seguro de que deseas eliminar este miembro del comité?",
+                                  confirmText: "Eliminar",
+                                  severity: "error",
+                                });
+                                if (confirmed) {
+                                  try {
+                                    await committeeMemberService.deleteCommitteeMember(
+                                      member.id,
+                                    );
+                                    loadCommitteeData(committee.id);
+                                  } catch (error) {
+                                    console.error(
+                                      "Error deleting member",
+                                      error,
+                                    );
+                                    alert("Error al eliminar el miembro");
+                                  }
                                 }
-                              }
-                            });
-                            
-                            const closeMenu = (e: MouseEvent) => {
-                              if (menu.parentNode && !menu.contains(e.target as Node)) {
-                                menu.parentNode.removeChild(menu);
-                                document.removeEventListener('click', closeMenu);
-                              }
-                            };
-                            
-                            setTimeout(() => document.addEventListener('click', closeMenu), 0);
+                              });
+
+                              const closeMenu = (e: MouseEvent) => {
+                                if (
+                                  menu.parentNode &&
+                                  !menu.contains(e.target as Node)
+                                ) {
+                                  menu.parentNode.removeChild(menu);
+                                  document.removeEventListener(
+                                    "click",
+                                    closeMenu,
+                                  );
+                                }
+                              };
+
+                              setTimeout(
+                                () =>
+                                  document.addEventListener("click", closeMenu),
+                                0,
+                              );
+                            }}
+                          >
+                            <MoreVertIcon />
+                          </IconButton>
+                        )
+                      }
+                    >
+                      <ListItemAvatar>
+                        <Avatar
+                          sx={{
+                            bgcolor: member.is_active
+                              ? getRoleColor(member.role)
+                              : "grey.500",
                           }}
                         >
-                          <MoreVertIcon />
-                        </IconButton>
-                      )
-                    }
-                  >
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: member.is_active ? getRoleColor(member.role) : 'grey.500' }}>
-                        <GroupIcon />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primaryTypographyProps={{ component: 'div' }}
-                      secondaryTypographyProps={{ component: 'div' }}
-                      primary={
-                        <Box display="flex" alignItems="center">
-                          <Typography variant="body1" component="span" sx={{ textDecoration: member.is_active ? 'none' : 'line-through', mr: 1 }}>
-                            {member.user ? `${member.user.first_name} ${member.user.last_name}` : 'Usuario no disponible'}
-                          </Typography>
-                          {!member.is_active && <Chip label="Inactivo" size="small" />}
-                        </Box>
-                      }
-                      secondary={
-                        <Box>
-                          <Chip
-                            label={getRoleLabel(member.role)}
-                            size="small"
-                            color={getRoleColor(member.role)}
-                            variant={member.is_active ? "filled" : "outlined"}
-                            sx={{ mr: 1, mt: 0.5 }}
-                          />
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            {member.start_date ? new Date(member.start_date).toLocaleDateString('es-ES') : 'No especificado'} 
-                            {member.end_date ? ` - ${new Date(member.end_date).toLocaleDateString('es-ES')}` : ''}
-                          </Typography>
-                          {member.notes && (
-                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontStyle: 'italic' }}>
-                              {member.notes}
+                          <GroupIcon />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primaryTypographyProps={{ component: "div" }}
+                        secondaryTypographyProps={{ component: "div" }}
+                        primary={
+                          <Box display="flex" alignItems="center">
+                            <Typography
+                              variant="body1"
+                              component="span"
+                              sx={{
+                                textDecoration: member.is_active
+                                  ? "none"
+                                  : "line-through",
+                                mr: 1,
+                              }}
+                            >
+                              {member.user
+                                ? `${member.user.first_name} ${member.user.last_name}`
+                                : "Usuario no disponible"}
                             </Typography>
-                          )}
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                  {index < filteredMembers.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-              {members.filter(m => showInactiveMembers || m.is_active).length === 0 && (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                  No hay miembros {showInactiveMembers ? '' : 'activos'} que mostrar
+                            {!member.is_active && (
+                              <Chip label="Inactivo" size="small" />
+                            )}
+                          </Box>
+                        }
+                        secondary={
+                          <Box>
+                            <Chip
+                              label={getRoleLabel(member.role)}
+                              size="small"
+                              color={getRoleColor(member.role)}
+                              variant={member.is_active ? "filled" : "outlined"}
+                              sx={{ mr: 1, mt: 0.5 }}
+                            />
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                            >
+                              {member.start_date
+                                ? new Date(
+                                    member.start_date,
+                                  ).toLocaleDateString("es-ES")
+                                : "No especificado"}
+                              {member.end_date
+                                ? ` - ${new Date(member.end_date).toLocaleDateString("es-ES")}`
+                                : ""}
+                            </Typography>
+                            {member.notes && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                                sx={{ fontStyle: "italic" }}
+                              >
+                                {member.notes}
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                    {index < filteredMembers.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              {members.filter((m) => showInactiveMembers || m.is_active)
+                .length === 0 && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                  py={4}
+                >
+                  No hay miembros {showInactiveMembers ? "" : "activos"} que
+                  mostrar
                 </Typography>
               )}
             </List>
@@ -677,12 +813,19 @@ const CommitteeDetail: React.FC = () => {
 
       <TabPanel value={tabValue} index={1}>
         {/* Meetings Tab */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
           <Typography variant="h6">Reuniones</Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate(`/admin/committees/${committee.id}/meetings/new`)}
+            onClick={() =>
+              navigate(`/admin/committees/${committee.id}/meetings/new`)
+            }
             disabled={!permissions.canCreateMeetings}
           >
             Nueva Reunión
@@ -695,7 +838,7 @@ const CommitteeDetail: React.FC = () => {
                 <React.Fragment key={meeting.id}>
                   <ListItem>
                     <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'primary.main' }}>
+                      <Avatar sx={{ bgcolor: "primary.main" }}>
                         <EventIcon />
                       </Avatar>
                     </ListItemAvatar>
@@ -704,14 +847,17 @@ const CommitteeDetail: React.FC = () => {
                       secondary={
                         <Box>
                           <Typography variant="caption" display="block">
-                            {new Date(meeting.meeting_date).toLocaleDateString('es-ES', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {new Date(meeting.meeting_date).toLocaleDateString(
+                              "es-ES",
+                              {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {meeting.location}
@@ -724,8 +870,16 @@ const CommitteeDetail: React.FC = () => {
                 </React.Fragment>
               ))}
               {meetings.length === 0 && (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                  Aún no hay reuniones programadas para este comité. {permissions.canCreateMeetings ? 'Puedes crear una nueva reunión usando el botón "Nueva Reunión".' : 'Las reuniones aparecerán aquí cuando sean programadas.'}
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                  py={4}
+                >
+                  Aún no hay reuniones programadas para este comité.{" "}
+                  {permissions.canCreateMeetings
+                    ? 'Puedes crear una nueva reunión usando el botón "Nueva Reunión".'
+                    : "Las reuniones aparecerán aquí cuando sean programadas."}
                 </Typography>
               )}
             </List>
@@ -735,7 +889,12 @@ const CommitteeDetail: React.FC = () => {
 
       <TabPanel value={tabValue} index={2}>
         {/* Votings Tab */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
           <Typography variant="h6">Votaciones</Typography>
           <Button
             variant="contained"
@@ -753,7 +912,7 @@ const CommitteeDetail: React.FC = () => {
                 <React.Fragment key={voting.id}>
                   <ListItem>
                     <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'warning.main' }}>
+                      <Avatar sx={{ bgcolor: "warning.main" }}>
                         <VoteIcon />
                       </Avatar>
                     </ListItemAvatar>
@@ -762,7 +921,15 @@ const CommitteeDetail: React.FC = () => {
                       secondary={
                         <Box>
                           <Typography variant="caption" display="block">
-                            {new Date(voting.start_time).toLocaleDateString('es-ES')} - {voting.end_time ? new Date(voting.end_time).toLocaleDateString('es-ES') : 'N/A'}
+                            {new Date(voting.start_time).toLocaleDateString(
+                              "es-ES",
+                            )}{" "}
+                            -{" "}
+                            {voting.end_time
+                              ? new Date(voting.end_time).toLocaleDateString(
+                                  "es-ES",
+                                )
+                              : "N/A"}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {voting.description}
@@ -775,8 +942,16 @@ const CommitteeDetail: React.FC = () => {
                 </React.Fragment>
               ))}
               {votings.length === 0 && (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                  Aún no hay votaciones registradas para este comité. {permissions.canManageVotings ? 'Puedes crear una nueva votación usando el botón "Nueva Votación".' : 'Las votaciones aparecerán aquí cuando sean creadas.'}
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                  py={4}
+                >
+                  Aún no hay votaciones registradas para este comité.{" "}
+                  {permissions.canManageVotings
+                    ? 'Puedes crear una nueva votación usando el botón "Nueva Votación".'
+                    : "Las votaciones aparecerán aquí cuando sean creadas."}
                 </Typography>
               )}
             </List>
@@ -786,7 +961,12 @@ const CommitteeDetail: React.FC = () => {
 
       <TabPanel value={tabValue} index={3}>
         {/* Activities Tab */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
           <Typography variant="h6">Actividades</Typography>
           <Button
             variant="contained"
@@ -810,9 +990,9 @@ const CommitteeDetail: React.FC = () => {
                             edge="end"
                             aria-label="more"
                             onClick={(event) => {
-                              const menu = document.createElement('div');
-                              menu.style.position = 'absolute';
-                              menu.style.zIndex = '1000';
+                              const menu = document.createElement("div");
+                              menu.style.position = "absolute";
+                              menu.style.zIndex = "1000";
                               menu.innerHTML = `
                                 <div style="background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
                                   <button id="edit-activity" style="display: block; width: 100%; padding: 8px 16px; border: none; background: none; text-align: left; cursor: pointer;">Editar</button>
@@ -820,32 +1000,42 @@ const CommitteeDetail: React.FC = () => {
                                 </div>
                               `;
                               document.body.appendChild(menu);
-                              
-                              const rect = event.currentTarget.getBoundingClientRect();
+
+                              const rect =
+                                event.currentTarget.getBoundingClientRect();
                               menu.style.left = `${rect.left}px`;
                               menu.style.top = `${rect.bottom}px`;
-                              
-                              const editBtn = menu.querySelector('#edit-activity');
-                              const deleteBtn = menu.querySelector('#delete-activity');
-                              
-                              editBtn?.addEventListener('click', () => {
+
+                              const editBtn =
+                                menu.querySelector("#edit-activity");
+                              const deleteBtn =
+                                menu.querySelector("#delete-activity");
+
+                              editBtn?.addEventListener("click", () => {
                                 handleEditActivity(activity);
                                 menu.remove();
                               });
 
-                              deleteBtn?.addEventListener('click', () => {
+                              deleteBtn?.addEventListener("click", () => {
                                 handleDeleteActivity(activity.id);
                                 menu.remove();
                               });
-                              
+
                               const closeMenu = (e: MouseEvent) => {
                                 if (!menu.contains(e.target as Node)) {
                                   document.body.removeChild(menu);
-                                  document.removeEventListener('click', closeMenu);
+                                  document.removeEventListener(
+                                    "click",
+                                    closeMenu,
+                                  );
                                 }
                               };
-                              
-                              setTimeout(() => document.addEventListener('click', closeMenu), 0);
+
+                              setTimeout(
+                                () =>
+                                  document.addEventListener("click", closeMenu),
+                                0,
+                              );
                             }}
                           >
                             <MoreVertIcon />
@@ -855,7 +1045,7 @@ const CommitteeDetail: React.FC = () => {
                     }
                   >
                     <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'info.main' }}>
+                      <Avatar sx={{ bgcolor: "info.main" }}>
                         <TaskIcon />
                       </Avatar>
                     </ListItemAvatar>
@@ -864,7 +1054,12 @@ const CommitteeDetail: React.FC = () => {
                       secondary={
                         <Box>
                           <Typography variant="caption" display="block">
-                            Vence: {activity.due_date ? new Date(activity.due_date).toLocaleDateString('es-ES') : 'Sin fecha límite'}
+                            Vence:{" "}
+                            {activity.due_date
+                              ? new Date(activity.due_date).toLocaleDateString(
+                                  "es-ES",
+                                )
+                              : "Sin fecha límite"}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {activity.description}
@@ -877,8 +1072,16 @@ const CommitteeDetail: React.FC = () => {
                 </React.Fragment>
               ))}
               {activities.length === 0 && (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                  Aún no hay actividades registradas para este comité. {permissions.canEdit ? 'Puedes crear una nueva actividad usando el botón "Nueva Actividad".' : 'Las actividades aparecerán aquí cuando sean creadas.'}
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                  py={4}
+                >
+                  Aún no hay actividades registradas para este comité.{" "}
+                  {permissions.canEdit
+                    ? 'Puedes crear una nueva actividad usando el botón "Nueva Actividad".'
+                    : "Las actividades aparecerán aquí cuando sean creadas."}
                 </Typography>
               )}
             </List>
@@ -888,12 +1091,19 @@ const CommitteeDetail: React.FC = () => {
 
       <TabPanel value={tabValue} index={4}>
         {/* Documents Tab */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
           <Typography variant="h6">Documentos</Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate(`/admin/committees/${committee.id}/documents/new`)}
+            onClick={() =>
+              navigate(`/admin/committees/${committee.id}/documents/new`)
+            }
             disabled={!permissions.canUploadDocuments}
           >
             Subir Documento
@@ -906,7 +1116,7 @@ const CommitteeDetail: React.FC = () => {
                 <React.Fragment key={document.id}>
                   <ListItem>
                     <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'success.main' }}>
+                      <Avatar sx={{ bgcolor: "success.main" }}>
                         <DocumentIcon />
                       </Avatar>
                     </ListItemAvatar>
@@ -915,7 +1125,10 @@ const CommitteeDetail: React.FC = () => {
                       secondary={
                         <Box>
                           <Typography variant="caption" display="block">
-                            Subido: {new Date(document.created_at).toLocaleDateString('es-ES')}
+                            Subido:{" "}
+                            {new Date(document.created_at).toLocaleDateString(
+                              "es-ES",
+                            )}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {document.description}
@@ -928,8 +1141,16 @@ const CommitteeDetail: React.FC = () => {
                 </React.Fragment>
               ))}
               {documents.length === 0 && (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                  Aún no hay documentos subidos para este comité. {permissions.canUploadDocuments ? 'Puedes subir documentos usando el botón "Subir Documento".' : 'Los documentos aparecerán aquí cuando sean subidos.'}
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                  py={4}
+                >
+                  Aún no hay documentos subidos para este comité.{" "}
+                  {permissions.canUploadDocuments
+                    ? 'Puedes subir documentos usando el botón "Subir Documento".'
+                    : "Los documentos aparecerán aquí cuando sean subidos."}
                 </Typography>
               )}
             </List>
@@ -943,13 +1164,18 @@ const CommitteeDetail: React.FC = () => {
         <DialogContent>
           <Typography>
             ¿Estás seguro de que deseas eliminar el comité "{committee?.name}"?
-            Esta acción eliminará también todos los miembros, reuniones, votaciones, 
-            documentos y actividades asociadas. Esta acción no se puede deshacer.
+            Esta acción eliminará también todos los miembros, reuniones,
+            votaciones, documentos y actividades asociadas. Esta acción no se
+            puede deshacer.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleDeleteCancel}>Cancelar</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+          >
             Eliminar
           </Button>
         </DialogActions>
@@ -981,13 +1207,15 @@ const CommitteeDetail: React.FC = () => {
       {/* Member Action Dialog */}
       <Dialog open={memberActionOpen} onClose={handleMemberActionClose}>
         <DialogTitle>
-          {memberActionType === 'activate' ? 'Activar Miembro' : 'Desactivar Miembro'}
+          {memberActionType === "activate"
+            ? "Activar Miembro"
+            : "Desactivar Miembro"}
         </DialogTitle>
         <DialogContent>
           <Typography paragraph>
-            {memberActionType === 'activate'
-              ? '¿Está seguro de que desea reactivar a este miembro del comité?'
-              : '¿Está seguro de que desea desactivar a este miembro del comité?'}
+            {memberActionType === "activate"
+              ? "¿Está seguro de que desea reactivar a este miembro del comité?"
+              : "¿Está seguro de que desea desactivar a este miembro del comité?"}
           </Typography>
           <TextField
             autoFocus
@@ -1006,12 +1234,12 @@ const CommitteeDetail: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleMemberActionClose}>Cancelar</Button>
-          <Button 
-            onClick={handleMemberActionSubmit} 
-            color={memberActionType === 'activate' ? 'success' : 'warning'}
+          <Button
+            onClick={handleMemberActionSubmit}
+            color={memberActionType === "activate" ? "success" : "warning"}
             variant="contained"
           >
-            {memberActionType === 'activate' ? 'Activar' : 'Desactivar'}
+            {memberActionType === "activate" ? "Activar" : "Desactivar"}
           </Button>
         </DialogActions>
       </Dialog>

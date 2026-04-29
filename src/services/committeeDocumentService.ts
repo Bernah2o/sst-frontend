@@ -9,6 +9,18 @@ import {
 
 const BASE_URL = '/committee-activities/documents';
 
+const normalizeDocumentType = (type?: string): string | undefined => {
+  if (!type) return type;
+
+  const legacyTypeMap: Record<string, CommitteeDocumentType> = {
+    voting_results: CommitteeDocumentType.VOTING_RECORD,
+    reports: CommitteeDocumentType.REPORT,
+    policies: CommitteeDocumentType.REGULATION,
+  };
+
+  return legacyTypeMap[type] || type;
+};
+
 export const committeeDocumentService = {
   // Document CRUD operations
   async getDocuments(filters?: {
@@ -101,13 +113,14 @@ export const committeeDocumentService = {
     }
   },
 
-  async getDocument(id: number): Promise<CommitteeDocument> {
-    const response = await api.get(`${BASE_URL}/${id}`);
+  async getDocument(id: number, committee_id: number): Promise<CommitteeDocument> {
+    const response = await api.get(`${BASE_URL}/${id}?committee_id=${committee_id}`);
     return response.data;
   },
 
   async createDocument(documentData: CommitteeDocumentCreate, file: File): Promise<CommitteeDocument> {
     const formData = new FormData();
+    const normalizedDocumentType = normalizeDocumentType(documentData.document_type) as CommitteeDocumentType;
     
     // Solo agregar el archivo al FormData
     formData.append('file', file);
@@ -136,7 +149,7 @@ export const committeeDocumentService = {
     const queryParams = new URLSearchParams({
       committee_id: documentData.committee_id.toString(),
       title: documentData.title,
-      document_type: documentData.document_type
+      document_type: normalizedDocumentType
     });
 
     const uploadUrl = `${BASE_URL}/upload?${queryParams.toString()}`;
@@ -153,18 +166,22 @@ export const committeeDocumentService = {
 
   async uploadDocument(file: File, documentData: Omit<CommitteeDocumentCreate, 'file_path' | 'file_name' | 'file_size' | 'mime_type'>): Promise<CommitteeDocument> {
     const formData = new FormData();
+    const normalizedDocumentType = normalizeDocumentType(documentData.document_type) as CommitteeDocumentType;
     formData.append('file', file);
-    formData.append('committee_id', documentData.committee_id.toString());
-    formData.append('title', documentData.title);
     if (documentData.description) formData.append('description', documentData.description);
-    formData.append('document_type', documentData.document_type);
     if (documentData.version) formData.append('version', documentData.version);
     if (documentData.tags) formData.append('tags', documentData.tags);
     if (documentData.expiry_date) formData.append('expiry_date', documentData.expiry_date);
     if (documentData.notes) formData.append('notes', documentData.notes);
     if (documentData.is_public !== undefined) formData.append('is_public', documentData.is_public.toString());
 
-    const response = await api.post(`${BASE_URL}/upload`, formData, {
+    const queryParams = new URLSearchParams({
+      committee_id: documentData.committee_id.toString(),
+      title: documentData.title,
+      document_type: normalizedDocumentType
+    });
+
+    const response = await api.post(`${BASE_URL}/upload?${queryParams.toString()}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -178,6 +195,7 @@ export const committeeDocumentService = {
     document: CommitteeDocumentUpdate,
     file?: File
   ): Promise<CommitteeDocument> {
+    const normalizedDocumentType = normalizeDocumentType(document.document_type) as CommitteeDocumentType | undefined;
     const updateUrl = `${BASE_URL}/${id}?committee_id=${committee_id}`;
     if (file) {
       // If file is provided, use FormData for file upload
@@ -185,7 +203,7 @@ export const committeeDocumentService = {
       formData.append('file', file);
       if (document.title) formData.append('title', document.title);
       if (document.description) formData.append('description', document.description);
-      if (document.document_type) formData.append('document_type', document.document_type);
+      if (normalizedDocumentType) formData.append('document_type', normalizedDocumentType);
       if (document.version) formData.append('version', document.version);
       if (document.tags) formData.append('tags', document.tags);
       if (document.expiry_date) formData.append('expiry_date', document.expiry_date);
@@ -199,7 +217,10 @@ export const committeeDocumentService = {
       return response.data;
     } else {
       // If no file, just update metadata
-      const response = await api.put(updateUrl, document);
+      const response = await api.put(updateUrl, {
+        ...document,
+        ...(normalizedDocumentType ? { document_type: normalizedDocumentType } : {}),
+      });
       return response.data;
     }
   },
@@ -241,6 +262,12 @@ export const committeeDocumentService = {
     return [
       { value: CommitteeDocumentType.MEETING_MINUTES, label: 'Acta de Reunión' },
       { value: CommitteeDocumentType.VOTING_RECORD, label: 'Registro de Votación' },
+      { value: CommitteeDocumentType.REGULATION, label: 'Reglamento' },
+      { value: CommitteeDocumentType.REPORT, label: 'Reporte' },
+      { value: CommitteeDocumentType.INVESTIGATION, label: 'Investigación' },
+      { value: CommitteeDocumentType.PROCEDURE, label: 'Procedimiento' },
+      { value: CommitteeDocumentType.FORM, label: 'Formato' },
+      { value: CommitteeDocumentType.CERTIFICATE, label: 'Certificado' },
       { value: CommitteeDocumentType.ACTIVITY_REPORT, label: 'Reporte de Actividad' },
       { value: CommitteeDocumentType.PRESENTATION, label: 'Presentación' },
       { value: CommitteeDocumentType.AGREEMENT, label: 'Acuerdo' },

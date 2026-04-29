@@ -432,6 +432,18 @@ const DocumentManagement: React.FC = () => {
         return 'Actas de Reunión';
       case CommitteeDocumentType.VOTING_RECORD:
         return 'Registros de Votación';
+      case CommitteeDocumentType.REGULATION:
+        return 'Reglamentos';
+      case CommitteeDocumentType.REPORT:
+        return 'Reportes';
+      case CommitteeDocumentType.INVESTIGATION:
+        return 'Investigaciones';
+      case CommitteeDocumentType.PROCEDURE:
+        return 'Procedimientos';
+      case CommitteeDocumentType.FORM:
+        return 'Formatos';
+      case CommitteeDocumentType.CERTIFICATE:
+        return 'Certificados';
       case CommitteeDocumentType.ACTIVITY_REPORT:
         return 'Informes de Actividad';
       case CommitteeDocumentType.PRESENTATION:
@@ -449,11 +461,18 @@ const DocumentManagement: React.FC = () => {
     switch (type) {
       case CommitteeDocumentType.MEETING_MINUTES:
         return 'primary';
-      case CommitteeDocumentType.VOTING_RESULTS:
+      case CommitteeDocumentType.VOTING_RECORD:
+      case CommitteeDocumentType.AGREEMENT:
         return 'secondary';
-      case CommitteeDocumentType.REPORTS:
+      case CommitteeDocumentType.REPORT:
+      case CommitteeDocumentType.ACTIVITY_REPORT:
         return 'success';
-      case CommitteeDocumentType.POLICIES:
+      case CommitteeDocumentType.REGULATION:
+      case CommitteeDocumentType.PROCEDURE:
+      case CommitteeDocumentType.FORM:
+      case CommitteeDocumentType.CERTIFICATE:
+      case CommitteeDocumentType.PRESENTATION:
+      case CommitteeDocumentType.INVESTIGATION:
         return 'warning';
       case CommitteeDocumentType.OTHER:
         return 'default';
@@ -609,6 +628,12 @@ const DocumentManagement: React.FC = () => {
                       <MenuItem value="">Todos</MenuItem>
                       <MenuItem value={CommitteeDocumentType.MEETING_MINUTES}>Actas de Reunión</MenuItem>
                       <MenuItem value={CommitteeDocumentType.VOTING_RECORD}>Registros de Votación</MenuItem>
+                      <MenuItem value={CommitteeDocumentType.REGULATION}>Reglamentos</MenuItem>
+                      <MenuItem value={CommitteeDocumentType.REPORT}>Reportes</MenuItem>
+                      <MenuItem value={CommitteeDocumentType.INVESTIGATION}>Investigaciones</MenuItem>
+                      <MenuItem value={CommitteeDocumentType.PROCEDURE}>Procedimientos</MenuItem>
+                      <MenuItem value={CommitteeDocumentType.FORM}>Formatos</MenuItem>
+                      <MenuItem value={CommitteeDocumentType.CERTIFICATE}>Certificados</MenuItem>
                       <MenuItem value={CommitteeDocumentType.ACTIVITY_REPORT}>Informes de Actividad</MenuItem>
                       <MenuItem value={CommitteeDocumentType.PRESENTATION}>Presentaciones</MenuItem>
                       <MenuItem value={CommitteeDocumentType.AGREEMENT}>Acuerdos</MenuItem>
