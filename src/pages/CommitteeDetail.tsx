@@ -39,6 +39,7 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   MoreVert as MoreVertIcon,
+  Article as ActaIcon,
   // CheckCircle as ActivateIcon,
   // Block as DeactivateIcon,
 } from "@mui/icons-material";
@@ -582,6 +583,12 @@ const CommitteeDetail: React.FC = () => {
           <Tab label="Votaciones" />
           <Tab label="Actividades" />
           <Tab label="Documentos" />
+          <Tab
+            label="Actas"
+            icon={<ActaIcon fontSize="small" />}
+            iconPosition="start"
+            onClick={() => navigate(`/admin/committees/${committee.id}/actas`)}
+          />
         </Tabs>
       </Paper>
 

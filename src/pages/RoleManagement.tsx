@@ -163,6 +163,14 @@ const RoleManagement: React.FC = () => {
     profile: "👤 Perfil de Usuario",
     audit: "🔍 Auditoría",
     enrollment: "📝 Inscripciones",
+    committee: "🏛️ Comités — Gestión General",
+    committee_dashboard: "📊 Comités — Dashboard",
+    committee_meetings: "📅 Comités — Reuniones",
+    committee_activities: "📋 Comités — Actividades",
+    committee_documents: "📄 Comités — Documentos",
+    committee_actas: "📝 Comités — Actas de Reunión",
+    committee_voting: "🗳️ Comités — Votaciones de Candidatos",
+    committee_members: "👥 Comités — Miembros",
   };
 
   // Agrupar permisos por recurso
@@ -524,19 +532,14 @@ const RoleManagement: React.FC = () => {
   return (
     <Box p={3}>
       {/* Header */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={3}
-      >
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Box>
           <Typography variant="h4" component="h1" gutterBottom>
             <Security sx={{ mr: 1, verticalAlign: "middle" }} />
-            Gestión de Roles Personalizados
+            Gestión de Roles
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Crea y gestiona roles personalizados con permisos específicos
+            Roles del sistema con permisos granulares
           </Typography>
         </Box>
         <Button

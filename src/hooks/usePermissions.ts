@@ -46,6 +46,43 @@ export interface ResourcePermissions {
   canViewOccupationalExamPage: boolean;
   canViewProgressPage: boolean;
   canViewSuppliersPage: boolean;
+  canViewCommitteePage: boolean;
+  canCreateCommittee: boolean;
+  canReadCommittee: boolean;
+  canUpdateCommittee: boolean;
+  canDeleteCommittee: boolean;
+  // Committee submenus
+  canViewCommitteeDashboardPage: boolean;
+  canViewCommitteeMeetingsPage: boolean;
+  canCreateCommitteeMeeting: boolean;
+  canReadCommitteeMeeting: boolean;
+  canUpdateCommitteeMeeting: boolean;
+  canDeleteCommitteeMeeting: boolean;
+  canViewCommitteeActivitiesPage: boolean;
+  canCreateCommitteeActivity: boolean;
+  canReadCommitteeActivity: boolean;
+  canUpdateCommitteeActivity: boolean;
+  canDeleteCommitteeActivity: boolean;
+  canViewCommitteeDocumentsPage: boolean;
+  canCreateCommitteeDocument: boolean;
+  canReadCommitteeDocument: boolean;
+  canUpdateCommitteeDocument: boolean;
+  canDeleteCommitteeDocument: boolean;
+  canViewCommitteeActasPage: boolean;
+  canCreateCommitteeActa: boolean;
+  canReadCommitteeActa: boolean;
+  canUpdateCommitteeActa: boolean;
+  canDeleteCommitteeActa: boolean;
+  canViewCommitteeVotingPage: boolean;
+  canCreateCommitteeVoting: boolean;
+  canReadCommitteeVoting: boolean;
+  canUpdateCommitteeVoting: boolean;
+  canDeleteCommitteeVoting: boolean;
+  canViewCommitteeMembersPage: boolean;
+  canCreateCommitteeMember: boolean;
+  canReadCommitteeMember: boolean;
+  canUpdateCommitteeMember: boolean;
+  canDeleteCommitteeMember: boolean;
   
   // CRUD permissions for each resource
   // User permissions
@@ -177,6 +214,42 @@ export const usePermissions = () => {
     canViewOccupationalExamPage: false,
     canViewProgressPage: false,
     canViewSuppliersPage: false,
+    canViewCommitteePage: false,
+    canCreateCommittee: false,
+    canReadCommittee: false,
+    canUpdateCommittee: false,
+    canDeleteCommittee: false,
+    canViewCommitteeDashboardPage: false,
+    canViewCommitteeMeetingsPage: false,
+    canCreateCommitteeMeeting: false,
+    canReadCommitteeMeeting: false,
+    canUpdateCommitteeMeeting: false,
+    canDeleteCommitteeMeeting: false,
+    canViewCommitteeActivitiesPage: false,
+    canCreateCommitteeActivity: false,
+    canReadCommitteeActivity: false,
+    canUpdateCommitteeActivity: false,
+    canDeleteCommitteeActivity: false,
+    canViewCommitteeDocumentsPage: false,
+    canCreateCommitteeDocument: false,
+    canReadCommitteeDocument: false,
+    canUpdateCommitteeDocument: false,
+    canDeleteCommitteeDocument: false,
+    canViewCommitteeActasPage: false,
+    canCreateCommitteeActa: false,
+    canReadCommitteeActa: false,
+    canUpdateCommitteeActa: false,
+    canDeleteCommitteeActa: false,
+    canViewCommitteeVotingPage: false,
+    canCreateCommitteeVoting: false,
+    canReadCommitteeVoting: false,
+    canUpdateCommitteeVoting: false,
+    canDeleteCommitteeVoting: false,
+    canViewCommitteeMembersPage: false,
+    canCreateCommitteeMember: false,
+    canReadCommitteeMember: false,
+    canUpdateCommitteeMember: false,
+    canDeleteCommitteeMember: false,
     // User permissions
     canCreateUsers: false,
     canReadUsers: false,
@@ -307,7 +380,44 @@ export const usePermissions = () => {
           canViewOccupationalExamPage: false,
           canViewProgressPage: false,
           canViewSuppliersPage: false,
-          
+          canViewCommitteePage: false,
+          canCreateCommittee: false,
+          canReadCommittee: false,
+          canUpdateCommittee: false,
+          canDeleteCommittee: false,
+          // Committee submenu permissions
+          canViewCommitteeDashboardPage: false,
+          canViewCommitteeMeetingsPage: false,
+          canCreateCommitteeMeeting: false,
+          canReadCommitteeMeeting: false,
+          canUpdateCommitteeMeeting: false,
+          canDeleteCommitteeMeeting: false,
+          canViewCommitteeActivitiesPage: false,
+          canCreateCommitteeActivity: false,
+          canReadCommitteeActivity: false,
+          canUpdateCommitteeActivity: false,
+          canDeleteCommitteeActivity: false,
+          canViewCommitteeDocumentsPage: false,
+          canCreateCommitteeDocument: false,
+          canReadCommitteeDocument: false,
+          canUpdateCommitteeDocument: false,
+          canDeleteCommitteeDocument: false,
+          canViewCommitteeActasPage: false,
+          canCreateCommitteeActa: false,
+          canReadCommitteeActa: false,
+          canUpdateCommitteeActa: false,
+          canDeleteCommitteeActa: false,
+          canViewCommitteeVotingPage: false,
+          canCreateCommitteeVoting: false,
+          canReadCommitteeVoting: false,
+          canUpdateCommitteeVoting: false,
+          canDeleteCommitteeVoting: false,
+          canViewCommitteeMembersPage: false,
+          canCreateCommitteeMember: false,
+          canReadCommitteeMember: false,
+          canUpdateCommitteeMember: false,
+          canDeleteCommitteeMember: false,
+
           // User permissions
           canCreateUsers: false,
           canReadUsers: false,
@@ -452,6 +562,11 @@ export const usePermissions = () => {
           canViewOccupationalExamPage: false,
           canViewProgressPage: false,
           canViewSuppliersPage: false,
+          canViewCommitteePage: false,
+          canCreateCommittee: false,
+          canReadCommittee: false,
+          canUpdateCommittee: false,
+          canDeleteCommittee: false,
           // User permissions
           canCreateUsers: false,
           canReadUsers: false,
@@ -550,7 +665,39 @@ export const usePermissions = () => {
           canReadMaterials: false,
           canUpdateMaterials: false,
           canDeleteMaterials: false,
-          canViewMaterialsPage: false
+          canViewMaterialsPage: false,
+          // Committee submenu permissions
+          canViewCommitteeDashboardPage: false,
+          canViewCommitteeMeetingsPage: false,
+          canCreateCommitteeMeeting: false,
+          canReadCommitteeMeeting: false,
+          canUpdateCommitteeMeeting: false,
+          canDeleteCommitteeMeeting: false,
+          canViewCommitteeActivitiesPage: false,
+          canCreateCommitteeActivity: false,
+          canReadCommitteeActivity: false,
+          canUpdateCommitteeActivity: false,
+          canDeleteCommitteeActivity: false,
+          canViewCommitteeDocumentsPage: false,
+          canCreateCommitteeDocument: false,
+          canReadCommitteeDocument: false,
+          canUpdateCommitteeDocument: false,
+          canDeleteCommitteeDocument: false,
+          canViewCommitteeActasPage: false,
+          canCreateCommitteeActa: false,
+          canReadCommitteeActa: false,
+          canUpdateCommitteeActa: false,
+          canDeleteCommitteeActa: false,
+          canViewCommitteeVotingPage: false,
+          canCreateCommitteeVoting: false,
+          canReadCommitteeVoting: false,
+          canUpdateCommitteeVoting: false,
+          canDeleteCommitteeVoting: false,
+          canViewCommitteeMembersPage: false,
+          canCreateCommitteeMember: false,
+          canReadCommitteeMember: false,
+          canUpdateCommitteeMember: false,
+          canDeleteCommitteeMember: false
         };
 
         // Usar el nuevo endpoint optimizado para obtener todos los permisos del usuario
@@ -595,6 +742,43 @@ export const usePermissions = () => {
               { key: 'canViewOccupationalExamPage', resource: 'occupational_exam', action: 'view' },
               { key: 'canViewProgressPage', resource: 'progress', action: 'view' },
               { key: 'canViewSuppliersPage', resource: 'suppliers', action: 'view' },
+              { key: 'canViewCommitteePage', resource: 'committee', action: 'view' },
+              { key: 'canCreateCommittee', resource: 'committee', action: 'create' },
+              { key: 'canReadCommittee', resource: 'committee', action: 'read' },
+              { key: 'canUpdateCommittee', resource: 'committee', action: 'update' },
+              { key: 'canDeleteCommittee', resource: 'committee', action: 'delete' },
+              // Committee submenus
+              { key: 'canViewCommitteeDashboardPage', resource: 'committee_dashboard', action: 'view' },
+              { key: 'canViewCommitteeMeetingsPage', resource: 'committee_meetings', action: 'view' },
+              { key: 'canCreateCommitteeMeeting', resource: 'committee_meetings', action: 'create' },
+              { key: 'canReadCommitteeMeeting', resource: 'committee_meetings', action: 'read' },
+              { key: 'canUpdateCommitteeMeeting', resource: 'committee_meetings', action: 'update' },
+              { key: 'canDeleteCommitteeMeeting', resource: 'committee_meetings', action: 'delete' },
+              { key: 'canViewCommitteeActivitiesPage', resource: 'committee_activities', action: 'view' },
+              { key: 'canCreateCommitteeActivity', resource: 'committee_activities', action: 'create' },
+              { key: 'canReadCommitteeActivity', resource: 'committee_activities', action: 'read' },
+              { key: 'canUpdateCommitteeActivity', resource: 'committee_activities', action: 'update' },
+              { key: 'canDeleteCommitteeActivity', resource: 'committee_activities', action: 'delete' },
+              { key: 'canViewCommitteeDocumentsPage', resource: 'committee_documents', action: 'view' },
+              { key: 'canCreateCommitteeDocument', resource: 'committee_documents', action: 'create' },
+              { key: 'canReadCommitteeDocument', resource: 'committee_documents', action: 'read' },
+              { key: 'canUpdateCommitteeDocument', resource: 'committee_documents', action: 'update' },
+              { key: 'canDeleteCommitteeDocument', resource: 'committee_documents', action: 'delete' },
+              { key: 'canViewCommitteeActasPage', resource: 'committee_actas', action: 'view' },
+              { key: 'canCreateCommitteeActa', resource: 'committee_actas', action: 'create' },
+              { key: 'canReadCommitteeActa', resource: 'committee_actas', action: 'read' },
+              { key: 'canUpdateCommitteeActa', resource: 'committee_actas', action: 'update' },
+              { key: 'canDeleteCommitteeActa', resource: 'committee_actas', action: 'delete' },
+              { key: 'canViewCommitteeVotingPage', resource: 'committee_voting', action: 'view' },
+              { key: 'canCreateCommitteeVoting', resource: 'committee_voting', action: 'create' },
+              { key: 'canReadCommitteeVoting', resource: 'committee_voting', action: 'read' },
+              { key: 'canUpdateCommitteeVoting', resource: 'committee_voting', action: 'update' },
+              { key: 'canDeleteCommitteeVoting', resource: 'committee_voting', action: 'delete' },
+              { key: 'canViewCommitteeMembersPage', resource: 'committee_members', action: 'view' },
+              { key: 'canCreateCommitteeMember', resource: 'committee_members', action: 'create' },
+              { key: 'canReadCommitteeMember', resource: 'committee_members', action: 'read' },
+              { key: 'canUpdateCommitteeMember', resource: 'committee_members', action: 'update' },
+              { key: 'canDeleteCommitteeMember', resource: 'committee_members', action: 'delete' },
               // User permissions
               { key: 'canCreateUsers', resource: 'users', action: 'create' },
               { key: 'canReadUsers', resource: 'users', action: 'read' },
@@ -842,6 +1026,11 @@ export const usePermissions = () => {
           canViewEnrollmentPage: false,
           canViewProgressPage: false,
           canViewSuppliersPage: false,
+          canViewCommitteePage: false,
+          canCreateCommittee: false,
+          canReadCommittee: false,
+          canUpdateCommittee: false,
+          canDeleteCommittee: false,
           // User permissions
           canCreateUsers: false,
           canReadUsers: false,
@@ -940,7 +1129,39 @@ export const usePermissions = () => {
           canReadMaterials: false,
           canUpdateMaterials: false,
           canDeleteMaterials: false,
-          canViewMaterialsPage: false
+          canViewMaterialsPage: false,
+          // Committee submenu permissions
+          canViewCommitteeDashboardPage: false,
+          canViewCommitteeMeetingsPage: false,
+          canCreateCommitteeMeeting: false,
+          canReadCommitteeMeeting: false,
+          canUpdateCommitteeMeeting: false,
+          canDeleteCommitteeMeeting: false,
+          canViewCommitteeActivitiesPage: false,
+          canCreateCommitteeActivity: false,
+          canReadCommitteeActivity: false,
+          canUpdateCommitteeActivity: false,
+          canDeleteCommitteeActivity: false,
+          canViewCommitteeDocumentsPage: false,
+          canCreateCommitteeDocument: false,
+          canReadCommitteeDocument: false,
+          canUpdateCommitteeDocument: false,
+          canDeleteCommitteeDocument: false,
+          canViewCommitteeActasPage: false,
+          canCreateCommitteeActa: false,
+          canReadCommitteeActa: false,
+          canUpdateCommitteeActa: false,
+          canDeleteCommitteeActa: false,
+          canViewCommitteeVotingPage: false,
+          canCreateCommitteeVoting: false,
+          canReadCommitteeVoting: false,
+          canUpdateCommitteeVoting: false,
+          canDeleteCommitteeVoting: false,
+          canViewCommitteeMembersPage: false,
+          canCreateCommitteeMember: false,
+          canReadCommitteeMember: false,
+          canUpdateCommitteeMember: false,
+          canDeleteCommitteeMember: false
         });
       } finally {
         setLoading(false);
@@ -1064,6 +1285,152 @@ export const usePermissions = () => {
   const canViewSuppliersPage = useCallback((): boolean => {
     return userPermissions.canViewSuppliersPage;
   }, [userPermissions.canViewSuppliersPage]);
+
+  // Committee permissions
+  const canViewCommitteePage = useCallback((): boolean => {
+    return userPermissions.canViewCommitteePage;
+  }, [userPermissions.canViewCommitteePage]);
+
+  const canCreateCommittee = useCallback((): boolean => {
+    return userPermissions.canCreateCommittee;
+  }, [userPermissions.canCreateCommittee]);
+
+  const canReadCommittee = useCallback((): boolean => {
+    return userPermissions.canReadCommittee;
+  }, [userPermissions.canReadCommittee]);
+
+  const canUpdateCommittee = useCallback((): boolean => {
+    return userPermissions.canUpdateCommittee;
+  }, [userPermissions.canUpdateCommittee]);
+
+  const canDeleteCommittee = useCallback((): boolean => {
+    return userPermissions.canDeleteCommittee;
+  }, [userPermissions.canDeleteCommittee]);
+
+  // Committee submenu permissions
+  const canViewCommitteeDashboardPage = useCallback((): boolean => {
+    return userPermissions.canViewCommitteeDashboardPage;
+  }, [userPermissions.canViewCommitteeDashboardPage]);
+
+  const canViewCommitteeMeetingsPage = useCallback((): boolean => {
+    return userPermissions.canViewCommitteeMeetingsPage;
+  }, [userPermissions.canViewCommitteeMeetingsPage]);
+
+  const canCreateCommitteeMeeting = useCallback((): boolean => {
+    return userPermissions.canCreateCommitteeMeeting;
+  }, [userPermissions.canCreateCommitteeMeeting]);
+
+  const canReadCommitteeMeeting = useCallback((): boolean => {
+    return userPermissions.canReadCommitteeMeeting;
+  }, [userPermissions.canReadCommitteeMeeting]);
+
+  const canUpdateCommitteeMeeting = useCallback((): boolean => {
+    return userPermissions.canUpdateCommitteeMeeting;
+  }, [userPermissions.canUpdateCommitteeMeeting]);
+
+  const canDeleteCommitteeMeeting = useCallback((): boolean => {
+    return userPermissions.canDeleteCommitteeMeeting;
+  }, [userPermissions.canDeleteCommitteeMeeting]);
+
+  const canViewCommitteeActivitiesPage = useCallback((): boolean => {
+    return userPermissions.canViewCommitteeActivitiesPage;
+  }, [userPermissions.canViewCommitteeActivitiesPage]);
+
+  const canCreateCommitteeActivity = useCallback((): boolean => {
+    return userPermissions.canCreateCommitteeActivity;
+  }, [userPermissions.canCreateCommitteeActivity]);
+
+  const canReadCommitteeActivity = useCallback((): boolean => {
+    return userPermissions.canReadCommitteeActivity;
+  }, [userPermissions.canReadCommitteeActivity]);
+
+  const canUpdateCommitteeActivity = useCallback((): boolean => {
+    return userPermissions.canUpdateCommitteeActivity;
+  }, [userPermissions.canUpdateCommitteeActivity]);
+
+  const canDeleteCommitteeActivity = useCallback((): boolean => {
+    return userPermissions.canDeleteCommitteeActivity;
+  }, [userPermissions.canDeleteCommitteeActivity]);
+
+  const canViewCommitteeDocumentsPage = useCallback((): boolean => {
+    return userPermissions.canViewCommitteeDocumentsPage;
+  }, [userPermissions.canViewCommitteeDocumentsPage]);
+
+  const canCreateCommitteeDocument = useCallback((): boolean => {
+    return userPermissions.canCreateCommitteeDocument;
+  }, [userPermissions.canCreateCommitteeDocument]);
+
+  const canReadCommitteeDocument = useCallback((): boolean => {
+    return userPermissions.canReadCommitteeDocument;
+  }, [userPermissions.canReadCommitteeDocument]);
+
+  const canUpdateCommitteeDocument = useCallback((): boolean => {
+    return userPermissions.canUpdateCommitteeDocument;
+  }, [userPermissions.canUpdateCommitteeDocument]);
+
+  const canDeleteCommitteeDocument = useCallback((): boolean => {
+    return userPermissions.canDeleteCommitteeDocument;
+  }, [userPermissions.canDeleteCommitteeDocument]);
+
+  const canViewCommitteeActasPage = useCallback((): boolean => {
+    return userPermissions.canViewCommitteeActasPage;
+  }, [userPermissions.canViewCommitteeActasPage]);
+
+  const canCreateCommitteeActa = useCallback((): boolean => {
+    return userPermissions.canCreateCommitteeActa;
+  }, [userPermissions.canCreateCommitteeActa]);
+
+  const canReadCommitteeActa = useCallback((): boolean => {
+    return userPermissions.canReadCommitteeActa;
+  }, [userPermissions.canReadCommitteeActa]);
+
+  const canUpdateCommitteeActa = useCallback((): boolean => {
+    return userPermissions.canUpdateCommitteeActa;
+  }, [userPermissions.canUpdateCommitteeActa]);
+
+  const canDeleteCommitteeActa = useCallback((): boolean => {
+    return userPermissions.canDeleteCommitteeActa;
+  }, [userPermissions.canDeleteCommitteeActa]);
+
+  const canViewCommitteeVotingPage = useCallback((): boolean => {
+    return userPermissions.canViewCommitteeVotingPage;
+  }, [userPermissions.canViewCommitteeVotingPage]);
+
+  const canCreateCommitteeVoting = useCallback((): boolean => {
+    return userPermissions.canCreateCommitteeVoting;
+  }, [userPermissions.canCreateCommitteeVoting]);
+
+  const canReadCommitteeVoting = useCallback((): boolean => {
+    return userPermissions.canReadCommitteeVoting;
+  }, [userPermissions.canReadCommitteeVoting]);
+
+  const canUpdateCommitteeVoting = useCallback((): boolean => {
+    return userPermissions.canUpdateCommitteeVoting;
+  }, [userPermissions.canUpdateCommitteeVoting]);
+
+  const canDeleteCommitteeVoting = useCallback((): boolean => {
+    return userPermissions.canDeleteCommitteeVoting;
+  }, [userPermissions.canDeleteCommitteeVoting]);
+
+  const canViewCommitteeMembersPage = useCallback((): boolean => {
+    return userPermissions.canViewCommitteeMembersPage;
+  }, [userPermissions.canViewCommitteeMembersPage]);
+
+  const canCreateCommitteeMember = useCallback((): boolean => {
+    return userPermissions.canCreateCommitteeMember;
+  }, [userPermissions.canCreateCommitteeMember]);
+
+  const canReadCommitteeMember = useCallback((): boolean => {
+    return userPermissions.canReadCommitteeMember;
+  }, [userPermissions.canReadCommitteeMember]);
+
+  const canUpdateCommitteeMember = useCallback((): boolean => {
+    return userPermissions.canUpdateCommitteeMember;
+  }, [userPermissions.canUpdateCommitteeMember]);
+
+  const canDeleteCommitteeMember = useCallback((): boolean => {
+    return userPermissions.canDeleteCommitteeMember;
+  }, [userPermissions.canDeleteCommitteeMember]);
 
   // User permissions
   const canCreateUsers = useCallback((): boolean => {
@@ -1584,6 +1951,43 @@ export const usePermissions = () => {
     canViewOccupationalExamPage,
     canViewProgressPage,
     canViewSuppliersPage,
+    // Committee permission functions
+    canViewCommitteePage,
+    canCreateCommittee,
+    canReadCommittee,
+    canUpdateCommittee,
+    canDeleteCommittee,
+    canViewCommitteeDashboardPage,
+    canViewCommitteeMeetingsPage,
+    canCreateCommitteeMeeting,
+    canReadCommitteeMeeting,
+    canUpdateCommitteeMeeting,
+    canDeleteCommitteeMeeting,
+    canViewCommitteeActivitiesPage,
+    canCreateCommitteeActivity,
+    canReadCommitteeActivity,
+    canUpdateCommitteeActivity,
+    canDeleteCommitteeActivity,
+    canViewCommitteeDocumentsPage,
+    canCreateCommitteeDocument,
+    canReadCommitteeDocument,
+    canUpdateCommitteeDocument,
+    canDeleteCommitteeDocument,
+    canViewCommitteeActasPage,
+    canCreateCommitteeActa,
+    canReadCommitteeActa,
+    canUpdateCommitteeActa,
+    canDeleteCommitteeActa,
+    canViewCommitteeVotingPage,
+    canCreateCommitteeVoting,
+    canReadCommitteeVoting,
+    canUpdateCommitteeVoting,
+    canDeleteCommitteeVoting,
+    canViewCommitteeMembersPage,
+    canCreateCommitteeMember,
+    canReadCommitteeMember,
+    canUpdateCommitteeMember,
+    canDeleteCommitteeMember,
     // User permission functions
     canCreateUsers,
     canReadUsers,
@@ -1728,7 +2132,8 @@ function checkTraditionalPageAccess(pageRoute: string, userRole?: string): boole
     '/notifications': ['admin', 'supervisor', 'trainer'],
     '/seguimiento': ['admin', 'supervisor'],
     '/profile': ['admin', 'supervisor', 'trainer', 'employee'],
-    '/dashboard': ['admin', 'supervisor', 'trainer', 'employee']
+    '/dashboard': ['admin', 'supervisor', 'trainer', 'employee'],
+    '/admin/committees/actas': ['admin', 'supervisor'],
   };
 
   const allowedRoles = traditionalAccess[pageRoute];

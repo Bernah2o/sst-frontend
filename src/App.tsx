@@ -72,6 +72,8 @@ import MemberManagement from "./pages/MemberManagement";
 import CandidateVotingAdmin from "./pages/CandidateVotingAdmin";
 import CandidateVotingForm from "./pages/CandidateVotingForm";
 import CandidateVoting from "./pages/CandidateVoting";
+import ActaList from "./pages/ActaList";
+import ActaForm from "./pages/ActaForm";
 
 // Absenteeism components
 import Audit from "./pages/Audit";
@@ -457,7 +459,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/committees"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees">
                         <CommitteeList />
                       </ProtectedRoute>
                     }
@@ -465,16 +467,15 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/committees/dashboard"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/dashboard">
                         <CommitteeDashboard />
                       </ProtectedRoute>
                     }
                   />
-
                   <Route
                     path="/admin/committees/:id"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id">
                         <CommitteeDetail />
                       </ProtectedRoute>
                     }
@@ -482,7 +483,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/committees/new"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/new">
                         <CommitteeForm />
                       </ProtectedRoute>
                     }
@@ -490,25 +491,55 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/committees/:id/edit"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id/edit">
                         <CommitteeForm />
                       </ProtectedRoute>
                     }
                   />
-                  {/* Rutas específicas para comités individuales */}
+                  <Route
+                    path="/admin/committees/actas"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/actas">
+                        <ActaList />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/:id/actas"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id/actas">
+                        <ActaList />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/:id/actas/new"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id/actas/new">
+                        <ActaForm />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/committees/:id/actas/:actaId/edit"
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id/actas/:actaId/edit">
+                        <ActaForm />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route
                     path="/admin/committees/:id/meetings/new"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id/meetings/new">
                         <MeetingManagement />
                       </ProtectedRoute>
                     }
                   />
-
                   <Route
                     path="/admin/committees/:id/activities/new"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id/activities/new">
                         <ActivityManagement />
                       </ProtectedRoute>
                     }
@@ -516,16 +547,15 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/committees/:id/documents/new"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id/documents/new">
                         <DocumentManagement />
                       </ProtectedRoute>
                     }
                   />
-                  {/* Rutas genéricas para gestión de comités */}
                   <Route
                     path="/admin/committees/meetings"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/meetings">
                         <MeetingManagement />
                       </ProtectedRoute>
                     }
@@ -533,7 +563,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/meetings/:meetingId/attendance"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/meetings/:meetingId/attendance">
                         <MeetingAttendancePage />
                       </ProtectedRoute>
                     }
@@ -541,16 +571,15 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/committees/activities"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/activities">
                         <ActivityManagement />
                       </ProtectedRoute>
                     }
                   />
-
                   <Route
                     path="/admin/committees/documents"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/documents">
                         <DocumentManagement />
                       </ProtectedRoute>
                     }
@@ -558,17 +587,15 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/committees/:id/members"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id/members">
                         <MemberManagement />
                       </ProtectedRoute>
                     }
                   />
-
-                  {/* Rutas de votaciones de candidatos */}
                   <Route
                     path="/admin/candidate-votings"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor", "trainer"]} route="/admin/candidate-votings">
                         <CandidateVotingAdmin />
                       </ProtectedRoute>
                     }
@@ -576,7 +603,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/candidate-votings/new"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/candidate-votings/new">
                         <CandidateVotingForm />
                       </ProtectedRoute>
                     }
@@ -584,7 +611,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/candidate-votings/:id/edit"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/candidate-votings/:id/edit">
                         <CandidateVotingForm />
                       </ProtectedRoute>
                     }
