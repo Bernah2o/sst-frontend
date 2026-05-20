@@ -108,6 +108,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
     canViewProgressPage,
     canViewAuditPage,
     canViewAbsenteeismPage,
+    canViewCommitteePage,
+    canViewCommitteeDashboardPage,
+    canViewCommitteeMeetingsPage,
+    canViewCommitteeActivitiesPage,
+    canViewCommitteeDocumentsPage,
+    canViewCommitteeActasPage,
+    canViewCommitteeVotingPage,
   } = usePermissions();
 
   const location = useLocation();
@@ -583,6 +590,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             roles: ["admin", "supervisor"],
           },
           {
+            id: "committees-actas",
+            label: "Actas de Reunión",
+            icon: <EventNote />,
+            path: "/admin/committees/actas",
+            roles: ["admin", "supervisor"],
+          },
+          {
             id: "candidate-voting",
             label: "Votaciones de Candidatos",
             icon: <HowToVote />,
@@ -866,20 +880,22 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
               // Committees
               committees: () => true, // Will be filtered by children
               "committees-dashboard": () =>
-                user.role === "admin" || user.role === "supervisor",
+                user.role === "admin" || user.role === "supervisor" || canViewCommitteeDashboardPage(),
               "committees-management": () =>
-                user.role === "admin" || user.role === "supervisor",
+                user.role === "admin" || user.role === "supervisor" || canViewCommitteePage(),
               "committees-meetings": () =>
-                user.role === "admin" || user.role === "supervisor",
+                user.role === "admin" || user.role === "supervisor" || canViewCommitteeMeetingsPage(),
               "committees-activities": () =>
-                user.role === "admin" || user.role === "supervisor",
-
+                user.role === "admin" || user.role === "supervisor" || canViewCommitteeActivitiesPage(),
               "committees-documents": () =>
-                user.role === "admin" || user.role === "supervisor",
+                user.role === "admin" || user.role === "supervisor" || canViewCommitteeDocumentsPage(),
+              "committees-actas": () =>
+                user.role === "admin" || user.role === "supervisor" || canViewCommitteeActasPage(),
               "candidate-voting": () =>
                 user.role === "admin" ||
                 user.role === "trainer" ||
-                user.role === "supervisor",
+                user.role === "supervisor" ||
+                canViewCommitteeVotingPage(),
 
               // Matriz Legal
               "matriz-legal": () =>
@@ -962,6 +978,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
       canViewProgressPage,
       canViewAuditPage,
       canViewAbsenteeismPage,
+      canViewCommitteePage,
+      canViewCommitteeDashboardPage,
+      canViewCommitteeMeetingsPage,
+      canViewCommitteeActivitiesPage,
+      canViewCommitteeDocumentsPage,
+      canViewCommitteeActasPage,
+      canViewCommitteeVotingPage,
     ],
   );
 
