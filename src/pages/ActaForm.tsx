@@ -68,6 +68,7 @@ interface PrevActivity {
 }
 
 interface NewTask {
+  id?: number;
   title: string;
   responsibleMemberId: string;
   commitmentDate: string;
@@ -206,14 +207,14 @@ const ActaForm: React.FC = () => {
         setLocation(m.location ?? '');
         setGuests(parsed.invitados);
         setDesarrollo(parsed.desarrollo);
-        setProposiciones(parsed.proposiciones);
+        setProposiciones(parsed.proposiciones || m.notes || '');
         setSavedMeetingId(m.id);
 
         // Cargar asistencia existente
         const attendanceRes = await api.get(`/committee-meetings/${actaId}/attendance`);
         const attendanceMap: Record<number, boolean> = {};
         (attendanceRes.data ?? []).forEach((a: any) => {
-          attendanceMap[a.member_id] = a.status === 'present';
+          attendanceMap[a.member_id] = a.status?.toUpperCase() === 'PRESENT';
         });
 
         setAttendees(
@@ -239,6 +240,7 @@ const ActaForm: React.FC = () => {
         if (currentActs.length > 0) {
           setNewTasks(
             currentActs.map((a: any) => ({
+              id: a.id,
               title: a.title ?? '',
               responsibleMemberId: a.assigned_to ? String(a.assigned_to) : '',
               commitmentDate: a.due_date ? a.due_date.split('T')[0] : '',
@@ -340,6 +342,8 @@ const ActaForm: React.FC = () => {
         meeting_type: 'regular',
         status: MeetingStatus.COMPLETED,
         minutes_content: minutesContent,
+        notes: proposiciones,
+        attendees_count: attendees.filter((a) => a.present).length,
       };
 
       let meetingId: number;
@@ -392,20 +396,29 @@ const ActaForm: React.FC = () => {
         }
       }
 
-      // Crear nuevas tareas (solo las que tienen título)
+      // Guardar tareas: actualizar las existentes, crear las nuevas
       for (const task of newTasks) {
         if (!task.title.trim()) continue;
         try {
-          await api.post('/committee-activities/', {
-            committee_id: parseInt(committeeId),
-            meeting_id: meetingId,
-            title: task.title,
-            assigned_to: task.responsibleMemberId ? parseInt(task.responsibleMemberId) : undefined,
-            due_date: task.commitmentDate || undefined,
-            notes: task.observations,
-            status: ActivityStatus.PENDING,
-            priority: 'MEDIUM',
-          });
+          if (task.id) {
+            await api.put(`/committee-activities/${task.id}`, {
+              title: task.title,
+              assigned_to: task.responsibleMemberId ? parseInt(task.responsibleMemberId) : undefined,
+              due_date: task.commitmentDate || undefined,
+              notes: task.observations,
+            });
+          } else {
+            await api.post('/committee-activities/', {
+              committee_id: parseInt(committeeId),
+              meeting_id: meetingId,
+              title: task.title,
+              assigned_to: task.responsibleMemberId ? parseInt(task.responsibleMemberId) : undefined,
+              due_date: task.commitmentDate || undefined,
+              notes: task.observations,
+              status: ActivityStatus.PENDING,
+              priority: 'MEDIUM',
+            });
+          }
         } catch {
           // Continuar aunque falle una tarea
         }
