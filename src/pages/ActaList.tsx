@@ -6,6 +6,11 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
@@ -26,11 +31,13 @@ import {
   Add as AddIcon,
   ArrowBack as ArrowBackIcon,
   Description as ActaIcon,
+  Delete as DeleteIcon,
   Edit as EditIcon,
   PictureAsPdf as PdfIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { Committee, Meeting, MeetingStatus } from '../types';
 
 const statusLabel: Record<MeetingStatus, string> = {
@@ -51,7 +58,9 @@ const statusColor: Record<MeetingStatus, 'default' | 'primary' | 'success' | 'wa
 
 const ActaList: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { id: committeeIdParam } = useParams<{ id: string }>();
+  const isAdmin = (user?.role || user?.rol) === 'admin';
 
   // When accessed from sidebar (no id param), allow selecting a committee
   const [selectedCommitteeId, setSelectedCommitteeId] = useState<string>(committeeIdParam ?? '');
@@ -61,6 +70,8 @@ const ActaList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Meeting | null>(null);
 
   // Load committee list when in generic mode (no id param)
   useEffect(() => {
@@ -120,6 +131,19 @@ const ActaList: React.FC = () => {
       setError('No se pudo generar el PDF. Intenta nuevamente.');
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handleDelete = async (meeting: Meeting) => {
+    setDeletingId(meeting.id);
+    setConfirmDelete(null);
+    try {
+      await api.delete(`/committee-meetings/${meeting.id}`);
+      setMeetings((prev) => prev.filter((m) => m.id !== meeting.id));
+    } catch {
+      setError('No se pudo eliminar el acta. Intenta nuevamente.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -298,16 +322,34 @@ const ActaList: React.FC = () => {
                             </IconButton>
                           </span>
                         </Tooltip>
-                        <Tooltip title="Editar acta">
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              navigate(`/admin/committees/${activeCommitteeId}/actas/${meeting.id}/edit`)
-                            }
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        {isAdmin && (
+                          <Tooltip title="Editar acta">
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                navigate(`/admin/committees/${activeCommitteeId}/actas/${meeting.id}/edit`)
+                              }
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {isAdmin && (
+                          <Tooltip title="Eliminar acta">
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setConfirmDelete(meeting)}
+                                disabled={deletingId === meeting.id}
+                              >
+                                {deletingId === meeting.id
+                                  ? <CircularProgress size={16} color="error" />
+                                  : <DeleteIcon fontSize="small" />}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -317,6 +359,27 @@ const ActaList: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      {/* Diálogo de confirmación de eliminación */}
+      <Dialog open={Boolean(confirmDelete)} onClose={() => setConfirmDelete(null)}>
+        <DialogTitle>Eliminar acta</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Estás seguro de que deseas eliminar el acta{' '}
+            <strong>{confirmDelete?.title}</strong>?
+            Esta acción no se puede deshacer y eliminará también la asistencia y actividades asociadas.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDelete(null)}>Cancelar</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => confirmDelete && handleDelete(confirmDelete)}
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Committee,
   CommitteeMember,
@@ -114,8 +115,11 @@ function parseMinutes(raw: string | undefined): MinutesContent {
 // ──────────────────────────────────────────────
 const ActaForm: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { id: committeeId, actaId } = useParams<{ id: string; actaId: string }>();
   const isEdit = Boolean(actaId);
+  const isAdmin = (user?.role || user?.rol) === 'admin';
+  const today = new Date().toISOString().split('T')[0];
 
   // ── Datos del comité y acta
   const [committee, setCommittee] = useState<Committee | null>(null);
@@ -142,6 +146,7 @@ const ActaForm: React.FC = () => {
   // ── UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [savedMeetingId, setSavedMeetingId] = useState<number | null>(null);
@@ -352,7 +357,7 @@ const ActaForm: React.FC = () => {
       for (const att of attendees) {
         const attendancePayload = {
           member_id: att.memberId,
-          status: att.present ? 'present' : 'absent',
+          status: att.present ? 'PRESENT' : 'ABSENT',
         };
         try {
           await api.post(`/committee-meetings/${meetingId}/attendance`, attendancePayload);
@@ -361,7 +366,7 @@ const ActaForm: React.FC = () => {
           try {
             await api.put(
               `/committee-meetings/${meetingId}/attendance/${att.memberId}`,
-              attendancePayload,
+              { status: att.present ? 'PRESENT' : 'ABSENT' },
             );
           } catch {
             // Ignorar errores individuales de asistencia
@@ -426,6 +431,7 @@ const ActaForm: React.FC = () => {
       setError('Guarda el acta primero para poder descargar el PDF.');
       return;
     }
+    setDownloading(true);
     try {
       const res = await api.get(`/committee-meetings/${mid}/minutes/pdf`, {
         responseType: 'blob',
@@ -438,6 +444,8 @@ const ActaForm: React.FC = () => {
       window.URL.revokeObjectURL(url);
     } catch {
       setError('No se pudo generar el PDF.');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -602,6 +610,8 @@ const ActaForm: React.FC = () => {
                 fullWidth
                 size="small"
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ min: isAdmin ? undefined : today }}
+                helperText={!isAdmin ? 'Solo el administrador puede registrar fechas anteriores' : undefined}
                 required
               />
             </Grid>
@@ -1044,39 +1054,41 @@ const ActaForm: React.FC = () => {
       {/* ── Acciones ── */}
       <Card>
         <CardContent>
-          <Box display="flex" justifyContent="flex-end" gap={2} flexWrap="wrap">
+          <Box display="flex" justifyContent="flex-end" gap={2} flexWrap="wrap" alignItems="center">
             <Button
               variant="outlined"
               onClick={() => navigate(`/admin/committees/${committeeId}/actas`)}
-              disabled={saving}
+              disabled={saving || downloading}
             >
               Cancelar
             </Button>
             <Button
               variant="outlined"
-              startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
+              startIcon={saving && !downloading ? <CircularProgress size={16} /> : <SaveIcon />}
               onClick={() => handleSave(false)}
-              disabled={saving}
+              disabled={saving || downloading}
             >
               Guardar
             </Button>
-            {(savedMeetingId || isEdit) && (
-              <Button
-                variant="outlined"
-                startIcon={<PdfIcon />}
-                onClick={() => handleDownloadPdf()}
-                disabled={saving}
-              >
-                Descargar PDF
-              </Button>
-            )}
+            <Tooltip title={!savedMeetingId && !isEdit ? 'Guarda el acta primero' : ''}>
+              <span>
+                <Button
+                  variant="outlined"
+                  startIcon={downloading && !saving ? <CircularProgress size={16} /> : <PdfIcon />}
+                  onClick={() => handleDownloadPdf()}
+                  disabled={saving || downloading || (!savedMeetingId && !isEdit)}
+                >
+                  {downloading && !saving ? 'Descargando…' : 'Descargar PDF'}
+                </Button>
+              </span>
+            </Tooltip>
             <Button
               variant="contained"
-              startIcon={saving ? <CircularProgress size={16} /> : <PdfIcon />}
+              startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <PdfIcon />}
               onClick={() => handleSave(true)}
-              disabled={saving}
+              disabled={saving || downloading}
             >
-              Guardar y Descargar PDF
+              {saving ? 'Guardando…' : 'Guardar y Descargar PDF'}
             </Button>
           </Box>
         </CardContent>

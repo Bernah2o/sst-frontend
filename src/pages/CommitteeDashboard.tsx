@@ -97,6 +97,8 @@ const CommitteeDashboard: React.FC = () => {
     pendingActivitiesCount: 0,
     overdueMeetings: 0,
     completedActivitiesThisMonth: 0,
+    meetingMinutesCount: 0,
+    lastMeetingMinutesDate: null as string | null,
   });
 
 
@@ -130,7 +132,8 @@ const CommitteeDashboard: React.FC = () => {
     committees: Committee[],
     meetings: Meeting[],
     votings: Voting[],
-    activities: Activity[]
+    activities: Activity[],
+    minutesSummary?: { total_actas: number; last_acta_date: string | null }
   ) => {
     const activeCommittees = committees.filter(c => c.is_active).length;
 
@@ -142,6 +145,8 @@ const CommitteeDashboard: React.FC = () => {
       pendingActivitiesCount: activities.length,
       overdueMeetings: meetings.filter(m => new Date(m.meeting_date) < new Date()).length,
       completedActivitiesThisMonth: 0,
+      meetingMinutesCount: minutesSummary?.total_actas ?? 0,
+      lastMeetingMinutesDate: minutesSummary?.last_acta_date ?? null,
     });
   }, []);
 
@@ -183,15 +188,19 @@ const CommitteeDashboard: React.FC = () => {
 
       // Load dashboard data if user has committees
       if (committees.length > 0) {
-        const { meetings, votings, activities } = await loadDashboardMetrics(committees);
+        const [metrics, minutesSummary] = await Promise.all([
+          loadDashboardMetrics(committees),
+          meetingService.getMeetingMinutesSummary(committees.map((c) => c.id)),
+        ]);
+        const { meetings, votings, activities } = metrics;
         setUpcomingMeetings(meetings);
         setActiveVotings(votings);
         setPendingActivities(activities);
         // Calculate statistics based on freshly fetched metrics
-        calculateStatistics(committees, meetings, votings, activities);
+        calculateStatistics(committees, meetings, votings, activities, minutesSummary);
       } else {
         // Reset statistics if no committees
-        calculateStatistics([], [], [], []);
+        calculateStatistics([], [], [], [], { total_actas: 0, last_acta_date: null });
       }
     } catch (err) {
       setError('Hubo un problema al cargar la información del dashboard. Por favor, intenta recargar la página o contacta al soporte técnico si el problema persiste.');
@@ -522,6 +531,36 @@ const CommitteeDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box>
+                  <Typography color="textSecondary" gutterBottom>
+                    Actas de Reuniones
+                  </Typography>
+                  <Typography variant="h4">
+                    {statistics.meetingMinutesCount}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {statistics.lastMeetingMinutesDate
+                      ? `Última: ${new Date(statistics.lastMeetingMinutesDate).toLocaleDateString('es-CO')}`
+                      : 'Sin actas'}
+                  </Typography>
+                </Box>
+                <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                  <DocumentIcon />
+                </Avatar>
+              </Box>
+              <Box mt={1}>
+                <Button size="small" onClick={() => navigate('/admin/committees/actas')}>
+                  Ver actas
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
       {/* Quick Actions */}
@@ -561,6 +600,14 @@ const CommitteeDashboard: React.FC = () => {
             size="small"
           >
             Documentos
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<DocumentIcon />}
+            onClick={() => navigate('/admin/committees/actas')}
+            size="small"
+          >
+            Actas
           </Button>
         </Box>
       </Paper>
