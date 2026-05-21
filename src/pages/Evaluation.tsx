@@ -734,9 +734,6 @@ const EvaluationsManagement: React.FC = () => {
       employeeAnswers,
       showSnackbar,
       timerInterval,
-      fetchEmployeeResponses,
-      fetchEvaluations,
-      navigate,
     ],
   );
 

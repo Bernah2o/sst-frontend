@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -465,11 +465,11 @@ const ErgonomicSelfInspection: React.FC = () => {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [hasPending, setHasPending] = useState(false);
 
-  const [workers, setWorkers] = useState<Worker[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
 
   const [formData, setFormData] =
     useState<Record<string, any>>(initialFormState());
+  const formDataRef = useRef(formData);
 
   const [obsPresets, setObsPresets] = useState<Record<string, string>>({});
   const [managementData, setManagementData] = useState<Record<string, any>>({});
@@ -524,12 +524,10 @@ const ErgonomicSelfInspection: React.FC = () => {
         const profile = profileRes.data as Worker;
         myProfile = profile;
         currentWorkerList = [profile];
-        setWorkers(currentWorkerList);
         setSelectedWorker(profile);
       } else {
         const workersRes = await api.get("/workers");
         currentWorkerList = workersRes.data;
-        setWorkers(currentWorkerList);
       }
 
       const inspectionsRes = await api.get("/assessments/ergonomic");
@@ -599,16 +597,24 @@ const ErgonomicSelfInspection: React.FC = () => {
   }, [user, fetchInitialData]);
 
   useEffect(() => {
-    const next = toMonthYear(formData.evaluation_date);
-    if (next && next !== formData.month_year) {
-      setFormData((p) => ({ ...p, month_year: next }));
-    }
+    setFormData((p) => {
+      const next = toMonthYear(p.evaluation_date);
+      if (next && next !== p.month_year) {
+        return { ...p, month_year: next };
+      }
+      return p;
+    });
   }, [formData.evaluation_date]);
 
   useEffect(() => {
+    formDataRef.current = formData;
+  }, [formData]);
+
+  useEffect(() => {
+    const fd = formDataRef.current;
     const presets: Record<string, string> = {};
     CHECKLIST.forEach((item) => {
-      const storedObs = (formData[item.obsField] as string) || "";
+      const storedObs = (fd[item.obsField] as string) || "";
       const options = OBS_OPTIONS[item.checkField] || [];
       const match = options.find(
         (o) => o.value !== "otro" && o.label === storedObs,

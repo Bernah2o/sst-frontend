@@ -3,7 +3,7 @@ import {
   Box, Typography, Card, CardContent, Grid, Button, Table, TableBody,
   TableCell, TableHead, TableRow, Chip, CircularProgress, Alert,
   FormControl, InputLabel, Select, MenuItem, Paper, LinearProgress,
-  Stack, Divider,
+  Stack,
 } from '@mui/material';
 import {
   PictureAsPdf as PdfIcon,

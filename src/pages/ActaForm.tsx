@@ -149,9 +149,9 @@ const ActaForm: React.FC = () => {
 
   // ── UI state
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [savingWithPdf, setSavingWithPdf] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  const [activeAction, setActiveAction] = useState<'save' | 'saveAndPdf' | 'pdf' | null>(null);
+  const saving = activeAction === 'save' || activeAction === 'saveAndPdf';
+  const downloading = activeAction === 'pdf';
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [savedMeetingId, setSavedMeetingId] = useState<number | null>(null);
@@ -319,8 +319,7 @@ const ActaForm: React.FC = () => {
       return;
     }
 
-    setSaving(true);
-    setSavingWithPdf(downloadPdf);
+    setActiveAction(downloadPdf ? 'saveAndPdf' : 'save');
     setError(null);
     setSuccessMsg(null);
 
@@ -449,8 +448,7 @@ const ActaForm: React.FC = () => {
         err?.response?.data?.detail ?? 'Error al guardar el acta. Por favor intenta nuevamente.',
       );
     } finally {
-      setSaving(false);
-      setSavingWithPdf(false);
+      setActiveAction(null);
     }
   };
 
@@ -460,7 +458,8 @@ const ActaForm: React.FC = () => {
       setError('Guarda el acta primero para poder descargar el PDF.');
       return;
     }
-    setDownloading(true);
+    const isSaveAndPdf = activeAction === 'saveAndPdf';
+    if (!isSaveAndPdf) setActiveAction('pdf');
     try {
       const res = await api.get(`/committee-meetings/${mid}/minutes/pdf`, {
         responseType: 'blob',
@@ -474,7 +473,7 @@ const ActaForm: React.FC = () => {
     } catch {
       setError('No se pudo generar el PDF.');
     } finally {
-      setDownloading(false);
+      if (!isSaveAndPdf) setActiveAction(null);
     }
   };
 
@@ -1089,37 +1088,37 @@ const ActaForm: React.FC = () => {
             <Button
               variant="outlined"
               onClick={() => navigate(`/admin/committees/${committeeId}/actas`)}
-              disabled={saving || downloading}
+              disabled={activeAction !== null}
             >
               Cancelar
             </Button>
             <Button
               variant="outlined"
-              startIcon={saving && !savingWithPdf ? <CircularProgress size={16} /> : <SaveIcon />}
+              startIcon={activeAction === 'save' ? <CircularProgress size={16} /> : <SaveIcon />}
               onClick={() => handleSave(false)}
-              disabled={saving || downloading}
+              disabled={activeAction !== null}
             >
-              {saving && !savingWithPdf ? 'Guardando…' : 'Guardar'}
+              {activeAction === 'save' ? 'Guardando…' : 'Guardar'}
             </Button>
             <Tooltip title={!savedMeetingId && !isEdit ? 'Guarda el acta primero' : ''}>
               <span>
                 <Button
                   variant="outlined"
-                  startIcon={downloading ? <CircularProgress size={16} /> : <PdfIcon />}
+                  startIcon={activeAction === 'pdf' ? <CircularProgress size={16} /> : <PdfIcon />}
                   onClick={() => handleDownloadPdf()}
-                  disabled={saving || downloading || (!savedMeetingId && !isEdit)}
+                  disabled={activeAction !== null || (!savedMeetingId && !isEdit)}
                 >
-                  {downloading ? 'Descargando…' : 'Descargar PDF'}
+                  {activeAction === 'pdf' ? 'Descargando…' : 'Descargar PDF'}
                 </Button>
               </span>
             </Tooltip>
             <Button
               variant="contained"
-              startIcon={saving && savingWithPdf ? <CircularProgress size={16} color="inherit" /> : <PdfIcon />}
+              startIcon={activeAction === 'saveAndPdf' ? <CircularProgress size={16} color="inherit" /> : <PdfIcon />}
               onClick={() => handleSave(true)}
-              disabled={saving || downloading}
+              disabled={activeAction !== null}
             >
-              {saving && savingWithPdf ? 'Guardando…' : 'Guardar y Descargar PDF'}
+              {activeAction === 'saveAndPdf' ? 'Guardando…' : 'Guardar y Descargar PDF'}
             </Button>
           </Box>
         </CardContent>
