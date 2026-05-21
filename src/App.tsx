@@ -523,7 +523,7 @@ const AppContent: React.FC = () => {
                   <Route
                     path="/admin/committees/:id/actas/:actaId/edit"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]} route="/admin/committees/:id/actas/:actaId/edit">
+                      <ProtectedRoute allowedRoles={["admin"]} route="/admin/committees/:id/actas/:actaId/edit">
                         <ActaForm />
                       </ProtectedRoute>
                     }

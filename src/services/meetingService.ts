@@ -189,4 +189,12 @@ export const meetingService = {
     });
     return response.data;
   },
+
+  async getMeetingMinutesSummary(committeeIds: number[]): Promise<{ total_actas: number; last_acta_date: string | null }> {
+    const params = new URLSearchParams();
+    committeeIds.forEach((id) => params.append('committee_ids', String(id)));
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await api.get(`${BASE_URL}/minutes/summary${queryString}`);
+    return response.data;
+  },
 };
