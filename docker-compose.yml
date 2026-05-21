@@ -1,52 +1,39 @@
-version: '3.8'
-
 services:
-  sst-frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: sst-frontend
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+  frontend:
+    image: ${FRONTEND_IMAGE:-sst-frontend-pj5t0g:latest}
     environment:
       - REACT_APP_API_URL=${REACT_APP_API_URL:-https://api.dh2o.com.co/api/v1}
       - REACT_APP_FRONTEND_URL=${REACT_APP_FRONTEND_URL:-https://sst.dh2o.com.co}
       - REACT_APP_ENVIRONMENT=${REACT_APP_ENVIRONMENT:-production}
-
-    restart: unless-stopped
+      - REACT_APP_ENABLE_DEBUG=${REACT_APP_ENABLE_DEBUG:-false}
+      - REACT_APP_ENABLE_LOGGING=${REACT_APP_ENABLE_LOGGING:-false}
+    expose:
+      - "3000"
     networks:
-      - sst-network
+      - dokploy-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.sst-frontend.rule=Host(`${FRONTEND_DOMAIN:-localhost}`)"
-      - "traefik.http.routers.sst-frontend.tls=true"
-      - "traefik.http.routers.sst-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.sst-frontend.loadbalancer.server.port=3000"
-    depends_on:
-      - sst-backend
     deploy:
+      replicas: 1
       resources:
         limits:
           memory: 512M
-          cpus: '0.5'
+          cpus: "0.5"
         reservations:
           memory: 256M
-          cpus: '0.25'
-
-  sst-backend:
-    image: sst-backend:latest
-    container_name: sst-backend
-    external_links:
-      - sst-backend
-    networks:
-      - sst-network
+          cpus: "0.25"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN:-sst.dh2o.com.co}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
 
 networks:
-  sst-network:
+  dokploy-network:
     external: true

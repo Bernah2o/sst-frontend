@@ -150,6 +150,7 @@ const ActaForm: React.FC = () => {
   // ── UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingWithPdf, setSavingWithPdf] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -319,6 +320,7 @@ const ActaForm: React.FC = () => {
     }
 
     setSaving(true);
+    setSavingWithPdf(downloadPdf);
     setError(null);
     setSuccessMsg(null);
 
@@ -363,22 +365,21 @@ const ActaForm: React.FC = () => {
 
       // Registrar asistencia
       for (const att of attendees) {
-        const attendancePayload = {
-          member_id: att.memberId,
-          status: att.present ? 'PRESENT' : 'ABSENT',
-        };
+        const attendanceStatus = att.present ? 'PRESENT' : 'ABSENT';
         try {
-          await api.post(`/committee-meetings/${meetingId}/attendance`, attendancePayload);
-        } catch {
-          // Si ya existe, actualizar
-          try {
+          if (isEdit) {
             await api.put(
               `/committee-meetings/${meetingId}/attendance/${att.memberId}`,
-              { status: att.present ? 'PRESENT' : 'ABSENT' },
+              { status: attendanceStatus },
             );
-          } catch {
-            // Ignorar errores individuales de asistencia
+          } else {
+            await api.post(`/committee-meetings/${meetingId}/attendance`, {
+              member_id: att.memberId,
+              status: attendanceStatus,
+            });
           }
+        } catch {
+          // Ignorar errores individuales de asistencia
         }
       }
 
@@ -449,6 +450,7 @@ const ActaForm: React.FC = () => {
       );
     } finally {
       setSaving(false);
+      setSavingWithPdf(false);
     }
   };
 
@@ -1093,31 +1095,31 @@ const ActaForm: React.FC = () => {
             </Button>
             <Button
               variant="outlined"
-              startIcon={saving && !downloading ? <CircularProgress size={16} /> : <SaveIcon />}
+              startIcon={saving && !savingWithPdf ? <CircularProgress size={16} /> : <SaveIcon />}
               onClick={() => handleSave(false)}
               disabled={saving || downloading}
             >
-              Guardar
+              {saving && !savingWithPdf ? 'Guardando…' : 'Guardar'}
             </Button>
             <Tooltip title={!savedMeetingId && !isEdit ? 'Guarda el acta primero' : ''}>
               <span>
                 <Button
                   variant="outlined"
-                  startIcon={downloading && !saving ? <CircularProgress size={16} /> : <PdfIcon />}
+                  startIcon={downloading ? <CircularProgress size={16} /> : <PdfIcon />}
                   onClick={() => handleDownloadPdf()}
                   disabled={saving || downloading || (!savedMeetingId && !isEdit)}
                 >
-                  {downloading && !saving ? 'Descargando…' : 'Descargar PDF'}
+                  {downloading ? 'Descargando…' : 'Descargar PDF'}
                 </Button>
               </span>
             </Tooltip>
             <Button
               variant="contained"
-              startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <PdfIcon />}
+              startIcon={saving && savingWithPdf ? <CircularProgress size={16} color="inherit" /> : <PdfIcon />}
               onClick={() => handleSave(true)}
               disabled={saving || downloading}
             >
-              {saving ? 'Guardando…' : 'Guardar y Descargar PDF'}
+              {saving && savingWithPdf ? 'Guardando…' : 'Guardar y Descargar PDF'}
             </Button>
           </Box>
         </CardContent>
