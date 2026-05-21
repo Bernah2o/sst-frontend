@@ -141,6 +141,9 @@ const ActaForm: React.FC = () => {
   const [newTasks, setNewTasks] = useState<NewTask[]>([emptyTask()]);
   const [proposiciones, setProposiciones] = useState('');
 
+  // ── IDs de tareas eliminadas pendientes de borrar en backend
+  const [deletedTaskIds, setDeletedTaskIds] = useState<number[]>([]);
+
   // ── Miembros disponibles para asignación
   const [members, setMembers] = useState<CommitteeMember[]>([]);
 
@@ -160,6 +163,7 @@ const ActaForm: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      setDeletedTaskIds([]);
 
       const [committeeRes, membersRes, meetingsRes] = await Promise.all([
         api.get(`/committees/${committeeId}`),
@@ -395,6 +399,16 @@ const ActaForm: React.FC = () => {
           // Continuar aunque falle una actualización
         }
       }
+
+      // Eliminar tareas que el usuario borró del formulario
+      for (const id of deletedTaskIds) {
+        try {
+          await api.delete(`/committee-activities/${id}`);
+        } catch {
+          // Continuar aunque falle un borrado individual
+        }
+      }
+      setDeletedTaskIds([]);
 
       // Guardar tareas: actualizar las existentes, crear las nuevas
       for (const task of newTasks) {
@@ -997,9 +1011,11 @@ const ActaForm: React.FC = () => {
                         <span>
                           <IconButton
                             size="small"
-                            onClick={() =>
-                              setNewTasks((prev) => prev.filter((_, i) => i !== idx))
-                            }
+                            onClick={() => {
+                              const task = newTasks[idx];
+                              if (task.id) setDeletedTaskIds((prev) => [...prev, task.id!]);
+                              setNewTasks((prev) => prev.filter((_, i) => i !== idx));
+                            }}
                             disabled={newTasks.length === 1}
                           >
                             <DeleteIcon fontSize="small" />
