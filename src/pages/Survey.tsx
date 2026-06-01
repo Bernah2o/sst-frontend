@@ -15,6 +15,7 @@ import {
   Stop as StopIcon,
   FileCopy as CopyIcon,
   LibraryBooks as TemplatesIcon,
+  MarkEmailUnread as PendingEmailIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -27,6 +28,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   DialogActions,
   IconButton,
   Table,
@@ -132,6 +134,7 @@ interface SurveyQuestion {
 // User Survey Interface
 
 interface EmployeeResponse {
+  user_survey_id?: number;
   user_id: number;
   employee_name: string;
   employee_email: string;
@@ -156,6 +159,16 @@ interface Worker {
   position?: string;
   department?: string;
   is_active: boolean;
+}
+
+interface PendingRespondent {
+  user_id: number;
+  name: string;
+  email: string;
+  cargo?: string;
+  department?: string;
+  status: string;
+  assigned_at?: string;
 }
 
 // Interface for employee survey view
@@ -276,6 +289,18 @@ const Survey: React.FC = () => {
   const [userSearch, setUserSearch] = useState("");
   const [userAreaFilter, setUserAreaFilter] = useState("");
   const [userCargoFilter, setUserCargoFilter] = useState("");
+
+  // Estados para modal de pendientes de respuesta
+  const [openPendingDialog, setOpenPendingDialog] = useState(false);
+  const [pendingSurvey, setPendingSurvey] = useState<SurveyData | null>(null);
+  const [pendingRespondents, setPendingRespondents] = useState<PendingRespondent[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [selectedPendingUsers, setSelectedPendingUsers] = useState<number[]>([]);
+
+  const [openDeleteResponseDialog, setOpenDeleteResponseDialog] = useState(false);
+  const [responseToDelete, setResponseToDelete] = useState<any>(null);
+  const [deletingResponse, setDeletingResponse] = useState(false);
 
   const statusConfig = {
     draft: { label: "Borrador", color: "default", icon: <EditIcon /> },
@@ -883,6 +908,46 @@ const Survey: React.FC = () => {
   // Función para deseleccionar todos los usuarios
   const handleDeselectAll = () => {
     setSelectedUsers([]);
+  };
+
+  const handleViewPendingRespondents = async (survey: SurveyData) => {
+    setPendingSurvey(survey);
+    setSelectedPendingUsers([]);
+    setLoadingPending(true);
+    setOpenPendingDialog(true);
+    try {
+      const resp = await api.get(`/surveys/${survey.id}/pending-respondents`);
+      setPendingRespondents(resp.data || []);
+    } catch (error) {
+      console.error("Error fetching pending respondents:", error);
+      setPendingRespondents([]);
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  const handleSendReminders = async () => {
+    if (!pendingSurvey || selectedPendingUsers.length === 0) return;
+    setSendingReminder(true);
+    try {
+      const resp = await api.post(`/surveys/${pendingSurvey.id}/send-reminder`, {
+        user_ids: selectedPendingUsers,
+      });
+      setSnackbar({
+        open: true,
+        message: `Recordatorios enviados: ${resp.data.sent} exitosos${resp.data.failed > 0 ? `, ${resp.data.failed} fallidos` : ""}`,
+        severity: resp.data.failed > 0 ? "warning" : "success",
+      });
+      setSelectedPendingUsers([]);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: "Error al enviar recordatorios",
+        severity: "error",
+      });
+    } finally {
+      setSendingReminder(false);
+    }
   };
 
   // Obtener áreas únicas
@@ -1923,7 +1988,23 @@ const Survey: React.FC = () => {
                                         <CopyIcon />
                                       </IconButton>
                                     </Tooltip>
-                                    {/* Botón de asignación solo para encuestas generales */}
+                                    {/* Botones solo para encuestas generales (sin curso) */}
+                                    {!(
+                                      survey.course_ids &&
+                                      survey.course_ids.length > 0
+                                    ) &&
+                                      !survey.course_id && (
+                                        <Tooltip title="Ver trabajadores pendientes de respuesta">
+                                          <IconButton
+                                            size="small"
+                                            onClick={() =>
+                                              handleViewPendingRespondents(survey)
+                                            }
+                                          >
+                                            <PendingEmailIcon />
+                                          </IconButton>
+                                        </Tooltip>
+                                      )}
                                     {!(
                                       survey.course_ids &&
                                       survey.course_ids.length > 0
@@ -2804,18 +2885,35 @@ const Survey: React.FC = () => {
                                 {employeeResponse.completion_percentage}%
                               </TableCell>
                               <TableCell>
-                                <Tooltip title="Ver respuestas">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() =>
-                                      handleViewDetailedResponse(
-                                        employeeResponse,
-                                      )
-                                    }
-                                  >
-                                    <ViewIcon />
-                                  </IconButton>
-                                </Tooltip>
+                                <Box display="flex" gap={0.5}>
+                                  <Tooltip title="Ver respuestas">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
+                                        handleViewDetailedResponse(
+                                          employeeResponse,
+                                        )
+                                      }
+                                    >
+                                      <ViewIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                  {employeeResponse.user_survey_id && (
+                                    <Tooltip title="Eliminar respuesta">
+                                      <IconButton
+                                        size="small"
+                                        color="error"
+                                        onClick={() => {
+                                          if (!viewingSurvey) return;
+                                          setResponseToDelete(employeeResponse);
+                                          setOpenDeleteResponseDialog(true);
+                                        }}
+                                      >
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                </Box>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -3343,6 +3441,186 @@ const Survey: React.FC = () => {
               </DialogActions>
             </Dialog>
 
+            {/* Modal de trabajadores pendientes de respuesta */}
+            <Dialog
+              open={openPendingDialog}
+              onClose={() => {
+                setOpenPendingDialog(false);
+                setSelectedPendingUsers([]);
+              }}
+              maxWidth="md"
+              fullWidth
+            >
+              <DialogTitle>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <PendingEmailIcon color="warning" />
+                  <Typography variant="h6">
+                    Pendientes de respuesta — {pendingSurvey?.title}
+                  </Typography>
+                </Box>
+              </DialogTitle>
+              <DialogContent>
+                {loadingPending ? (
+                  <Box display="flex" justifyContent="center" py={4}>
+                    <CircularProgress />
+                  </Box>
+                ) : pendingRespondents.length === 0 ? (
+                  <Alert severity="success" sx={{ mt: 1 }}>
+                    Todos los trabajadores asignados han completado la encuesta.
+                  </Alert>
+                ) : (
+                  <>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="body2" color="text.secondary">
+                        {pendingRespondents.length} trabajador(es) aún no han respondido
+                      </Typography>
+                      <Box display="flex" gap={1}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() =>
+                            setSelectedPendingUsers(pendingRespondents.map((r) => r.user_id))
+                          }
+                          disabled={selectedPendingUsers.length === pendingRespondents.length}
+                        >
+                          Todos
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setSelectedPendingUsers([])}
+                          disabled={selectedPendingUsers.length === 0}
+                        >
+                          Ninguno
+                        </Button>
+                      </Box>
+                    </Box>
+                    <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                      <Table stickyHeader size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell padding="checkbox" />
+                            <TableCell>Nombre</TableCell>
+                            <TableCell>Email</TableCell>
+                            <TableCell>Cargo</TableCell>
+                            <TableCell>Área</TableCell>
+                            <TableCell>Estado</TableCell>
+                            <TableCell>Acción</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {pendingRespondents.map((r) => (
+                            <TableRow
+                              key={r.user_id}
+                              selected={selectedPendingUsers.includes(r.user_id)}
+                              hover
+                              onClick={() =>
+                                setSelectedPendingUsers((prev) =>
+                                  prev.includes(r.user_id)
+                                    ? prev.filter((id) => id !== r.user_id)
+                                    : [...prev, r.user_id],
+                                )
+                              }
+                              sx={{ cursor: "pointer" }}
+                            >
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                  checked={selectedPendingUsers.includes(r.user_id)}
+                                  size="small"
+                                />
+                              </TableCell>
+                              <TableCell>{r.name}</TableCell>
+                              <TableCell>{r.email}</TableCell>
+                              <TableCell>{r.cargo || "—"}</TableCell>
+                              <TableCell>{r.department || "—"}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={
+                                    r.status === "not_started"
+                                      ? "No iniciada"
+                                      : r.status === "in_progress"
+                                        ? "En progreso"
+                                        : r.status
+                                  }
+                                  color={r.status === "in_progress" ? "warning" : "default"}
+                                  size="small"
+                                />
+                              </TableCell>
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <Tooltip title="Eliminar asignación">
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={async () => {
+                                      if (!pendingSurvey) return;
+                                      try {
+                                        await api.delete(
+                                          `/surveys/${pendingSurvey.id}/unassign/${r.user_id}`,
+                                        );
+                                        setPendingRespondents((prev) =>
+                                          prev.filter((p) => p.user_id !== r.user_id),
+                                        );
+                                        setSelectedPendingUsers((prev) =>
+                                          prev.filter((id) => id !== r.user_id),
+                                        );
+                                        setSnackbar({
+                                          open: true,
+                                          message: `Asignación de ${r.name} eliminada`,
+                                          severity: "success",
+                                        });
+                                      } catch (error: any) {
+                                        setSnackbar({
+                                          open: true,
+                                          message:
+                                            error?.response?.data?.detail ||
+                                            "Error al eliminar la asignación",
+                                          severity: "error",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                    {selectedPendingUsers.length > 0 && (
+                      <Alert severity="info" sx={{ mt: 2 }}>
+                        {selectedPendingUsers.length} trabajador(es) seleccionado(s) para recibir recordatorio
+                      </Alert>
+                    )}
+                  </>
+                )}
+              </DialogContent>
+              <DialogActions sx={{ px: 3, pb: 2 }}>
+                <Button
+                  onClick={() => {
+                    setOpenPendingDialog(false);
+                    setSelectedPendingUsers([]);
+                  }}
+                  disabled={sendingReminder}
+                >
+                  Cerrar
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={
+                    sendingReminder ? <CircularProgress size={18} /> : <SendIcon />
+                  }
+                  onClick={handleSendReminders}
+                  disabled={selectedPendingUsers.length === 0 || sendingReminder}
+                >
+                  {sendingReminder
+                    ? "Enviando..."
+                    : `Enviar recordatorio a ${selectedPendingUsers.length} trabajador(es)`}
+                </Button>
+              </DialogActions>
+            </Dialog>
+
             {/* Delete Confirmation Dialog */}
             <Dialog
               open={openDeleteDialog}
@@ -3471,6 +3749,73 @@ const Survey: React.FC = () => {
           <DialogActions>
             <Button onClick={() => setOpenTemplatesDialog(false)}>
               Cerrar
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={openDeleteResponseDialog}
+          onClose={() => {
+            if (deletingResponse) return;
+            setOpenDeleteResponseDialog(false);
+            setResponseToDelete(null);
+          }}
+        >
+          <DialogTitle>Eliminar respuesta</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              ¿Eliminar la respuesta de {responseToDelete?.employee_name}? Esta
+              acción no se puede deshacer.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setOpenDeleteResponseDialog(false);
+                setResponseToDelete(null);
+              }}
+              disabled={deletingResponse}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={deletingResponse || !viewingSurvey || !responseToDelete}
+              onClick={async () => {
+                if (!viewingSurvey || !responseToDelete?.user_survey_id) return;
+                try {
+                  setDeletingResponse(true);
+                  await api.delete(
+                    `/surveys/${viewingSurvey.id}/responses/${responseToDelete.user_survey_id}`,
+                  );
+                  setUserSurveys((prev) =>
+                    prev.filter(
+                      (r) =>
+                        r.user_survey_id !== responseToDelete.user_survey_id,
+                    ),
+                  );
+                  setSnackbar({
+                    open: true,
+                    message: `Respuesta de ${responseToDelete.employee_name} eliminada`,
+                    severity: "success",
+                  });
+                  setOpenDeleteResponseDialog(false);
+                  setResponseToDelete(null);
+                } catch (err: any) {
+                  setSnackbar({
+                    open: true,
+                    message:
+                      err?.response?.data?.detail ||
+                      "Error al eliminar la respuesta",
+                    severity: "error",
+                  });
+                } finally {
+                  setDeletingResponse(false);
+                }
+              }}
+            >
+              Eliminar
             </Button>
           </DialogActions>
         </Dialog>
