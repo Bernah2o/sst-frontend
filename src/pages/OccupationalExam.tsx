@@ -1119,7 +1119,19 @@ const OccupationalExam: React.FC = () => {
   // Datos calculados para el cronograma de evaluaciones futuras
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const scheduleData = exams
+
+  // Solo el examen más reciente por trabajador + tipo (evita mostrar fechas vencidas
+  // cuando ya existe un examen posterior que las supera)
+  const latestExamByWorkerType = new Map<string, (typeof exams)[0]>();
+  for (const exam of exams) {
+    const key = `${exam.worker_id}__${exam.exam_type}`;
+    const existing = latestExamByWorkerType.get(key);
+    if (!existing || exam.exam_date > existing.exam_date) {
+      latestExamByWorkerType.set(key, exam);
+    }
+  }
+
+  const scheduleData = Array.from(latestExamByWorkerType.values())
     .filter((e) => e.next_exam_date)
     .map((e) => {
       const nextDate = new Date(e.next_exam_date!);
