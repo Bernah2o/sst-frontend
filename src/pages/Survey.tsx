@@ -186,6 +186,7 @@ interface EmployeeSurvey {
     id: number;
     title: string;
     description?: string;
+    status?: SurveyStatus;
     course?: { id: number; title: string } | null;
   };
 }
@@ -293,12 +294,17 @@ const Survey: React.FC = () => {
   // Estados para modal de pendientes de respuesta
   const [openPendingDialog, setOpenPendingDialog] = useState(false);
   const [pendingSurvey, setPendingSurvey] = useState<SurveyData | null>(null);
-  const [pendingRespondents, setPendingRespondents] = useState<PendingRespondent[]>([]);
+  const [pendingRespondents, setPendingRespondents] = useState<
+    PendingRespondent[]
+  >([]);
   const [loadingPending, setLoadingPending] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
-  const [selectedPendingUsers, setSelectedPendingUsers] = useState<number[]>([]);
+  const [selectedPendingUsers, setSelectedPendingUsers] = useState<number[]>(
+    [],
+  );
 
-  const [openDeleteResponseDialog, setOpenDeleteResponseDialog] = useState(false);
+  const [openDeleteResponseDialog, setOpenDeleteResponseDialog] =
+    useState(false);
   const [responseToDelete, setResponseToDelete] = useState<any>(null);
   const [deletingResponse, setDeletingResponse] = useState(false);
 
@@ -326,7 +332,12 @@ const Survey: React.FC = () => {
       if (user?.role === "employee") {
         // For employees, get their assigned surveys
         const response = await api.get("/surveys/my-surveys");
-        setEmployeeSurveys(response.data.items || []);
+        setEmployeeSurveys(
+          (response.data.items || []).filter(
+            (employeeSurvey: EmployeeSurvey) =>
+              employeeSurvey.survey?.status === "published",
+          ),
+        );
       } else {
         // For admin/capacitador, get surveys with pagination
         const params = new URLSearchParams();
@@ -930,9 +941,12 @@ const Survey: React.FC = () => {
     if (!pendingSurvey || selectedPendingUsers.length === 0) return;
     setSendingReminder(true);
     try {
-      const resp = await api.post(`/surveys/${pendingSurvey.id}/send-reminder`, {
-        user_ids: selectedPendingUsers,
-      });
+      const resp = await api.post(
+        `/surveys/${pendingSurvey.id}/send-reminder`,
+        {
+          user_ids: selectedPendingUsers,
+        },
+      );
       setSnackbar({
         open: true,
         message: `Recordatorios enviados: ${resp.data.sent} exitosos${resp.data.failed > 0 ? `, ${resp.data.failed} fallidos` : ""}`,
@@ -1998,7 +2012,9 @@ const Survey: React.FC = () => {
                                           <IconButton
                                             size="small"
                                             onClick={() =>
-                                              handleViewPendingRespondents(survey)
+                                              handleViewPendingRespondents(
+                                                survey,
+                                              )
                                             }
                                           >
                                             <PendingEmailIcon />
@@ -3470,18 +3486,29 @@ const Survey: React.FC = () => {
                   </Alert>
                 ) : (
                   <>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={1}
+                    >
                       <Typography variant="body2" color="text.secondary">
-                        {pendingRespondents.length} trabajador(es) aún no han respondido
+                        {pendingRespondents.length} trabajador(es) aún no han
+                        respondido
                       </Typography>
                       <Box display="flex" gap={1}>
                         <Button
                           size="small"
                           variant="outlined"
                           onClick={() =>
-                            setSelectedPendingUsers(pendingRespondents.map((r) => r.user_id))
+                            setSelectedPendingUsers(
+                              pendingRespondents.map((r) => r.user_id),
+                            )
                           }
-                          disabled={selectedPendingUsers.length === pendingRespondents.length}
+                          disabled={
+                            selectedPendingUsers.length ===
+                            pendingRespondents.length
+                          }
                         >
                           Todos
                         </Button>
@@ -3512,7 +3539,9 @@ const Survey: React.FC = () => {
                           {pendingRespondents.map((r) => (
                             <TableRow
                               key={r.user_id}
-                              selected={selectedPendingUsers.includes(r.user_id)}
+                              selected={selectedPendingUsers.includes(
+                                r.user_id,
+                              )}
                               hover
                               onClick={() =>
                                 setSelectedPendingUsers((prev) =>
@@ -3525,7 +3554,9 @@ const Survey: React.FC = () => {
                             >
                               <TableCell padding="checkbox">
                                 <Checkbox
-                                  checked={selectedPendingUsers.includes(r.user_id)}
+                                  checked={selectedPendingUsers.includes(
+                                    r.user_id,
+                                  )}
                                   size="small"
                                 />
                               </TableCell>
@@ -3542,7 +3573,11 @@ const Survey: React.FC = () => {
                                         ? "En progreso"
                                         : r.status
                                   }
-                                  color={r.status === "in_progress" ? "warning" : "default"}
+                                  color={
+                                    r.status === "in_progress"
+                                      ? "warning"
+                                      : "default"
+                                  }
                                   size="small"
                                 />
                               </TableCell>
@@ -3558,7 +3593,9 @@ const Survey: React.FC = () => {
                                           `/surveys/${pendingSurvey.id}/unassign/${r.user_id}`,
                                         );
                                         setPendingRespondents((prev) =>
-                                          prev.filter((p) => p.user_id !== r.user_id),
+                                          prev.filter(
+                                            (p) => p.user_id !== r.user_id,
+                                          ),
                                         );
                                         setSelectedPendingUsers((prev) =>
                                           prev.filter((id) => id !== r.user_id),
@@ -3590,7 +3627,8 @@ const Survey: React.FC = () => {
                     </TableContainer>
                     {selectedPendingUsers.length > 0 && (
                       <Alert severity="info" sx={{ mt: 2 }}>
-                        {selectedPendingUsers.length} trabajador(es) seleccionado(s) para recibir recordatorio
+                        {selectedPendingUsers.length} trabajador(es)
+                        seleccionado(s) para recibir recordatorio
                       </Alert>
                     )}
                   </>
@@ -3609,10 +3647,16 @@ const Survey: React.FC = () => {
                 <Button
                   variant="contained"
                   startIcon={
-                    sendingReminder ? <CircularProgress size={18} /> : <SendIcon />
+                    sendingReminder ? (
+                      <CircularProgress size={18} />
+                    ) : (
+                      <SendIcon />
+                    )
                   }
                   onClick={handleSendReminders}
-                  disabled={selectedPendingUsers.length === 0 || sendingReminder}
+                  disabled={
+                    selectedPendingUsers.length === 0 || sendingReminder
+                  }
                 >
                   {sendingReminder
                     ? "Enviando..."
