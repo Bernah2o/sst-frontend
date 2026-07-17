@@ -38,6 +38,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  PersonAdd as PersonAddIcon,
 } from "@mui/icons-material";
 import apiService from "../../services/api";
 
@@ -94,6 +95,14 @@ const EmpresasAdmin: React.FC = () => {
     telefono: "",
   });
   const [deleteTarget, setDeleteTarget] = useState<EmpresaPlataforma | null>(null);
+  const [adminTarget, setAdminTarget] = useState<EmpresaPlataforma | null>(null);
+  const [adminForm, setAdminForm] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    document_number: "",
+    password: "",
+  });
   const [snackbar, setSnackbar] = useState<{
     message: string;
     severity: "success" | "error";
@@ -231,6 +240,48 @@ const EmpresasAdmin: React.FC = () => {
     }
   };
 
+  const adminFormValido =
+    adminForm.first_name.trim() &&
+    adminForm.last_name.trim() &&
+    adminForm.email.trim() &&
+    adminForm.document_number.trim() &&
+    adminForm.password.length >= 8;
+
+  const crearAdmin = async () => {
+    if (!adminTarget) return;
+    setSaving(true);
+    try {
+      await apiService.post(`/superadmin/empresas/${adminTarget.id}/admins`, {
+        first_name: adminForm.first_name.trim(),
+        last_name: adminForm.last_name.trim(),
+        email: adminForm.email.trim(),
+        document_number: adminForm.document_number.trim(),
+        password: adminForm.password,
+      });
+      setSnackbar({
+        message: `Administrador ${adminForm.email} creado para "${adminTarget.nombre}"`,
+        severity: "success",
+      });
+      setAdminTarget(null);
+      setAdminForm({
+        first_name: "",
+        last_name: "",
+        email: "",
+        document_number: "",
+        password: "",
+      });
+      cargarEmpresas();
+    } catch (error: any) {
+      setSnackbar({
+        message:
+          error?.response?.data?.detail || "Error creando el administrador",
+        severity: "error",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const cambiarEstado = async (empresa: EmpresaPlataforma) => {
     const accion = empresa.activo ? "suspender" : "activar";
     try {
@@ -323,6 +374,15 @@ const EmpresasAdmin: React.FC = () => {
                         onClick={() => abrirEditar(empresa)}
                       >
                         <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Agregar administrador a esta empresa">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => setAdminTarget(empresa)}
+                      >
+                        <PersonAddIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip
@@ -557,6 +617,90 @@ const EmpresasAdmin: React.FC = () => {
             disabled={!editForm.nombre.trim() || saving}
           >
             {saving ? <CircularProgress size={22} /> : "Guardar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo para agregar administrador */}
+      <Dialog
+        open={!!adminTarget}
+        onClose={() => !saving && setAdminTarget(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Agregar Administrador — {adminTarget?.nombre}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Nombres *"
+                fullWidth
+                value={adminForm.first_name}
+                onChange={(e) =>
+                  setAdminForm((p) => ({ ...p, first_name: e.target.value }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Apellidos *"
+                fullWidth
+                value={adminForm.last_name}
+                onChange={(e) =>
+                  setAdminForm((p) => ({ ...p, last_name: e.target.value }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Email *"
+                type="email"
+                fullWidth
+                value={adminForm.email}
+                onChange={(e) =>
+                  setAdminForm((p) => ({ ...p, email: e.target.value }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Número de documento *"
+                fullWidth
+                value={adminForm.document_number}
+                onChange={(e) =>
+                  setAdminForm((p) => ({
+                    ...p,
+                    document_number: e.target.value,
+                  }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Contraseña temporal *"
+                type="password"
+                fullWidth
+                value={adminForm.password}
+                onChange={(e) =>
+                  setAdminForm((p) => ({ ...p, password: e.target.value }))
+                }
+                helperText="Mínimo 8 caracteres, con mayúscula, minúscula, número y carácter especial"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAdminTarget(null)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={crearAdmin}
+            disabled={!adminFormValido || saving}
+          >
+            {saving ? <CircularProgress size={22} /> : "Crear Administrador"}
           </Button>
         </DialogActions>
       </Dialog>
