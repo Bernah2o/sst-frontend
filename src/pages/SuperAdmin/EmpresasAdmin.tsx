@@ -38,7 +38,9 @@ import {
   CheckCircle as CheckCircleIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  LockOpen as LockOpenIcon,
   PersonAdd as PersonAddIcon,
+  VpnKey as VpnKeyIcon,
 } from "@mui/icons-material";
 import apiService from "../../services/api";
 
@@ -52,6 +54,17 @@ interface EmpresaPlataforma {
   activo: boolean;
   total_usuarios: number;
   total_trabajadores: number;
+}
+
+interface UsuarioBloqueado {
+  id: number;
+  email: string;
+  full_name: string;
+  role: string;
+  empresa_id?: number | null;
+  empresa_nombre?: string | null;
+  failed_login_attempts: number;
+  last_failed_login?: string | null;
 }
 
 interface NuevaEmpresaForm {
@@ -96,6 +109,11 @@ const EmpresasAdmin: React.FC = () => {
   });
   const [deleteTarget, setDeleteTarget] = useState<EmpresaPlataforma | null>(null);
   const [adminTarget, setAdminTarget] = useState<EmpresaPlataforma | null>(null);
+  const [bloqueadosOpen, setBloqueadosOpen] = useState(false);
+  const [bloqueados, setBloqueados] = useState<UsuarioBloqueado[]>([]);
+  const [loadingBloqueados, setLoadingBloqueados] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetForm, setResetForm] = useState({ email: "", new_password: "" });
   const [adminForm, setAdminForm] = useState({
     first_name: "",
     last_name: "",
@@ -282,6 +300,78 @@ const EmpresasAdmin: React.FC = () => {
     }
   };
 
+  const cargarBloqueados = useCallback(async () => {
+    setLoadingBloqueados(true);
+    try {
+      const response = await apiService.get("/superadmin/usuarios-bloqueados");
+      setBloqueados(response.data);
+    } catch (error: any) {
+      setSnackbar({
+        message:
+          error?.response?.data?.detail ||
+          "Error cargando los usuarios bloqueados",
+        severity: "error",
+      });
+    } finally {
+      setLoadingBloqueados(false);
+    }
+  }, []);
+
+  const abrirBloqueados = () => {
+    setBloqueadosOpen(true);
+    cargarBloqueados();
+  };
+
+  const desbloquearUsuario = async (usuario: UsuarioBloqueado) => {
+    try {
+      const response = await apiService.post(
+        `/superadmin/usuarios/${usuario.id}/desbloquear`,
+        {},
+      );
+      setSnackbar({
+        message: response.data?.message || `Cuenta de ${usuario.email} desbloqueada`,
+        severity: "success",
+      });
+      cargarBloqueados();
+    } catch (error: any) {
+      setSnackbar({
+        message:
+          error?.response?.data?.detail || "Error desbloqueando la cuenta",
+        severity: "error",
+      });
+    }
+  };
+
+  const abrirReset = (email: string = "") => {
+    setResetForm({ email, new_password: "" });
+    setResetOpen(true);
+  };
+
+  const resetearPassword = async () => {
+    setSaving(true);
+    try {
+      const response = await apiService.post("/superadmin/usuarios/reset-password", {
+        email: resetForm.email.trim(),
+        new_password: resetForm.new_password,
+      });
+      setSnackbar({
+        message: response.data?.message || "Contraseña reseteada",
+        severity: "success",
+      });
+      setResetOpen(false);
+      setResetForm({ email: "", new_password: "" });
+      if (bloqueadosOpen) cargarBloqueados();
+    } catch (error: any) {
+      setSnackbar({
+        message:
+          error?.response?.data?.detail || "Error reseteando la contraseña",
+        severity: "error",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const cambiarEstado = async (empresa: EmpresaPlataforma) => {
     const accion = empresa.activo ? "suspender" : "activar";
     try {
@@ -317,13 +407,29 @@ const EmpresasAdmin: React.FC = () => {
           <BusinessIcon color="primary" fontSize="large" />
           <Typography variant="h4">Empresas de la Plataforma</Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setDialogOpen(true)}
-        >
-          Nueva Empresa
-        </Button>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<VpnKeyIcon />}
+            onClick={() => abrirReset()}
+          >
+            Resetear Contraseña
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<LockOpenIcon />}
+            onClick={abrirBloqueados}
+          >
+            Usuarios Bloqueados
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setDialogOpen(true)}
+          >
+            Nueva Empresa
+          </Button>
+        </Box>
       </Box>
 
       {loading ? (
@@ -701,6 +807,146 @@ const EmpresasAdmin: React.FC = () => {
             disabled={!adminFormValido || saving}
           >
             {saving ? <CircularProgress size={22} /> : "Crear Administrador"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Usuarios bloqueados por intentos fallidos */}
+      <Dialog
+        open={bloqueadosOpen}
+        onClose={() => setBloqueadosOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Usuarios Bloqueados</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Cuentas bloqueadas por 3 o más intentos fallidos de inicio de
+            sesión. Al desbloquear, el usuario podrá volver a intentar con su
+            contraseña actual.
+          </Typography>
+          {loadingBloqueados ? (
+            <Box sx={{ textAlign: "center", py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : bloqueados.length === 0 ? (
+            <Typography sx={{ py: 2 }} align="center">
+              No hay usuarios bloqueados 🎉
+            </Typography>
+          ) : (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Usuario</TableCell>
+                    <TableCell>Empresa</TableCell>
+                    <TableCell align="center">Intentos</TableCell>
+                    <TableCell>Último intento fallido</TableCell>
+                    <TableCell align="center">Acción</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {bloqueados.map((u) => (
+                    <TableRow key={u.id} hover>
+                      <TableCell>
+                        <Typography variant="body2">{u.full_name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {u.email}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{u.empresa_nombre || "—"}</TableCell>
+                      <TableCell align="center">
+                        {u.failed_login_attempts}
+                      </TableCell>
+                      <TableCell>
+                        {u.last_failed_login
+                          ? new Date(u.last_failed_login).toLocaleString()
+                          : "—"}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          size="small"
+                          color="success"
+                          startIcon={<LockOpenIcon />}
+                          onClick={() => desbloquearUsuario(u)}
+                        >
+                          Desbloquear
+                        </Button>
+                        <Tooltip title="Asignar contraseña nueva (además desbloquea)">
+                          <Button
+                            size="small"
+                            startIcon={<VpnKeyIcon />}
+                            onClick={() => abrirReset(u.email)}
+                          >
+                            Resetear clave
+                          </Button>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBloqueadosOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reset de contraseña */}
+      <Dialog
+        open={resetOpen}
+        onClose={() => !saving && setResetOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Resetear Contraseña</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Asigna una contraseña temporal al usuario y desbloquea su cuenta.
+            Indícale que la cambie al iniciar sesión.
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Email del usuario *"
+                type="email"
+                fullWidth
+                value={resetForm.email}
+                onChange={(e) =>
+                  setResetForm((p) => ({ ...p, email: e.target.value }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Contraseña temporal *"
+                type="password"
+                fullWidth
+                value={resetForm.new_password}
+                onChange={(e) =>
+                  setResetForm((p) => ({ ...p, new_password: e.target.value }))
+                }
+                helperText="Mínimo 8 caracteres, con mayúscula, minúscula, número y carácter especial"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResetOpen(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={resetearPassword}
+            disabled={
+              !resetForm.email.trim() ||
+              resetForm.new_password.length < 8 ||
+              saving
+            }
+          >
+            {saving ? <CircularProgress size={22} /> : "Resetear"}
           </Button>
         </DialogActions>
       </Dialog>
