@@ -49,6 +49,7 @@ import matrizLegalService, {
   Empresa,
   EmpresaResumen,
   SectorEconomicoSimple,
+  getSeccionCIIU,
 } from "../../services/matrizLegalService";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import ConfirmDialog from "../../components/ConfirmDialog";
@@ -57,6 +58,7 @@ interface EmpresaFormData {
   nombre: string;
   nit: string;
   sector_economico_id: number | "";
+  codigo_ciiu: string;
   activo: boolean; // Add this line
   // Características
   tiene_trabajadores_independientes: boolean;
@@ -82,6 +84,7 @@ const initialFormData: EmpresaFormData = {
   nombre: "",
   nit: "",
   sector_economico_id: "",
+  codigo_ciiu: "",
   activo: true, // Add this line
   tiene_trabajadores_independientes: false,
   tiene_teletrabajo: false,
@@ -187,6 +190,7 @@ const EmpresaList: React.FC = () => {
           nombre: empresa.nombre,
           nit: empresa.nit || "",
           sector_economico_id: empresa.sector_economico_id || "",
+          codigo_ciiu: empresa.codigo_ciiu || "",
           activo: empresa.activo,
           tiene_trabajadores_independientes:
             empresa.tiene_trabajadores_independientes,
@@ -237,6 +241,14 @@ const EmpresaList: React.FC = () => {
       return;
     }
 
+    const codigoCiiu = formData.codigo_ciiu.trim();
+    if (codigoCiiu && !/^\d{2,4}$/.test(codigoCiiu)) {
+      enqueueSnackbar("El código CIIU debe tener entre 2 y 4 dígitos", {
+        variant: "warning",
+      });
+      return;
+    }
+
     try {
       setSaving(true);
       const dataToSend: Partial<Empresa> = {
@@ -245,6 +257,7 @@ const EmpresaList: React.FC = () => {
           formData.sector_economico_id === ""
             ? null
             : Number(formData.sector_economico_id),
+        codigo_ciiu: codigoCiiu || null,
       };
 
       if (editingId) {
@@ -578,6 +591,30 @@ const EmpresaList: React.FC = () => {
                       </MenuItem>
                     ))}
                   </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Código CIIU principal"
+                    fullWidth
+                    value={formData.codigo_ciiu}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        codigo_ciiu: e.target.value.replace(/\D/g, "").slice(0, 4),
+                      })
+                    }
+                    placeholder="Ej: 4111"
+                    helperText={
+                      formData.codigo_ciiu.length >= 2
+                        ? (() => {
+                            const seccion = getSeccionCIIU(formData.codigo_ciiu);
+                            return seccion
+                              ? `Sección ${seccion.letra} — ${seccion.nombre}`
+                              : "División CIIU no reconocida";
+                          })()
+                        : "Actividad económica principal según el RUT (2-4 dígitos)"
+                    }
+                  />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <FormControlLabel

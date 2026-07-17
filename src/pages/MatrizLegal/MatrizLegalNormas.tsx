@@ -41,6 +41,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   ArrowBack as BackIcon,
+  Rule as RecalcIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "notistack";
@@ -48,10 +49,13 @@ import matrizLegalService, {
   MatrizLegalNorma,
   // PaginatedResponse,
 } from "../../services/matrizLegalService";
+import { useAuth } from "../../contexts/AuthContext";
 
 const MatrizLegalNormas: React.FC = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+  const { user } = useAuth();
+  const isAdmin = (user?.role || user?.rol) === "admin";
 
   // Estados de datos
   const [normas, setNormas] = useState<MatrizLegalNorma[]>([]);
@@ -80,6 +84,10 @@ const MatrizLegalNormas: React.FC = () => {
     null,
   );
   const [openDetail, setOpenDetail] = useState(false);
+
+  // Recalcular aplicabilidad
+  const [openRecalc, setOpenRecalc] = useState(false);
+  const [recalculando, setRecalculando] = useState(false);
 
   const loadCatalogos = useCallback(async () => {
     try {
@@ -163,6 +171,24 @@ const MatrizLegalNormas: React.FC = () => {
     } catch (error) {
       console.error("Error exporting:", error);
       enqueueSnackbar("Error al exportar", { variant: "error" });
+    }
+  };
+
+  const handleRecalcularAplicabilidad = async () => {
+    try {
+      setRecalculando(true);
+      const result = await matrizLegalService.recalcularAplicabilidad();
+      enqueueSnackbar(
+        `Aplicabilidad recalculada: ${result.total} normas (${result.marcadas_especificas} específicas, ${result.marcadas_generales} generales). Recuerde sincronizar cada empresa.`,
+        { variant: "success", autoHideDuration: 8000 },
+      );
+      setOpenRecalc(false);
+      loadNormas();
+    } catch (error) {
+      console.error("Error recalculando aplicabilidad:", error);
+      enqueueSnackbar("Error al recalcular aplicabilidad", { variant: "error" });
+    } finally {
+      setRecalculando(false);
     }
   };
 
@@ -260,6 +286,18 @@ const MatrizLegalNormas: React.FC = () => {
               </Button>
             </Box>
             <Box display="flex" gap={1}>
+              {isAdmin && (
+                <Tooltip title="Vuelve a detectar a qué características/riesgos aplica cada norma según su contenido">
+                  <Button
+                    startIcon={<RecalcIcon />}
+                    variant="outlined"
+                    color="warning"
+                    onClick={() => setOpenRecalc(true)}
+                  >
+                    Recalcular aplicabilidad
+                  </Button>
+                </Tooltip>
+              )}
               <Button startIcon={<RefreshIcon />} onClick={loadNormas}>
                 Recargar
               </Button>
@@ -638,6 +676,48 @@ const MatrizLegalNormas: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDetail(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog confirmación recalcular aplicabilidad */}
+      <Dialog
+        open={openRecalc}
+        onClose={() => !recalculando && setOpenRecalc(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Recalcular aplicabilidad de las normas</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" gutterBottom>
+            Se volverá a detectar, para <strong>todas las normas activas</strong>,
+            a qué características o riesgos aplican (alturas, químicos,
+            conductores, etc.) según su tema, subtema y descripción. Las normas
+            sin característica detectada quedarán como generales (aplican a
+            todas las empresas).
+          </Typography>
+          <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
+            Esto sobrescribe los campos de aplicabilidad actuales de cada norma.
+            Después del recálculo, use el botón &quot;Sincronizar&quot; en la
+            matriz de cada empresa para actualizar sus normas aplicables.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setOpenRecalc(false)}
+            color="inherit"
+            disabled={recalculando}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleRecalcularAplicabilidad}
+            variant="contained"
+            color="warning"
+            disabled={recalculando}
+            startIcon={recalculando ? <CircularProgress size={16} /> : <RecalcIcon />}
+          >
+            {recalculando ? "Recalculando..." : "Recalcular"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

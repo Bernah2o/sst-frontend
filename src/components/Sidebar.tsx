@@ -742,6 +742,21 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
         ],
         roles: ["admin", "supervisor"],
       },
+      {
+        id: "platform-admin",
+        label: "Plataforma",
+        icon: <AdminPanelSettings />,
+        roles: ["superadmin"],
+        children: [
+          {
+            id: "platform-empresas",
+            label: "Empresas",
+            icon: <Business />,
+            path: "/superadmin/empresas",
+            roles: ["superadmin"],
+          },
+        ],
+      },
     ],
     [],
   );

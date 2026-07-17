@@ -23,6 +23,7 @@ export interface SectorEconomico {
   nombre: string;
   descripcion: string | null;
   es_todos_los_sectores: boolean;
+  ciiu_prefijos: string | null;
   activo: boolean;
   created_at: string;
   updated_at: string | null;
@@ -63,6 +64,7 @@ export interface Empresa extends EmpresaCaracteristicas {
   telefono: string | null;
   email: string | null;
   sector_economico_id: number | null;
+  codigo_ciiu: string | null;
   sector_economico?: SectorEconomicoSimple;
   activo: boolean;
   created_at: string;
@@ -187,6 +189,12 @@ export interface MatrizLegalImportacionResult {
   creado_por: number;
 }
 
+export interface RecalculoAplicabilidadResult {
+  total: number;
+  marcadas_especificas: number;
+  marcadas_generales: number;
+}
+
 export interface MatrizLegalEstadisticasPorEstado {
   cumple: number;
   no_cumple: number;
@@ -263,6 +271,47 @@ export interface FiltrosBulkUpdatePayload {
   observaciones?: string | null;
   aplica_empresa?: boolean | null;
   justificacion_no_aplica?: string | null;
+}
+
+// ==================== CIIU ====================
+
+/**
+ * Secciones CIIU Rev. 4 A.C.: rango de divisiones (2 primeros dígitos) y nombre.
+ */
+export const SECCIONES_CIIU: { letra: string; desde: string; hasta: string; nombre: string }[] = [
+  { letra: "A", desde: "01", hasta: "03", nombre: "Agricultura, ganadería, caza, silvicultura y pesca" },
+  { letra: "B", desde: "05", hasta: "09", nombre: "Explotación de minas y canteras" },
+  { letra: "C", desde: "10", hasta: "33", nombre: "Industrias manufactureras" },
+  { letra: "D", desde: "35", hasta: "35", nombre: "Suministro de electricidad, gas, vapor y aire acondicionado" },
+  { letra: "E", desde: "36", hasta: "39", nombre: "Distribución de agua; saneamiento ambiental" },
+  { letra: "F", desde: "41", hasta: "43", nombre: "Construcción" },
+  { letra: "G", desde: "45", hasta: "47", nombre: "Comercio; reparación de vehículos automotores" },
+  { letra: "H", desde: "49", hasta: "53", nombre: "Transporte y almacenamiento" },
+  { letra: "I", desde: "55", hasta: "56", nombre: "Alojamiento y servicios de comida" },
+  { letra: "J", desde: "58", hasta: "63", nombre: "Información y comunicaciones" },
+  { letra: "K", desde: "64", hasta: "66", nombre: "Actividades financieras y de seguros" },
+  { letra: "L", desde: "68", hasta: "68", nombre: "Actividades inmobiliarias" },
+  { letra: "M", desde: "69", hasta: "75", nombre: "Actividades profesionales, científicas y técnicas" },
+  { letra: "N", desde: "77", hasta: "82", nombre: "Actividades de servicios administrativos y de apoyo" },
+  { letra: "O", desde: "84", hasta: "84", nombre: "Administración pública y defensa" },
+  { letra: "P", desde: "85", hasta: "85", nombre: "Educación" },
+  { letra: "Q", desde: "86", hasta: "88", nombre: "Atención de la salud humana y asistencia social" },
+  { letra: "R", desde: "90", hasta: "93", nombre: "Actividades artísticas, de entretenimiento y recreación" },
+  { letra: "S", desde: "94", hasta: "96", nombre: "Otras actividades de servicios" },
+  { letra: "T", desde: "97", hasta: "98", nombre: "Actividades de los hogares como empleadores" },
+  { letra: "U", desde: "99", hasta: "99", nombre: "Organizaciones y entidades extraterritoriales" },
+];
+
+/**
+ * Devuelve la sección CIIU a la que pertenece un código (2-4 dígitos), o null.
+ */
+export function getSeccionCIIU(codigo: string | null | undefined) {
+  const digitos = (codigo || "").replace(/\D/g, "");
+  if (digitos.length < 2) return null;
+  const division = digitos.slice(0, 2);
+  return (
+    SECCIONES_CIIU.find((s) => s.desde <= division && division <= s.hasta) || null
+  );
 }
 
 // ==================== SERVICIO ====================
@@ -394,6 +443,11 @@ class MatrizLegalService {
   async updateNorma(normaId: number, data: Partial<MatrizLegalNorma>) {
     const res = await api.put(`/matriz-legal/normas/${normaId}`, data);
     return res.data as MatrizLegalNorma;
+  }
+
+  async recalcularAplicabilidad() {
+    const res = await api.post("/matriz-legal/normas/recalcular-aplicabilidad");
+    return res.data as RecalculoAplicabilidadResult;
   }
 
   async getCatalogosClasificaciones() {

@@ -87,6 +87,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
+      case 'superadmin':
+        return 'secondary';
       case 'admin':
         return 'error';
       case 'trainer':
@@ -102,6 +104,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
+      case 'superadmin':
+        return 'Super Admin';
       case 'admin':
         return 'Administrador';
       case 'trainer':

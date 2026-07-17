@@ -1,5 +1,6 @@
 // Enums
 export enum UserRole {
+  SUPERADMIN = "superadmin",
   ADMIN = "admin",
   TRAINER = "trainer",
   EMPLOYEE = "employee",
@@ -231,6 +232,14 @@ export interface UserResponse extends UserBase {
     is_system_role: boolean;
     is_active: boolean;
   };
+  // Multi-tenancy: empresa (tenant) a la que pertenece el usuario.
+  // null/undefined para el superadmin de la plataforma.
+  empresa_id?: number | null;
+  empresa?: {
+    id: number;
+    nombre: string;
+    activo: boolean;
+  } | null;
 }
 
 export interface UserLogin {

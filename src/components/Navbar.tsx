@@ -45,6 +45,8 @@ const Navbar: React.FC = () => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
+      case 'superadmin':
+        return 'secondary';
       case 'admin':
         return 'error';
       case 'trainer':
@@ -60,6 +62,8 @@ const Navbar: React.FC = () => {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
+      case 'superadmin':
+        return 'Super Admin';
       case 'admin':
         return 'Administrador';
       case 'trainer':

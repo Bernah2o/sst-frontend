@@ -750,9 +750,9 @@ export const usePagePermissions = () => {
     // Verificar rol
     if (!user) return false;
 
-    // Admin siempre tiene acceso
+    // Admin y superadmin siempre tienen acceso
     const userRole = user.role || (user as any).rol;
-    if (userRole === UserRole.ADMIN) return true;
+    if (userRole === UserRole.ADMIN || userRole === UserRole.SUPERADMIN) return true;
 
     // Normalizar el rol para comparación
     const normalizedRole = userRole?.includes("UserRole.")
@@ -836,7 +836,7 @@ export const checkPagePermission = (
 
   // Verificar si es administrador del sistema (con o sin rol personalizado)
   const userRole = user?.role || user?.rol;
-  const isSystemAdmin = userRole === UserRole.ADMIN;
+  const isSystemAdmin = userRole === UserRole.ADMIN || userRole === UserRole.SUPERADMIN;
 
   if (isSystemAdmin) {
     return true; // Los administradores del sistema tienen acceso a todo

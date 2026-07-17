@@ -712,7 +712,7 @@ export const usePermissions = () => {
           
           // Si es admin (rol básico), tiene todos los permisos
           const userRole = user.role || user.rol; // Compatibilidad con ambos nombres de campo
-          if (userRole === UserRole.ADMIN) {
+          if (userRole === UserRole.ADMIN || userRole === UserRole.SUPERADMIN) {
             Object.keys(permissions).forEach(key => {
               (permissions as any)[key] = true;
             });
@@ -891,7 +891,7 @@ export const usePermissions = () => {
           
           // Fallback: usar el método anterior si el nuevo endpoint falla
           const userRole = user.role || user.rol;
-          if (userRole === UserRole.ADMIN) {
+          if (userRole === UserRole.ADMIN || userRole === UserRole.SUPERADMIN) {
             Object.keys(permissions).forEach(key => {
               (permissions as any)[key] = true;
             });
@@ -2104,8 +2104,14 @@ function checkTraditionalPageAccess(pageRoute: string, userRole?: string): boole
   // Normalizar el rol para comparación
   const normalizedRole = userRole.includes('UserRole.') ? userRole.split('.')[1].toLowerCase() : userRole.toLowerCase();
 
+  // El superadmin de la plataforma tiene acceso a todas las páginas
+  if (normalizedRole === 'superadmin') {
+    return true;
+  }
+
   // Mapeo tradicional de acceso a páginas por rol del sistema
   const traditionalAccess: Record<string, string[]> = {
+    '/superadmin/empresas': [],  // solo superadmin (cubierto por el return de arriba)
     '/admin/users': ['admin', 'supervisor'],
     '/admin/roles': ['admin'],
     '/admin/config': ['admin'],

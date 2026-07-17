@@ -80,6 +80,7 @@ import Audit from "./pages/Audit";
 import Files from "./pages/Files";
 import Profile from "./pages/Profile";
 import RoleManagement from "./pages/RoleManagement";
+import EmpresasAdmin from "./pages/SuperAdmin/EmpresasAdmin";
 
 // Dashboard pages
 import TrainerDashboard from "./pages/TrainerDashboard";
@@ -181,9 +182,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
 
-  // Admin siempre tiene acceso
   const userRole = user?.role || user?.rol;
-  if (userRole === UserRole.ADMIN) {
+
+  // Rutas exclusivas del superadmin de la plataforma (no aplica el bypass de admin)
+  if (
+    allowedRoles &&
+    allowedRoles.length === 1 &&
+    allowedRoles[0] === UserRole.SUPERADMIN
+  ) {
+    return userRole === UserRole.SUPERADMIN ? (
+      <>{children}</>
+    ) : (
+      <Navigate to="/unauthorized" replace />
+    );
+  }
+
+  // Admin y superadmin siempre tienen acceso
+  if (userRole === UserRole.ADMIN || userRole === UserRole.SUPERADMIN) {
     return <>{children}</>;
   }
 
@@ -435,6 +450,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/roles">
                         <RoleManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/superadmin/empresas"
+                    element={
+                      <ProtectedRoute allowedRoles={[UserRole.SUPERADMIN]}>
+                        <EmpresasAdmin />
                       </ProtectedRoute>
                     }
                   />
@@ -1352,6 +1375,8 @@ const DashboardRedirect: React.FC = () => {
   const userRole = user.role || user.rol;
 
   switch (userRole) {
+    case "superadmin":
+      return <Navigate to="/superadmin/empresas" replace />;
     case "admin":
       return <Navigate to="/admin/dashboard" replace />;
     case "trainer":

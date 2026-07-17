@@ -49,6 +49,7 @@ interface SectorFormData {
   nombre: string;
   codigo: string;
   descripcion: string;
+  ciiu_prefijos: string;
   es_todos_los_sectores: boolean;
   activo: boolean;
 }
@@ -57,6 +58,7 @@ const initialFormData: SectorFormData = {
   nombre: "",
   codigo: "",
   descripcion: "",
+  ciiu_prefijos: "",
   es_todos_los_sectores: false,
   activo: true,
 };
@@ -105,6 +107,7 @@ const SectorEconomicoList: React.FC = () => {
         nombre: sector.nombre,
         codigo: sector.codigo || "",
         descripcion: sector.descripcion || "",
+        ciiu_prefijos: sector.ciiu_prefijos || "",
         es_todos_los_sectores: sector.es_todos_los_sectores,
         activo: sector.activo,
       });
@@ -129,11 +132,15 @@ const SectorEconomicoList: React.FC = () => {
 
     try {
       setSaving(true);
+      const dataToSend = {
+        ...formData,
+        ciiu_prefijos: formData.ciiu_prefijos.trim() || null,
+      };
       if (editingId) {
-        await matrizLegalService.updateSectorEconomico(editingId, formData);
+        await matrizLegalService.updateSectorEconomico(editingId, dataToSend);
         enqueueSnackbar("Sector actualizado correctamente", { variant: "success" });
       } else {
-        await matrizLegalService.createSectorEconomico(formData);
+        await matrizLegalService.createSectorEconomico(dataToSend);
         enqueueSnackbar("Sector creado correctamente", { variant: "success" });
       }
       handleCloseDialog();
@@ -389,7 +396,15 @@ const SectorEconomicoList: React.FC = () => {
               value={formData.descripcion}
               onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
             />
-            
+            <TextField
+              label="Prefijos CIIU del sector (Opcional)"
+              fullWidth
+              value={formData.ciiu_prefijos}
+              onChange={(e) => setFormData({ ...formData, ciiu_prefijos: e.target.value })}
+              placeholder="Ej: F  |  41,42,43  |  4111"
+              helperText="Separados por coma: letra de sección CIIU ('F' = Construcción) o prefijos numéricos ('41', '4111'). Las normas de este sector aplicarán a empresas cuyo código CIIU coincida."
+            />
+
             <FormControlLabel
               control={
                 <Switch
