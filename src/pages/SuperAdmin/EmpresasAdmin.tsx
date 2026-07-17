@@ -30,11 +30,14 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { IconButton } from "@mui/material";
 import {
   Add as AddIcon,
   Block as BlockIcon,
   Business as BusinessIcon,
   CheckCircle as CheckCircleIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import apiService from "../../services/api";
 
@@ -82,6 +85,15 @@ const EmpresasAdmin: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<NuevaEmpresaForm>(FORM_INICIAL);
   const [saving, setSaving] = useState(false);
+  const [editTarget, setEditTarget] = useState<EmpresaPlataforma | null>(null);
+  const [editForm, setEditForm] = useState({
+    nombre: "",
+    nit: "",
+    razon_social: "",
+    email: "",
+    telefono: "",
+  });
+  const [deleteTarget, setDeleteTarget] = useState<EmpresaPlataforma | null>(null);
   const [snackbar, setSnackbar] = useState<{
     message: string;
     severity: "success" | "error";
@@ -151,6 +163,67 @@ const EmpresasAdmin: React.FC = () => {
       setSnackbar({
         message:
           error?.response?.data?.detail || "Error creando la empresa",
+        severity: "error",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const abrirEditar = (empresa: EmpresaPlataforma) => {
+    setEditForm({
+      nombre: empresa.nombre || "",
+      nit: empresa.nit || "",
+      razon_social: empresa.razon_social || "",
+      email: empresa.email || "",
+      telefono: empresa.telefono || "",
+    });
+    setEditTarget(empresa);
+  };
+
+  const guardarEdicion = async () => {
+    if (!editTarget) return;
+    setSaving(true);
+    try {
+      await apiService.put(`/empresas/${editTarget.id}`, {
+        nombre: editForm.nombre.trim(),
+        nit: editForm.nit.trim() || null,
+        razon_social: editForm.razon_social.trim() || null,
+        email: editForm.email.trim() || null,
+        telefono: editForm.telefono.trim() || null,
+      });
+      setSnackbar({
+        message: `Empresa "${editForm.nombre}" actualizada`,
+        severity: "success",
+      });
+      setEditTarget(null);
+      cargarEmpresas();
+    } catch (error: any) {
+      setSnackbar({
+        message:
+          error?.response?.data?.detail || "Error actualizando la empresa",
+        severity: "error",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const eliminarEmpresa = async () => {
+    if (!deleteTarget) return;
+    setSaving(true);
+    try {
+      await apiService.delete(`/empresas/${deleteTarget.id}`);
+      setSnackbar({
+        message: `Empresa "${deleteTarget.nombre}" eliminada`,
+        severity: "success",
+      });
+      setDeleteTarget(null);
+      cargarEmpresas();
+    } catch (error: any) {
+      setSnackbar({
+        message:
+          error?.response?.data?.detail || "Error eliminando la empresa",
         severity: "error",
       });
     } finally {
@@ -243,6 +316,15 @@ const EmpresasAdmin: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell align="center">
+                    <Tooltip title="Editar datos de la empresa">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => abrirEditar(empresa)}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip
                       title={
                         empresa.activo
@@ -260,6 +342,15 @@ const EmpresasAdmin: React.FC = () => {
                       >
                         {empresa.activo ? "Suspender" : "Activar"}
                       </Button>
+                    </Tooltip>
+                    <Tooltip title="Eliminar empresa (solo si no tiene datos)">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => setDeleteTarget(empresa)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
                     </Tooltip>
                   </TableCell>
                 </TableRow>
@@ -390,6 +481,115 @@ const EmpresasAdmin: React.FC = () => {
             disabled={!formValido || saving}
           >
             {saving ? <CircularProgress size={22} /> : "Crear Empresa"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de edición */}
+      <Dialog
+        open={!!editTarget}
+        onClose={() => !saving && setEditTarget(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Editar Empresa</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Nombre *"
+                fullWidth
+                value={editForm.nombre}
+                onChange={(e) =>
+                  setEditForm((p) => ({ ...p, nombre: e.target.value }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="NIT"
+                fullWidth
+                value={editForm.nit}
+                onChange={(e) =>
+                  setEditForm((p) => ({ ...p, nit: e.target.value }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Razón social"
+                fullWidth
+                value={editForm.razon_social}
+                onChange={(e) =>
+                  setEditForm((p) => ({ ...p, razon_social: e.target.value }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Email"
+                fullWidth
+                value={editForm.email}
+                onChange={(e) =>
+                  setEditForm((p) => ({ ...p, email: e.target.value }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Teléfono"
+                fullWidth
+                value={editForm.telefono}
+                onChange={(e) =>
+                  setEditForm((p) => ({ ...p, telefono: e.target.value }))
+                }
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditTarget(null)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={guardarEdicion}
+            disabled={!editForm.nombre.trim() || saving}
+          >
+            {saving ? <CircularProgress size={22} /> : "Guardar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmación de eliminación */}
+      <Dialog
+        open={!!deleteTarget}
+        onClose={() => !saving && setDeleteTarget(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Eliminar Empresa</DialogTitle>
+        <DialogContent>
+          <Typography>
+            ¿Seguro que deseas eliminar{" "}
+            <strong>{deleteTarget?.nombre}</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Solo se puede eliminar una empresa sin usuarios, trabajadores ni
+            datos asociados. Si ya tiene información, usa "Suspender".
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={eliminarEmpresa}
+            disabled={saving}
+          >
+            {saving ? <CircularProgress size={22} /> : "Eliminar"}
           </Button>
         </DialogActions>
       </Dialog>
