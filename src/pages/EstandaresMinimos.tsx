@@ -50,6 +50,7 @@ import {
   determinarGrupo,
   estandaresMinimosService,
 } from '../services/estandaresMinimosService';
+import apiService from '../services/api';
 
 // ─── Helpers UI ────────────────────────────────────────────────────────────
 
@@ -111,6 +112,25 @@ export default function EstandaresMinimos() {
   }, [cargarEvaluaciones]);
 
   // ─── Acciones ──────────────────────────────────────────────────────────
+
+  const abrirDialogCrear = async () => {
+    setDialogCrear(true);
+    // Prellenar número de trabajadores y nivel de riesgo desde la
+    // configuración de la empresa (fuente de verdad para el grupo)
+    try {
+      const r = await apiService.get('/empresas/mi-empresa');
+      const emp = r.data;
+      setFormData((p) => ({
+        ...p,
+        num_trabajadores:
+          p.num_trabajadores ||
+          (emp?.num_trabajadores ? String(emp.num_trabajadores) : ''),
+        nivel_riesgo: p.nivel_riesgo || emp?.nivel_riesgo || '',
+      }));
+    } catch {
+      // Sin empresa asociada o sin datos: el formulario se llena manualmente
+    }
+  };
 
   const handleCrear = async () => {
     if (!formData.nivel_riesgo || !formData.num_trabajadores) return;
@@ -175,7 +195,7 @@ export default function EstandaresMinimos() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setDialogCrear(true)}
+          onClick={abrirDialogCrear}
         >
           Nueva Autoevaluación
         </Button>

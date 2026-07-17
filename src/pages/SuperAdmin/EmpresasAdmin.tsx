@@ -33,6 +33,7 @@ import {
 import { IconButton } from "@mui/material";
 import {
   Add as AddIcon,
+  AutoFixHigh as AutoFixHighIcon,
   Block as BlockIcon,
   Business as BusinessIcon,
   CheckCircle as CheckCircleIcon,
@@ -42,6 +43,7 @@ import {
   PersonAdd as PersonAddIcon,
   VpnKey as VpnKeyIcon,
 } from "@mui/icons-material";
+import { MenuItem } from "@mui/material";
 import apiService from "../../services/api";
 
 interface EmpresaPlataforma {
@@ -51,10 +53,32 @@ interface EmpresaPlataforma {
   razon_social?: string | null;
   email?: string | null;
   telefono?: string | null;
+  num_trabajadores?: number | null;
+  nivel_riesgo?: string | null;
   activo: boolean;
   total_usuarios: number;
   total_trabajadores: number;
 }
+
+interface AprovisionamientoResumen {
+  grupo?: string | null;
+  creado: string[];
+  omitido: string[];
+}
+
+const NIVELES_RIESGO = ["I", "II", "III", "IV", "V"];
+
+// Espejo de determinar_grupo() del backend (Res. 0312/2019)
+const calcularGrupo = (num: number | null, riesgo: string): string | null => {
+  if (riesgo === "IV" || riesgo === "V") return "GRUPO_60";
+  if (!num || !riesgo) return null;
+  return num <= 10 ? "GRUPO_7" : num <= 50 ? "GRUPO_21" : "GRUPO_60";
+};
+
+const etiquetaGrupo = (grupo: string | null): string =>
+  grupo
+    ? `Grupo de ${grupo.split("_")[1]} estándares mínimos (Res. 0312/2019)`
+    : "";
 
 interface UsuarioBloqueado {
   id: number;
@@ -73,6 +97,8 @@ interface NuevaEmpresaForm {
   razon_social: string;
   email: string;
   telefono: string;
+  num_trabajadores: string;
+  nivel_riesgo: string;
   admin_first_name: string;
   admin_last_name: string;
   admin_email: string;
@@ -86,6 +112,8 @@ const FORM_INICIAL: NuevaEmpresaForm = {
   razon_social: "",
   email: "",
   telefono: "",
+  num_trabajadores: "",
+  nivel_riesgo: "",
   admin_first_name: "",
   admin_last_name: "",
   admin_email: "",
@@ -106,6 +134,8 @@ const EmpresasAdmin: React.FC = () => {
     razon_social: "",
     email: "",
     telefono: "",
+    num_trabajadores: "",
+    nivel_riesgo: "",
   });
   const [deleteTarget, setDeleteTarget] = useState<EmpresaPlataforma | null>(null);
   const [adminTarget, setAdminTarget] = useState<EmpresaPlataforma | null>(null);
@@ -114,6 +144,10 @@ const EmpresasAdmin: React.FC = () => {
   const [loadingBloqueados, setLoadingBloqueados] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetForm, setResetForm] = useState({ email: "", new_password: "" });
+  const [resumenAprov, setResumenAprov] = useState<{
+    titulo: string;
+    resumen: AprovisionamientoResumen;
+  } | null>(null);
   const [adminForm, setAdminForm] = useState({
     first_name: "",
     last_name: "",
@@ -163,13 +197,17 @@ const EmpresasAdmin: React.FC = () => {
   const crearEmpresa = async () => {
     setSaving(true);
     try {
-      await apiService.post("/superadmin/empresas", {
+      const response = await apiService.post("/superadmin/empresas", {
         empresa: {
           nombre: form.nombre.trim(),
           nit: form.nit.trim() || null,
           razon_social: form.razon_social.trim() || null,
           email: form.email.trim() || null,
           telefono: form.telefono.trim() || null,
+          num_trabajadores: form.num_trabajadores
+            ? parseInt(form.num_trabajadores, 10)
+            : null,
+          nivel_riesgo: form.nivel_riesgo || null,
         },
         admin: {
           first_name: form.admin_first_name.trim(),
@@ -184,6 +222,12 @@ const EmpresasAdmin: React.FC = () => {
         severity: "success",
       });
       setDialogOpen(false);
+      if (response.data?.aprovisionamiento) {
+        setResumenAprov({
+          titulo: `Aprovisionamiento SST — ${form.nombre}`,
+          resumen: response.data.aprovisionamiento,
+        });
+      }
       setForm(FORM_INICIAL);
       cargarEmpresas();
     } catch (error: any) {
@@ -204,6 +248,10 @@ const EmpresasAdmin: React.FC = () => {
       razon_social: empresa.razon_social || "",
       email: empresa.email || "",
       telefono: empresa.telefono || "",
+      num_trabajadores: empresa.num_trabajadores
+        ? String(empresa.num_trabajadores)
+        : "",
+      nivel_riesgo: empresa.nivel_riesgo || "",
     });
     setEditTarget(empresa);
   };
@@ -218,6 +266,10 @@ const EmpresasAdmin: React.FC = () => {
         razon_social: editForm.razon_social.trim() || null,
         email: editForm.email.trim() || null,
         telefono: editForm.telefono.trim() || null,
+        num_trabajadores: editForm.num_trabajadores
+          ? parseInt(editForm.num_trabajadores, 10)
+          : null,
+        nivel_riesgo: editForm.nivel_riesgo || null,
       });
       setSnackbar({
         message: `Empresa "${editForm.nombre}" actualizada`,
@@ -337,6 +389,26 @@ const EmpresasAdmin: React.FC = () => {
       setSnackbar({
         message:
           error?.response?.data?.detail || "Error desbloqueando la cuenta",
+        severity: "error",
+      });
+    }
+  };
+
+  const aprovisionarEmpresa = async (empresa: EmpresaPlataforma) => {
+    try {
+      const response = await apiService.post(
+        `/superadmin/empresas/${empresa.id}/aprovisionar`,
+        {},
+      );
+      setResumenAprov({
+        titulo: `Aprovisionamiento SST — ${empresa.nombre}`,
+        resumen: response.data,
+      });
+    } catch (error: any) {
+      setSnackbar({
+        message:
+          error?.response?.data?.detail ||
+          "Error aprovisionando los instrumentos SST",
         severity: "error",
       });
     }
@@ -491,6 +563,15 @@ const EmpresasAdmin: React.FC = () => {
                         <PersonAddIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Aprovisionar instrumentos SST (encuestas, plan anual, autoevaluación) según su grupo de estándares">
+                      <IconButton
+                        size="small"
+                        color="secondary"
+                        onClick={() => aprovisionarEmpresa(empresa)}
+                      >
+                        <AutoFixHighIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip
                       title={
                         empresa.activo
@@ -585,6 +666,49 @@ const EmpresasAdmin: React.FC = () => {
                 onChange={handleFormChange("telefono")}
               />
             </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Número de trabajadores"
+                type="number"
+                fullWidth
+                value={form.num_trabajadores}
+                onChange={handleFormChange("num_trabajadores")}
+                helperText="Determina el grupo de estándares mínimos"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Nivel de riesgo ARL"
+                select
+                fullWidth
+                value={form.nivel_riesgo}
+                onChange={handleFormChange("nivel_riesgo")}
+              >
+                {NIVELES_RIESGO.map((n) => (
+                  <MenuItem key={n} value={n}>
+                    {n}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            {calcularGrupo(
+              form.num_trabajadores ? parseInt(form.num_trabajadores, 10) : null,
+              form.nivel_riesgo,
+            ) && (
+              <Grid size={{ xs: 12 }}>
+                <Alert severity="info">
+                  {etiquetaGrupo(
+                    calcularGrupo(
+                      form.num_trabajadores
+                        ? parseInt(form.num_trabajadores, 10)
+                        : null,
+                      form.nivel_riesgo,
+                    ),
+                  )}
+                  {" — al crear la empresa se aprovisionarán automáticamente las encuestas, el plan de trabajo anual y la autoevaluación que le aplican."}
+                </Alert>
+              </Grid>
+            )}
           </Grid>
 
           <Divider sx={{ my: 2 }} />
@@ -711,6 +835,56 @@ const EmpresasAdmin: React.FC = () => {
                 }
               />
             </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Número de trabajadores"
+                type="number"
+                fullWidth
+                value={editForm.num_trabajadores}
+                onChange={(e) =>
+                  setEditForm((p) => ({
+                    ...p,
+                    num_trabajadores: e.target.value,
+                  }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Nivel de riesgo ARL"
+                select
+                fullWidth
+                value={editForm.nivel_riesgo}
+                onChange={(e) =>
+                  setEditForm((p) => ({ ...p, nivel_riesgo: e.target.value }))
+                }
+              >
+                {NIVELES_RIESGO.map((n) => (
+                  <MenuItem key={n} value={n}>
+                    {n}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            {calcularGrupo(
+              editForm.num_trabajadores
+                ? parseInt(editForm.num_trabajadores, 10)
+                : null,
+              editForm.nivel_riesgo,
+            ) && (
+              <Grid size={{ xs: 12 }}>
+                <Alert severity="info">
+                  {etiquetaGrupo(
+                    calcularGrupo(
+                      editForm.num_trabajadores
+                        ? parseInt(editForm.num_trabajadores, 10)
+                        : null,
+                      editForm.nivel_riesgo,
+                    ),
+                  )}
+                </Alert>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>
@@ -891,6 +1065,58 @@ const EmpresasAdmin: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBloqueadosOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Resumen de aprovisionamiento SST */}
+      <Dialog
+        open={!!resumenAprov}
+        onClose={() => setResumenAprov(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{resumenAprov?.titulo}</DialogTitle>
+        <DialogContent>
+          {resumenAprov?.resumen.grupo && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {etiquetaGrupo(resumenAprov.resumen.grupo)}
+            </Alert>
+          )}
+          {(resumenAprov?.resumen.creado?.length ?? 0) > 0 && (
+            <>
+              <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                Creado
+              </Typography>
+              <Box component="ul" sx={{ mt: 0, mb: 2, pl: 3 }}>
+                {resumenAprov?.resumen.creado.map((item, i) => (
+                  <li key={i}>
+                    <Typography variant="body2">{item}</Typography>
+                  </li>
+                ))}
+              </Box>
+            </>
+          )}
+          {(resumenAprov?.resumen.omitido?.length ?? 0) > 0 && (
+            <>
+              <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                Ya existía u omitido
+              </Typography>
+              <Box component="ul" sx={{ mt: 0, mb: 0, pl: 3 }}>
+                {resumenAprov?.resumen.omitido.map((item, i) => (
+                  <li key={i}>
+                    <Typography variant="body2" color="text.secondary">
+                      {item}
+                    </Typography>
+                  </li>
+                ))}
+              </Box>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={() => setResumenAprov(null)}>
+            Entendido
+          </Button>
         </DialogActions>
       </Dialog>
 
