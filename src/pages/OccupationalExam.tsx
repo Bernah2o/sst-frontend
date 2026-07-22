@@ -24,6 +24,7 @@ import {
   TableChart as TableChartIcon,
   Add as AddIcon,
   Edit as EditIcon,
+  History as HistoryIcon,
 } from "@mui/icons-material";
 import {
   Box,
@@ -91,6 +92,19 @@ import ConfirmDialog from "../components/ConfirmDialog";
 // Enums que coinciden con el backend
 
 type MedicalAptitude = "apto" | "apto_con_recomendaciones" | "no_apto";
+
+interface NotificationLogItem {
+  id: number;
+  worker_id: number;
+  worker_name: string;
+  recipient_email: string;
+  exam_status: string;
+  notification_type: string;
+  success: boolean;
+  error_message: string | null;
+  sent_at: string;
+  sent_by: string;
+}
 
 interface OccupationalExamData {
   id: number;
@@ -196,6 +210,9 @@ const calculateDurationInMonths = (
 
 const OccupationalExam: React.FC = () => {
   const [exams, setExams] = useState<OccupationalExamData[]>([]);
+  // Set COMPLETO de exámenes para el cronograma (independiente de la
+  // paginación y filtros de la tabla — ver fetchScheduleExams)
+  const [scheduleExams, setScheduleExams] = useState<OccupationalExamData[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -224,6 +241,18 @@ const OccupationalExam: React.FC = () => {
   const [generatingIndividualReport, setGeneratingIndividualReport] =
     useState(false);
   const [sendingEmail, setSendingEmail] = useState<number | null>(null);
+
+  // Historial/evidencia de notificaciones enviadas (reemplaza el CC externo:
+  // el admin consulta aquí, dentro de la plataforma, quién fue notificado)
+  const [notifLogOpen, setNotifLogOpen] = useState(false);
+  const [notifLogWorker, setNotifLogWorker] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const [notifLogItems, setNotifLogItems] = useState<NotificationLogItem[]>(
+    [],
+  );
+  const [notifLogLoading, setNotifLogLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [examSeguimientos, setExamSeguimientos] = useState<{
@@ -342,6 +371,28 @@ const OccupationalExam: React.FC = () => {
       setLoading(false);
     }
   }, [page, filters]);
+
+  const fetchScheduleExams = useCallback(async () => {
+    // Trae TODOS los exámenes (acumulando páginas) para que el cronograma de
+    // evaluaciones futuras no dependa de la página/filtros de la tabla.
+    try {
+      const all: OccupationalExamData[] = [];
+      let currentPage = 1;
+      let totalPagesSchedule = 1;
+      do {
+        // worker_active=true: los trabajadores inactivos no cuentan en el cronograma
+        const response = await api.get(
+          `/occupational-exams/?page=${currentPage}&limit=500&worker_active=true`,
+        );
+        all.push(...(response.data.items || []));
+        totalPagesSchedule = response.data.pages || 1;
+        currentPage += 1;
+      } while (currentPage <= totalPagesSchedule && currentPage <= 20);
+      setScheduleExams(all);
+    } catch (error) {
+      console.error("Error fetching schedule exams:", error);
+    }
+  }, []);
 
   const fetchWorkers = useCallback(async () => {
     try {
@@ -639,6 +690,7 @@ const OccupationalExam: React.FC = () => {
       }
 
       fetchExams();
+      fetchScheduleExams();
       handleCloseDialog();
     } catch (error: any) {
       console.error("Error saving exam:", error);
@@ -670,6 +722,7 @@ const OccupationalExam: React.FC = () => {
     try {
       await api.delete(`/occupational-exams/${exam.id}`);
       fetchExams();
+      fetchScheduleExams();
       showAlert("Examen eliminado correctamente", "success");
     } catch (error) {
       console.error("Error deleting exam:", error);
@@ -790,8 +843,11 @@ const OccupationalExam: React.FC = () => {
     try {
       setSendingEmail(exam.id);
 
+      // IMPORTANTE: el endpoint espera el ID del TRABAJADOR (worker_id), no el
+      // ID del examen. Enviar exam.id aquí notificaría a quien tenga ese id
+      // en la tabla de trabajadores — una persona distinta a la del examen.
       const response = await api.post(
-        `/exam-scheduler/send-notification-with-pdf/${exam.id}`,
+        `/exam-scheduler/send-notification-with-pdf/${exam.worker_id}`,
       );
 
       if (response.status === 200) {
@@ -820,6 +876,26 @@ const OccupationalExam: React.FC = () => {
       }
     } finally {
       setSendingEmail(null);
+    }
+  };
+
+  const abrirHistorialNotificaciones = async (exam: OccupationalExamData) => {
+    setNotifLogWorker({
+      id: exam.worker_id,
+      name: exam.worker_name || "Trabajador",
+    });
+    setNotifLogOpen(true);
+    setNotifLogLoading(true);
+    try {
+      const response = await api.get(
+        `/occupational-exam-notifications/log?worker_id=${exam.worker_id}`,
+      );
+      setNotifLogItems(response.data.items || []);
+    } catch (error) {
+      console.error("Error cargando historial de notificaciones:", error);
+      setNotifLogItems([]);
+    } finally {
+      setNotifLogLoading(false);
     }
   };
 
@@ -1114,16 +1190,18 @@ const OccupationalExam: React.FC = () => {
   useEffect(() => {
     fetchProgramas();
     fetchSuppliers();
-  }, [fetchProgramas, fetchSuppliers]);
+    fetchScheduleExams();
+  }, [fetchProgramas, fetchSuppliers, fetchScheduleExams]);
 
   // Datos calculados para el cronograma de evaluaciones futuras
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   // Solo el examen más reciente por trabajador + tipo (evita mostrar fechas vencidas
-  // cuando ya existe un examen posterior que las supera)
-  const latestExamByWorkerType = new Map<string, (typeof exams)[0]>();
-  for (const exam of exams) {
+  // cuando ya existe un examen posterior que las supera). Se calcula sobre el
+  // set COMPLETO de exámenes (scheduleExams), no sobre la página de la tabla.
+  const latestExamByWorkerType = new Map<string, (typeof scheduleExams)[0]>();
+  for (const exam of scheduleExams) {
     const key = `${exam.worker_id}__${exam.exam_type}`;
     const existing = latestExamByWorkerType.get(key);
     if (!existing || exam.exam_date > existing.exam_date) {
@@ -1563,6 +1641,16 @@ const OccupationalExam: React.FC = () => {
                                   ) : (
                                     <EmailIcon />
                                   )}
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Ver historial de notificaciones enviadas">
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    abrirHistorialNotificaciones(exam)
+                                  }
+                                >
+                                  <HistoryIcon />
                                 </IconButton>
                               </Tooltip>
                               <Tooltip
@@ -2885,6 +2973,99 @@ const OccupationalExam: React.FC = () => {
             >
               Entendido
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Historial/evidencia de notificaciones de examen enviadas al trabajador */}
+        <Dialog
+          open={notifLogOpen}
+          onClose={() => setNotifLogOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            Historial de Notificaciones — {notifLogWorker?.name}
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Evidencia de los correos de examen médico enviados a este
+              trabajador: fecha, destinatario, resultado y quién lo envió.
+            </Typography>
+            {notifLogLoading ? (
+              <Box sx={{ textAlign: "center", py: 4 }}>
+                <LinearProgress />
+              </Box>
+            ) : notifLogItems.length === 0 ? (
+              <Alert severity="info">
+                Aún no se ha enviado ninguna notificación a este trabajador.
+              </Alert>
+            ) : (
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Fecha</TableCell>
+                      <TableCell>Destinatario</TableCell>
+                      <TableCell>Tipo</TableCell>
+                      <TableCell>Resultado</TableCell>
+                      <TableCell>Enviado por</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {notifLogItems.map((item) => (
+                      <TableRow key={item.id} hover>
+                        <TableCell>
+                          {new Date(item.sent_at).toLocaleString("es-CO")}
+                        </TableCell>
+                        <TableCell>{item.recipient_email}</TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={
+                              item.exam_status === "vencido"
+                                ? "Vencido"
+                                : item.exam_status === "sin_examenes"
+                                  ? "Sin exámenes"
+                                  : "Próximo a vencer"
+                            }
+                            color={
+                              item.exam_status === "vencido"
+                                ? "error"
+                                : item.exam_status === "sin_examenes"
+                                  ? "warning"
+                                  : "info"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {item.success ? (
+                            <Chip
+                              size="small"
+                              icon={<SuccessIcon />}
+                              label="Enviado"
+                              color="success"
+                            />
+                          ) : (
+                            <Tooltip title={item.error_message || "Error"}>
+                              <Chip
+                                size="small"
+                                icon={<ErrorIcon />}
+                                label="Falló"
+                                color="error"
+                              />
+                            </Tooltip>
+                          )}
+                        </TableCell>
+                        <TableCell>{item.sent_by}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setNotifLogOpen(false)}>Cerrar</Button>
           </DialogActions>
         </Dialog>
       </Box>
