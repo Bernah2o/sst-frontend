@@ -122,6 +122,8 @@ import CronogramaPyp from "./pages/CronogramaPyp";
 import CronogramaPypDetail from "./pages/CronogramaPypDetail";
 import ProgramaInspecciones from "./pages/ProgramaInspecciones";
 import ProgramaInspeccionesDetail from "./pages/ProgramaInspeccionesDetail";
+import AuditoriaSST from "./pages/AuditoriaSST";
+import AuditoriaSSTDetail from "./pages/AuditoriaSSTDetail";
 import { UserRole } from "./types";
 import { checkPagePermission, PAGE_PERMISSIONS } from "./utils/pagePermissions";
 
@@ -889,6 +891,23 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
                         <ProgramaInspeccionesDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Rutas de Auditoría SST (Art. 16 Res. 0312/2019, Art. 2.2.4.6.30 Decreto 1072/2015) */}
+                  <Route
+                    path="/admin/auditoria-sst"
+                    element={
+                      <ProtectedRoute route="/admin/auditoria-sst">
+                        <AuditoriaSST />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/auditoria-sst/:auditoriaId"
+                    element={
+                      <ProtectedRoute route="/admin/auditoria-sst/:auditoriaId">
+                        <AuditoriaSSTDetail />
                       </ProtectedRoute>
                     }
                   />

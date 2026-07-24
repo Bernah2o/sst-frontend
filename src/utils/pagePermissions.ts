@@ -563,6 +563,22 @@ export const PAGE_PERMISSIONS: PagePermissionConfig[] = [
     requiredPermissions: [],
     allowedRoles: ["admin", "supervisor"],
   },
+  {
+    route: "/admin/auditoria-sst",
+    name: "Auditoría Interna SG-SST",
+    description:
+      "Auditoría de cumplimiento del SG-SST — Art. 16 Res. 0312/2019 y Art. 2.2.4.6.30 Decreto 1072/2015",
+    requiredPermissions: [],
+    allowedRoles: ["admin", "supervisor"],
+  },
+  {
+    route: "/admin/auditoria-sst/:auditoriaId",
+    name: "Detalle Auditoría SST",
+    description:
+      "Checklist de los 13 aspectos mínimos del alcance de auditoría, hallazgos y plan de mejoramiento",
+    requiredPermissions: [],
+    allowedRoles: ["admin", "supervisor"],
+  },
 
   // Committees
   {

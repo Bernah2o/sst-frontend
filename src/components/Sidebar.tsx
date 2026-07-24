@@ -44,6 +44,7 @@ import {
   EventNote,
   AccountBalance,
   FactCheck,
+  VerifiedUser,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -684,6 +685,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             roles: ["admin", "supervisor"],
           },
           {
+            id: "auditoria-sst",
+            label: "Auditoría SST",
+            icon: <VerifiedUser />,
+            path: "/admin/auditoria-sst",
+            roles: ["admin", "supervisor"],
+          },
+          {
             id: "master-documents",
             label: "Listado Maestro de Documentos",
             icon: <Description />,
@@ -935,6 +943,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
               "estandares-minimos": () =>
                 user.role === "admin" || user.role === "supervisor",
               "programa-inspecciones": () =>
+                user.role === "admin" || user.role === "supervisor",
+              "auditoria-sst": () =>
                 user.role === "admin" || user.role === "supervisor",
 
               // Administration (check individual permissions or role)
