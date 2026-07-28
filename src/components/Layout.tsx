@@ -25,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 import PermissionRefreshNotification from './PermissionRefreshNotification';
 import Sidebar from './Sidebar';
+import SuperadminEmpresaSwitcher from './SuperadminEmpresaSwitcher';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -188,6 +189,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             
             {user && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {/* Selector de empresa (solo superadmin) */}
+                {(user.role || user.rol) === 'superadmin' && <SuperadminEmpresaSwitcher />}
+
                 {/* Role Chip */}
                 <Chip
                   label={getRoleLabel(user.role || user.rol)}

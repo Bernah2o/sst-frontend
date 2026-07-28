@@ -10,11 +10,11 @@ import {
   useLocation,
 } from "react-router-dom";
 
+import ActivateAccount from "./components/ActivateAccount";
 import ChangePassword from "./components/ChangePassword";
 import ForgotPassword from "./components/ForgotPassword";
 import Layout from "./components/Layout";
 import Login from "./components/Login";
-import Register from "./components/Register";
 import ResetPassword from "./components/ResetPassword";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { usePermissions } from "./hooks/usePermissions";
@@ -299,8 +299,8 @@ const AppContent: React.FC = () => {
         {/* Rutas públicas sin Layout */}
         <Route path="/login" element={<LoginRoute />} />
         <Route
-          path="/register"
-          element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
+          path="/activar-cuenta"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <ActivateAccount />}
         />
         <Route
           path="/forgot-password"

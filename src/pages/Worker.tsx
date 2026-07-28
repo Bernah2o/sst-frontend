@@ -14,6 +14,7 @@ import {
   Close as CloseIcon,
   Download,
   AssignmentTurnedIn,
+  MarkEmailRead,
 } from "@mui/icons-material";
 import {
   Autocomplete,
@@ -591,14 +592,20 @@ const WorkersManagement: React.FC = () => {
         showSnackbar("Trabajador actualizado exitosamente", "success");
       } else {
         // Crear nuevo trabajador
-        await api.post("/workers", cleanedWorkerData);
-        showSnackbar("Trabajador creado exitosamente", "success");
+        const created = await api.post("/workers", cleanedWorkerData);
+        showSnackbar(
+          `Trabajador creado exitosamente. Se envió un correo de invitación a ${created.data.email}`,
+          "success",
+        );
       }
       handleCloseDialog();
       fetchWorkers();
-    } catch (error) {
+    } catch (error: any) {
       logger.error("Error saving worker:", error);
-      showSnackbar("Error al guardar trabajador", "error");
+      showSnackbar(
+        error.response?.data?.detail || "Error al guardar trabajador",
+        "error",
+      );
     }
   };
 
@@ -724,6 +731,25 @@ const WorkersManagement: React.FC = () => {
         open: true,
         message:
           error.response?.data?.detail || "Error al cambiar estado de registro",
+        severity: "error",
+      });
+    }
+  };
+
+  const handleSendInvitation = async (worker: WorkerList) => {
+    try {
+      const response = await api.post(`/workers/${worker.id}/send-invitation`);
+      setSnackbar({
+        open: true,
+        message: response.data?.message || "Invitación enviada exitosamente",
+        severity: "success",
+      });
+      fetchWorkers();
+    } catch (error: any) {
+      setSnackbar({
+        open: true,
+        message:
+          error.response?.data?.detail || "Error al enviar la invitación",
         severity: "error",
       });
     }
@@ -1001,6 +1027,18 @@ const WorkersManagement: React.FC = () => {
                     >
                       <Edit />
                     </IconButton>
+
+                    {/* Botón para enviar/reenviar invitación de activación de cuenta */}
+                    {!worker.is_registered && worker.is_active && (
+                      <IconButton
+                        color="primary"
+                        onClick={() => handleSendInvitation(worker)}
+                        size="small"
+                        title="Enviar invitación de activación"
+                      >
+                        <MarkEmailRead />
+                      </IconButton>
+                    )}
 
                     {/* Botón para vincular usuario */}
                     {!worker.is_registered && (

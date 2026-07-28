@@ -26,6 +26,13 @@ class ApiService {
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        // Solo tiene efecto para superadmin (el backend lo ignora para el resto
+        // de usuarios): empresa activa mientras "entra" a operar dentro de una
+        // empresa específica desde el selector de empresa.
+        const activeEmpresaId = localStorage.getItem('active_empresa_id');
+        if (activeEmpresaId) {
+          config.headers['X-Empresa-Id'] = activeEmpresaId;
+        }
         return config;
       },
       (error) => {
@@ -43,6 +50,7 @@ class ApiService {
           // Token expirado o inválido
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+          localStorage.removeItem('active_empresa_id');
           window.location.href = '/login';
         }
         return Promise.reject(error);
@@ -70,6 +78,10 @@ class ApiService {
 
   async resetPassword(data: { token: string; new_password: string }): Promise<void> {
     await this.api.post('/auth/reset-password', data);
+  }
+
+  async activateAccount(data: { token: string; password: string }): Promise<void> {
+    await this.api.post('/auth/activate-account', data);
   }
 
   async changePassword(data: { current_password: string; new_password: string }): Promise<void> {

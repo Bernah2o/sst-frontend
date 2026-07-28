@@ -496,31 +496,6 @@ const Login: React.FC = () => {
                 </Alert>
               )}
 
-              {/* Registro */}
-              <Box
-                sx={{
-                  textAlign: "center",
-                  mt: 3,
-                  pt: 2.5,
-                  borderTop: "1px solid #e0e0e0",
-                }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  ¿No tienes una cuenta?{" "}
-                  <Link
-                    component={RouterLink}
-                    to="/register"
-                    sx={{
-                      color: "primary.main",
-                      textDecoration: "none",
-                      fontWeight: 600,
-                      "&:hover": { textDecoration: "underline" },
-                    }}
-                  >
-                    Regístrate aquí
-                  </Link>
-                </Typography>
-              </Box>
             </Box>
           </Box>
 
