@@ -41,10 +41,15 @@ import matrizLegalService, {
   EmpresaResumen,
   MatrizLegalEstadisticas,
 } from "../../services/matrizLegalService";
+import { useAuth } from "../../contexts/AuthContext";
+import { UserRole } from "../../types";
 
 const MatrizLegalDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+  const { user } = useAuth();
+  // El catálogo de normas es global: solo el superadmin carga el Excel de la ARL
+  const esSuperadmin = (user?.role || user?.rol) === UserRole.SUPERADMIN;
 
   const [loading, setLoading] = useState(true);
   const [empresas, setEmpresas] = useState<EmpresaResumen[]>([]);
@@ -149,10 +154,10 @@ const MatrizLegalDashboard: React.FC = () => {
           <Button
             color="inherit"
             size="small"
-            onClick={() => navigate("/admin/empresas")}
+            onClick={() => navigate("/admin/matriz-legal/empresas")}
             sx={{ ml: 2 }}
           >
-            Crear Empresa
+            Ver perfil de la empresa
           </Button>
         </Alert>
       ) : (
@@ -194,13 +199,15 @@ const MatrizLegalDashboard: React.FC = () => {
                   >
                     Exportar Excel
                   </Button>
-                  <Button
-                    variant="contained"
-                    startIcon={<UploadIcon />}
-                    onClick={() => navigate("/admin/matriz-legal/importar")}
-                  >
-                    Importar Excel ARL
-                  </Button>
+                  {esSuperadmin && (
+                    <Button
+                      variant="contained"
+                      startIcon={<UploadIcon />}
+                      onClick={() => navigate("/admin/matriz-legal/importar")}
+                    >
+                      Importar Excel ARL
+                    </Button>
+                  )}
                 </Box>
               </Grid>
             </Grid>
@@ -391,9 +398,9 @@ const MatrizLegalDashboard: React.FC = () => {
                       <Box display="flex" alignItems="center" gap={2}>
                         <BusinessIcon sx={{ fontSize: 40, color: "success.main" }} />
                         <Box>
-                          <Typography variant="h6">Gestionar Empresas</Typography>
+                          <Typography variant="h6">Perfil de la Empresa</Typography>
                           <Typography color="textSecondary">
-                            Configurar empresas y características
+                            Sector, CIIU y características de riesgo
                           </Typography>
                         </Box>
                       </Box>

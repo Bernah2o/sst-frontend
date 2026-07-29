@@ -91,6 +91,7 @@ import SupervisorDashboard from "./pages/SupervisorDashboard";
 import User from "./pages/User";
 import Worker from "./pages/Worker";
 import WorkerDetail from "./pages/WorkerDetail";
+import WorkerImport from "./pages/WorkerImport";
 import WorkerSearch from "./pages/WorkerSearch";
 import WorkerVacations from "./pages/WorkerVacations";
 import VacationsManagement from "./pages/VacationsManagement";
@@ -102,7 +103,7 @@ import WorkerProfesiograma from "./pages/WorkerProfesiograma";
 import WorkerProfesiogramaSearch from "./pages/WorkerProfesiogramaSearch";
 import RestriccionesMedicas from "./pages/RestriccionesMedicas";
 import MatrizLegalDashboard from "./pages/MatrizLegal/MatrizLegalDashboard";
-import EmpresaList from "./pages/MatrizLegal/EmpresaList";
+import EmpresaPerfil from "./pages/MatrizLegal/EmpresaPerfil";
 import SectorEconomicoList from "./pages/MatrizLegal/SectorEconomicoList";
 import MatrizLegalImport from "./pages/MatrizLegal/MatrizLegalImport";
 import MatrizLegalNormas from "./pages/MatrizLegal/MatrizLegalNormas";
@@ -369,6 +370,14 @@ const AppContent: React.FC = () => {
                     element={
                       <ProtectedRoute route="/admin/workers/vacations">
                         <VacationsManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/workers/import"
+                    element={
+                      <ProtectedRoute route="/admin/workers/import">
+                        <WorkerImport />
                       </ProtectedRoute>
                     }
                   />
@@ -743,7 +752,7 @@ const AppContent: React.FC = () => {
                     path="/admin/matriz-legal/empresas"
                     element={
                       <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
-                        <EmpresaList />
+                        <EmpresaPerfil />
                       </ProtectedRoute>
                     }
                   />
@@ -755,10 +764,11 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
+                  {/* El catálogo de normas es global: solo el superadmin lo importa */}
                   <Route
                     path="/admin/matriz-legal/importar"
                     element={
-                      <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+                      <ProtectedRoute allowedRoles={[UserRole.SUPERADMIN]}>
                         <MatrizLegalImport />
                       </ProtectedRoute>
                     }

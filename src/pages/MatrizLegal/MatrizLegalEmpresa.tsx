@@ -38,6 +38,9 @@ import {
   LinearProgress,
   Divider,
   Autocomplete,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -64,6 +67,8 @@ import matrizLegalService, {
   EstadoCumplimiento,
   BulkUpdatePayload,
   FiltrosBulkUpdatePayload,
+  SugerenciasIABulkPayload,
+  SugerenciasIAJobStatus,
 } from "../../services/matrizLegalService";
 
 interface CumplimientoFormData {
@@ -237,8 +242,13 @@ const MatrizLegalEmpresa: React.FC = () => {
   const [inlineNorma, setInlineNorma] = useState<MatrizLegalNormaConCumplimiento | null>(null);
   const [savingInline, setSavingInline] = useState(false);
 
-  // IA para bulk
-  const [loadingIABulk, setLoadingIABulk] = useState(false);
+  // Generación de evidencias con IA (una sugerencia por norma, en background)
+  const [openIADialog, setOpenIADialog] = useState(false);
+  const [iaSoloVacios, setIaSoloVacios] = useState(true);
+  const [iaIncluirObservaciones, setIaIncluirObservaciones] = useState(false);
+  const [iaLanzando, setIaLanzando] = useState(false);
+  const [iaJob, setIaJob] = useState<SugerenciasIAJobStatus | null>(null);
+  const [openIAProgreso, setOpenIAProgreso] = useState(false);
 
   const numEmpresaId = Number(empresaId);
 
@@ -452,25 +462,100 @@ const MatrizLegalEmpresa: React.FC = () => {
     }
   };
 
-  // --- Handler IA para bulk (contexto: filtros activos o descrición manual) ---
-  const handleSolicitarIABulk = async () => {
+  // --- Generación de evidencias con IA: una sugerencia por norma ---
+  // A diferencia de las acciones masivas (que aplican un texto único), aquí
+  // cada norma recibe una evidencia redactada para su propio artículo. Como son
+  // N llamadas a la IA, corre en el servidor y aquí solo se consulta el avance.
+
+  /** Nº de normas sobre las que actuaría: la selección, o todo lo filtrado. */
+  const iaAlcance = selected.length > 0 ? selected.length : total;
+
+  const handleOpenIADialog = () => {
+    setIaSoloVacios(true);
+    setIaIncluirObservaciones(false);
+    setOpenIADialog(true);
+  };
+
+  const handleLanzarJobIA = async () => {
     try {
-      setLoadingIABulk(true);
-      const res = await matrizLegalService.getSugerenciasIAContexto({
-        clasificacion: clasificacion || undefined,
-        tema_general: temaGeneral || undefined,
-        descripcion_contexto: bulkFormData.observaciones || undefined,
-      });
-      if (res.sugerencias?.evidencia) {
-        setBulkFormData(prev => ({ ...prev, evidencia_cumplimiento: res.sugerencias.evidencia }));
-        enqueueSnackbar("Sugerencia de evidencia generada por IA", { variant: "success" });
+      setIaLanzando(true);
+      const payload: SugerenciasIABulkPayload = {
+        solo_vacios: iaSoloVacios,
+        sobrescribir_observaciones: iaIncluirObservaciones,
+      };
+      if (selected.length > 0) {
+        payload.cumplimiento_ids = selected;
+      } else {
+        payload.estado_cumplimiento = estadoCumplimiento || undefined;
+        payload.clasificacion = clasificacion || undefined;
+        payload.tema_general = temaGeneral || undefined;
+        payload.q = searchTerm || undefined;
+        payload.solo_aplicables = soloAplicables;
       }
-    } catch (error) {
-      enqueueSnackbar("Error al obtener sugerencia de IA", { variant: "error" });
+
+      const { job_id, total: totalJob } = await matrizLegalService.generarSugerenciasIABulk(
+        numEmpresaId,
+        payload,
+      );
+      setOpenIADialog(false);
+      setIaJob({
+        id: job_id,
+        estado: "en_proceso",
+        total: totalJob,
+        procesadas: 0,
+        exitosas: 0,
+        fallidas: 0,
+        log_errores: null,
+        created_at: new Date().toISOString(),
+        finished_at: null,
+      });
+      setOpenIAProgreso(true);
+    } catch (error: unknown) {
+      const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      enqueueSnackbar(detail || "Error al iniciar la generación con IA", { variant: "error" });
     } finally {
-      setLoadingIABulk(false);
+      setIaLanzando(false);
     }
   };
+
+  const handleCerrarProgresoIA = () => {
+    setOpenIAProgreso(false);
+    setIaJob(null);
+  };
+
+  // Polling del progreso del job. El intervalo se limpia al desmontar, al
+  // cerrar el diálogo y en cuanto el job deja de estar en proceso.
+  useEffect(() => {
+    if (!openIAProgreso || !iaJob || iaJob.estado !== "en_proceso") return;
+
+    const jobId = iaJob.id;
+    let cancelado = false;
+
+    const intervalo = setInterval(async () => {
+      try {
+        const estado = await matrizLegalService.getSugerenciasIAJob(numEmpresaId, jobId);
+        if (cancelado) return;
+        setIaJob(estado);
+
+        if (estado.estado !== "en_proceso") {
+          clearInterval(intervalo);
+          loadNormas();
+          matrizLegalService
+            .getEstadisticasEmpresa(numEmpresaId)
+            .then(setEstadisticas)
+            .catch(() => undefined);
+          setSelected([]);
+        }
+      } catch (error) {
+        console.error("Error consultando el job de IA:", error);
+      }
+    }, 2000);
+
+    return () => {
+      cancelado = true;
+      clearInterval(intervalo);
+    };
+  }, [openIAProgreso, iaJob, numEmpresaId, loadNormas]);
 
   // --- Handlers bulk extendido (ítems seleccionados) ---
   const handleOpenBulkDialog = () => {
@@ -737,6 +822,58 @@ const MatrizLegalEmpresa: React.FC = () => {
           </Card>
         )}
 
+        {/* Normas heredadas de un perfil anterior: siguen en la base pero ya no
+            aplican, e inflan la matriz si se navega sin "Solo aplicables". */}
+        {estadisticas && (estadisticas.normas_no_aplicables ?? 0) > 0 && soloAplicables && (
+          <Alert
+            severity="info"
+            sx={{ mb: 2 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  setSoloAplicables(false);
+                  setPage(0);
+                }}
+              >
+                Ver cuáles
+              </Button>
+            }
+          >
+            Hay <strong>{estadisticas.normas_no_aplicables}</strong> normas que ya
+            no aplican a su perfil actual (quedaron de una configuración anterior).
+            Están ocultas por el filtro «Solo aplicables».
+          </Alert>
+        )}
+
+        {/* Normas que aplican pero cuyo cumplimiento depende del perfil */}
+        {estadisticas &&
+          ((estadisticas.normas_revision_tamano ?? 0) > 0 ||
+            (estadisticas.normas_revision_riesgo ?? 0) > 0) && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Revisión manual recomendada:{" "}
+              {(estadisticas.normas_revision_tamano ?? 0) > 0 && (
+                <>
+                  <strong>{estadisticas.normas_revision_tamano}</strong> normas
+                  dependen del número de trabajadores
+                </>
+              )}
+              {(estadisticas.normas_revision_tamano ?? 0) > 0 &&
+                (estadisticas.normas_revision_riesgo ?? 0) > 0 &&
+                " y "}
+              {(estadisticas.normas_revision_riesgo ?? 0) > 0 && (
+                <>
+                  <strong>{estadisticas.normas_revision_riesgo}</strong> dependen
+                  de la clase de riesgo
+                </>
+              )}
+              . Todas aplican a su empresa; lo que cambia es <em>cómo</em> se
+              cumplen (por ejemplo COPASST frente a Vigía de SST). Están marcadas
+              en la tabla.
+            </Alert>
+          )}
+
         {/* Barra de herramientas */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
@@ -774,6 +911,23 @@ const MatrizLegalEmpresa: React.FC = () => {
                     onClick={handleOpenFiltrosDialog}
                   >
                     Aplicar a todos ({total})
+                  </Button>
+                </Tooltip>
+                <Tooltip
+                  title={
+                    selected.length > 0
+                      ? `Generar una evidencia distinta con IA para cada una de las ${selected.length} normas seleccionadas`
+                      : `Generar una evidencia distinta con IA para cada una de las ${total} normas filtradas`
+                  }
+                >
+                  <Button
+                    startIcon={<AIIcon />}
+                    variant="outlined"
+                    color="secondary"
+                    onClick={handleOpenIADialog}
+                    disabled={iaAlcance === 0}
+                  >
+                    Generar evidencias con IA ({iaAlcance})
                   </Button>
                 </Tooltip>
                 <Button
@@ -945,6 +1099,34 @@ const MatrizLegalEmpresa: React.FC = () => {
                               </Typography>
                             </Box>
                           </Tooltip>
+                          {/* Avisos: la norma aplica igual, pero cómo se cumple
+                              depende del perfil de la empresa */}
+                          {(norma.requiere_revision_tamano || norma.requiere_revision_riesgo) && (
+                            <Box display="flex" gap={0.5} mt={0.5} flexWrap="wrap">
+                              {norma.requiere_revision_tamano && (
+                                <Tooltip title="Cómo se cumple esta norma depende del número de trabajadores (p. ej. COPASST si son 10 o más, Vigía de SST si son menos). Revísela contra su nómina.">
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    color="info"
+                                    label="Revisar: nº trabajadores"
+                                    sx={{ height: 18, fontSize: "0.65rem" }}
+                                  />
+                                </Tooltip>
+                              )}
+                              {norma.requiere_revision_riesgo && (
+                                <Tooltip title="Cómo se cumple esta norma depende de la clase de riesgo de la empresa (I a V). Revísela contra su clasificación ante la ARL.">
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    color="warning"
+                                    label="Revisar: clase de riesgo"
+                                    sx={{ height: 18, fontSize: "0.65rem" }}
+                                  />
+                                </Tooltip>
+                              )}
+                            </Box>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Chip size="small" label={norma.clasificacion_norma} variant="outlined" />
@@ -1380,19 +1562,8 @@ const MatrizLegalEmpresa: React.FC = () => {
               <Box>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
                   <Typography variant="body2" color="textSecondary">Evidencia de Cumplimiento (opcional)</Typography>
-                  <Tooltip title="Generar sugerencia con IA basada en los filtros activos">
-                    <span>
-                      <Button
-                        size="small"
-                        startIcon={loadingIABulk ? <CircularProgress size={14} /> : <AIIcon fontSize="small" />}
-                        onClick={handleSolicitarIABulk}
-                        disabled={loadingIABulk}
-                        variant="outlined"
-                        sx={{ fontSize: "0.7rem", py: 0.25 }}
-                      >
-                        {loadingIABulk ? "Generando..." : "Generar con IA"}
-                      </Button>
-                    </span>
+                  <Tooltip title='Este texto se aplica IGUAL a todas las normas. Para una evidencia distinta por norma use "Generar evidencias con IA".'>
+                    <Chip size="small" variant="outlined" label="Texto único" />
                   </Tooltip>
                 </Box>
                 <TextField
@@ -1519,23 +1690,8 @@ const MatrizLegalEmpresa: React.FC = () => {
               <Box>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
                   <Typography variant="body2" color="textSecondary">Evidencia de Cumplimiento (opcional)</Typography>
-                  <Tooltip title={
-                    clasificacion || temaGeneral
-                      ? `Generar sugerencia con IA basada en: ${[clasificacion, temaGeneral].filter(Boolean).join(", ")}`
-                      : "Generar sugerencia con IA (añade filtros de clasificación o tema para mayor precisión)"
-                  }>
-                    <span>
-                      <Button
-                        size="small"
-                        startIcon={loadingIABulk ? <CircularProgress size={14} /> : <AIIcon fontSize="small" />}
-                        onClick={handleSolicitarIABulk}
-                        disabled={loadingIABulk}
-                        variant="outlined"
-                        sx={{ fontSize: "0.7rem", py: 0.25 }}
-                      >
-                        {loadingIABulk ? "Generando..." : "Generar con IA"}
-                      </Button>
-                    </span>
+                  <Tooltip title='Este texto se aplica IGUAL a todas las normas. Para una evidencia distinta por norma use "Generar evidencias con IA".'>
+                    <Chip size="small" variant="outlined" label="Texto único" />
                   </Tooltip>
                 </Box>
                 <TextField
@@ -1582,6 +1738,153 @@ const MatrizLegalEmpresa: React.FC = () => {
             <Button onClick={() => setOpenFiltrosDialog(false)} color="inherit">Cancelar</Button>
             <Button onClick={handleSaveFiltros} variant="contained" color="warning" disabled={savingFiltros}>
               {savingFiltros ? "Procesando..." : `Confirmar: aplicar a ${total} normas`}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Diálogo: confirmar generación de evidencias con IA (una por norma) */}
+        <Dialog open={openIADialog} onClose={() => setOpenIADialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>
+            <Box display="flex" alignItems="center" gap={1}>
+              <AIIcon color="secondary" />
+              Generar evidencias con IA
+            </Box>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Se generará una evidencia <strong>distinta para cada norma</strong>,
+              redactada a partir del artículo de esa norma y del perfil de su
+              empresa (sector, CIIU, clase de riesgo y características de riesgo).
+            </Alert>
+
+            <Typography variant="body2" paragraph>
+              Normas a procesar: <strong>{iaAlcance}</strong>{" "}
+              {selected.length > 0
+                ? "(seleccionadas en la tabla)"
+                : "(todas las que coinciden con los filtros actuales)"}
+            </Typography>
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={iaSoloVacios}
+                  onChange={(e) => setIaSoloVacios(e.target.checked)}
+                />
+              }
+              label="Solo rellenar campos vacíos (no sobrescribir lo ya escrito)"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={iaIncluirObservaciones}
+                  onChange={(e) => setIaIncluirObservaciones(e.target.checked)}
+                />
+              }
+              label="Generar también las observaciones"
+            />
+
+            {!iaSoloVacios && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Se sobrescribirán las evidencias existentes. El texto anterior
+                queda guardado en el historial de cada norma.
+              </Alert>
+            )}
+
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              El proceso corre en el servidor y puede tardar varios minutos.
+              Puede cerrar la ventana de progreso sin detenerlo.
+            </Alert>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenIADialog(false)} color="inherit">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleLanzarJobIA}
+              variant="contained"
+              color="secondary"
+              disabled={iaLanzando}
+              startIcon={iaLanzando ? <CircularProgress size={16} /> : <AIIcon />}
+            >
+              {iaLanzando ? "Iniciando..." : `Generar para ${iaAlcance} normas`}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Diálogo: progreso del job de IA */}
+        <Dialog open={openIAProgreso} onClose={handleCerrarProgresoIA} maxWidth="sm" fullWidth>
+          <DialogTitle>Generando evidencias con IA</DialogTitle>
+          <DialogContent dividers>
+            {iaJob && (
+              <Box>
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography variant="body2">
+                    {iaJob.procesadas} de {iaJob.total} normas procesadas
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {iaJob.total > 0
+                      ? Math.round((iaJob.procesadas / iaJob.total) * 100)
+                      : 0}
+                    %
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant={iaJob.total > 0 ? "determinate" : "indeterminate"}
+                  value={iaJob.total > 0 ? (iaJob.procesadas / iaJob.total) * 100 : 0}
+                  sx={{ mb: 2, height: 8, borderRadius: 4 }}
+                />
+
+                <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
+                  <Chip size="small" color="success" label={`${iaJob.exitosas} generadas`} />
+                  {iaJob.fallidas > 0 && (
+                    <Chip size="small" color="error" label={`${iaJob.fallidas} fallidas`} />
+                  )}
+                </Box>
+
+                {iaJob.estado === "en_proceso" && (
+                  <Alert severity="info">
+                    Puede cerrar esta ventana: el proceso continúa en el servidor.
+                  </Alert>
+                )}
+                {iaJob.estado === "completada" && (
+                  <Alert severity="success">
+                    Listo. Se generaron {iaJob.exitosas} evidencias.
+                  </Alert>
+                )}
+                {iaJob.estado === "parcial" && (
+                  <Alert severity="warning">
+                    Terminó con errores: {iaJob.exitosas} generadas, {iaJob.fallidas} fallidas.
+                  </Alert>
+                )}
+                {iaJob.estado === "fallida" && (
+                  <Alert severity="error">
+                    No se pudo generar ninguna evidencia. Revise la configuración
+                    del servicio de IA.
+                  </Alert>
+                )}
+
+                {iaJob.log_errores && (
+                  <Accordion sx={{ mt: 2 }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="body2">Detalle de errores</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Typography
+                        variant="caption"
+                        component="pre"
+                        sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                      >
+                        {iaJob.log_errores}
+                      </Typography>
+                    </AccordionDetails>
+                  </Accordion>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCerrarProgresoIA} variant="contained">
+              Cerrar
             </Button>
           </DialogActions>
         </Dialog>

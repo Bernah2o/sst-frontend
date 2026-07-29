@@ -178,8 +178,20 @@ const MatrizLegalNormas: React.FC = () => {
     try {
       setRecalculando(true);
       const result = await matrizLegalService.recalcularAplicabilidad();
+      const revision = [
+        result.marcadas_revision_tamano
+          ? `${result.marcadas_revision_tamano} a revisar por nº de trabajadores`
+          : null,
+        result.marcadas_revision_riesgo
+          ? `${result.marcadas_revision_riesgo} por clase de riesgo`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
       enqueueSnackbar(
-        `Aplicabilidad recalculada: ${result.total} normas (${result.marcadas_especificas} específicas, ${result.marcadas_generales} generales). Recuerde sincronizar cada empresa.`,
+        `Aplicabilidad recalculada: ${result.total} normas (${result.marcadas_especificas} específicas, ${result.marcadas_generales} generales)` +
+          (revision ? `. ${revision}` : "") +
+          ". Recuerde sincronizar cada empresa.",
         { variant: "success", autoHideDuration: 8000 },
       );
       setOpenRecalc(false);

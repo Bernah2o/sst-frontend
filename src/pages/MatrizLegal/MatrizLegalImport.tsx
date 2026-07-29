@@ -43,7 +43,10 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "notistack";
-import matrizLegalService, { MatrizLegalImportacionPreview } from "../../services/matrizLegalService";
+import matrizLegalService, {
+  MatrizLegalImportacionPreview,
+  MatrizLegalImportacionResult,
+} from "../../services/matrizLegalService";
 
 // Mensajes de progreso para mostrar durante la importación
 const mensajesProgreso = [
@@ -63,6 +66,7 @@ const MatrizLegalImport: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<MatrizLegalImportacionPreview | null>(null);
+  const [resultado, setResultado] = useState<MatrizLegalImportacionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [sobrescribir, setSobrescribir] = useState(false);
 
@@ -136,6 +140,7 @@ const MatrizLegalImport: React.FC = () => {
       setActiveStep(2); // Paso de procesamiento
       const result = await matrizLegalService.importExcel(file, sobrescribir);
 
+      setResultado(result);
       enqueueSnackbar(`Importación completada: ${result.normas_nuevas} nuevas, ${result.normas_actualizadas} actualizadas`, { variant: "success" });
       setActiveStep(4); // Final step (Resultados)
     } catch (error) {
@@ -403,15 +408,128 @@ const MatrizLegalImport: React.FC = () => {
 
          {/* Paso 4: Resultados */}
          {activeStep === 4 && (
-             <Box display="flex" flexDirection="column" alignItems="center" py={4}>
-                 <SuccessIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
-                 <Typography variant="h5" gutterBottom>¡Importación Exitosa!</Typography>
-                 <Typography color="textSecondary" paragraph>
-                     La matriz legal se ha actualizado correctamente.
-                 </Typography>
-                 <Button variant="outlined" onClick={() => navigate("/admin/matriz-legal")}>
-                     Volver al Dashboard
-                 </Button>
+             <Box py={2}>
+                 <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+                     <SuccessIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
+                     <Typography variant="h5" gutterBottom>¡Importación Exitosa!</Typography>
+                     <Typography color="textSecondary">
+                         La matriz legal se ha actualizado correctamente.
+                     </Typography>
+                 </Box>
+
+                 {resultado && (
+                     <Grid container spacing={2} sx={{ mb: 3 }} justifyContent="center">
+                         <Grid size={{ xs: 6, md: 3 }}>
+                             <Card variant="outlined">
+                                 <CardContent sx={{ textAlign: "center" }}>
+                                     <Typography variant="h4" color="success.main">
+                                         {resultado.normas_nuevas}
+                                     </Typography>
+                                     <Typography variant="body2" color="textSecondary">
+                                         Normas nuevas
+                                     </Typography>
+                                 </CardContent>
+                             </Card>
+                         </Grid>
+                         <Grid size={{ xs: 6, md: 3 }}>
+                             <Card variant="outlined">
+                                 <CardContent sx={{ textAlign: "center" }}>
+                                     <Typography variant="h4" color="info.main">
+                                         {resultado.normas_actualizadas}
+                                     </Typography>
+                                     <Typography variant="body2" color="textSecondary">
+                                         Actualizadas
+                                     </Typography>
+                                 </CardContent>
+                             </Card>
+                         </Grid>
+                         <Grid size={{ xs: 6, md: 3 }}>
+                             <Card variant="outlined">
+                                 <CardContent sx={{ textAlign: "center" }}>
+                                     <Typography variant="h4">
+                                         {resultado.normas_sin_cambios}
+                                     </Typography>
+                                     <Typography variant="body2" color="textSecondary">
+                                         Sin cambios
+                                     </Typography>
+                                 </CardContent>
+                             </Card>
+                         </Grid>
+                         <Grid size={{ xs: 6, md: 3 }}>
+                             <Card variant="outlined">
+                                 <CardContent sx={{ textAlign: "center" }}>
+                                     <Typography
+                                         variant="h4"
+                                         color={resultado.errores > 0 ? "error.main" : "textPrimary"}
+                                     >
+                                         {resultado.errores}
+                                     </Typography>
+                                     <Typography variant="body2" color="textSecondary">
+                                         Errores
+                                     </Typography>
+                                 </CardContent>
+                             </Card>
+                         </Grid>
+                     </Grid>
+                 )}
+
+                 {/* Sincronización automática por empresa */}
+                 {resultado?.sincronizacion && resultado.sincronizacion.length > 0 && (
+                     <Box sx={{ mb: 3 }}>
+                         <Typography variant="h6" gutterBottom>
+                             Sincronización de empresas
+                         </Typography>
+                         <Typography variant="body2" color="textSecondary" paragraph>
+                             Las normas nuevas se repartieron automáticamente a cada
+                             empresa según su sector, CIIU y características de riesgo.
+                             No hace falta sincronizar empresa por empresa.
+                         </Typography>
+                         <TableContainer component={Paper} variant="outlined">
+                             <Table size="small">
+                                 <TableHead>
+                                     <TableRow>
+                                         <TableCell>Empresa</TableCell>
+                                         <TableCell align="right">Nuevos cumplimientos</TableCell>
+                                         <TableCell align="right">Reactivados</TableCell>
+                                         <TableCell align="right">Desactivados</TableCell>
+                                         <TableCell>Estado</TableCell>
+                                     </TableRow>
+                                 </TableHead>
+                                 <TableBody>
+                                     {resultado.sincronizacion.map((s) => (
+                                         <TableRow key={s.empresa_id}>
+                                             <TableCell>{s.empresa_nombre}</TableCell>
+                                             <TableCell align="right">
+                                                 <Typography
+                                                     variant="body2"
+                                                     color={s.nuevos_creados > 0 ? "success.main" : "textSecondary"}
+                                                     fontWeight={s.nuevos_creados > 0 ? "bold" : "normal"}
+                                                 >
+                                                     {s.nuevos_creados}
+                                                 </Typography>
+                                             </TableCell>
+                                             <TableCell align="right">{s.reactivados}</TableCell>
+                                             <TableCell align="right">{s.desactivados}</TableCell>
+                                             <TableCell>
+                                                 {s.error ? (
+                                                     <Chip size="small" color="error" label={s.error.slice(0, 60)} />
+                                                 ) : (
+                                                     <Chip size="small" color="success" label="OK" />
+                                                 )}
+                                             </TableCell>
+                                         </TableRow>
+                                     ))}
+                                 </TableBody>
+                             </Table>
+                         </TableContainer>
+                     </Box>
+                 )}
+
+                 <Box display="flex" justifyContent="center">
+                     <Button variant="outlined" onClick={() => navigate("/admin/matriz-legal")}>
+                         Volver al Dashboard
+                     </Button>
+                 </Box>
              </Box>
          )}
 

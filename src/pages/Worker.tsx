@@ -15,6 +15,7 @@ import {
   Download,
   AssignmentTurnedIn,
   MarkEmailRead,
+  UploadFile,
 } from "@mui/icons-material";
 import {
   Autocomplete,
@@ -51,6 +52,7 @@ import {
   Checkbox,
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
 import AutocompleteField, {
   AutocompleteOption,
@@ -73,6 +75,7 @@ import {
 } from "../types";
 import { formatDate } from "../utils/dateUtils";
 import { logger } from "../utils/logger";
+import workerImportService from "../services/workerImportService";
 
 import api from "./../services/api";
 
@@ -143,6 +146,7 @@ interface Area {
 
 const WorkersManagement: React.FC = () => {
   // Debug: Contar renders del componente principal
+  const navigate = useNavigate();
 
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -651,6 +655,16 @@ const WorkersManagement: React.FC = () => {
     }
   };
 
+  const handleDownloadImportTemplate = async () => {
+    try {
+      const blob = await workerImportService.downloadTemplate();
+      workerImportService.downloadBlob(blob, "plantilla_trabajadores.xlsx");
+    } catch (error) {
+      logger.error("Error downloading import template:", error);
+      showSnackbar("Error al descargar la plantilla", "error");
+    }
+  };
+
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setLoadingUserData(false);
@@ -864,6 +878,20 @@ const WorkersManagement: React.FC = () => {
           onClick={handleExportExcel}
         >
           Exportar
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<UploadFile />}
+          onClick={() => navigate("/admin/workers/import")}
+        >
+          Importar Excel
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<Download />}
+          onClick={handleDownloadImportTemplate}
+        >
+          Descargar Plantilla
         </Button>
         {selectedWorkers.length > 0 && (
           <Button

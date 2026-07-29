@@ -114,6 +114,12 @@ export interface MatrizLegalNorma {
   aplica_menores_edad: boolean;
   aplica_mujeres_embarazadas: boolean;
   aplica_trabajo_administrativo: boolean;
+  /**
+   * Avisos, no filtros: la norma aplica igual, pero cómo se cumple depende del
+   * número de trabajadores o de la clase de riesgo (p. ej. COPASST vs Vigía).
+   */
+  requiere_revision_tamano: boolean;
+  requiere_revision_riesgo: boolean;
   version: number;
   activo: boolean;
   created_at: string;
@@ -187,12 +193,25 @@ export interface MatrizLegalImportacionResult {
   errores: number;
   log_errores: string | null;
   creado_por: number;
+  /** Sincronización automática de cumplimientos por empresa tras la importación */
+  sincronizacion?: SincronizacionEmpresaResult[];
+}
+
+export interface SincronizacionEmpresaResult {
+  empresa_id: number;
+  empresa_nombre: string;
+  nuevos_creados: number;
+  reactivados: number;
+  desactivados: number;
+  error: string | null;
 }
 
 export interface RecalculoAplicabilidadResult {
   total: number;
   marcadas_especificas: number;
   marcadas_generales: number;
+  marcadas_revision_tamano?: number;
+  marcadas_revision_riesgo?: number;
 }
 
 export interface MatrizLegalEstadisticasPorEstado {
@@ -211,6 +230,11 @@ export interface MatrizLegalEstadisticas {
   porcentaje_cumplimiento: number;
   normas_con_plan_accion: number;
   normas_vencidas: number;
+  /** Cumplimientos heredados de un perfil anterior (aplica_empresa=false) */
+  normas_no_aplicables?: number;
+  /** Normas vigentes cuyo cumplimiento depende del tamaño / clase de riesgo */
+  normas_revision_tamano?: number;
+  normas_revision_riesgo?: number;
 }
 
 export interface MatrizLegalDashboard {
@@ -271,6 +295,38 @@ export interface FiltrosBulkUpdatePayload {
   observaciones?: string | null;
   aplica_empresa?: boolean | null;
   justificacion_no_aplica?: string | null;
+}
+
+/**
+ * Genera sugerencias de IA distintas para CADA norma (no un texto único).
+ * Si se envía `cumplimiento_ids` se usa esa selección; si no, los filtros.
+ */
+export interface SugerenciasIABulkPayload {
+  cumplimiento_ids?: number[];
+  estado_cumplimiento?: string;
+  clasificacion?: string;
+  tema_general?: string;
+  q?: string;
+  solo_aplicables?: boolean;
+  solo_vacios?: boolean;
+  sobrescribir_observaciones?: boolean;
+}
+
+export interface SugerenciasIAJobCreated {
+  job_id: number;
+  total: number;
+}
+
+export interface SugerenciasIAJobStatus {
+  id: number;
+  estado: EstadoImportacion;
+  total: number;
+  procesadas: number;
+  exitosas: number;
+  fallidas: number;
+  log_errores: string | null;
+  created_at: string;
+  finished_at: string | null;
 }
 
 // ==================== CIIU ====================
@@ -365,18 +421,24 @@ class MatrizLegalService {
     return res.data as Empresa;
   }
 
-  async createEmpresa(data: Partial<Empresa>) {
-    const res = await api.post("/empresas/", data);
-    return res.data as Empresa;
-  }
-
   async updateEmpresa(id: number, data: Partial<Empresa>) {
     const res = await api.put(`/empresas/${id}`, data);
     return res.data as Empresa;
   }
 
-  async deleteEmpresa(id: number) {
-    await api.delete(`/empresas/${id}`);
+  /** Empresa (tenant) del usuario autenticado. */
+  async getMiEmpresa() {
+    const res = await api.get("/empresas/mi-empresa");
+    return res.data as Empresa;
+  }
+
+  /**
+   * Actualiza el perfil de la propia empresa (sector, CIIU y características).
+   * El backend ignora `activo`: suspender una empresa es cosa del superadmin.
+   */
+  async updateMiEmpresa(data: Partial<Empresa>) {
+    const res = await api.put("/empresas/mi-empresa", data);
+    return res.data as Empresa;
   }
 
   async sincronizarNormasEmpresa(empresaId: number) {
@@ -579,15 +641,30 @@ class MatrizLegalService {
   }
 
   /**
-   * Genera sugerencia de evidencia usando IA basada en contexto general (para bulk).
+   * Lanza la generación de sugerencias personalizadas POR NORMA en segundo
+   * plano. Devuelve el id del job de inmediato; el progreso se consulta con
+   * `getSugerenciasIAJob`.
    */
-  async getSugerenciasIAContexto(params: {
-    clasificacion?: string;
-    tema_general?: string;
-    descripcion_contexto?: string;
-  }): Promise<SugerenciasIAResponse> {
-    const res = await api.post(`/matriz-legal/sugerencias-ia/contexto`, params);
-    return res.data as SugerenciasIAResponse;
+  async generarSugerenciasIABulk(
+    empresaId: number,
+    payload: SugerenciasIABulkPayload,
+  ): Promise<SugerenciasIAJobCreated> {
+    const res = await api.post(
+      `/matriz-legal/empresas/${empresaId}/sugerencias-ia/bulk`,
+      payload,
+    );
+    return res.data as SugerenciasIAJobCreated;
+  }
+
+  /** Progreso de un job de sugerencias de IA. */
+  async getSugerenciasIAJob(
+    empresaId: number,
+    jobId: number,
+  ): Promise<SugerenciasIAJobStatus> {
+    const res = await api.get(
+      `/matriz-legal/empresas/${empresaId}/sugerencias-ia/jobs/${jobId}`,
+    );
+    return res.data as SugerenciasIAJobStatus;
   }
 
   // ==================== HELPERS ====================

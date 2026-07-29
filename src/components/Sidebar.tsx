@@ -628,7 +628,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
           },
           {
             id: "matriz-empresas",
-            label: "Empresas",
+            label: "Perfil de la Empresa",
             icon: <Apartment />,
             path: "/admin/matriz-legal/empresas",
             roles: ["admin", "supervisor"],
