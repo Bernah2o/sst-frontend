@@ -764,11 +764,10 @@ const AppContent: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
-                  {/* El catálogo de normas es global: solo el superadmin lo importa */}
                   <Route
                     path="/admin/matriz-legal/importar"
                     element={
-                      <ProtectedRoute allowedRoles={[UserRole.SUPERADMIN]}>
+                      <ProtectedRoute allowedRoles={["admin"]}>
                         <MatrizLegalImport />
                       </ProtectedRoute>
                     }

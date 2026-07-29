@@ -47,6 +47,8 @@ import matrizLegalService, {
   MatrizLegalImportacionPreview,
   MatrizLegalImportacionResult,
 } from "../../services/matrizLegalService";
+import { useAuth } from "../../contexts/AuthContext";
+import { UserRole } from "../../types";
 
 // Mensajes de progreso para mostrar durante la importación
 const mensajesProgreso = [
@@ -62,6 +64,8 @@ const mensajesProgreso = [
 const MatrizLegalImport: React.FC = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+  const { user } = useAuth();
+  const esSuperadmin = (user?.role || user?.rol) === UserRole.SUPERADMIN;
 
   const [activeStep, setActiveStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
@@ -315,15 +319,26 @@ const MatrizLegalImport: React.FC = () => {
                  </Accordion>
                 
                  <Box display="flex" flexDirection="column" gap={2} alignItems="flex-start" sx={{ mt: 2 }}>
-                     <FormControlLabel
-                        control={
-                            <Checkbox 
-                                checked={sobrescribir} 
-                                onChange={(e) => setSobrescribir(e.target.checked)} 
-                            />
-                        }
-                        label="Sobrescribir información de normas existentes (Actualizar datos)"
-                     />
+                     {/* El texto de las normas es compartido por todas las
+                         empresas, así que reescribir las existentes queda
+                         reservado al superadministrador. */}
+                     {esSuperadmin ? (
+                        <FormControlLabel
+                           control={
+                               <Checkbox
+                                   checked={sobrescribir}
+                                   onChange={(e) => setSobrescribir(e.target.checked)}
+                               />
+                           }
+                           label="Sobrescribir información de normas existentes (Actualizar datos)"
+                        />
+                     ) : (
+                        <Alert severity="info" sx={{ width: "100%" }}>
+                           Se agregarán únicamente las <strong>normas nuevas</strong>.
+                           Las que ya están en el catálogo no se modifican: su texto
+                           es compartido con las demás empresas de la plataforma.
+                        </Alert>
+                     )}
 
                      <Button 
                         variant="contained" 

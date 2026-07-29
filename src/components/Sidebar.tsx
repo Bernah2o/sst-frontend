@@ -45,6 +45,7 @@ import {
   AccountBalance,
   FactCheck,
   VerifiedUser,
+  CloudUpload,
 } from "@mui/icons-material";
 import {
   Drawer,
@@ -617,31 +618,41 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             label: "Dashboard",
             icon: <Dashboard />,
             path: "/admin/matriz-legal",
-            roles: ["admin", "supervisor"],
+            roles: ["admin", "supervisor", "superadmin"],
           },
           {
             id: "matriz-normas",
             label: "Normas",
             icon: <Gavel />,
             path: "/admin/matriz-legal/normas",
-            roles: ["admin", "supervisor"],
+            roles: ["admin", "supervisor", "superadmin"],
           },
           {
             id: "matriz-empresas",
             label: "Perfil de la Empresa",
             icon: <Apartment />,
             path: "/admin/matriz-legal/empresas",
-            roles: ["admin", "supervisor"],
+            roles: ["admin", "supervisor", "superadmin"],
           },
           {
             id: "matriz-sectores",
             label: "Sectores Económicos",
             icon: <Category />,
             path: "/admin/matriz-legal/sectores",
-            roles: ["admin"],
+            roles: ["admin", "superadmin"],
+          },
+          {
+            id: "matriz-importar",
+            label: "Importar Excel ARL",
+            icon: <CloudUpload />,
+            path: "/admin/matriz-legal/importar",
+            roles: ["admin", "superadmin"],
           },
         ],
-        roles: ["admin", "supervisor"],
+        // Incluye superadmin: el filtrado del sidebar es un includes estricto
+        // sobre user.role y no tiene bypass, así que sin esto el superadmin no
+        // vería el módulo (y la importación quedaría solo accesible por URL).
+        roles: ["admin", "supervisor", "superadmin"],
       },
       {
         id: "plan-trabajo-anual",

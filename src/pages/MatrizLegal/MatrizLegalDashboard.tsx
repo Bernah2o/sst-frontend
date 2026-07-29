@@ -41,15 +41,9 @@ import matrizLegalService, {
   EmpresaResumen,
   MatrizLegalEstadisticas,
 } from "../../services/matrizLegalService";
-import { useAuth } from "../../contexts/AuthContext";
-import { UserRole } from "../../types";
-
 const MatrizLegalDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { user } = useAuth();
-  // El catálogo de normas es global: solo el superadmin carga el Excel de la ARL
-  const esSuperadmin = (user?.role || user?.rol) === UserRole.SUPERADMIN;
 
   const [loading, setLoading] = useState(true);
   const [empresas, setEmpresas] = useState<EmpresaResumen[]>([]);
@@ -199,15 +193,13 @@ const MatrizLegalDashboard: React.FC = () => {
                   >
                     Exportar Excel
                   </Button>
-                  {esSuperadmin && (
-                    <Button
-                      variant="contained"
-                      startIcon={<UploadIcon />}
-                      onClick={() => navigate("/admin/matriz-legal/importar")}
-                    >
-                      Importar Excel ARL
-                    </Button>
-                  )}
+                  <Button
+                    variant="contained"
+                    startIcon={<UploadIcon />}
+                    onClick={() => navigate("/admin/matriz-legal/importar")}
+                  >
+                    Importar Excel ARL
+                  </Button>
                 </Box>
               </Grid>
             </Grid>
