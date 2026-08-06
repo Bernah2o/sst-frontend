@@ -463,13 +463,20 @@ const EvaluationResults: React.FC = () => {
                       >
                         <Visibility />
                       </IconButton>
-                      {/* Botón de reasignar solo para evaluaciones completadas y usuarios con permisos */}
-                      {normalizeStatus(result.status) === 'completed' && (user?.role === 'admin' || user?.role === 'trainer') && (
+                      {/* Reasignar: disponible en cualquier estado. Un intento
+                          que quedó "en progreso" y nunca se envió también
+                          consume cupo, así que reasignar es la única forma de
+                          desbloquear al trabajador. */}
+                      {(user?.role === 'admin' || user?.role === 'trainer') && (
                         <IconButton
                           color="warning"
                           onClick={() => handleReassignEvaluation(result)}
                           size="small"
-                          title="Reasignar evaluación"
+                          title={
+                            normalizeStatus(result.status) === 'in_progress'
+                              ? 'Reasignar evaluación (borra el intento en progreso y libera los intentos)'
+                              : 'Reasignar evaluación (borra los intentos y permite volver a presentarla)'
+                          }
                         >
                           <RestartAlt />
                         </IconButton>
