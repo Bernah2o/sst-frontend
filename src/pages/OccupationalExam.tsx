@@ -1197,20 +1197,22 @@ const OccupationalExam: React.FC = () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Solo el examen más reciente por trabajador + tipo (evita mostrar fechas vencidas
-  // cuando ya existe un examen posterior que las supera). Se calcula sobre el
-  // set COMPLETO de exámenes (scheduleExams), no sobre la página de la tabla.
-  const latestExamByWorkerType = new Map<string, (typeof scheduleExams)[0]>();
+  // Solo el examen más reciente por trabajador (el ciclo ingreso -> periódico(s)
+  // -> retiro es una única línea de tiempo; agrupar por tipo generaba filas
+  // duplicadas/obsoletas -p.ej. una basada en el ingreso ya superada por el
+  // último periódico-). Se calcula sobre el set COMPLETO de exámenes
+  // (scheduleExams), no sobre la página de la tabla.
+  const latestExamByWorker = new Map<number, (typeof scheduleExams)[0]>();
   for (const exam of scheduleExams) {
-    const key = `${exam.worker_id}__${exam.exam_type}`;
-    const existing = latestExamByWorkerType.get(key);
+    const existing = latestExamByWorker.get(exam.worker_id);
     if (!existing || exam.exam_date > existing.exam_date) {
-      latestExamByWorkerType.set(key, exam);
+      latestExamByWorker.set(exam.worker_id, exam);
     }
   }
 
-  const scheduleData = Array.from(latestExamByWorkerType.values())
-    .filter((e) => e.next_exam_date)
+  const scheduleData = Array.from(latestExamByWorker.values())
+    // RETIRO cierra el ciclo: no hay un próximo examen que proyectar
+    .filter((e) => e.exam_type !== "RETIRO" && e.next_exam_date)
     .map((e) => {
       const nextDate = new Date(e.next_exam_date!);
       const daysUntil = Math.ceil(
@@ -1521,11 +1523,13 @@ const OccupationalExam: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
-                              {exam.next_exam_date
-                                ? formatDate(exam.next_exam_date)
-                                : "No programado"}
+                              {exam.exam_type === "RETIRO"
+                                ? "N/A (ciclo finalizado)"
+                                : exam.next_exam_date
+                                  ? formatDate(exam.next_exam_date)
+                                  : "No programado"}
                             </Typography>
-                            {exam.expires_at && (
+                            {exam.exam_type !== "RETIRO" && exam.expires_at && (
                               <Typography
                                 variant="caption"
                                 color={

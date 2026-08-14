@@ -46,7 +46,9 @@ class ApiService {
         return response;
       },
       (error) => {
-        if (error.response?.status === 401) {
+        const requestUrl: string = error.config?.url || '';
+        const isLoginRequest = requestUrl.includes('/auth/login');
+        if (error.response?.status === 401 && !isLoginRequest) {
           // Token expirado o inválido
           localStorage.removeItem('token');
           localStorage.removeItem('user');
