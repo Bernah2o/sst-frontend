@@ -469,6 +469,10 @@ const MatrizLegalEmpresa: React.FC = () => {
 
   /** Nº de normas sobre las que actuaría: la selección, o todo lo filtrado. */
   const iaAlcance = selected.length > 0 ? selected.length : total;
+  // Debe coincidir con MAX_NORMAS_POR_JOB en app/api/matriz_legal.py — cada
+  // norma es una llamada a Claude, así que el backend rechaza jobs más grandes.
+  const IA_MAX_NORMAS_POR_JOB = 200;
+  const iaExcedeLimite = iaAlcance > IA_MAX_NORMAS_POR_JOB;
 
   const handleOpenIADialog = () => {
     setIaSoloVacios(true);
@@ -477,6 +481,7 @@ const MatrizLegalEmpresa: React.FC = () => {
   };
 
   const handleLanzarJobIA = async () => {
+    if (iaExcedeLimite) return;
     try {
       setIaLanzando(true);
       const payload: SugerenciasIABulkPayload = {
@@ -1764,6 +1769,16 @@ const MatrizLegalEmpresa: React.FC = () => {
                 : "(todas las que coinciden con los filtros actuales)"}
             </Typography>
 
+            {iaExcedeLimite && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                El máximo por ejecución es <strong>{IA_MAX_NORMAS_POR_JOB} normas</strong>{" "}
+                (hay {iaAlcance}). Reduce el resultado seleccionando{" "}
+                {IA_MAX_NORMAS_POR_JOB} o menos con los checkboxes de la tabla,
+                o ajusta los filtros (clasificación, tema, estado) para acotarlo,
+                y repite la generación en varias tandas.
+              </Alert>
+            )}
+
             <FormControlLabel
               control={
                 <Checkbox
@@ -1803,7 +1818,7 @@ const MatrizLegalEmpresa: React.FC = () => {
               onClick={handleLanzarJobIA}
               variant="contained"
               color="secondary"
-              disabled={iaLanzando}
+              disabled={iaLanzando || iaExcedeLimite}
               startIcon={iaLanzando ? <CircularProgress size={16} /> : <AIIcon />}
             >
               {iaLanzando ? "Iniciando..." : `Generar para ${iaAlcance} normas`}
