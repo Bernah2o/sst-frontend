@@ -138,6 +138,8 @@ export interface MatrizLegalNormaConCumplimiento extends MatrizLegalNorma {
   responsable: string | null;
   fecha_compromiso: string | null;
   fecha_ultima_evaluacion: string | null;
+  /** Solo presente si requiere_revision_tamano/riesgo — ver backend para el detalle. */
+  revision_hint: string | null;
 }
 
 export interface MatrizLegalCumplimiento {
@@ -654,6 +656,24 @@ class MatrizLegalService {
       payload,
     );
     return res.data as SugerenciasIAJobCreated;
+  }
+
+  /**
+   * Todos los cumplimiento_ids que coinciden con los filtros, sin tope de
+   * tamaño — para trocearlos en tandas y lanzar varios jobs en secuencia.
+   */
+  async listarIdsSugerenciasIA(
+    empresaId: number,
+    filtros: Pick<
+      SugerenciasIABulkPayload,
+      "estado_cumplimiento" | "clasificacion" | "tema_general" | "q" | "solo_aplicables"
+    >,
+  ): Promise<number[]> {
+    const res = await api.get(
+      `/matriz-legal/empresas/${empresaId}/sugerencias-ia/ids`,
+      { params: filtros },
+    );
+    return res.data as number[];
   }
 
   /** Progreso de un job de sugerencias de IA. */

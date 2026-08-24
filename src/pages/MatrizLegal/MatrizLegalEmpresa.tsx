@@ -249,21 +249,31 @@ const MatrizLegalEmpresa: React.FC = () => {
   const [iaLanzando, setIaLanzando] = useState(false);
   const [iaJob, setIaJob] = useState<SugerenciasIAJobStatus | null>(null);
   const [openIAProgreso, setOpenIAProgreso] = useState(false);
+  // Tandas automáticas: cuando hay más de IA_MAX_NORMAS_POR_JOB normas, se
+  // trocean y se lanzan en jobs sucesivos sin selección manual.
+  const [iaTandas, setIaTandas] = useState<number[][]>([]);
+  const [iaTandaIndex, setIaTandaIndex] = useState(0);
+  const [iaTandaTotal, setIaTandaTotal] = useState(0);
+  const [iaTotalGeneral, setIaTotalGeneral] = useState(0);
+  const [iaAcumulado, setIaAcumulado] = useState<{
+    procesadas: number;
+    exitosas: number;
+    fallidas: number;
+    logErrores: string[];
+  }>({ procesadas: 0, exitosas: 0, fallidas: 0, logErrores: [] });
 
   const numEmpresaId = Number(empresaId);
 
   const loadInitialData = useCallback(async () => {
     try {
-      const [empresasData, clasificacionesData, temasData] = await Promise.all([
+      const [empresasData, clasificacionesData] = await Promise.all([
         matrizLegalService.listEmpresas(),
         matrizLegalService.getCatalogosClasificaciones(),
-        matrizLegalService.getCatalogosTemas(),
       ]);
 
       const empresaData = empresasData.find(e => e.id === numEmpresaId);
       setEmpresa(empresaData || null);
       setClasificaciones(clasificacionesData);
-      setTemas(temasData);
 
       // Cargar estadísticas
       const stats = await matrizLegalService.getEstadisticasEmpresa(numEmpresaId);
@@ -273,6 +283,25 @@ const MatrizLegalEmpresa: React.FC = () => {
       enqueueSnackbar("Error al cargar datos", { variant: "error" });
     }
   }, [numEmpresaId, enqueueSnackbar]);
+
+  // El catálogo de temas se filtra por la clasificación elegida — si no, el
+  // dropdown ofrece combinaciones imposibles (temas de OTRA clasificación)
+  // y el usuario termina filtrando a una combinación que nunca tiene normas.
+  useEffect(() => {
+    let cancelado = false;
+    matrizLegalService.getCatalogosTemas(clasificacion || undefined)
+      .then((data) => {
+        if (cancelado) return;
+        setTemas(data);
+        // Si el tema ya elegido no pertenece a la nueva clasificación, se
+        // limpia para no dejar seleccionada una combinación imposible.
+        setTemaGeneral((actual) => (actual && !data.includes(actual) ? "" : actual));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelado = true;
+    };
+  }, [clasificacion]);
 
   const loadNormas = useCallback(async () => {
     if (!empresaId) return;
@@ -471,8 +500,10 @@ const MatrizLegalEmpresa: React.FC = () => {
   const iaAlcance = selected.length > 0 ? selected.length : total;
   // Debe coincidir con MAX_NORMAS_POR_JOB en app/api/matriz_legal.py — cada
   // norma es una llamada a Claude, así que el backend rechaza jobs más grandes.
+  // Por eso, cuando el alcance supera este tamaño, se trocea en varios jobs
+  // automáticos (ver handleLanzarJobIA) en vez de exigir selección manual.
   const IA_MAX_NORMAS_POR_JOB = 200;
-  const iaExcedeLimite = iaAlcance > IA_MAX_NORMAS_POR_JOB;
+  const iaTandasPreview = Math.max(1, Math.ceil(iaAlcance / IA_MAX_NORMAS_POR_JOB));
 
   const handleOpenIADialog = () => {
     setIaSoloVacios(true);
@@ -480,29 +511,24 @@ const MatrizLegalEmpresa: React.FC = () => {
     setOpenIADialog(true);
   };
 
-  const handleLanzarJobIA = async () => {
-    if (iaExcedeLimite) return;
-    try {
-      setIaLanzando(true);
+  const chunk = (ids: number[], size: number): number[][] => {
+    const tandas: number[][] = [];
+    for (let i = 0; i < ids.length; i += size) tandas.push(ids.slice(i, i + size));
+    return tandas;
+  };
+
+  /** Lanza el job de una tanda y lo deja como job "en curso" para el polling. */
+  const lanzarTanda = useCallback(
+    async (ids: number[]) => {
       const payload: SugerenciasIABulkPayload = {
+        cumplimiento_ids: ids,
         solo_vacios: iaSoloVacios,
         sobrescribir_observaciones: iaIncluirObservaciones,
       };
-      if (selected.length > 0) {
-        payload.cumplimiento_ids = selected;
-      } else {
-        payload.estado_cumplimiento = estadoCumplimiento || undefined;
-        payload.clasificacion = clasificacion || undefined;
-        payload.tema_general = temaGeneral || undefined;
-        payload.q = searchTerm || undefined;
-        payload.solo_aplicables = soloAplicables;
-      }
-
       const { job_id, total: totalJob } = await matrizLegalService.generarSugerenciasIABulk(
         numEmpresaId,
         payload,
       );
-      setOpenIADialog(false);
       setIaJob({
         id: job_id,
         estado: "en_proceso",
@@ -514,6 +540,41 @@ const MatrizLegalEmpresa: React.FC = () => {
         created_at: new Date().toISOString(),
         finished_at: null,
       });
+    },
+    [iaSoloVacios, iaIncluirObservaciones, numEmpresaId],
+  );
+
+  const handleLanzarJobIA = async () => {
+    try {
+      setIaLanzando(true);
+
+      let ids: number[];
+      if (selected.length > 0) {
+        ids = selected;
+      } else {
+        ids = await matrizLegalService.listarIdsSugerenciasIA(numEmpresaId, {
+          estado_cumplimiento: estadoCumplimiento || undefined,
+          clasificacion: clasificacion || undefined,
+          tema_general: temaGeneral || undefined,
+          q: searchTerm || undefined,
+          solo_aplicables: soloAplicables,
+        });
+      }
+
+      if (ids.length === 0) {
+        enqueueSnackbar("No hay normas que coincidan con la selección o los filtros", { variant: "warning" });
+        return;
+      }
+
+      const tandas = chunk(ids, IA_MAX_NORMAS_POR_JOB);
+      setIaTandaTotal(tandas.length);
+      setIaTandaIndex(1);
+      setIaTotalGeneral(ids.length);
+      setIaAcumulado({ procesadas: 0, exitosas: 0, fallidas: 0, logErrores: [] });
+      setIaTandas(tandas.slice(1));
+
+      setOpenIADialog(false);
+      await lanzarTanda(tandas[0]);
       setOpenIAProgreso(true);
     } catch (error: unknown) {
       const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -526,10 +587,17 @@ const MatrizLegalEmpresa: React.FC = () => {
   const handleCerrarProgresoIA = () => {
     setOpenIAProgreso(false);
     setIaJob(null);
+    setIaTandas([]);
+    setIaTandaIndex(0);
+    setIaTandaTotal(0);
+    setIaTotalGeneral(0);
+    setIaAcumulado({ procesadas: 0, exitosas: 0, fallidas: 0, logErrores: [] });
   };
 
-  // Polling del progreso del job. El intervalo se limpia al desmontar, al
-  // cerrar el diálogo y en cuanto el job deja de estar en proceso.
+  // Polling del progreso del job. Al terminar una tanda, si quedan más en la
+  // cola, lanza la siguiente automáticamente (acumulando el progreso total).
+  // El intervalo se limpia al desmontar, al cerrar el diálogo y en cuanto el
+  // job deja de estar en proceso.
   useEffect(() => {
     if (!openIAProgreso || !iaJob || iaJob.estado !== "en_proceso") return;
 
@@ -544,6 +612,26 @@ const MatrizLegalEmpresa: React.FC = () => {
 
         if (estado.estado !== "en_proceso") {
           clearInterval(intervalo);
+          setIaAcumulado((prev) => ({
+            procesadas: prev.procesadas + estado.procesadas,
+            exitosas: prev.exitosas + estado.exitosas,
+            fallidas: prev.fallidas + estado.fallidas,
+            logErrores: estado.log_errores ? [...prev.logErrores, estado.log_errores] : prev.logErrores,
+          }));
+
+          if (iaTandas.length > 0) {
+            const [siguiente, ...resto] = iaTandas;
+            setIaTandas(resto);
+            setIaTandaIndex((i) => i + 1);
+            try {
+              await lanzarTanda(siguiente);
+            } catch (err) {
+              console.error("Error lanzando la siguiente tanda de IA:", err);
+              enqueueSnackbar("No se pudo iniciar la siguiente tanda de IA", { variant: "error" });
+            }
+            return;
+          }
+
           loadNormas();
           matrizLegalService
             .getEstadisticasEmpresa(numEmpresaId)
@@ -560,7 +648,7 @@ const MatrizLegalEmpresa: React.FC = () => {
       cancelado = true;
       clearInterval(intervalo);
     };
-  }, [openIAProgreso, iaJob, numEmpresaId, loadNormas]);
+  }, [openIAProgreso, iaJob, numEmpresaId, loadNormas, iaTandas, lanzarTanda, enqueueSnackbar]);
 
   // --- Handlers bulk extendido (ítems seleccionados) ---
   const handleOpenBulkDialog = () => {
@@ -1108,19 +1196,39 @@ const MatrizLegalEmpresa: React.FC = () => {
                               depende del perfil de la empresa */}
                           {(norma.requiere_revision_tamano || norma.requiere_revision_riesgo) && (
                             <Box display="flex" gap={0.5} mt={0.5} flexWrap="wrap">
-                              {norma.requiere_revision_tamano && (
-                                <Tooltip title="Cómo se cumple esta norma depende del número de trabajadores (p. ej. COPASST si son 10 o más, Vigía de SST si son menos). Revísela contra su nómina.">
-                                  <Chip
-                                    size="small"
-                                    variant="outlined"
-                                    color="info"
-                                    label="Revisar: nº trabajadores"
-                                    sx={{ height: 18, fontSize: "0.65rem" }}
-                                  />
-                                </Tooltip>
-                              )}
+                              {norma.requiere_revision_tamano && (() => {
+                                // Si revision_hint arranca con "Aplica" es el caso
+                                // COPASST/Vigía, resuelto con el nº de trabajadores
+                                // de la empresa — se puede mostrar como definitivo.
+                                const resuelto = norma.revision_hint?.startsWith("Aplica");
+                                return (
+                                  <Tooltip
+                                    title={
+                                      norma.revision_hint ||
+                                      "Cómo se cumple esta norma depende del número de trabajadores (p. ej. COPASST si son 10 o más, Vigía de SST si son menos). Revísela contra su nómina."
+                                    }
+                                  >
+                                    <Chip
+                                      size="small"
+                                      variant={resuelto ? "filled" : "outlined"}
+                                      color={resuelto ? "success" : "info"}
+                                      label={
+                                        resuelto
+                                          ? norma.revision_hint!.replace(/\s*\(.*\)$/, "")
+                                          : "Revisar: nº trabajadores"
+                                      }
+                                      sx={{ height: 18, fontSize: "0.65rem" }}
+                                    />
+                                  </Tooltip>
+                                );
+                              })()}
                               {norma.requiere_revision_riesgo && (
-                                <Tooltip title="Cómo se cumple esta norma depende de la clase de riesgo de la empresa (I a V). Revísela contra su clasificación ante la ARL.">
+                                <Tooltip
+                                  title={
+                                    norma.revision_hint ||
+                                    "Cómo se cumple esta norma depende de la clase de riesgo de la empresa (I a V). Revísela contra su clasificación ante la ARL."
+                                  }
+                                >
                                   <Chip
                                     size="small"
                                     variant="outlined"
@@ -1769,13 +1877,13 @@ const MatrizLegalEmpresa: React.FC = () => {
                 : "(todas las que coinciden con los filtros actuales)"}
             </Typography>
 
-            {iaExcedeLimite && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                El máximo por ejecución es <strong>{IA_MAX_NORMAS_POR_JOB} normas</strong>{" "}
-                (hay {iaAlcance}). Reduce el resultado seleccionando{" "}
-                {IA_MAX_NORMAS_POR_JOB} o menos con los checkboxes de la tabla,
-                o ajusta los filtros (clasificación, tema, estado) para acotarlo,
-                y repite la generación en varias tandas.
+            {iaTandasPreview > 1 && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Claude procesa como máximo {IA_MAX_NORMAS_POR_JOB} normas por
+                tanda, así que esto se va a lanzar automáticamente en{" "}
+                <strong>{iaTandasPreview} tandas</strong> sucesivas — no hace
+                falta seleccionar manualmente. La ventana de progreso muestra
+                el avance acumulado de todas las tandas.
               </Alert>
             )}
 
@@ -1818,7 +1926,7 @@ const MatrizLegalEmpresa: React.FC = () => {
               onClick={handleLanzarJobIA}
               variant="contained"
               color="secondary"
-              disabled={iaLanzando || iaExcedeLimite}
+              disabled={iaLanzando}
               startIcon={iaLanzando ? <CircularProgress size={16} /> : <AIIcon />}
             >
               {iaLanzando ? "Iniciando..." : `Generar para ${iaAlcance} normas`}
@@ -1830,72 +1938,83 @@ const MatrizLegalEmpresa: React.FC = () => {
         <Dialog open={openIAProgreso} onClose={handleCerrarProgresoIA} maxWidth="sm" fullWidth>
           <DialogTitle>Generando evidencias con IA</DialogTitle>
           <DialogContent dividers>
-            {iaJob && (
-              <Box>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography variant="body2">
-                    {iaJob.procesadas} de {iaJob.total} normas procesadas
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {iaJob.total > 0
-                      ? Math.round((iaJob.procesadas / iaJob.total) * 100)
-                      : 0}
-                    %
-                  </Typography>
-                </Box>
-                <LinearProgress
-                  variant={iaJob.total > 0 ? "determinate" : "indeterminate"}
-                  value={iaJob.total > 0 ? (iaJob.procesadas / iaJob.total) * 100 : 0}
-                  sx={{ mb: 2, height: 8, borderRadius: 4 }}
-                />
+            {iaJob && (() => {
+              const procesadas = iaAcumulado.procesadas + iaJob.procesadas;
+              const exitosas = iaAcumulado.exitosas + iaJob.exitosas;
+              const fallidas = iaAcumulado.fallidas + iaJob.fallidas;
+              const totalGeneral = iaTotalGeneral || iaJob.total;
+              const procesoTerminado = iaJob.estado !== "en_proceso" && iaTandas.length === 0;
+              const logErroresCombinado = [...iaAcumulado.logErrores, ...(iaJob.log_errores ? [iaJob.log_errores] : [])];
 
-                <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
-                  <Chip size="small" color="success" label={`${iaJob.exitosas} generadas`} />
-                  {iaJob.fallidas > 0 && (
-                    <Chip size="small" color="error" label={`${iaJob.fallidas} fallidas`} />
+              return (
+                <Box>
+                  {iaTandaTotal > 1 && (
+                    <Typography variant="caption" color="textSecondary" display="block" mb={1}>
+                      Tanda {iaTandaIndex} de {iaTandaTotal}
+                    </Typography>
+                  )}
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography variant="body2">
+                      {procesadas} de {totalGeneral} normas procesadas
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      {totalGeneral > 0 ? Math.round((procesadas / totalGeneral) * 100) : 0}%
+                    </Typography>
+                  </Box>
+                  <LinearProgress
+                    variant={totalGeneral > 0 ? "determinate" : "indeterminate"}
+                    value={totalGeneral > 0 ? (procesadas / totalGeneral) * 100 : 0}
+                    sx={{ mb: 2, height: 8, borderRadius: 4 }}
+                  />
+
+                  <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
+                    <Chip size="small" color="success" label={`${exitosas} generadas`} />
+                    {fallidas > 0 && (
+                      <Chip size="small" color="error" label={`${fallidas} fallidas`} />
+                    )}
+                  </Box>
+
+                  {!procesoTerminado && (
+                    <Alert severity="info">
+                      Puede cerrar esta ventana: el proceso continúa en el servidor.
+                    </Alert>
+                  )}
+                  {procesoTerminado && iaJob.estado === "completada" && (
+                    <Alert severity="success">
+                      Listo. Se generaron {exitosas} evidencias.
+                    </Alert>
+                  )}
+                  {procesoTerminado && iaJob.estado === "parcial" && (
+                    <Alert severity="warning">
+                      Terminó con errores: {exitosas} generadas, {fallidas} fallidas.
+                    </Alert>
+                  )}
+                  {procesoTerminado && iaJob.estado === "fallida" && fallidas > 0 && exitosas === 0 && (
+                    <Alert severity="error">
+                      No se pudo generar ninguna evidencia. Revise la configuración
+                      del servicio de IA.
+                    </Alert>
+                  )}
+
+                  {logErroresCombinado.length > 0 && (
+                    <Accordion sx={{ mt: 2 }}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography variant="body2">Detalle de errores</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Typography
+                          variant="caption"
+                          component="pre"
+                          sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                        >
+                          {logErroresCombinado.join("\n")}
+                        </Typography>
+                      </AccordionDetails>
+                    </Accordion>
                   )}
                 </Box>
-
-                {iaJob.estado === "en_proceso" && (
-                  <Alert severity="info">
-                    Puede cerrar esta ventana: el proceso continúa en el servidor.
-                  </Alert>
-                )}
-                {iaJob.estado === "completada" && (
-                  <Alert severity="success">
-                    Listo. Se generaron {iaJob.exitosas} evidencias.
-                  </Alert>
-                )}
-                {iaJob.estado === "parcial" && (
-                  <Alert severity="warning">
-                    Terminó con errores: {iaJob.exitosas} generadas, {iaJob.fallidas} fallidas.
-                  </Alert>
-                )}
-                {iaJob.estado === "fallida" && (
-                  <Alert severity="error">
-                    No se pudo generar ninguna evidencia. Revise la configuración
-                    del servicio de IA.
-                  </Alert>
-                )}
-
-                {iaJob.log_errores && (
-                  <Accordion sx={{ mt: 2 }}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                      <Typography variant="body2">Detalle de errores</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <Typography
-                        variant="caption"
-                        component="pre"
-                        sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-                      >
-                        {iaJob.log_errores}
-                      </Typography>
-                    </AccordionDetails>
-                  </Accordion>
-                )}
-              </Box>
-            )}
+              );
+            })()}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCerrarProgresoIA} variant="contained">

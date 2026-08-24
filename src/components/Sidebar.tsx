@@ -646,12 +646,16 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
             label: "Importar Excel ARL",
             icon: <CloudUpload />,
             path: "/admin/matriz-legal/importar",
-            roles: ["admin", "superadmin"],
+            // Sin superadmin a propósito: es un rol técnico de plataforma,
+            // no gestiona matrices de ninguna empresa (ver también la guarda
+            // en MatrizLegalImport.tsx, que bloquea el acceso por URL).
+            roles: ["admin"],
           },
         ],
         // Incluye superadmin: el filtrado del sidebar es un includes estricto
         // sobre user.role y no tiene bypass, así que sin esto el superadmin no
-        // vería el módulo (y la importación quedaría solo accesible por URL).
+        // vería el módulo (necesita Dashboard/Normas/Empresas/Sectores, solo
+        // se le excluye explícitamente de Importar arriba).
         roles: ["admin", "supervisor", "superadmin"],
       },
       {

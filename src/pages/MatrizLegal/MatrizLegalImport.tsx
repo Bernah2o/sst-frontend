@@ -41,7 +41,7 @@ import {
   ArrowBack as BackIcon,
   ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useSnackbar } from "notistack";
 import matrizLegalService, {
   MatrizLegalImportacionPreview,
@@ -65,7 +65,6 @@ const MatrizLegalImport: React.FC = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
   const { user } = useAuth();
-  const esSuperadmin = (user?.role || user?.rol) === UserRole.SUPERADMIN;
 
   const [activeStep, setActiveStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
@@ -157,6 +156,12 @@ const MatrizLegalImport: React.FC = () => {
   };
 
   const steps = ["Seleccionar Archivo", "Validación y Previsualización", "Procesando", "Resultados"];
+
+  // El superadmin es un rol técnico de plataforma, no gestiona matrices de
+  // ninguna empresa — la importación es tarea del admin de cada empresa.
+  if ((user?.role || user?.rol) === UserRole.SUPERADMIN) {
+    return <Navigate to="/admin/matriz-legal" replace />;
+  }
 
   return (
     <Box p={3}>
@@ -319,28 +324,17 @@ const MatrizLegalImport: React.FC = () => {
                  </Accordion>
                 
                  <Box display="flex" flexDirection="column" gap={2} alignItems="flex-start" sx={{ mt: 2 }}>
-                     {/* El texto de las normas es compartido por todas las
-                         empresas, así que reescribir las existentes queda
-                         reservado al superadministrador. */}
-                     {esSuperadmin ? (
-                        <FormControlLabel
-                           control={
-                               <Checkbox
-                                   checked={sobrescribir}
-                                   onChange={(e) => setSobrescribir(e.target.checked)}
-                               />
-                           }
-                           label="Sobrescribir información de normas existentes (Actualizar datos)"
-                        />
-                     ) : (
-                        <Alert severity="info" sx={{ width: "100%" }}>
-                           Se agregarán únicamente las <strong>normas nuevas</strong>.
-                           Las que ya están en el catálogo no se modifican: su texto
-                           es compartido con las demás empresas de la plataforma.
-                        </Alert>
-                     )}
+                     <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={sobrescribir}
+                                onChange={(e) => setSobrescribir(e.target.checked)}
+                            />
+                        }
+                        label="Sobrescribir información de normas existentes (Actualizar datos)"
+                     />
 
-                     <Button 
+                     <Button
                         variant="contained" 
                         color="primary" 
                         size="large" 
