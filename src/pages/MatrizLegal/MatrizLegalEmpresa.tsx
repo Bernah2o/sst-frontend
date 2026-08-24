@@ -115,59 +115,6 @@ const initialBulkFormData: BulkFormData = {
   justificacion_no_aplica: "",
 };
 
-// Sugerencias predefinidas para evidencias de cumplimiento
-const sugerenciasEvidencia = [
-  "Procedimiento documentado y socializado",
-  "Registro de capacitaciones realizadas",
-  "Actas de reunión del COPASST",
-  "Informe de inspecciones de seguridad",
-  "Matriz de EPP actualizada",
-  "Certificados de aptitud médica vigentes",
-  "Programa de vigilancia epidemiológica",
-  "Plan de emergencias documentado",
-  "Registro de entrega de EPP",
-  "Matriz de identificación de peligros y valoración de riesgos",
-  "Política de SST firmada y divulgada",
-  "Reglamento de higiene y seguridad industrial",
-  "Investigación de accidentes e incidentes",
-  "Indicadores de gestión SST",
-  "Auditorías internas realizadas",
-];
-
-// Sugerencias predefinidas para observaciones
-const sugerenciasObservaciones = [
-  "Pendiente actualización del documento",
-  "Requiere capacitación adicional al personal",
-  "En proceso de implementación",
-  "Se evidencia cumplimiento parcial",
-  "Documento vencido, requiere renovación",
-  "Falta socialización con trabajadores",
-  "Requiere asignación de recursos",
-  "Pendiente aprobación de gerencia",
-  "En revisión por parte del COPASST",
-  "Se recomienda seguimiento mensual",
-  "Cumplimiento verificado en auditoría",
-  "Sin hallazgos en la última inspección",
-];
-
-// Sugerencias predefinidas para plan de acción
-const sugerenciasPlanAccion = [
-  "Elaborar procedimiento documentado",
-  "Programar capacitación para el personal",
-  "Actualizar matriz de peligros y riesgos",
-  "Realizar inspección de seguridad",
-  "Gestionar compra de EPP requeridos",
-  "Programar exámenes médicos ocupacionales",
-  "Actualizar plan de emergencias",
-  "Socializar política de SST",
-  "Conformar/renovar COPASST",
-  "Realizar simulacro de emergencias",
-  "Implementar programa de vigilancia epidemiológica",
-  "Contratar asesoría externa especializada",
-  "Asignar presupuesto para implementación",
-  "Revisar y actualizar indicadores de gestión",
-];
-
 // Sugerencias predefinidas para responsables
 const sugerenciasResponsables = [
   "Responsable del SG-SST",
@@ -1406,28 +1353,6 @@ const MatrizLegalEmpresa: React.FC = () => {
                         </IconButton>
                       </Tooltip>
                     </Box>
-                    <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ width: "100%", mb: 0.5 }}>
-                        Sugerencias (clic para agregar):
-                      </Typography>
-                      {sugerenciasEvidencia.map((sugerencia, idx) => (
-                        <Chip
-                          key={idx}
-                          label={sugerencia}
-                          size="small"
-                          variant="outlined"
-                          onClick={() => {
-                            const currentText = formData.evidencia_cumplimiento;
-                            const separator = currentText && !currentText.endsWith("\n") && !currentText.endsWith(" ") ? ". " : "";
-                            setFormData({
-                              ...formData,
-                              evidencia_cumplimiento: currentText + separator + sugerencia,
-                            });
-                          }}
-                          sx={{ cursor: "pointer", "&:hover": { bgcolor: "primary.light", color: "white" } }}
-                        />
-                      ))}
-                    </Box>
                   </Grid>
 
                   <Grid size={{ xs: 12 }}>
@@ -1457,28 +1382,44 @@ const MatrizLegalEmpresa: React.FC = () => {
                         </IconButton>
                       </Tooltip>
                     </Box>
-                    <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ width: "100%", mb: 0.5 }}>
-                        Sugerencias (clic para agregar):
-                      </Typography>
-                      {sugerenciasObservaciones.map((sugerencia, idx) => (
-                        <Chip
-                          key={idx}
-                          label={sugerencia}
-                          size="small"
-                          variant="outlined"
-                          onClick={() => {
-                            const currentText = formData.observaciones;
-                            const separator = currentText && !currentText.endsWith("\n") && !currentText.endsWith(" ") ? ". " : "";
-                            setFormData({
-                              ...formData,
-                              observaciones: currentText + separator + sugerencia,
-                            });
-                          }}
-                          sx={{ cursor: "pointer", "&:hover": { bgcolor: "secondary.light", color: "white" } }}
+                  </Grid>
+
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Autocomplete
+                      freeSolo
+                      options={sugerenciasResponsables}
+                      value={formData.responsable}
+                      onChange={(_event, newValue) => {
+                        setFormData({ ...formData, responsable: newValue || "" });
+                      }}
+                      onInputChange={(_event, newInputValue) => {
+                        setFormData({ ...formData, responsable: newInputValue });
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Responsable"
+                          fullWidth
+                          placeholder="Seleccione o escriba el responsable"
+                          helperText="Opcional — puede seleccionar de la lista o escribir un nombre"
                         />
-                      ))}
-                    </Box>
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Fecha Compromiso"
+                      type="date"
+                      fullWidth
+                      value={formData.fecha_compromiso || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          fecha_compromiso: e.target.value || null,
+                        })
+                      }
+                      slotProps={{ inputLabel: { shrink: true } }}
+                    />
                   </Grid>
 
                   {(formData.estado === "no_cumple" || formData.estado === "en_proceso") && (
@@ -1516,65 +1457,6 @@ const MatrizLegalEmpresa: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                         </Box>
-                        <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                          <Typography variant="caption" color="textSecondary" sx={{ width: "100%", mb: 0.5 }}>
-                            Sugerencias (clic para agregar):
-                          </Typography>
-                          {sugerenciasPlanAccion.map((sugerencia, idx) => (
-                            <Chip
-                              key={idx}
-                              label={sugerencia}
-                              size="small"
-                              variant="outlined"
-                              onClick={() => {
-                                const currentText = formData.plan_accion;
-                                const separator = currentText && !currentText.endsWith("\n") && !currentText.endsWith(" ") ? ". " : "";
-                                setFormData({
-                                  ...formData,
-                                  plan_accion: currentText + separator + sugerencia,
-                                });
-                              }}
-                              sx={{ cursor: "pointer", "&:hover": { bgcolor: "warning.light", color: "white" } }}
-                            />
-                          ))}
-                        </Box>
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Autocomplete
-                          freeSolo
-                          options={sugerenciasResponsables}
-                          value={formData.responsable}
-                          onChange={(_event, newValue) => {
-                            setFormData({ ...formData, responsable: newValue || "" });
-                          }}
-                          onInputChange={(_event, newInputValue) => {
-                            setFormData({ ...formData, responsable: newInputValue });
-                          }}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label="Responsable"
-                              fullWidth
-                              placeholder="Seleccione o escriba el responsable"
-                              helperText="Puede seleccionar de la lista o escribir un nombre"
-                            />
-                          )}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                          label="Fecha Compromiso"
-                          type="date"
-                          fullWidth
-                          value={formData.fecha_compromiso || ""}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              fecha_compromiso: e.target.value || null,
-                            })
-                          }
-                          slotProps={{ inputLabel: { shrink: true } }}
-                        />
                       </Grid>
                     </>
                   )}
