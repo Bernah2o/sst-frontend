@@ -56,6 +56,7 @@ import {
   HourglassEmpty as ProcessIcon,
   Block as BlockIcon,
   Sync as SyncIcon,
+  AssignmentInd as AssignmentIndIcon,
   AutoAwesome as AIIcon,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
@@ -69,6 +70,7 @@ import matrizLegalService, {
   FiltrosBulkUpdatePayload,
   SugerenciasIABulkPayload,
   SugerenciasIAJobStatus,
+  SUGERENCIAS_RESPONSABLES,
 } from "../../services/matrizLegalService";
 
 interface CumplimientoFormData {
@@ -115,25 +117,6 @@ const initialBulkFormData: BulkFormData = {
   justificacion_no_aplica: "",
 };
 
-// Sugerencias predefinidas para responsables
-const sugerenciasResponsables = [
-  "Responsable del SG-SST",
-  "Coordinador de SST",
-  "Jefe de Talento Humano",
-  "Gerente General",
-  "Jefe de Operaciones",
-  "Médico Ocupacional",
-  "COPASST",
-  "Vigía de SST",
-  "Jefe de Mantenimiento",
-  "Coordinador de Calidad",
-  "ARL",
-  "Asesor Externo SST",
-  "Brigada de Emergencias",
-  "Jefe de Producción",
-  "Jefe de Almacén",
-  "Supervisor de Área",
-];
 
 const MatrizLegalEmpresa: React.FC = () => {
   const navigate = useNavigate();
@@ -147,6 +130,7 @@ const MatrizLegalEmpresa: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [sincronizando, setSincronizando] = useState(false);
+  const [autoasignandoResponsables, setAutoasignandoResponsables] = useState(false);
 
   // Estados de filtros
   const [searchTerm, setSearchTerm] = useState("");
@@ -317,6 +301,26 @@ const MatrizLegalEmpresa: React.FC = () => {
       enqueueSnackbar("Error al sincronizar normas", { variant: "error" });
     } finally {
       setSincronizando(false);
+    }
+  };
+
+  const handleAutoasignarResponsables = async () => {
+    try {
+      setAutoasignandoResponsables(true);
+      const res = await matrizLegalService.autoasignarResponsables(numEmpresaId);
+      enqueueSnackbar(
+        `Se asignó responsable a ${res.actualizados} norma(s) pendiente(s)` +
+          (res.sin_mapeo > 0
+            ? `. ${res.sin_mapeo} quedaron sin mapeo de clasificación.`
+            : "."),
+        { variant: res.actualizados > 0 ? "success" : "info" },
+      );
+      if (res.actualizados > 0) loadNormas();
+    } catch (error) {
+      console.error("Error autoasignando responsables:", error);
+      enqueueSnackbar("Error al autoasignar responsables", { variant: "error" });
+    } finally {
+      setAutoasignandoResponsables(false);
     }
   };
 
@@ -977,6 +981,17 @@ const MatrizLegalEmpresa: React.FC = () => {
                 >
                   {sincronizando ? "Sincronizando..." : "Sincronizar"}
                 </Button>
+                <Tooltip title='Asigna el responsable configurado por clasificación (Perfil de la Empresa) a los pendientes sin responsable. No sobrescribe los que ya tienen uno.'>
+                  <span>
+                    <Button
+                      startIcon={<AssignmentIndIcon />}
+                      onClick={handleAutoasignarResponsables}
+                      disabled={autoasignandoResponsables}
+                    >
+                      {autoasignandoResponsables ? "Autoasignando..." : "Autoasignar responsables"}
+                    </Button>
+                  </span>
+                </Tooltip>
                 <Button startIcon={<RefreshIcon />} onClick={loadNormas}>
                   Recargar
                 </Button>
@@ -1387,7 +1402,7 @@ const MatrizLegalEmpresa: React.FC = () => {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <Autocomplete
                       freeSolo
-                      options={sugerenciasResponsables}
+                      options={SUGERENCIAS_RESPONSABLES}
                       value={formData.responsable}
                       onChange={(_event, newValue) => {
                         setFormData({ ...formData, responsable: newValue || "" });
@@ -1573,7 +1588,7 @@ const MatrizLegalEmpresa: React.FC = () => {
 
               <Autocomplete
                 freeSolo
-                options={sugerenciasResponsables}
+                options={SUGERENCIAS_RESPONSABLES}
                 value={bulkFormData.responsable}
                 onChange={(_e, v) => setBulkFormData({ ...bulkFormData, responsable: v || "" })}
                 onInputChange={(_e, v) => setBulkFormData({ ...bulkFormData, responsable: v })}
@@ -1701,7 +1716,7 @@ const MatrizLegalEmpresa: React.FC = () => {
 
               <Autocomplete
                 freeSolo
-                options={sugerenciasResponsables}
+                options={SUGERENCIAS_RESPONSABLES}
                 value={bulkFormData.responsable}
                 onChange={(_e, v) => setBulkFormData({ ...bulkFormData, responsable: v || "" })}
                 onInputChange={(_e, v) => setBulkFormData({ ...bulkFormData, responsable: v })}

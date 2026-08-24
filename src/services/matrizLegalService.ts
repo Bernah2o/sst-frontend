@@ -10,6 +10,28 @@
 
 import api from "./api";
 
+// Sugerencias predefinidas para el campo "Responsable" — compartidas entre
+// el modal de evaluación individual, los diálogos bulk y el mapeo de
+// responsables por clasificación en el Perfil de la Empresa.
+export const SUGERENCIAS_RESPONSABLES = [
+  "Responsable del SG-SST",
+  "Coordinador de SST",
+  "Jefe de Talento Humano",
+  "Gerente General",
+  "Jefe de Operaciones",
+  "Médico Ocupacional",
+  "COPASST",
+  "Vigía de SST",
+  "Jefe de Mantenimiento",
+  "Coordinador de Calidad",
+  "ARL",
+  "Asesor Externo SST",
+  "Brigada de Emergencias",
+  "Jefe de Producción",
+  "Jefe de Almacén",
+  "Supervisor de Área",
+];
+
 // ==================== TIPOS ====================
 
 export type AmbitoAplicacion = "nacional" | "departamental" | "municipal" | "internacional";
@@ -329,6 +351,21 @@ export interface SugerenciasIAJobStatus {
   log_errores: string | null;
   created_at: string;
   finished_at: string | null;
+}
+
+/** Responsable por defecto que le corresponde a la empresa según clasificación de norma. */
+export interface MatrizLegalResponsableClasificacion {
+  id: number;
+  empresa_id: number;
+  clasificacion_norma: string;
+  responsable: string;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface AutoasignarResponsablesResult {
+  actualizados: number;
+  sin_mapeo: number;
 }
 
 // ==================== CIIU ====================
@@ -685,6 +722,47 @@ class MatrizLegalService {
       `/matriz-legal/empresas/${empresaId}/sugerencias-ia/jobs/${jobId}`,
     );
     return res.data as SugerenciasIAJobStatus;
+  }
+
+  // ============ RESPONSABLES POR CLASIFICACIÓN (autoasignación) ============
+
+  async getResponsablesClasificacion(
+    empresaId: number,
+  ): Promise<MatrizLegalResponsableClasificacion[]> {
+    const res = await api.get(
+      `/matriz-legal/empresas/${empresaId}/responsables-clasificacion`,
+    );
+    return res.data as MatrizLegalResponsableClasificacion[];
+  }
+
+  async upsertResponsableClasificacion(
+    empresaId: number,
+    clasificacionNorma: string,
+    responsable: string,
+  ): Promise<MatrizLegalResponsableClasificacion> {
+    const res = await api.post(
+      `/matriz-legal/empresas/${empresaId}/responsables-clasificacion`,
+      { clasificacion_norma: clasificacionNorma, responsable },
+    );
+    return res.data as MatrizLegalResponsableClasificacion;
+  }
+
+  async deleteResponsableClasificacion(
+    empresaId: number,
+    mapeoId: number,
+  ): Promise<void> {
+    await api.delete(
+      `/matriz-legal/empresas/${empresaId}/responsables-clasificacion/${mapeoId}`,
+    );
+  }
+
+  async autoasignarResponsables(
+    empresaId: number,
+  ): Promise<AutoasignarResponsablesResult> {
+    const res = await api.post(
+      `/matriz-legal/empresas/${empresaId}/cumplimiento/autoasignar-responsables`,
+    );
+    return res.data as AutoasignarResponsablesResult;
   }
 
   // ==================== HELPERS ====================

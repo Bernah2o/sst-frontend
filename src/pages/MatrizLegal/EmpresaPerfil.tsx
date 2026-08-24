@@ -19,8 +19,10 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  Divider,
   FormControlLabel,
   Grid,
+  IconButton,
   MenuItem,
   Paper,
   Switch,
@@ -28,6 +30,7 @@ import {
   Typography,
 } from "@mui/material";
 import {
+  Delete as DeleteIcon,
   ExpandMore as ExpandMoreIcon,
   Save as SaveIcon,
   Sync as SyncIcon,
@@ -35,7 +38,9 @@ import {
 import { useSnackbar } from "notistack";
 import matrizLegalService, {
   Empresa,
+  MatrizLegalResponsableClasificacion,
   SectorEconomicoSimple,
+  SUGERENCIAS_RESPONSABLES,
   getSeccionCIIU,
 } from "../../services/matrizLegalService";
 
@@ -116,16 +121,26 @@ const EmpresaPerfil: React.FC = () => {
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [cambiosPendientes, setCambiosPendientes] = useState(false);
 
+  // Responsables por clasificación (autoasignación)
+  const [clasificacionesCatalogo, setClasificacionesCatalogo] = useState<string[]>([]);
+  const [responsables, setResponsables] = useState<MatrizLegalResponsableClasificacion[]>([]);
+  const [nuevaClasificacion, setNuevaClasificacion] = useState("");
+  const [nuevoResponsable, setNuevoResponsable] = useState("");
+  const [savingResponsable, setSavingResponsable] = useState(false);
+  const [autoasignando, setAutoasignando] = useState(false);
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setErrorCarga(null);
-      const [empresaData, sectoresData] = await Promise.all([
+      const [empresaData, sectoresData, clasificacionesData] = await Promise.all([
         matrizLegalService.getMiEmpresa(),
         matrizLegalService.listSectoresActivos(),
+        matrizLegalService.getCatalogosClasificaciones(),
       ]);
       setEmpresa(empresaData);
       setSectores(sectoresData);
+      setClasificacionesCatalogo(clasificacionesData);
       setFormData({
         sector_economico_id: empresaData.sector_economico_id ?? "",
         codigo_ciiu: empresaData.codigo_ciiu ?? "",
@@ -214,6 +229,80 @@ const EmpresaPerfil: React.FC = () => {
       enqueueSnackbar("Error al sincronizar normas", { variant: "error" });
     } finally {
       setSincronizando(false);
+    }
+  };
+
+  const loadResponsables = useCallback(async () => {
+    if (!empresa) return;
+    try {
+      const data = await matrizLegalService.getResponsablesClasificacion(empresa.id);
+      setResponsables(data);
+    } catch (error) {
+      console.error("Error cargando responsables por clasificación:", error);
+    }
+  }, [empresa]);
+
+  useEffect(() => {
+    loadResponsables();
+  }, [loadResponsables]);
+
+  const handleClasificacionChange = (value: string) => {
+    setNuevaClasificacion(value);
+    // Si ya hay un responsable configurado para esta clasificación, se
+    // precarga para poder editarlo en el mismo formulario.
+    const existente = responsables.find((r) => r.clasificacion_norma === value);
+    setNuevoResponsable(existente ? existente.responsable : "");
+  };
+
+  const handleGuardarResponsable = async () => {
+    if (!empresa || !nuevaClasificacion || !nuevoResponsable.trim()) return;
+    try {
+      setSavingResponsable(true);
+      await matrizLegalService.upsertResponsableClasificacion(
+        empresa.id,
+        nuevaClasificacion,
+        nuevoResponsable.trim(),
+      );
+      setNuevaClasificacion("");
+      setNuevoResponsable("");
+      await loadResponsables();
+      enqueueSnackbar("Responsable guardado", { variant: "success" });
+    } catch (error) {
+      console.error("Error guardando el responsable:", error);
+      enqueueSnackbar("Error al guardar el responsable", { variant: "error" });
+    } finally {
+      setSavingResponsable(false);
+    }
+  };
+
+  const handleEliminarResponsable = async (id: number) => {
+    if (!empresa) return;
+    try {
+      await matrizLegalService.deleteResponsableClasificacion(empresa.id, id);
+      setResponsables((prev) => prev.filter((r) => r.id !== id));
+    } catch (error) {
+      console.error("Error eliminando el mapeo:", error);
+      enqueueSnackbar("Error al eliminar el mapeo", { variant: "error" });
+    }
+  };
+
+  const handleAutoasignar = async () => {
+    if (!empresa) return;
+    try {
+      setAutoasignando(true);
+      const res = await matrizLegalService.autoasignarResponsables(empresa.id);
+      enqueueSnackbar(
+        `Se asignó responsable a ${res.actualizados} norma(s) pendiente(s)` +
+          (res.sin_mapeo > 0
+            ? `. ${res.sin_mapeo} quedaron sin mapeo de clasificación.`
+            : "."),
+        { variant: res.actualizados > 0 ? "success" : "info" },
+      );
+    } catch (error) {
+      console.error("Error autoasignando responsables:", error);
+      enqueueSnackbar("Error al autoasignar responsables", { variant: "error" });
+    } finally {
+      setAutoasignando(false);
     }
   };
 
@@ -364,6 +453,114 @@ const EmpresaPerfil: React.FC = () => {
               </Grid>
             ))}
           </Grid>
+        </AccordionDetails>
+      </Accordion>
+
+      {/* Responsables por Clasificación (autoasignación) */}
+      <Accordion sx={{ mb: 3 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6" color="primary">
+            Responsables por Clasificación
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography variant="body2" color="textSecondary" paragraph>
+            Defina un responsable por defecto para cada clasificación de
+            norma. Se usa para autoasignar el campo "Responsable" cuando
+            queda vacío — nunca sobrescribe uno que ya esté puesto a mano.
+          </Typography>
+
+          {responsables.length > 0 && (
+            <Box display="flex" flexDirection="column" gap={1} mb={2}>
+              {responsables.map((r) => (
+                <Box
+                  key={r.id}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  gap={1}
+                  sx={{ p: 1, bgcolor: "grey.50", borderRadius: 1 }}
+                >
+                  <Typography variant="body2">
+                    <strong>{r.clasificacion_norma}</strong> → {r.responsable}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleEliminarResponsable(r.id)}
+                    aria-label={`Eliminar responsable de ${r.clasificacion_norma}`}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          <Grid container spacing={2} alignItems="flex-end">
+            <Grid size={{ xs: 12, sm: 5 }}>
+              <TextField
+                select
+                label="Clasificación"
+                fullWidth
+                size="small"
+                value={nuevaClasificacion}
+                onChange={(e) => handleClasificacionChange(e.target.value)}
+              >
+                {clasificacionesCatalogo.map((c) => (
+                  <MenuItem key={c} value={c}>{c}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 5 }}>
+              <TextField
+                select
+                label="Responsable"
+                fullWidth
+                size="small"
+                value={nuevoResponsable}
+                onChange={(e) => setNuevoResponsable(e.target.value)}
+              >
+                {/* Si se está editando un mapeo cuyo responsable no está en la
+                    lista predefinida (se guardó con otro texto), se agrega
+                    igual para que el select no quede en blanco. */}
+                {Array.from(
+                  new Set(
+                    nuevoResponsable
+                      ? [...SUGERENCIAS_RESPONSABLES, nuevoResponsable]
+                      : SUGERENCIAS_RESPONSABLES,
+                  ),
+                ).map((r) => (
+                  <MenuItem key={r} value={r}>{r}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 2 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={handleGuardarResponsable}
+                disabled={!nuevaClasificacion || !nuevoResponsable.trim() || savingResponsable}
+              >
+                {savingResponsable ? "Guardando..." : "Guardar"}
+              </Button>
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={handleAutoasignar}
+            disabled={autoasignando || responsables.length === 0}
+          >
+            {autoasignando ? "Autoasignando..." : "Autoasignar responsables pendientes"}
+          </Button>
+          {responsables.length === 0 && (
+            <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+              Agregue al menos un mapeo arriba para poder autoasignar.
+            </Typography>
+          )}
         </AccordionDetails>
       </Accordion>
 
