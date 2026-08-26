@@ -368,6 +368,14 @@ export interface AutoasignarResponsablesResult {
   sin_mapeo: number;
 }
 
+export interface ImportarCumplimientoResult {
+  total_filas: number;
+  actualizados: number;
+  sin_cambios: number;
+  errores: number;
+  log_errores: string[];
+}
+
 // ==================== CIIU ====================
 
 /**
@@ -656,6 +664,26 @@ class MatrizLegalService {
       }
     );
     return res.data as Blob;
+  }
+
+  /**
+   * Importa el mismo Excel de exportMatrizEmpresa, ya diligenciado con
+   * evidencia/observaciones/plan de acción/responsable/fecha compromiso/
+   * seguimiento. Solo actualiza celdas con contenido — nunca borra con celdas
+   * vacías.
+   */
+  async importarCumplimientoExcel(
+    empresaId: number,
+    file: File,
+  ): Promise<ImportarCumplimientoResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await api.post(
+      `/matriz-legal/empresas/${empresaId}/cumplimiento/importar-excel`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return res.data as ImportarCumplimientoResult;
   }
 
   async exportTodasNormas(params?: {

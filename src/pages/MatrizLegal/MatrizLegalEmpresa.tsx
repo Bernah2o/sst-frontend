@@ -3,7 +3,7 @@
  * Permite evaluar y gestionar el cumplimiento de normas legales.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box,
   Button,
@@ -57,6 +57,7 @@ import {
   Block as BlockIcon,
   Sync as SyncIcon,
   AssignmentInd as AssignmentIndIcon,
+  CloudUpload as UploadCumplimientoIcon,
   AutoAwesome as AIIcon,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
@@ -71,6 +72,7 @@ import matrizLegalService, {
   SugerenciasIABulkPayload,
   SugerenciasIAJobStatus,
   SUGERENCIAS_RESPONSABLES,
+  ImportarCumplimientoResult,
 } from "../../services/matrizLegalService";
 
 interface CumplimientoFormData {
@@ -131,6 +133,10 @@ const MatrizLegalEmpresa: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [sincronizando, setSincronizando] = useState(false);
   const [autoasignandoResponsables, setAutoasignandoResponsables] = useState(false);
+  const [importandoCumplimiento, setImportandoCumplimiento] = useState(false);
+  const [resultadoImportCumplimiento, setResultadoImportCumplimiento] =
+    useState<ImportarCumplimientoResult | null>(null);
+  const importCumplimientoInputRef = useRef<HTMLInputElement>(null);
 
   // Estados de filtros
   const [searchTerm, setSearchTerm] = useState("");
@@ -324,9 +330,38 @@ const MatrizLegalEmpresa: React.FC = () => {
     }
   };
 
+  const handleImportarCumplimientoClick = () => {
+    importCumplimientoInputRef.current?.click();
+  };
+
+  const handleImportarCumplimientoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permite volver a elegir el mismo archivo después
+    if (!file) return;
+
+    try {
+      setImportandoCumplimiento(true);
+      const resultado = await matrizLegalService.importarCumplimientoExcel(numEmpresaId, file);
+      setResultadoImportCumplimiento(resultado);
+      if (resultado.actualizados > 0) {
+        loadNormas();
+        matrizLegalService
+          .getEstadisticasEmpresa(numEmpresaId)
+          .then(setEstadisticas)
+          .catch(() => undefined);
+      }
+    } catch (error: unknown) {
+      console.error("Error importando cumplimiento:", error);
+      const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      enqueueSnackbar(detail || "Error al importar el archivo", { variant: "error" });
+    } finally {
+      setImportandoCumplimiento(false);
+    }
+  };
+
   const handleExport = async () => {
     try {
-      const blob = await matrizLegalService.exportMatrizEmpresa(numEmpresaId);
+      const blob = await matrizLegalService.exportMatrizEmpresa(numEmpresaId, !soloAplicables);
       const filename = `matriz_legal_${empresa?.nombre.replace(/\s/g, "_")}_${new Date().toISOString().split("T")[0]}.xlsx`;
       matrizLegalService.downloadBlob(blob, filename);
       enqueueSnackbar("Exportación completada", { variant: "success" });
@@ -998,6 +1033,25 @@ const MatrizLegalEmpresa: React.FC = () => {
                 <Button startIcon={<DownloadIcon />} variant="outlined" onClick={handleExport}>
                   Exportar
                 </Button>
+                <Tooltip title="Sube el mismo Excel exportado, ya diligenciado con evidencia, observaciones, plan de acción, responsable, fecha compromiso y seguimiento. Solo actualiza celdas con contenido — no borra nada con celdas vacías.">
+                  <span>
+                    <Button
+                      startIcon={<UploadCumplimientoIcon />}
+                      variant="outlined"
+                      onClick={handleImportarCumplimientoClick}
+                      disabled={importandoCumplimiento}
+                    >
+                      {importandoCumplimiento ? "Importando..." : "Importar Cumplimiento"}
+                    </Button>
+                  </span>
+                </Tooltip>
+                <input
+                  ref={importCumplimientoInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  hidden
+                  onChange={handleImportarCumplimientoFile}
+                />
               </Box>
             </Box>
 
@@ -1915,6 +1969,74 @@ const MatrizLegalEmpresa: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCerrarProgresoIA} variant="contained">
+              Cerrar
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Resultado de importar el Excel de cumplimiento diligenciado */}
+        <Dialog
+          open={!!resultadoImportCumplimiento}
+          onClose={() => setResultadoImportCumplimiento(null)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Resultado de la importación</DialogTitle>
+          <DialogContent dividers>
+            {resultadoImportCumplimiento && (
+              <Box>
+                <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
+                  <Chip
+                    size="small"
+                    label={`${resultadoImportCumplimiento.total_filas} filas leídas`}
+                  />
+                  <Chip
+                    size="small"
+                    color="success"
+                    label={`${resultadoImportCumplimiento.actualizados} actualizadas`}
+                  />
+                  <Chip
+                    size="small"
+                    label={`${resultadoImportCumplimiento.sin_cambios} sin cambios`}
+                  />
+                  {resultadoImportCumplimiento.errores > 0 && (
+                    <Chip
+                      size="small"
+                      color="error"
+                      label={`${resultadoImportCumplimiento.errores} con error`}
+                    />
+                  )}
+                </Box>
+
+                {resultadoImportCumplimiento.actualizados > 0 && (
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    Se actualizaron {resultadoImportCumplimiento.actualizados} normas.
+                  </Alert>
+                )}
+
+                {resultadoImportCumplimiento.log_errores.length > 0 && (
+                  <Accordion>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="body2">
+                        Detalle ({resultadoImportCumplimiento.log_errores.length})
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Typography
+                        variant="caption"
+                        component="pre"
+                        sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                      >
+                        {resultadoImportCumplimiento.log_errores.join("\n")}
+                      </Typography>
+                    </AccordionDetails>
+                  </Accordion>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setResultadoImportCumplimiento(null)} variant="contained">
               Cerrar
             </Button>
           </DialogActions>
