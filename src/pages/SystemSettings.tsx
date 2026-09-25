@@ -23,6 +23,7 @@ import {
 } from "@mui/material";
 import React, { useState, useEffect, useCallback } from "react";
 
+import NotificationRecipientsSettings from "../components/NotificationRecipientsSettings";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 
@@ -261,6 +262,9 @@ const SystemSettings: React.FC = () => {
               </Stack>
             </CardContent>
           </Card>
+
+          {/* Destinatarios en copia por empresa */}
+          <NotificationRecipientsSettings />
 
           {/* Información adicional */}
           <Card>

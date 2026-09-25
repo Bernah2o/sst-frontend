@@ -2572,3 +2572,40 @@ export const FOLLOWUP_DECISION_OPTIONS = [
   { value: 'restringir', label: 'Restringir trabajo en casa hasta adecuar el puesto' },
   { value: 'escalar_arl', label: 'Escalar caso a ARL (asesoría / visita virtual)' },
 ];
+
+// ────────────────────────────────────────────────────────────
+// Destinatarios en copia de notificaciones (por empresa)
+// ────────────────────────────────────────────────────────────
+
+export type NotificationRecipientDelivery = "cc" | "bcc";
+
+export interface NotificationRecipient {
+  id: number;
+  notification_type: string;
+  email: string;
+  name?: string | null;
+  delivery: NotificationRecipientDelivery;
+  is_active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface NotificationRecipientCreate {
+  notification_type: string;
+  email: string;
+  name?: string | null;
+  delivery: NotificationRecipientDelivery;
+  is_active?: boolean;
+}
+
+export interface NotificationRecipientUpdate {
+  email?: string;
+  name?: string | null;
+  delivery?: NotificationRecipientDelivery;
+  is_active?: boolean;
+}
+
+export interface NotificationTypeOption {
+  key: string;
+  name: string;
+}
