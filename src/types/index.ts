@@ -1158,6 +1158,8 @@ export interface ReinductionRecord {
   first_notification_sent?: string;
   reminder_notification_sent?: string;
   overdue_notification_sent?: string;
+  last_notification_sent?: string;
+  notification_count?: number;
   created_at: string;
   updated_at: string;
   created_by?: number;
@@ -1195,6 +1197,7 @@ export interface ReinductionConfig {
   first_notification_days: number;
   reminder_notification_days: number;
   grace_period_days: number;
+  overdue_reminder_interval_days: number;
   default_reinduction_course_id?: number;
   auto_enroll_enabled: boolean;
   auto_check_enabled: boolean;

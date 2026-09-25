@@ -81,6 +81,8 @@ interface ReinductionData {
   first_notification_sent?: string;
   reminder_notification_sent?: string;
   overdue_notification_sent?: string;
+  last_notification_sent?: string;
+  notification_count?: number;
   notes?: string;
   exemption_reason?: string;
   created_at: string;
@@ -902,6 +904,20 @@ const Reinduction: React.FC = () => {
                                   )}
                                 </Typography>
                               )}
+                              {reinduction.last_notification_sent &&
+                                (reinduction.notification_count ?? 0) > 1 && (
+                                  <Typography
+                                    variant="caption"
+                                    display="block"
+                                    color="text.secondary"
+                                  >
+                                    Última:{" "}
+                                    {formatDate(
+                                      reinduction.last_notification_sent,
+                                    )}{" "}
+                                    ({reinduction.notification_count} avisos)
+                                  </Typography>
+                                )}
                             </Box>
                           </TableCell>
                           <TableCell>
