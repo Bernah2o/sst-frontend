@@ -44,11 +44,12 @@ import {
   Snackbar,
   CircularProgress,
 } from "@mui/material";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import SeguimientoActividadesModal from "../components/SeguimientoActividadesModal";
+import WorkerAutocomplete, { WorkerOption } from "../components/WorkerAutocomplete";
 
 import {
   adminConfigService,
@@ -86,6 +87,17 @@ interface SeguimientoData {
 const Seguimiento: React.FC = () => {
   const [seguimientos, setSeguimientos] = useState<SeguimientoData[]>([]);
   const [workers, setWorkers] = useState<WorkerList[]>([]);
+  const workerOptions = useMemo<WorkerOption[]>(
+    () =>
+      workers.map((worker) => ({
+        id: worker.id,
+        name: `${worker.first_name} ${worker.last_name}`.trim(),
+        document: worker.document_number,
+        detail: worker.position,
+        is_active: worker.is_active,
+      })),
+    [workers],
+  );
   const [programas, setProgramas] = useState<ProgramaOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -586,22 +598,13 @@ const Seguimiento: React.FC = () => {
                 </FormControl>
               </Grid>
               <Grid size={{ xs: 12, md: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Trabajador</InputLabel>
-                  <Select
-                    value={filters.worker}
-                    onChange={(e) =>
-                      handleFilterChange("worker", e.target.value)
-                    }
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {workers.map((worker) => (
-                      <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.first_name} {worker.last_name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <WorkerAutocomplete
+                  options={workerOptions}
+                  value={filters.worker}
+                  onChange={(id) => handleFilterChange("worker", id)}
+                  placeholder="Todos"
+                  allowInactive
+                />
               </Grid>
               <Grid size={{ xs: 12, md: 2 }}>
                 <Box display="flex" gap={1}>
@@ -855,22 +858,12 @@ const Seguimiento: React.FC = () => {
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Trabajador</InputLabel>
-                  <Select
-                    value={formData.worker_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, worker_id: e.target.value })
-                    }
-                  >
-                    {workers.map((worker) => (
-                      <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.first_name} {worker.last_name} -{" "}
-                        {worker.document_number}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <WorkerAutocomplete
+                  options={workerOptions}
+                  value={formData.worker_id}
+                  onChange={(id) => setFormData({ ...formData, worker_id: id })}
+                  required
+                />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth>

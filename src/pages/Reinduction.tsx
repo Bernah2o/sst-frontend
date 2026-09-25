@@ -41,6 +41,7 @@ import {
   Tooltip,
   Avatar,
   Alert,
+  Snackbar,
   List,
   ListItem,
   ListItemText,
@@ -58,6 +59,7 @@ import React, {
   useMemo,
 } from "react";
 
+import WorkerAutocomplete, { WorkerOption } from "../components/WorkerAutocomplete";
 import api from "../services/api";
 import { formatDate } from "../utils/dateUtils";
 import { logger } from "../utils/logger";
@@ -109,6 +111,8 @@ interface Worker {
   cedula: string;
   cargo: string;
   area: string;
+  position?: string;
+  is_active?: boolean;
 }
 
 type ReinductionWithEffectiveStatus = ReinductionData & {
@@ -169,6 +173,10 @@ const Reinduction: React.FC = () => {
     open: false,
     reinductionId: null as number | null,
   });
+  const [enrollFeedback, setEnrollFeedback] = useState<{
+    severity: "success" | "error";
+    message: string;
+  } | null>(null);
   const [notificationConfirmDialog, setNotificationConfirmDialog] = useState({
     open: false,
     workerId: null as number | null,
@@ -266,7 +274,7 @@ const Reinduction: React.FC = () => {
 
   const fetchWorkers = useCallback(async () => {
     try {
-      const response = await api.get("/workers/");
+      const response = await api.get("/workers/", { params: { limit: 1000 } });
       setWorkers(response.data);
     } catch (error) {
       logger.error("Error fetching workers:", error);
@@ -335,12 +343,24 @@ const Reinduction: React.FC = () => {
   const handleConfirmEnroll = async () => {
     if (enrollConfirmDialog.reinductionId) {
       try {
-        await api.post(
+        const response = await api.post(
           `/reinduction/records/${enrollConfirmDialog.reinductionId}/enroll`,
         );
+        setEnrollFeedback({
+          severity: "success",
+          message: response.data?.message || "Trabajador inscrito exitosamente",
+        });
         fetchReinductions();
-      } catch (error) {
+      } catch (error: any) {
         logger.error("Error enrolling worker:", error);
+        const detail = error?.response?.data?.detail;
+        setEnrollFeedback({
+          severity: "error",
+          message:
+            typeof detail === "string"
+              ? detail
+              : "No se pudo inscribir al trabajador en la reinducción",
+        });
       }
     }
     setEnrollConfirmDialog({ open: false, reinductionId: null });
@@ -469,6 +489,18 @@ const Reinduction: React.FC = () => {
     if (days <= 30) return "warning"; // Próxima a vencer
     return "success"; // A tiempo
   };
+
+  const workerOptions = useMemo<WorkerOption[]>(
+    () =>
+      workers.map((worker) => ({
+        id: worker.id,
+        name: `${worker.first_name || worker.nombre || ""} ${worker.last_name || worker.apellido || ""}`.trim(),
+        document: worker.document_number || worker.cedula,
+        detail: worker.position || worker.cargo,
+        is_active: worker.is_active,
+      })),
+    [workers],
+  );
 
   const reinductionsWithEffectiveStatus = useMemo<
     ReinductionWithEffectiveStatus[]
@@ -1020,23 +1052,12 @@ const Reinduction: React.FC = () => {
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Trabajador</InputLabel>
-                  <Select
-                    value={formData.worker_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, worker_id: e.target.value })
-                    }
-                  >
-                    {workers.map((worker) => (
-                      <MenuItem key={worker.id} value={worker.id.toString()}>
-                        {worker.first_name || worker.nombre}{" "}
-                        {worker.last_name || worker.apellido} -{" "}
-                        {worker.document_number || worker.cedula}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <WorkerAutocomplete
+                  options={workerOptions}
+                  value={formData.worker_id}
+                  onChange={(id) => setFormData({ ...formData, worker_id: id })}
+                  required
+                />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
@@ -1400,6 +1421,21 @@ const Reinduction: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <Snackbar
+          open={enrollFeedback !== null}
+          autoHideDuration={6000}
+          onClose={() => setEnrollFeedback(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity={enrollFeedback?.severity ?? "success"}
+            onClose={() => setEnrollFeedback(null)}
+            variant="filled"
+          >
+            {enrollFeedback?.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </LocalizationProvider>
   );

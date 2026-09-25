@@ -40,6 +40,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import React, { useState, useEffect } from "react";
 
+import WorkerAutocomplete, { WorkerOption } from "../components/WorkerAutocomplete";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import { UserRole } from "../types";
@@ -79,21 +80,10 @@ interface Certificate {
   course?: Course;
 }
 
-interface Worker {
-  id: number;
-  nombre?: string; // Legacy field
-  apellido?: string; // Legacy field
-  documento?: string; // Legacy field
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  document_number?: string;
-}
-
 const CertificatePage: React.FC = () => {
   const { user } = useAuth();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [workers, setWorkers] = useState<WorkerOption[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -151,19 +141,36 @@ const CertificatePage: React.FC = () => {
 
   useEffect(() => {
     fetchCertificates();
+  }, [page, filters, fetchCertificates]);
+
+  useEffect(() => {
     // Only fetch workers and courses for admin users
     if (user?.role === UserRole.ADMIN || user?.role === UserRole.TRAINER) {
       fetchWorkers();
       fetchCourses();
     }
-  }, [page, filters, fetchCertificates, user?.role]);
+  }, [user?.role]);
 
   const fetchWorkers = async () => {
     try {
-      const response = await api.get("/users/");
-      setWorkers(response.data.items || response.data);
+      // Los certificados se filtran por user_id: se listan los trabajadores
+      // con cuenta de usuario, con su estado (activo/inactivo) para el filtro
+      const response = await api.get("/workers/", { params: { limit: 1000 } });
+      const list: any[] = Array.isArray(response.data)
+        ? response.data
+        : response.data.items || [];
+      setWorkers(
+        list
+          .filter((w) => w.user_id)
+          .map((w) => ({
+            id: w.user_id,
+            name: w.full_name || `${w.first_name || ""} ${w.last_name || ""}`.trim(),
+            document: w.document_number,
+            is_active: w.is_active,
+          })),
+      );
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching workers:", error);
     }
   };
 
@@ -324,23 +331,13 @@ const CertificatePage: React.FC = () => {
               {(user?.role === UserRole.ADMIN || user?.role === UserRole.TRAINER) && (
                 <>
                   <Grid size={{ xs: 12, md: 2 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Usuario</InputLabel>
-                      <Select
-                        value={filters.user_id}
-                        onChange={(e) =>
-                          handleFilterChange("user_id", e.target.value)
-                        }
-                      >
-                        <MenuItem value="">Todos</MenuItem>
-                        {workers.map((worker) => (
-                          <MenuItem key={worker.id} value={worker.id.toString()}>
-                            {worker.first_name || worker.nombre}{" "}
-                            {worker.last_name || worker.apellido}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                    <WorkerAutocomplete
+                      options={workers}
+                      value={filters.user_id}
+                      onChange={(id) => handleFilterChange("user_id", id)}
+                      placeholder="Todos"
+                      allowInactive
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, md: 2 }}>
                     <FormControl fullWidth>

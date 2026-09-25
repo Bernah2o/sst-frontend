@@ -102,7 +102,7 @@ const ErgonomicSelfInspectionAdmin: React.FC = () => {
 
   const fetchWorkers = useCallback(async () => {
     try {
-      const res = await api.get("/workers");
+      const res = await api.get("/workers", { params: { is_active: true, limit: 1000 } });
       setWorkers(res.data);
     } catch (error: any) {
       const msg =

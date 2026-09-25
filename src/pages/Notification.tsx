@@ -14,6 +14,7 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 import {
+  Autocomplete,
   Box,
   Typography,
   Card,
@@ -43,12 +44,14 @@ import {
   Switch,
   FormControlLabel,
 
+  createFilterOptions,
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import React, { useState, useEffect, useCallback } from 'react';
 
+import { WorkerOption } from '../components/WorkerAutocomplete';
 import api from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
 
@@ -70,17 +73,17 @@ interface NotificationData {
   total_recipients?: number;
 }
 
-interface User {
-  id: number;
-  nombre: string;
-  apellido: string;
-  email: string;
-  rol: string;
-}
+
+// Busca destinatarios por nombre, documento o email, sin distinguir tildes
+const recipientFilter = createFilterOptions<WorkerOption>({
+  ignoreAccents: true,
+  ignoreCase: true,
+  stringify: (o) => [o.name, o.document, o.detail].filter(Boolean).join(' '),
+});
 
 const Notification: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [recipientOptions, setRecipientOptions] = useState<WorkerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -161,11 +164,25 @@ const Notification: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get('/users/list');
-      setUsers(Array.isArray(response.data) ? response.data : []);
+      // Destinatarios: trabajadores activos con cuenta de usuario (la
+      // notificación se envía al user_id). /users/list no existe en el backend.
+      const response = await api.get('/workers/', { params: { is_active: true, limit: 1000 } });
+      const workers: any[] = Array.isArray(response.data) ? response.data : [];
+      setRecipientOptions(
+        workers
+          .filter((w) => w.user_id)
+          .map((w) => ({
+            id: w.user_id,
+            name: w.full_name || `${w.first_name || ''} ${w.last_name || ''}`.trim(),
+            document: w.document_number,
+            detail: w.email,
+            is_active: w.is_active,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
+      );
     } catch (error) {
-      console.error('Error fetching users:', error);
-      setUsers([]);
+      console.error('Error fetching workers:', error);
+      setRecipientOptions([]);
     }
   };
 
@@ -632,23 +649,44 @@ const Notification: React.FC = () => {
               )}
               {formData.recipient_type === 'specific' && (
                 <Grid size={12}>
-                  <FormControl fullWidth>
-                    <InputLabel>Usuarios</InputLabel>
-                    <Select
-                      multiple
-                      value={formData.recipient_ids.map(String)}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        recipient_ids: (e.target.value as string[]).map(Number) 
-                      })}
-                    >
-                      {Array.isArray(users) && users.map((user) => (
-                        <MenuItem key={user.id} value={user.id.toString()}>
-                          {user.nombre} {user.apellido} - {user.email}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    multiple
+                    options={recipientOptions}
+                    value={recipientOptions.filter((o) =>
+                      formData.recipient_ids.includes(Number(o.id)),
+                    )}
+                    onChange={(_, selected) =>
+                      setFormData({
+                        ...formData,
+                        recipient_ids: selected.map((o) => Number(o.id)),
+                      })
+                    }
+                    filterOptions={recipientFilter}
+                    getOptionLabel={(o) => o.name}
+                    isOptionEqualToValue={(o, v) => o.id === v.id}
+                    renderOption={(props, o) => {
+                      const { key, ...optionProps } = props as typeof props & { key: React.Key };
+                      return (
+                        <Box component="li" key={key} {...optionProps}>
+                          <Box>
+                            <Typography variant="body2">{o.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {[o.document, o.detail].filter(Boolean).join(' · ')}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      );
+                    }}
+                    noOptionsText="Sin coincidencias"
+                    disableCloseOnSelect
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Trabajadores"
+                        placeholder="Buscar por nombre o documento"
+                      />
+                    )}
+                  />
                 </Grid>
               )}
               <Grid size={12}>

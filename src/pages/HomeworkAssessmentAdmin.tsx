@@ -132,7 +132,7 @@ const HomeworkAssessmentAdmin: React.FC = () => {
 
   const fetchWorkers = useCallback(async () => {
     try {
-      const response = await api.get("/workers");
+      const response = await api.get("/workers", { params: { is_active: true, limit: 1000 } });
       setWorkers(response.data);
     } catch (error) {
       console.error("Error loading workers:", error);

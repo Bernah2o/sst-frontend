@@ -38,10 +38,11 @@ import {
   CardContent,
   Grid,
 } from "@mui/material";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 
 import { formatDate } from "../utils/dateUtils";
 
+import WorkerAutocomplete, { WorkerOption } from "../components/WorkerAutocomplete";
 import api from "./../services/api";
 import usePermissions from "../hooks/usePermissions";
 
@@ -144,6 +145,19 @@ interface Course {
 const EnrollmentsManagement: React.FC = () => {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const userOptions = useMemo<WorkerOption[]>(
+    () =>
+      users.map((user) => ({
+        id: user.id,
+        name:
+          user.full_name ||
+          `${user.first_name || user.nombre || ""} ${user.last_name || user.apellido || ""}`.trim(),
+        document: (user as any).document_number,
+        detail: user.email,
+        is_active: (user as any).is_active,
+      })),
+    [users],
+  );
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -372,7 +386,7 @@ const EnrollmentsManagement: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const response = await api.get("/workers/", {
-        params: { is_active: true },
+        params: { is_active: true, limit: 1000 },
       });
       // Filter only workers that are registered
       const registeredWorkers = (response.data || []).filter(
@@ -1157,28 +1171,19 @@ const EnrollmentsManagement: React.FC = () => {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={12}>
-              <FormControl fullWidth required>
-                <InputLabel>Empleado</InputLabel>
-                <Select
-                  value={formData.worker_id ?? formData.usuario_id ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      worker_id: e.target.value as number,
-                      usuario_id: e.target.value as number,
-                    })
-                  }
-                  label="Empleado"
-                >
-                  {users.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.full_name ||
-                        `${user.first_name || user.nombre || ""} ${user.last_name || user.apellido || ""}`}{" "}
-                      ({user.email})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <WorkerAutocomplete
+                label="Empleado"
+                options={userOptions}
+                value={formData.worker_id ?? formData.usuario_id ?? ""}
+                onChange={(id) =>
+                  setFormData({
+                    ...formData,
+                    worker_id: id ? Number(id) : undefined,
+                    usuario_id: id ? Number(id) : undefined,
+                  })
+                }
+                required
+              />
             </Grid>
             <Grid size={12}>
               <FormControl fullWidth required>
