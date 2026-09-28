@@ -215,6 +215,25 @@ const CourseDetail: React.FC = () => {
           currentStep = 2; // Si no hay encuestas, saltar al paso de evaluación
         }
 
+        // Curso interactivo: la lección reemplaza la evaluación final
+        if (course.delivery_mode === "interactive") {
+          if (currentStep >= 2) {
+            try {
+              const certCheck = await api.get(`/certificates/course/${id}/check`);
+              if (certCheck.data?.available) {
+                setHasCertificate(true);
+                currentStep = 3;
+              } else if (course.completed) {
+                currentStep = 3;
+              }
+            } catch (e) {
+              if (course.completed) currentStep = 3;
+            }
+          }
+          setActiveStep(currentStep);
+          return;
+        }
+
         // Verificar evaluación
         if (currentStep >= 2) {
           const evaluationResponse = await api.get(`/evaluations/?course_id=${id}`);
@@ -590,6 +609,12 @@ const CourseDetail: React.FC = () => {
                         ? (isInteractiveCourse ? "¡Lección completada! Puedes avanzar al siguiente paso." : "¡Materiales completados! Puedes avanzar al siguiente paso.")
                         : `${isInteractiveCourse ? "Completa la lección interactiva" : "Completa todos los materiales del curso"} para avanzar al siguiente paso. Progreso actual: ${Math.round(progressInfo?.overall_progress || 0)}%`}
                     </Typography>
+                    {isInteractiveCourse && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        La lección incluye sus propias preguntas de evaluación: al aprobarla y
+                        completar las encuestas obtienes tu certificado.
+                      </Typography>
+                    )}
                     {activeStep === 0 && (
                       <LinearProgress 
                         variant="determinate" 
@@ -631,6 +656,7 @@ const CourseDetail: React.FC = () => {
                   </StepContent>
                 </Step>
                 
+                {!isInteractiveCourse && (
                 <Step completed={activeStep > 2}>
                   <StepLabel
                     sx={{
@@ -688,8 +714,9 @@ const CourseDetail: React.FC = () => {
                     )}
                   </StepContent>
                 </Step>
-                
-                <Step completed={activeStep > 3}>
+                )}
+                                
+                <Step completed={activeStep > (isInteractiveCourse ? 2 : 3)}>
                   <StepLabel
                     sx={{
                       '& .MuiStepLabel-iconContainer .Mui-completed': {
