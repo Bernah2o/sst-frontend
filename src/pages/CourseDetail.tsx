@@ -58,6 +58,8 @@ interface ICourseDetail {
   created_at: string;
   published_at: string;
   modules: CourseModule[];
+  /** "interactive": solo lecciones publicadas; "traditional": solo materiales */
+  delivery_mode?: "traditional" | "interactive";
   progress: number;
   enrolled_at: string;
   completed: boolean;
@@ -284,6 +286,18 @@ const CourseDetail: React.FC = () => {
     return 0;
   };
 
+  // Un curso es tradicional (materiales) o interactivo (lecciones publicadas), nunca ambos
+  const isInteractiveCourse = course?.delivery_mode === "interactive";
+  const moduleMaterials = (module: CourseModule): CourseMaterial[] =>
+    isInteractiveCourse ? [] : module.materials;
+  const moduleLessons = (module: CourseModule): InteractiveLessonSummary[] =>
+    isInteractiveCourse
+      ? (module.interactive_lessons || []).filter((lesson) => lesson.status === "published")
+      : [];
+  const visibleModules = (course?.modules || []).filter(
+    (module) => !isInteractiveCourse || moduleLessons(module).length > 0,
+  );
+
   // Helper function to get module progress percentage
   const getModuleProgress = (moduleId: number): number => {
     if (!progressInfo || !progressInfo.modules) return 0;
@@ -342,7 +356,7 @@ const CourseDetail: React.FC = () => {
     
     // Validar si puede tomar encuestas (>= 95% o completado)
     if (!progressInfo || !progressInfo.can_take_survey) {
-      setError("Debe completar los materiales del curso antes de poder contestar las encuestas.");
+      setError(isInteractiveCourse ? "Debe completar la lección interactiva antes de poder contestar las encuestas." : "Debe completar los materiales del curso antes de poder contestar las encuestas.");
       return;
     }
     
@@ -357,7 +371,7 @@ const CourseDetail: React.FC = () => {
     
     // Validar si puede tomar evaluación (>= 95% y encuestas completas)
     if (!progressInfo || !progressInfo.can_take_evaluation) {
-      setError("Debe completar los materiales y encuestas del curso antes de poder realizar la evaluación.");
+      setError(isInteractiveCourse ? "Debe completar la lección interactiva y las encuestas antes de poder realizar la evaluación." : "Debe completar los materiales y encuestas del curso antes de poder realizar la evaluación.");
       return;
     }
     
@@ -566,13 +580,15 @@ const CourseDetail: React.FC = () => {
                       },
                     }}
                   >
-                    <Typography variant="subtitle1">Completar Materiales del Curso</Typography>
+                    <Typography variant="subtitle1">
+                      {isInteractiveCourse ? "Completar la Lección Interactiva" : "Completar Materiales del Curso"}
+                    </Typography>
                   </StepLabel>
                   <StepContent>
                     <Typography>
                       {activeStep > 0 
-                        ? "¡Materiales completados! Puedes avanzar al siguiente paso." 
-                        : `Completa todos los materiales del curso para avanzar al siguiente paso. Progreso actual: ${Math.round(progressInfo?.overall_progress || 0)}%`}
+                        ? (isInteractiveCourse ? "¡Lección completada! Puedes avanzar al siguiente paso." : "¡Materiales completados! Puedes avanzar al siguiente paso.")
+                        : `${isInteractiveCourse ? "Completa la lección interactiva" : "Completa todos los materiales del curso"} para avanzar al siguiente paso. Progreso actual: ${Math.round(progressInfo?.overall_progress || 0)}%`}
                     </Typography>
                     {activeStep === 0 && (
                       <LinearProgress 
@@ -715,15 +731,15 @@ const CourseDetail: React.FC = () => {
 
       {/* Course Modules */}
       <Typography variant="h5" gutterBottom>
-        Módulos del Curso
+        {isInteractiveCourse ? "Lección interactiva" : "Módulos del Curso"}
       </Typography>
 
-      {course.modules.length === 0 ? (
+      {visibleModules.length === 0 ? (
         <Alert severity="info">
           Este curso aún no tiene módulos configurados.
         </Alert>
       ) : (
-        course.modules
+        visibleModules
           .sort((a, b) => a.order_index - b.order_index)
           .map((module) => (
             <Accordion
@@ -771,14 +787,14 @@ const CourseDetail: React.FC = () => {
               </AccordionSummary>
 
               <AccordionDetails>
-                {module.materials.length === 0 && (!module.interactive_lessons || module.interactive_lessons.length === 0) ? (
+                {moduleMaterials(module).length === 0 && moduleLessons(module).length === 0 ? (
                   <Alert severity="info">
                     Este módulo aún no tiene contenido configurado.
                   </Alert>
                 ) : (
                   <List>
                     {/* Materiales tradicionales */}
-                    {module.materials
+                    {moduleMaterials(module)
                       .sort((a, b) => a.order_index - b.order_index)
                       .map((material) => (
                         <ListItem key={`material-${material.id}`} disablePadding>
@@ -848,8 +864,7 @@ const CourseDetail: React.FC = () => {
                       ))}
 
                     {/* Lecciones interactivas */}
-                    {module.interactive_lessons && module.interactive_lessons
-                      .filter((lesson) => lesson.status === 'published')
+                    {moduleLessons(module)
                       .sort((a, b) => a.order_index - b.order_index)
                       .map((lesson) => (
                         <ListItem key={`lesson-${lesson.id}`} disablePadding>

@@ -43,6 +43,7 @@ import {
   Visibility,
   Settings,
   AutoAwesome,
+  Unpublished,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -183,6 +184,31 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({
       setSnackbar({
         open: true,
         message: "Error al guardar la lección",
+        severity: "error",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Pasar a borrador devuelve el curso a su contenido tradicional (materiales)
+  const handleUnpublish = async () => {
+    if (!lessonId) return;
+
+    setSaving(true);
+    try {
+      const updated = await interactiveLessonApi.unpublishLesson(lessonId);
+      setLesson((prev) => (prev ? { ...prev, status: updated.status } : null));
+      setSnackbar({
+        open: true,
+        message: "Lección en borrador: el curso vuelve a su contenido tradicional",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error unpublishing lesson:", error);
+      setSnackbar({
+        open: true,
+        message: "Error al pasar la lección a borrador",
         severity: "error",
       });
     } finally {
@@ -470,6 +496,22 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({
             >
               Publicar
             </Button>
+          )}
+
+          {lesson && lesson.status === "published" && (
+            <Tooltip title="El curso vuelve a su contenido tradicional (materiales)">
+              <span>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<Unpublished />}
+                  onClick={handleUnpublish}
+                  disabled={saving}
+                >
+                  Pasar a borrador
+                </Button>
+              </span>
+            </Tooltip>
           )}
         </Box>
       </Paper>

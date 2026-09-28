@@ -295,6 +295,8 @@ export interface InteractiveLessonListItem {
   updated_at: string;
   slides_count: number;
   activities_count: number;
+  course_id?: number | null;
+  course_title?: string | null;
 }
 
 // ============= Progress Interfaces =============

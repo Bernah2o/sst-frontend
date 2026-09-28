@@ -14,6 +14,7 @@ import {
   Chip,
   CircularProgress,
   Tooltip,
+  Alert,
 } from "@mui/material";
 import {
   // Add,
@@ -21,6 +22,8 @@ import {
   Delete,
   Visibility,
   Slideshow,
+  Publish,
+  Unpublished,
 } from '@mui/icons-material';
 import { useNavigate } from "react-router-dom";
 import interactiveLessonApi from "../services/interactiveLessonApi";
@@ -32,6 +35,8 @@ const InteractiveLessons: React.FC = () => {
   const navigate = useNavigate();
   const [lessons, setLessons] = useState<InteractiveLessonListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState<{ severity: "success" | "error"; message: string } | null>(null);
   const { dialogState, showConfirmDialog } = useConfirmDialog();
 
   useEffect(() => {
@@ -70,6 +75,47 @@ const InteractiveLessons: React.FC = () => {
     }
   };
 
+  // Publicar la lección convierte el curso en interactivo (reemplaza los
+  // materiales tradicionales); pasarla a borrador lo devuelve al tradicional.
+  const handleToggleStatus = async (lesson: InteractiveLessonListItem) => {
+    const publishing = lesson.status !== "published";
+    const courseName = lesson.course_title ? `"${lesson.course_title}"` : "el curso";
+    const confirmed = await showConfirmDialog({
+      title: publishing ? "Publicar lección" : "Pasar a borrador",
+      message: publishing
+        ? `Al publicar "${lesson.title}", ${courseName} se mostrará como curso interactivo: esta lección reemplaza los materiales tradicionales (PDF, videos) y será obligatoria para completarlo. Las encuestas y la evaluación final siguen aplicando. El avance de quienes están cursándolo se recalculará.`
+        : `Al pasar "${lesson.title}" a borrador, ${courseName} vuelve a su contenido tradicional (materiales) si no tiene otras lecciones publicadas. El avance de quienes están cursándolo se recalculará.`,
+      severity: "warning",
+      confirmText: publishing ? "Publicar" : "Pasar a borrador",
+      cancelText: "Cancelar",
+    });
+    if (!confirmed) return;
+
+    setTogglingId(lesson.id);
+    try {
+      const updated = publishing
+        ? await interactiveLessonApi.publishLesson(lesson.id)
+        : await interactiveLessonApi.unpublishLesson(lesson.id);
+      setLessons((prev) =>
+        prev.map((l) => (l.id === lesson.id ? { ...l, status: updated.status } : l)),
+      );
+      setFeedback({
+        severity: "success",
+        message: publishing
+          ? `Lección publicada: ${courseName} ahora es un curso interactivo.`
+          : `Lección en borrador: ${courseName} vuelve al contenido tradicional.`,
+      });
+    } catch (error: any) {
+      console.error("Error changing lesson status:", error);
+      setFeedback({
+        severity: "error",
+        message: error?.response?.data?.detail || "No se pudo cambiar el estado de la lección",
+      });
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <Box
@@ -103,11 +149,18 @@ const InteractiveLessons: React.FC = () => {
         </Typography>
       </Box>
 
+      {feedback && (
+        <Alert severity={feedback.severity} sx={{ mb: 2 }} onClose={() => setFeedback(null)}>
+          {feedback.message}
+        </Alert>
+      )}
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
               <TableCell>Título</TableCell>
+              <TableCell>Curso</TableCell>
               <TableCell>Estado</TableCell>
               <TableCell align="center">Slides</TableCell>
               <TableCell align="center">Actividades</TableCell>
@@ -118,7 +171,7 @@ const InteractiveLessons: React.FC = () => {
           <TableBody>
             {lessons.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   No se encontraron lecciones. Gestiona las lecciones desde el
                   detalle de cada curso/módulo.
                 </TableCell>
@@ -132,6 +185,14 @@ const InteractiveLessons: React.FC = () => {
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       ID: {lesson.id}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{lesson.course_title || "—"}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {lesson.status === "published"
+                        ? "Curso interactivo (reemplaza los materiales)"
+                        : "Curso tradicional (materiales)"}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -158,6 +219,30 @@ const InteractiveLessons: React.FC = () => {
                     <Box
                       sx={{ display: "flex", justifyContent: "center", gap: 1 }}
                     >
+                      <Tooltip
+                        title={
+                          lesson.status === "published"
+                            ? "Pasar a borrador (volver al curso tradicional)"
+                            : "Publicar (reemplaza los materiales del curso)"
+                        }
+                      >
+                        <span>
+                          <IconButton
+                            size="small"
+                            color={lesson.status === "published" ? "warning" : "success"}
+                            disabled={togglingId === lesson.id}
+                            onClick={() => handleToggleStatus(lesson)}
+                          >
+                            {togglingId === lesson.id ? (
+                              <CircularProgress size={18} />
+                            ) : lesson.status === "published" ? (
+                              <Unpublished fontSize="small" />
+                            ) : (
+                              <Publish fontSize="small" />
+                            )}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                       <Tooltip title="Vista Previa">
                         <IconButton
                           size="small"
