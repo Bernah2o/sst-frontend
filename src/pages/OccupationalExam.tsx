@@ -228,6 +228,14 @@ const OccupationalExam: React.FC = () => {
     null,
   );
   const [openViewDialog, setOpenViewDialog] = useState(false);
+  // Historial de exámenes del trabajador y visor de PDF del modal de detalles
+  const [workerExamHistory, setWorkerExamHistory] = useState<
+    OccupationalExamData[]
+  >([]);
+  const [workerHistoryLoading, setWorkerHistoryLoading] = useState(false);
+  const [viewPdfUrl, setViewPdfUrl] = useState<string | null>(null);
+  const [viewPdfLoading, setViewPdfLoading] = useState(false);
+  const [viewPdfError, setViewPdfError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { dialogState, showConfirmDialog } = useConfirmDialog();
   const [filters, setFilters] = useState({
@@ -1014,7 +1022,79 @@ const OccupationalExam: React.FC = () => {
   const handleViewExam = (exam: OccupationalExamData) => {
     setViewingExam(exam);
     setOpenViewDialog(true);
+    fetchWorkerExamHistory(exam.worker_id);
   };
+
+  const handleCloseViewDialog = () => {
+    setOpenViewDialog(false);
+    setWorkerExamHistory([]);
+    setViewPdfError(null);
+    setViewPdfUrl(null);
+  };
+
+  // Carga todos los exámenes del trabajador para el historial del modal
+  const fetchWorkerExamHistory = async (workerId: number) => {
+    setWorkerHistoryLoading(true);
+    try {
+      const response = await api.get(
+        `/occupational-exams/?worker_id=${workerId}&limit=500`,
+      );
+      setWorkerExamHistory(response.data.items || []);
+    } catch (error) {
+      console.error("Error fetching worker exam history:", error);
+      setWorkerExamHistory([]);
+    } finally {
+      setWorkerHistoryLoading(false);
+    }
+  };
+
+  // Carga el PDF del examen seleccionado en el visor embebido del modal
+  useEffect(() => {
+    if (!openViewDialog || !viewingExam?.pdf_file_path?.trim()) {
+      setViewPdfUrl(null);
+      setViewPdfError(null);
+      return;
+    }
+
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    setViewPdfLoading(true);
+    setViewPdfError(null);
+    setViewPdfUrl(null);
+
+    api
+      .get(`/occupational-exams/${viewingExam.id}/pdf`, {
+        responseType: "blob",
+      })
+      .then((response) => {
+        if (cancelled) return;
+        if (!response.data || response.data.size === 0) {
+          setViewPdfError("El archivo PDF está vacío o no existe.");
+          return;
+        }
+        objectUrl = window.URL.createObjectURL(
+          new Blob([response.data], { type: "application/pdf" }),
+        );
+        setViewPdfUrl(objectUrl);
+      })
+      .catch((error: any) => {
+        if (cancelled) return;
+        console.error("Error loading exam PDF:", error);
+        setViewPdfError(
+          error.response?.status === 404
+            ? "El archivo PDF no fue encontrado."
+            : "No se pudo cargar el PDF del examen.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setViewPdfLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) window.URL.revokeObjectURL(objectUrl);
+    };
+  }, [openViewDialog, viewingExam?.id, viewingExam?.pdf_file_path]);
 
   // Función para generar PDF de notificación médica individual
   const handleGenerateIndividualReport = async (exam: OccupationalExamData) => {
@@ -2684,8 +2764,8 @@ const OccupationalExam: React.FC = () => {
         {/* Dialog para Ver Detalles del Examen */}
         <Dialog
           open={openViewDialog}
-          onClose={() => setOpenViewDialog(false)}
-          maxWidth="md"
+          onClose={handleCloseViewDialog}
+          maxWidth="lg"
           fullWidth
         >
           <DialogTitle>Detalles del Examen Ocupacional</DialogTitle>
@@ -2880,6 +2960,191 @@ const OccupationalExam: React.FC = () => {
                       </Card>
                     </Grid>
                   )}
+
+                  {/* Documento PDF cargado del examen */}
+                  <Grid size={12}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          flexWrap="wrap"
+                          gap={1}
+                          mb={2}
+                        >
+                          <Typography
+                            variant="h6"
+                            display="flex"
+                            alignItems="center"
+                            gap={1}
+                          >
+                            <PdfIcon color="error" />
+                            Documento del Examen ({formatDate(viewingExam.exam_date)})
+                          </Typography>
+                          {viewingExam.pdf_file_path?.trim() && (
+                            <Box display="flex" gap={1}>
+                              <Button
+                                size="small"
+                                startIcon={<ViewIcon />}
+                                onClick={() => handlePreviewPdf(viewingExam.id)}
+                              >
+                                Abrir en pestaña
+                              </Button>
+                              <Button
+                                size="small"
+                                startIcon={<DownloadIcon />}
+                                onClick={() =>
+                                  handleDownloadPdf(
+                                    viewingExam.id,
+                                    viewingExam.worker_name,
+                                  )
+                                }
+                              >
+                                Descargar
+                              </Button>
+                            </Box>
+                          )}
+                        </Box>
+                        {!viewingExam.pdf_file_path?.trim() ? (
+                          <Alert severity="info">
+                            Este examen no tiene un PDF cargado.
+                          </Alert>
+                        ) : viewPdfLoading ? (
+                          <LinearProgress />
+                        ) : viewPdfError ? (
+                          <Alert severity="error">{viewPdfError}</Alert>
+                        ) : viewPdfUrl ? (
+                          <Box
+                            component="iframe"
+                            src={viewPdfUrl}
+                            title="PDF del examen ocupacional"
+                            sx={{
+                              width: "100%",
+                              height: { xs: 400, md: 600 },
+                              border: 1,
+                              borderColor: "divider",
+                              borderRadius: 1,
+                            }}
+                          />
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Historial de exámenes del trabajador */}
+                  <Grid size={12}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography
+                          variant="h6"
+                          gutterBottom
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                        >
+                          <HistoryIcon />
+                          Historial de Exámenes del Trabajador
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mb: 2 }}
+                        >
+                          Seleccione un examen para ver su detalle y el PDF
+                          cargado.
+                        </Typography>
+                        {workerHistoryLoading ? (
+                          <LinearProgress />
+                        ) : workerExamHistory.length === 0 ? (
+                          <Alert severity="info">
+                            No hay exámenes registrados para este trabajador.
+                          </Alert>
+                        ) : (
+                          <TableContainer component={Paper} variant="outlined">
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Fecha</TableCell>
+                                  <TableCell>Tipo</TableCell>
+                                  <TableCell>Concepto</TableCell>
+                                  <TableCell>Centro Médico</TableCell>
+                                  <TableCell align="center">PDF</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {workerExamHistory.map((exam) => {
+                                  const isSelected = exam.id === viewingExam.id;
+                                  const hasPdf = !!exam.pdf_file_path?.trim();
+                                  return (
+                                    <TableRow
+                                      key={exam.id}
+                                      hover
+                                      selected={isSelected}
+                                      onClick={() => setViewingExam(exam)}
+                                      sx={{ cursor: "pointer" }}
+                                    >
+                                      <TableCell>
+                                        {formatDate(exam.exam_date)}
+                                        {isSelected && (
+                                          <Chip
+                                            size="small"
+                                            label="Viendo"
+                                            color="primary"
+                                            sx={{ ml: 1 }}
+                                          />
+                                        )}
+                                      </TableCell>
+                                      <TableCell>
+                                        {exam.exam_type
+                                          ? EXAM_TYPE_LABELS[exam.exam_type] ||
+                                            exam.exam_type
+                                          : "N/A"}
+                                      </TableCell>
+                                      <TableCell>
+                                        {medicalAptitudeTypes.find(
+                                          (t) =>
+                                            t.value ===
+                                            exam.medical_aptitude_concept,
+                                        )?.label ||
+                                          exam.medical_aptitude_concept}
+                                      </TableCell>
+                                      <TableCell>
+                                        {exam.medical_center || "—"}
+                                      </TableCell>
+                                      <TableCell align="center">
+                                        {hasPdf ? (
+                                          <Tooltip title="Ver PDF de este examen">
+                                            <IconButton
+                                              size="small"
+                                              color="error"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setViewingExam(exam);
+                                              }}
+                                            >
+                                              <PdfIcon fontSize="small" />
+                                            </IconButton>
+                                          </Tooltip>
+                                        ) : (
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                          >
+                                            Sin PDF
+                                          </Typography>
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
               </Box>
             )}
@@ -2908,7 +3173,7 @@ const OccupationalExam: React.FC = () => {
                 ? "Generando..."
                 : "Generar Notificación Médica"}
             </Button>
-            <Button onClick={() => setOpenViewDialog(false)}>Cerrar</Button>
+            <Button onClick={handleCloseViewDialog}>Cerrar</Button>
           </DialogActions>
         </Dialog>
 
