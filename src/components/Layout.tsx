@@ -2,7 +2,6 @@ import {
   Menu as MenuIcon,
   AccountCircle,
   ExitToApp,
-  School,
 } from '@mui/icons-material';
 import {
   Box,
@@ -14,6 +13,7 @@ import {
   MenuItem,
   Avatar,
   Chip,
+  Tooltip,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { getApiUrl } from '../config/env';
 import { useAuth } from '../contexts/AuthContext';
+import { brand, condensed } from '../theme';
 
 import PermissionRefreshNotification from './PermissionRefreshNotification';
 import Sidebar from './Sidebar';
@@ -86,23 +87,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'superadmin':
-        return 'secondary';
-      case 'admin':
-        return 'error';
-      case 'trainer':
-        return 'warning';
-      case 'supervisor':
-        return 'info';
-      case 'employee':
-        return 'success';
-      default:
-        return 'default';
-    }
-  };
-
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'superadmin':
@@ -144,6 +128,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         className="sidebar-transition"
         sx={{
           flexGrow: 1,
+          minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
           transition: theme.transitions.create(['margin'], {
@@ -156,65 +141,81 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Top AppBar */}
         <AppBar
           position="sticky"
+          color="primary"
           sx={{
             zIndex: theme.zIndex.drawer + 1,
-            backgroundColor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-            boxShadow: 1,
+            borderBottom: '1px solid rgba(255, 255, 255, 0.14)',
           }}
         >
-          <Toolbar>
-            <IconButton
-              color="inherit"
-              aria-label="toggle sidebar"
-              onClick={handleSidebarToggle}
-              edge="start"
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
-            
-            <School sx={{ mr: 2, color: theme.palette.primary.main }} />
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
+          <Toolbar sx={{ minHeight: { xs: 56, sm: 60 }, gap: 1.5 }}>
+            <Tooltip title={isMobile ? 'Abrir menú' : sidebarCollapsed ? 'Expandir menú' : 'Contraer menú'}>
+              <IconButton
+                color="inherit"
+                aria-label={isMobile ? 'Abrir menú' : sidebarCollapsed ? 'Expandir menú' : 'Contraer menú'}
+                onClick={handleSidebarToggle}
+                edge="start"
+              >
+                <MenuIcon />
+              </IconButton>
+            </Tooltip>
+
+            <Typography
+              component="div"
+              sx={{
                 flexGrow: 1,
-                color: theme.palette.primary.main,
-                fontWeight: 600
+                fontFamily: condensed,
+                fontWeight: 700,
+                fontSize: '1.2rem',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
               }}
             >
               Plataforma SST
             </Typography>
-            
+
             {user && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
                 {/* Selector de empresa (solo superadmin) */}
                 {(user.role || user.rol) === 'superadmin' && <SuperadminEmpresaSwitcher />}
 
-                {/* Role Chip */}
+                {/* Rol del usuario, como sello */}
                 <Chip
-                  label={getRoleLabel(user.role || user.rol)}
-                  color={getRoleColor(user.role || user.rol) as any}
+                  label={user.custom_role?.display_name || getRoleLabel(user.role || user.rol)}
                   size="small"
                   variant="outlined"
+                  sx={{
+                    display: { xs: 'none', sm: 'inline-flex' },
+                    color: '#fff',
+                    borderColor: 'rgba(255, 255, 255, 0.55)',
+                  }}
                 />
-                
+
                 {/* User Menu */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ display: { xs: 'none', md: 'block' }, color: brand.shellText, fontWeight: 500 }}
+                  >
                     {user.nombre} {user.apellido}
                   </Typography>
                   <IconButton
-                    size="large"
-                    aria-label="account of current user"
+                    aria-label="Cuenta del usuario"
                     aria-controls="menu-appbar"
                     aria-haspopup="true"
                     onClick={handleMenu}
                     color="inherit"
                   >
-                    <Avatar 
-                      sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}
+                    <Avatar
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        bgcolor: brand.coupon,
+                        color: brand.shell,
+                        fontFamily: condensed,
+                        fontWeight: 700,
+                        fontSize: '0.95rem',
+                      }}
                       src={user.profile_picture ? 
                         (user.profile_picture.startsWith('http') ? 
                           user.profile_picture : 
@@ -222,7 +223,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         ) : undefined
                       }
                     >
-                      <AccountCircle />
+                      {`${user.nombre?.[0] ?? ''}${user.apellido?.[0] ?? ''}`.toUpperCase() || <AccountCircle />}
                     </Avatar>
                   </IconButton>
                   <Menu
@@ -241,12 +242,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     onClose={handleClose}
                   >
                     <MenuItem onClick={() => { navigate('/profile'); handleClose(); }}>
-                      <AccountCircle sx={{ mr: 1 }} />
-                      Mi Perfil
+                      <AccountCircle sx={{ mr: 1.5, color: 'text.secondary' }} fontSize="small" />
+                      Mi perfil
                     </MenuItem>
                     <MenuItem onClick={handleLogout}>
-                      <ExitToApp sx={{ mr: 1 }} />
-                      Cerrar Sesión
+                      <ExitToApp sx={{ mr: 1.5, color: 'text.secondary' }} fontSize="small" />
+                      Cerrar sesión
                     </MenuItem>
                   </Menu>
                 </Box>
@@ -260,9 +261,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           className="content-wrapper"
           sx={{
             flexGrow: 1,
-            p: 3,
-            backgroundColor: theme.palette.grey[50],
-            minHeight: 'calc(100vh - 64px)',
+            p: { xs: 2, sm: 3 },
+            backgroundColor: 'background.default',
+            minHeight: 'calc(100vh - 60px)',
+            minWidth: 0,
           }}
         >
           <div className="main-content">

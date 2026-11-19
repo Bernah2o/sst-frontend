@@ -1,42 +1,29 @@
 import {
-  People as PeopleIcon,
-  School as SchoolIcon,
-  Assignment as AssignmentIcon,
-  TrendingUp as TrendingUpIcon,
-  Notifications as NotificationsIcon,
-  Warning as WarningIcon,
-  CheckCircle as CheckCircleIcon,
-  WorkspacePremium as CertificateIcon,
-  PersonAdd as PersonAddIcon,
-  Timeline as TimelineIcon,
-  Business as BusinessIcon,
-  CalendarMonth as CalendarIcon,
-  ArrowUpward as ArrowUpIcon,
-  ArrowDownward as ArrowDownIcon,
+  Refresh as RefreshIcon,
+  ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 import {
   Box,
   Grid,
-  Card,
-  CardContent,
+  Paper,
   Typography,
   Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  LinearProgress,
-  Divider,
   Alert,
-  Avatar,
   Chip,
-  Stack,
+  Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Tooltip,
 } from '@mui/material';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { brand, condensed } from '../theme';
 import { logger } from '../utils/logger';
 
 interface DashboardStats {
@@ -88,14 +75,93 @@ const MODALITY_LABELS: Record<string, string> = {
   UNKNOWN: 'Desconocida'
 };
 
-const MODALITY_COLORS: Record<string, string> = {
-  ON_SITE: '#4caf50',
-  REMOTE: '#2196f3',
-  TELEWORK: '#9c27b0',
-  HOME_OFFICE: '#ff9800',
-  MOBILE: '#f44336',
-  UNKNOWN: '#9e9e9e'
+const ACTION_LABELS: Record<string, string> = {
+  CREATE: 'Creación',
+  UPDATE: 'Actualización',
+  DELETE: 'Eliminación',
+  LOGIN: 'Inicio de sesión',
+  LOGOUT: 'Cierre de sesión',
 };
+
+const ACTION_COLORS: Record<string, 'success' | 'info' | 'error' | 'default'> = {
+  CREATE: 'success',
+  UPDATE: 'info',
+  DELETE: 'error',
+};
+
+const nf = new Intl.NumberFormat('es-CO');
+const pf = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
+
+const formatMonth = (raw: string) => {
+  const m = /^(\d{4})-(\d{2})/.exec(raw);
+  if (!m) return raw;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, 1);
+  return d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '').slice(0, 3);
+};
+
+const capsSx = {
+  fontFamily: condensed,
+  fontWeight: 600,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.07em',
+};
+
+const visuallyHidden = {
+  position: 'absolute' as const,
+  width: '1px',
+  height: '1px',
+  margin: '-1px',
+  padding: 0,
+  border: 0,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap' as const,
+};
+
+/** Encabezado de un cupón: título en mayúsculas condensadas y acción opcional */
+const CouponHead: React.FC<{ title: string; meta?: React.ReactNode }> = ({ title, meta }) => (
+  <Box
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 2,
+      px: 2.5,
+      minHeight: 48,
+      borderBottom: `1px solid ${brand.ruleSoft}`,
+    }}
+  >
+    <Typography component="h2" sx={{ ...capsSx, fontSize: '1rem', color: 'text.primary' }}>
+      {title}
+    </Typography>
+    {meta}
+  </Box>
+);
+
+/** Celda de la libreta de indicadores */
+const Figure: React.FC<{ label: string; value: string; note?: string }> = ({ label, value, note }) => (
+  <Box sx={{ px: 2.5, py: 2, minWidth: 0 }}>
+    <Typography sx={{ ...capsSx, fontSize: '0.78rem', color: 'text.secondary' }} noWrap>
+      {label}
+    </Typography>
+    <Typography
+      sx={{
+        fontFamily: condensed,
+        fontWeight: 700,
+        fontSize: '2.1rem',
+        lineHeight: 1.1,
+        mt: 0.5,
+        color: brand.carbon,
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
+      {value}
+    </Typography>
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', minHeight: 18 }} noWrap>
+      {note ?? ''}
+    </Typography>
+  </Box>
+);
 
 const AdminDashboard: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
@@ -206,23 +272,6 @@ const AdminDashboard: React.FC = () => {
     setAlerts(newAlerts);
   };
 
-  const getActivityIcon = (action: string) => {
-    switch (action) {
-      case 'CREATE':
-        return <PersonAddIcon sx={{ color: '#4caf50' }} />;
-      case 'UPDATE':
-        return <NotificationsIcon sx={{ color: '#2196f3' }} />;
-      case 'DELETE':
-        return <WarningIcon sx={{ color: '#f44336' }} />;
-      case 'LOGIN':
-        return <CheckCircleIcon sx={{ color: '#9c27b0' }} />;
-      case 'LOGOUT':
-        return <PeopleIcon sx={{ color: '#ff9800' }} />;
-      default:
-        return <TimelineIcon sx={{ color: '#607d8b' }} />;
-    }
-  };
-
   const getActivityDescription = (activity: AuditActivity) => {
     const resourceName = activity.resource_name || activity.resource_type;
     switch (activity.action) {
@@ -241,17 +290,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const getActionChipColor = (action: string): "success" | "info" | "error" | "warning" | "default" => {
-    switch (action) {
-      case 'CREATE': return 'success';
-      case 'UPDATE': return 'info';
-      case 'DELETE': return 'error';
-      case 'LOGIN': return 'default';
-      case 'LOGOUT': return 'warning';
-      default: return 'default';
-    }
-  };
-
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date();
     const date = new Date(timestamp);
@@ -267,379 +305,383 @@ const AdminDashboard: React.FC = () => {
     return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
   };
 
+  const monthly = (stats.monthly_enrollments ?? []).slice(-12);
+  const monthlyMax = Math.max(0, ...monthly.map((m) => m.count));
+  const modalities = workerStats?.by_modality
+    ? Object.entries(workerStats.by_modality).sort((a, b) => b[1] - a[1])
+    : [];
+  const modalityMax = Math.max(0, ...modalities.map(([, c]) => c));
+  const totalWorkers =
+    workerStats?.total_workers ?? (workerStats ? workerStats.active_workers + workerStats.inactive_workers : 0);
+  const today = new Date().toLocaleDateString('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   if (loading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Cargando Dashboard...
-        </Typography>
-        <LinearProgress />
+      <Box aria-busy="true" aria-label="Cargando panel administrativo">
+        <Skeleton variant="text" width={320} height={48} />
+        <Skeleton variant="text" width={260} sx={{ mb: 3 }} />
+        <Skeleton variant="rectangular" height={132} sx={{ mb: 3, borderRadius: 1 }} />
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, lg: 7 }}>
+            <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 1 }} />
+          </Grid>
+          <Grid size={{ xs: 12, lg: 5 }}>
+            <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 1 }} />
+          </Grid>
+        </Grid>
       </Box>
     );
   }
 
-  const StatCard = ({
-    icon,
-    title,
-    value,
-    subtitle,
-    color,
-    trend,
-    trendValue
-  }: {
-    icon: React.ReactNode;
-    title: string;
-    value: string | number;
-    subtitle?: string;
-    color: string;
-    trend?: 'up' | 'down' | 'neutral';
-    trendValue?: string;
-  }) => (
-    <Card sx={{
-      height: '100%',
-      borderRadius: 3,
-      boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-      transition: 'all 0.3s ease',
-      '&:hover': {
-        boxShadow: '0 8px 25px rgba(0,0,0,0.12)',
-        transform: 'translateY(-2px)'
-      }
-    }}>
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Avatar sx={{
-            bgcolor: `${color}15`,
-            width: 56,
-            height: 56,
-            '& .MuiSvgIcon-root': { color: color, fontSize: 28 }
-          }}>
-            {icon}
-          </Avatar>
-          {trend && trendValue && (
-            <Chip
-              size="small"
-              icon={trend === 'up' ? <ArrowUpIcon sx={{ fontSize: 16 }} /> : <ArrowDownIcon sx={{ fontSize: 16 }} />}
-              label={trendValue}
-              sx={{
-                bgcolor: trend === 'up' ? '#e8f5e9' : '#ffebee',
-                color: trend === 'up' ? '#2e7d32' : '#c62828',
-                fontWeight: 600,
-                '& .MuiChip-icon': { color: 'inherit' }
-              }}
-            />
-          )}
-        </Box>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a2e', mb: 0.5 }}>
-          {value}
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#6b7280', fontWeight: 500 }}>
-          {title}
-        </Typography>
-        {subtitle && (
-          <Typography variant="caption" sx={{ color: '#9ca3af', mt: 1, display: 'block' }}>
-            {subtitle}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  );
-
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: '#f8fafc', minHeight: '100vh' }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a2e', mb: 1 }}>
-          Dashboard
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="body1" sx={{ color: '#6b7280' }}>
-            Bienvenido, {user?.first_name} {user?.last_name}
+    <Box sx={{ maxWidth: 1440, mx: 'auto' }}>
+      {/* ── Encabezado ── */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h4" component="h1" sx={{ textTransform: 'uppercase', lineHeight: 1.05 }}>
+            Panel administrativo
           </Typography>
-          <Chip
-            icon={<CalendarIcon sx={{ fontSize: 16 }} />}
-            label={new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-            size="small"
-            sx={{ bgcolor: '#e0e7ff', color: '#4338ca', fontWeight: 500, textTransform: 'capitalize' }}
-          />
+          <Typography color="text.secondary" sx={{ mt: 0.75 }}>
+            {user?.first_name ? `Bienvenido, ${user.first_name} ${user.last_name ?? ''} · ` : ''}
+            <Box component="span" sx={{ '&::first-letter': { textTransform: 'uppercase' }, display: 'inline-block' }}>
+              {today}
+            </Box>
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchDashboardData}>
+            Actualizar
+          </Button>
+          <Button variant="contained" endIcon={<ArrowForwardIcon />} onClick={() => navigate('/admin/audit')}>
+            Auditoría
+          </Button>
         </Box>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          action={
+            <Button color="inherit" size="small" onClick={fetchDashboardData}>
+              Reintentar
+            </Button>
+          }
+        >
           {error}
         </Alert>
       )}
 
-      {/* Alertas importantes */}
-      {alerts.length > 0 && (
-        <Box sx={{ mb: 4 }}>
-          <Grid container spacing={2}>
-            {alerts.map((alert) => (
-              <Grid size={{ xs: 12, md: 4 }} key={alert.id}>
-                <Alert
-                  severity={alert.type}
-                  sx={{
-                    borderRadius: 2,
-                    '& .MuiAlert-message': { width: '100%' }
-                  }}
-                >
-                  <Typography variant="subtitle2" fontWeight="bold">
-                    {alert.title}
-                  </Typography>
-                  <Typography variant="body2">
-                    {alert.description}
-                  </Typography>
-                </Alert>
-              </Grid>
-            ))}
-          </Grid>
+      {/* ── Libreta de indicadores ── */}
+      <Paper sx={{ mb: 3, overflow: 'hidden' }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', lg: '5fr 2fr' },
+          }}
+        >
+          <Box>
+            <Box sx={{ px: 2.5, py: 1, backgroundColor: brand.shell, color: '#fff' }}>
+              <Typography sx={{ ...capsSx, fontSize: '0.85rem' }}>Capacitación</Typography>
+            </Box>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))', md: 'repeat(5, minmax(0, 1fr))' },
+                '& > *': { borderRight: `1px solid ${brand.ruleSoft}`, borderBottom: { xs: `1px solid ${brand.ruleSoft}`, md: 0 } },
+              }}
+            >
+              <Figure label="Cursos" value={nf.format(stats.total_courses)} />
+              <Figure
+                label="Inscripciones"
+                value={nf.format(stats.total_enrollments)}
+                note={`${nf.format(stats.active_enrollments)} activas`}
+              />
+              <Figure label="Completación" value={`${pf.format(stats.completion_rate ?? 0)} %`} note="de las inscripciones" />
+              <Figure label="Últimos 30 días" value={nf.format(stats.recent_enrollments)} note="inscripciones nuevas" />
+              <Figure label="Certificados" value={nf.format(stats.total_certificates)} note="emitidos" />
+            </Box>
+          </Box>
+          <Box sx={{ borderLeft: { lg: `2px dashed ${brand.rule}` }, borderTop: { xs: `2px dashed ${brand.rule}`, lg: 0 } }}>
+            <Box sx={{ px: 2.5, py: 1, backgroundColor: brand.shell, color: '#fff' }}>
+              <Typography sx={{ ...capsSx, fontSize: '0.85rem' }}>Trabajadores</Typography>
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', '& > *:first-of-type': { borderRight: `1px solid ${brand.ruleSoft}` } }}>
+              <Figure
+                label="Activos"
+                value={workerStats ? nf.format(workerStats.active_workers) : '—'}
+                note={workerStats ? `de ${nf.format(totalWorkers)} registrados` : 'Sin datos'}
+              />
+              <Figure
+                label="Inactivos"
+                value={workerStats ? nf.format(workerStats.inactive_workers) : '—'}
+                note={workerStats ? undefined : 'Sin datos'}
+              />
+            </Box>
+          </Box>
         </Box>
-      )}
+      </Paper>
 
-      {/* Estadísticas principales */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <StatCard
-            icon={<PeopleIcon />}
-            title="Total Usuarios"
-            value={stats.total_users}
-            color="#6366f1"
-            trend="up"
-            trendValue="+12%"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <StatCard
-            icon={<SchoolIcon />}
-            title="Total Cursos"
-            value={stats.total_courses}
-            color="#ec4899"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <StatCard
-            icon={<AssignmentIcon />}
-            title="Inscripciones"
-            value={stats.total_enrollments}
-            subtitle={`${stats.active_enrollments} activas`}
-            color="#14b8a6"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <StatCard
-            icon={<CertificateIcon />}
-            title="Certificados"
-            value={stats.total_certificates}
-            color="#f59e0b"
-          />
-        </Grid>
-      </Grid>
-
-      {/* Segunda fila de estadísticas */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <StatCard
-            icon={<TrendingUpIcon />}
-            title="Tasa Completación"
-            value={`${stats.completion_rate}%`}
-            color="#10b981"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <StatCard
-            icon={<PersonAddIcon />}
-            title="Inscripciones Recientes"
-            value={stats.recent_enrollments}
-            subtitle="Últimos 30 días"
-            color="#8b5cf6"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <StatCard
-            icon={<CheckCircleIcon />}
-            title="Trabajadores Activos"
-            value={workerStats?.active_workers ?? 0}
-            color="#22c55e"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <StatCard
-            icon={<WarningIcon />}
-            title="Trabajadores Inactivos"
-            value={workerStats?.inactive_workers ?? 0}
-            color="#ef4444"
-          />
-        </Grid>
-      </Grid>
-
-      {/* Contenido principal */}
-      <Grid container spacing={3}>
-        {/* Modalidad de Trabajo */}
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <Card sx={{
-            height: '100%',
-            borderRadius: 3,
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
-          }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                <BusinessIcon sx={{ color: '#6366f1' }} />
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#1a1a2e' }}>
-                  Modalidad de Trabajo
-                </Typography>
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        {/* ── Inscripciones por mes ── */}
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <Paper sx={{ height: '100%' }}>
+            <CouponHead
+              title="Inscripciones por mes"
+              meta={
+                monthly.length > 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    Últimos {monthly.length} meses
+                  </Typography>
+                )
+              }
+            />
+            {monthly.length > 0 && monthlyMax > 0 ? (
+              <Box sx={{ px: 2.5, pt: 3, pb: 2, position: 'relative' }}>
+                <Box
+                  role="img"
+                  aria-label={`Inscripciones por mes. Máximo ${nf.format(monthlyMax)}. Último mes: ${nf.format(monthly[monthly.length - 1].count)}.`}
+                  sx={{ position: 'relative', height: 200, borderBottom: `1px solid ${brand.ink}` }}
+                >
+                  {/* Líneas de referencia recesivas */}
+                  {[0.5, 1].map((f) => (
+                    <Box
+                      key={f}
+                      aria-hidden
+                      sx={{ position: 'absolute', left: 0, right: 0, bottom: `${f * 100}%`, borderTop: `1px dashed ${brand.ruleSoft}` }}
+                    >
+                      <Typography variant="caption" sx={{ position: 'absolute', right: 0, top: -18, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+                        {nf.format(Math.round(monthlyMax * f))}
+                      </Typography>
+                    </Box>
+                  ))}
+                  <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', gap: '2px', pr: 5 }}>
+                    {monthly.map((m, i) => {
+                      const isLast = i === monthly.length - 1;
+                      return (
+                        <Tooltip key={m.month} title={`${formatMonth(m.month)}: ${nf.format(m.count)} inscripciones`} placement="top" arrow>
+                          <Box sx={{ flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', cursor: 'default', '&:hover > span': { opacity: 1 } }}>
+                            <Box
+                              component="span"
+                              sx={{
+                                position: 'relative',
+                                width: '100%',
+                                maxWidth: 34,
+                                height: `${(m.count / monthlyMax) * 100}%`,
+                                minHeight: m.count > 0 ? 2 : 0,
+                                backgroundColor: brand.chart,
+                                borderRadius: '4px 4px 0 0',
+                                opacity: isLast ? 1 : 0.82,
+                                transition: 'opacity 120ms ease-out',
+                              }}
+                            >
+                              {isLast && (
+                                <Typography
+                                  component="span"
+                                  sx={{ position: 'absolute', top: -22, left: '50%', transform: 'translateX(-50%)', fontWeight: 700, fontSize: '0.85rem', color: 'text.primary', fontVariantNumeric: 'tabular-nums' }}
+                                >
+                                  {nf.format(m.count)}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        </Tooltip>
+                      );
+                    })}
+                  </Box>
+                </Box>
+                <Box aria-hidden sx={{ display: 'flex', gap: '2px', pr: 5, mt: 0.75 }}>
+                  {monthly.map((m) => (
+                    <Typography key={m.month} variant="caption" sx={{ flex: 1, textAlign: 'center', color: 'text.secondary', textTransform: 'capitalize' }} noWrap>
+                      {formatMonth(m.month)}
+                    </Typography>
+                  ))}
+                </Box>
+                {/* Vista de tabla para lectores de pantalla */}
+                <Table size="small" sx={visuallyHidden}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Mes</TableCell>
+                      <TableCell>Inscripciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {monthly.map((m) => (
+                      <TableRow key={m.month}>
+                        <TableCell>{formatMonth(m.month)}</TableCell>
+                        <TableCell>{m.count}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </Box>
+            ) : (
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Typography color="text.secondary">Aún no hay inscripciones registradas por mes.</Typography>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
 
-              {workerStats?.by_modality && Object.keys(workerStats.by_modality).length > 0 ? (
-                <Stack spacing={2.5}>
-                  {Object.entries(workerStats.by_modality).map(([key, count]) => {
-                    const label = MODALITY_LABELS[key] || key;
-                    const color = MODALITY_COLORS[key] || '#9e9e9e';
-                    const percent = workerStats?.percent_by_modality?.[key] ?? 0;
-                    return (
-                      <Box key={key}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: color }} />
-                            <Typography variant="body2" sx={{ fontWeight: 500, color: '#374151' }}>
-                              {label}
-                            </Typography>
+        {/* ── Modalidad de trabajo ── */}
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <Paper sx={{ height: '100%' }}>
+            <CouponHead
+              title="Trabajadores por modalidad"
+              meta={
+                workerStats && (
+                  <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {nf.format(totalWorkers)} en total
+                  </Typography>
+                )
+              }
+            />
+            {modalities.length > 0 && modalityMax > 0 ? (
+              <Box component="ul" sx={{ listStyle: 'none', m: 0, px: 2.5, py: 2 }}>
+                {modalities.map(([key, count]) => {
+                  const percent = workerStats?.percent_by_modality?.[key] ?? 0;
+                  return (
+                    <Box component="li" key={key} sx={{ py: 1.1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 0.6, gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                          {MODALITY_LABELS[key] || key}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                          <Box component="strong">{nf.format(count)}</Box>
+                          <Box component="span" sx={{ color: 'text.secondary', ml: 1 }}>
+                            {pf.format(percent)} %
                           </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1a1a2e' }}>
-                              {count}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: '#9ca3af' }}>
-                              ({percent}%)
-                            </Typography>
-                          </Box>
-                        </Box>
-                        <LinearProgress
-                          variant="determinate"
-                          value={percent}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ height: 8, backgroundColor: brand.ruleSoft, borderRadius: '1px' }}>
+                        <Box
                           sx={{
-                            height: 8,
-                            borderRadius: 4,
-                            bgcolor: '#f3f4f6',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                              bgcolor: color
-                            }
+                            height: '100%',
+                            width: `${(count / modalityMax) * 100}%`,
+                            minWidth: count > 0 ? 2 : 0,
+                            backgroundColor: brand.chart,
+                            borderRadius: '0 4px 4px 0',
                           }}
                         />
                       </Box>
-                    );
-                  })}
-                </Stack>
-              ) : (
-                <Box sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: 200,
-                  bgcolor: '#f9fafb',
-                  borderRadius: 2
-                }}>
-                  <Typography variant="body2" sx={{ color: '#9ca3af' }}>
-                    No hay datos de modalidades disponibles
-                  </Typography>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
+                    </Box>
+                  );
+                })}
+              </Box>
+            ) : (
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Typography color="text.secondary">No hay datos de modalidad de trabajo.</Typography>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={3}>
+        {/* ── Requiere atención ── */}
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Paper sx={{ height: '100%' }}>
+            <CouponHead
+              title="Requiere atención"
+              meta={alerts.length > 0 && <Chip size="small" color="warning" label={alerts.length} />}
+            />
+            {alerts.length > 0 ? (
+              <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+                {alerts.map((alert) => (
+                  <Box component="li" key={alert.id} sx={{ px: 2.5, py: 1.75, borderBottom: `1px dashed ${brand.ruleSoft}`, '&:last-of-type': { borderBottom: 0 } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, alignItems: 'flex-start' }}>
+                      <Typography sx={{ fontWeight: 700 }}>{alert.title}</Typography>
+                      <Chip
+                        size="small"
+                        color={alert.type === 'info' ? 'info' : alert.type === 'error' ? 'error' : 'warning'}
+                        label={alert.type === 'info' ? 'Seguimiento' : 'Revisar'}
+                        sx={{ flex: 'none' }}
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {alert.description}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Box sx={{ px: 2.5, py: 3 }}>
+                <Typography color="text.secondary">Sin alertas activas en capacitación.</Typography>
+              </Box>
+            )}
+          </Paper>
         </Grid>
 
-        {/* Actividad reciente */}
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <Card sx={{
-            height: '100%',
-            borderRadius: 3,
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
-          }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TimelineIcon sx={{ color: '#6366f1' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#1a1a2e' }}>
-                    Actividad Reciente
-                  </Typography>
-                </Box>
-                <Button
-                  size="small"
-                  onClick={() => navigate('/admin/audit')}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 500,
-                    color: '#6366f1'
-                  }}
-                >
+        {/* ── Actividad reciente ── */}
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <Paper sx={{ height: '100%', overflow: 'hidden' }}>
+            <CouponHead
+              title="Actividad reciente"
+              meta={
+                <Button size="small" endIcon={<ArrowForwardIcon fontSize="small" />} onClick={() => navigate('/admin/audit')}>
                   Ver todo
                 </Button>
+              }
+            />
+            {recentActivities.length > 0 ? (
+              <Box sx={{ overflowX: 'auto' }}>
+                <Table size="small" aria-label="Actividad reciente">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Cuándo</TableCell>
+                      <TableCell>Usuario</TableCell>
+                      <TableCell>Acción</TableCell>
+                      <TableCell>Detalle</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {recentActivities.map((activity) => (
+                      <TableRow key={activity.id} hover>
+                        <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>
+                          <Tooltip title={new Date(activity.created_at).toLocaleString('es-CO')}>
+                            <span>{formatTimeAgo(activity.created_at)}</span>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell sx={{ maxWidth: 220 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                            {activity.user_name || activity.user_email || 'Usuario'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={ACTION_LABELS[activity.action] ?? activity.action}
+                            color={ACTION_COLORS[activity.action] ?? 'default'}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ color: 'text.secondary', maxWidth: 280 }}>
+                          <Typography variant="body2" noWrap>{getActivityDescription(activity)}</Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </Box>
-
-              {recentActivities.length > 0 ? (
-                <List sx={{ p: 0 }}>
-                  {recentActivities.map((activity, index) => (
-                    <React.Fragment key={activity.id}>
-                      <ListItem sx={{
-                        px: 0,
-                        py: 1.5,
-                        '&:hover': { bgcolor: '#f9fafb', borderRadius: 2 }
-                      }}>
-                        <ListItemIcon sx={{ minWidth: 44 }}>
-                          <Avatar sx={{
-                            width: 36,
-                            height: 36,
-                            bgcolor: '#f3f4f6'
-                          }}>
-                            {getActivityIcon(activity.action)}
-                          </Avatar>
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                              <Typography variant="body2" sx={{ fontWeight: 500, color: '#1a1a2e' }}>
-                                {activity.user_email || 'Usuario'}
-                              </Typography>
-                              <Chip
-                                label={activity.action}
-                                size="small"
-                                color={getActionChipColor(activity.action)}
-                                sx={{ height: 20, fontSize: '0.7rem' }}
-                              />
-                            </Box>
-                          }
-                          secondary={
-                            <Typography variant="caption" sx={{ color: '#6b7280' }}>
-                              {getActivityDescription(activity)}
-                            </Typography>
-                          }
-                        />
-                        <Typography variant="caption" sx={{ color: '#9ca3af', whiteSpace: 'nowrap' }}>
-                          {formatTimeAgo(activity.created_at)}
-                        </Typography>
-                      </ListItem>
-                      {index < recentActivities.length - 1 && (
-                        <Divider sx={{ my: 0.5 }} />
-                      )}
-                    </React.Fragment>
-                  ))}
-                </List>
-              ) : (
-                <Box sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: 200,
-                  bgcolor: '#f9fafb',
-                  borderRadius: 2
-                }}>
-                  <Typography variant="body2" sx={{ color: '#9ca3af' }}>
-                    No hay actividad reciente
-                  </Typography>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
+            ) : (
+              <Box sx={{ px: 2.5, py: 3 }}>
+                <Typography color="text.secondary">No hay actividad reciente.</Typography>
+              </Box>
+            )}
+          </Paper>
         </Grid>
       </Grid>
     </Box>

@@ -1,5 +1,6 @@
 import { CssBaseline, Box } from "@mui/material";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { ThemeProvider } from "@mui/material/styles";
+import theme from "./theme";
 import { SnackbarProvider } from "notistack";
 import React from "react";
 import {
@@ -128,36 +129,6 @@ import AuditoriaSSTDetail from "./pages/AuditoriaSSTDetail";
 import { UserRole } from "./types";
 import { checkPagePermission, PAGE_PERMISSIONS } from "./utils/pagePermissions";
 
-const theme = createTheme({
-  breakpoints: {
-    values: {
-      xs: 0,
-      sm: 600,
-      md: 900,
-      lg: 1200,
-      xl: 1536,
-    },
-  },
-  palette: {
-    primary: {
-      main: "#1976d2",
-    },
-    secondary: {
-      main: "#dc004e",
-    },
-  },
-  typography: {
-    h4: {
-      fontWeight: 600,
-    },
-    h5: {
-      fontWeight: 600,
-    },
-    h6: {
-      fontWeight: 600,
-    },
-  },
-});
 
 // Componente para rutas protegidas
 interface ProtectedRouteProps {

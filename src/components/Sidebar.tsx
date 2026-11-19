@@ -67,6 +67,7 @@ import { useLocation, Link } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
+import { brand, condensed } from "../theme";
 
 const DRAWER_WIDTH = 280;
 const MINI_DRAWER_WIDTH = 64;
@@ -1053,25 +1054,38 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
           : {})}
         onClick={handleItemClick}
         selected={isItemActive}
+        aria-current={isItemActive ? "page" : undefined}
+        aria-expanded={hasChildren && !collapsed ? isExpanded : undefined}
         sx={{
-          pl: collapsed ? 0 : 2 + level * 2,
-          minHeight: 48,
+          mx: collapsed ? 0.75 : 1.25,
+          pl: collapsed ? 0 : 1.5 + level * 2,
+          pr: collapsed ? 0 : 1.25,
+          minHeight: level > 0 ? 36 : 42,
+          borderRadius: "3px",
           justifyContent: collapsed ? "center" : "flex-start",
-          px: collapsed ? 2.5 : undefined,
-          "&.Mui-selected": {
-            backgroundColor: theme.palette.primary.main + "20",
-            borderRight: collapsed
-              ? "none"
-              : `3px solid ${theme.palette.primary.main}`,
-            "&:hover": { backgroundColor: theme.palette.primary.main + "30" },
+          color: brand.shellText,
+          transition: "background-color 120ms ease-out, color 120ms ease-out",
+          "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.08)", color: "#fff" },
+          "&.Mui-focusVisible": {
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            outline: "2px solid #fff",
+            outlineOffset: -2,
           },
+          // Ítem activo: un cupón blanco que sobresale del forro azul
+          "&.Mui-selected, &.Mui-selected:hover": {
+            backgroundColor: brand.coupon,
+            color: brand.shell,
+          },
+          ...(isExpanded && !isItemActive ? { color: "#fff" } : {}),
         }}
       >
         <ListItemIcon
           sx={{
-            minWidth: collapsed ? "auto" : 40,
-            justifyContent: "center",
-            color: isItemActive ? theme.palette.primary.main : "inherit",
+            minWidth: collapsed ? "auto" : 34,
+            justifyContent: collapsed ? "center" : "flex-start",
+            color: "inherit",
+            opacity: isItemActive ? 1 : 0.85,
+            "& .MuiSvgIcon-root": { fontSize: level > 0 ? 18 : 20 },
           }}
         >
           {item.icon}
@@ -1080,13 +1094,29 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
           <>
             <ListItemText
               primary={item.label}
-              primaryTypographyProps={{
-                fontSize: level > 0 ? "0.875rem" : "1rem",
-                fontWeight: isItemActive ? 600 : 400,
-                color: isItemActive ? theme.palette.primary.main : "inherit",
-              }}
+              primaryTypographyProps={
+                level === 0 && hasChildren
+                  ? {
+                      fontFamily: condensed,
+                      fontWeight: 600,
+                      fontSize: "0.92rem",
+                      letterSpacing: "0.07em",
+                      textTransform: "uppercase",
+                      noWrap: true,
+                    }
+                  : {
+                      fontSize: level > 0 ? "0.88rem" : "0.95rem",
+                      fontWeight: isItemActive ? 700 : 500,
+                      noWrap: true,
+                    }
+              }
             />
-            {hasChildren && (isExpanded ? <ExpandLess /> : <ExpandMore />)}
+            {hasChildren &&
+              (isExpanded ? (
+                <ExpandLess fontSize="small" sx={{ opacity: 0.7 }} />
+              ) : (
+                <ExpandMore fontSize="small" sx={{ opacity: 0.7 }} />
+              ))}
           </>
         )}
       </ListItemButton>
@@ -1126,73 +1156,111 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
         display: "flex",
         flexDirection: "column",
         overflowX: "hidden",
+        backgroundColor: brand.shell,
+        color: brand.shellText,
       }}
     >
-      {/* Header */}
+      {/* Encabezado: espacio de marca (hoy la plataforma, luego la empresa) */}
       <Box
         sx={{
-          p: collapsed ? 1 : 2,
+          px: collapsed ? 1 : 2,
           display: "flex",
           alignItems: "center",
+          gap: 1.5,
           justifyContent: collapsed ? "center" : "space-between",
-          borderBottom: 1,
-          borderColor: "divider",
-          minHeight: 64,
+          borderBottom: "1px solid rgba(255, 255, 255, 0.14)",
+          minHeight: 60,
         }}
       >
         {!collapsed && (
-          <Typography variant="h6" noWrap component="div">
-            Plataforma SST
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0 }}>
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                flex: "none",
+                borderRadius: "3px",
+                backgroundColor: brand.coupon,
+                display: "grid",
+                placeItems: "center",
+              }}
+            >
+              <Box component="img" src="/logo.png" alt="" sx={{ width: 26, height: 26, objectFit: "contain" }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                noWrap
+                sx={{
+                  fontFamily: condensed,
+                  fontWeight: 700,
+                  fontSize: "1.05rem",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#fff",
+                  lineHeight: 1.1,
+                }}
+              >
+                SG-SST
+              </Typography>
+              {user && (
+                <Typography noWrap sx={{ fontSize: "0.8rem", color: brand.shellText }}>
+                  {user.first_name} {user.last_name}
+                </Typography>
+              )}
+            </Box>
+          </Box>
         )}
-        <IconButton onClick={onToggle} size="small">
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
-        </IconButton>
+        <Tooltip title={collapsed ? "Expandir menú" : "Contraer menú"} placement="right">
+          <IconButton
+            onClick={onToggle}
+            size="small"
+            aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
+            sx={{ color: brand.shellText, "&:hover": { color: "#fff", backgroundColor: "rgba(255,255,255,0.08)" } }}
+          >
+            {collapsed ? <ChevronRight /> : <ChevronLeft />}
+          </IconButton>
+        </Tooltip>
       </Box>
 
-      {/* User Info */}
-      {user && !collapsed && (
-        <Box
-          sx={{
-            p: 2,
-            borderBottom: 1,
-            borderColor: "divider",
-            backgroundColor: theme.palette.grey[50],
-          }}
-        >
-          <Typography variant="subtitle2" noWrap>
-            {user.first_name} {user.last_name}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap>
-            {user.role === "admin"
-              ? "Administrador"
-              : user.role === "trainer"
-                ? "Entrenador"
-                : user.role === "supervisor"
-                  ? "Supervisor"
-                  : "Empleado"}
-          </Typography>
-        </Box>
-      )}
-
       {/* Menu Items */}
-      <Box sx={{ flexGrow: 1, overflow: "auto" }} className="sidebar-content">
-        <List>{filteredMenuItems.map((item) => renderMenuItem(item))}</List>
+      <Box
+        component="nav"
+        aria-label="Menú principal"
+        sx={{
+          flexGrow: 1,
+          overflowY: "auto",
+          py: 1,
+          scrollbarColor: "rgba(255,255,255,0.25) transparent",
+          "&::-webkit-scrollbar-thumb": { backgroundColor: "rgba(255,255,255,0.25)" },
+        }}
+        className="sidebar-content"
+      >
+        <List disablePadding>{filteredMenuItems.map((item) => renderMenuItem(item))}</List>
       </Box>
 
       {/* Footer */}
-      <Box
-        sx={{
-          p: 2,
-          borderTop: 1,
-          borderColor: "divider",
-          textAlign: "center",
-        }}
-      >
-        <Typography variant="caption" color="text.secondary">
-          © 2025 Plataforma SST
-        </Typography>
-      </Box>
+      {!collapsed && (
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            borderTop: "1px dashed rgba(255, 255, 255, 0.22)",
+          }}
+        >
+          <Typography
+            sx={{
+              fontFamily: condensed,
+              fontWeight: 600,
+              fontSize: "0.78rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "rgba(201, 211, 234, 0.75)",
+            }}
+          >
+            Decreto 1072 · Res. 0312
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 
@@ -1218,8 +1286,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
           "& .MuiDrawer-paper": {
             width: DRAWER_WIDTH,
             boxSizing: "border-box",
-            borderRight: 1,
-            borderColor: "divider",
+            backgroundColor: brand.shell,
           },
         }}
       >
@@ -1241,8 +1308,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onToggle }) => {
           width: drawerWidth,
           boxSizing: "border-box",
           overflowX: "hidden",
-          borderRight: 1,
-          borderColor: "divider",
+          backgroundColor: brand.shell,
+          borderRight: "1px solid rgba(255, 255, 255, 0.14)",
           transition: widthTransition,
         },
       }}

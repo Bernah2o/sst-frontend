@@ -2,32 +2,23 @@ import React, { useState } from "react";
 import {
   TextField,
   Button,
-  Container,
-  Paper,
   Typography,
   Alert,
   Box,
   InputAdornment,
   IconButton,
   CircularProgress,
-  useTheme,
-  alpha,
   Link,
-  CssBaseline,
-  Chip,
 } from "@mui/material";
 import {
   Email,
   Lock,
   Visibility,
   VisibilityOff,
-  HealthAndSafety,
-  Shield,
-  VerifiedUser,
-  Security,
 } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { brand, condensed } from "../theme";
 
 const Login: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -41,7 +32,6 @@ const Login: React.FC = () => {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isAccountLocked, setIsAccountLocked] = useState(false);
   const { login } = useAuth();
-  const theme = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -132,388 +122,308 @@ const Login: React.FC = () => {
     }
   };
 
-  const features = [
-    { icon: <HealthAndSafety sx={{ fontSize: 18 }} />, label: "Gestión SST" },
-    { icon: <Shield sx={{ fontSize: 18 }} />, label: "Cumplimiento Legal" },
-    { icon: <VerifiedUser sx={{ fontSize: 18 }} />, label: "Certificaciones" },
-    { icon: <Security sx={{ fontSize: 18 }} />, label: "Datos Seguros" },
+  const busy = loading || isRedirecting;
+
+  const capsSx = {
+    fontFamily: condensed,
+    fontWeight: 600,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.08em",
+  };
+
+  // Módulos reales de la plataforma, como itinerario del SG-SST
+  const modules = [
+    ["Planear", "Estándares mínimos · Plan anual · Matriz legal"],
+    ["Hacer", "Capacitaciones · Comités · Exámenes · Inspecciones"],
+    ["Verificar", "Auditoría · Indicadores · Ausentismo"],
+    ["Actuar", "Planes de acción · Seguimiento"],
   ];
 
   return (
     <Box
       sx={{
         minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: `linear-gradient(135deg, #0d47a1 0%, #1565c0 40%, #1976d2 70%, #42a5f5 100%)`,
-        position: "relative",
-        overflow: "hidden",
-        p: 2,
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background:
-            "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-        },
+        display: "grid",
+        gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 5fr) minmax(0, 4fr)" },
+        gridTemplateRows: { xs: "auto 1fr", md: "1fr" },
+        backgroundColor: brand.stock,
       }}
     >
-      <CssBaseline />
-
-      <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
-        <Paper
-          elevation={24}
-          sx={{
-            borderRadius: 4,
-            overflow: "hidden",
-            background: "rgba(255, 255, 255, 0.98)",
-            backdropFilter: "blur(20px)",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-          }}
-        >
-          {/* Header con gradiente */}
+      {/* ── Forro azul: la plataforma ── */}
+      <Box
+        component="section"
+        aria-label="Plataforma SST"
+        sx={{
+          backgroundColor: brand.shell,
+          color: "#fff",
+          px: { xs: 3, sm: 6, lg: 9 },
+          py: { xs: 4, md: 7 },
+          display: "flex",
+          flexDirection: "column",
+          gap: { xs: 3, md: 5 },
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <Box
             sx={{
-              background: `linear-gradient(135deg, #0d47a1 0%, #1565c0 100%)`,
-              p: 4,
-              textAlign: "center",
-              position: "relative",
-              overflow: "hidden",
-              "&::after": {
-                content: '""',
-                position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: "4px",
-                background: "linear-gradient(90deg, #4caf50, #8bc34a, #cddc39)",
-              },
+              width: 44,
+              height: 44,
+              borderRadius: "3px",
+              backgroundColor: brand.coupon,
+              display: "grid",
+              placeItems: "center",
+              flex: "none",
             }}
           >
-            {/* Logo */}
-            <Box
-              sx={{
-                width: 90,
-                height: 90,
-                mx: "auto",
-                mb: 2,
-                borderRadius: "20px",
-                background: "rgba(255, 255, 255, 0.15)",
-                backdropFilter: "blur(10px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-              }}
-            >
-              <img
-                src="/logo.png"
-                alt="Logo SST"
-                style={{
-                  width: "75%",
-                  height: "75%",
-                  objectFit: "contain",
+            <Box component="img" src="/logo.png" alt="Logo" sx={{ width: 34, height: 34, objectFit: "contain" }} />
+          </Box>
+          <Typography sx={{ ...capsSx, fontSize: "0.95rem", color: brand.shellText }}>
+            Sistema de Gestión SST
+          </Typography>
+        </Box>
+
+        <Box sx={{ my: { md: "auto" } }}>
+          <Typography
+            component="h1"
+            sx={{
+              fontFamily: condensed,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              lineHeight: 0.92,
+              letterSpacing: "0.005em",
+              fontSize: { xs: "3rem", sm: "4.2rem", lg: "5.4rem" },
+            }}
+          >
+            Plataforma
+            <br />
+            SST
+          </Typography>
+          <Typography sx={{ mt: 2, maxWidth: 440, color: brand.shellText, fontSize: { xs: "1rem", md: "1.1rem" } }}>
+            Sistema Integral de Gestión en Seguridad y Salud en el Trabajo
+          </Typography>
+
+          <Box
+            component="ol"
+            sx={{
+              display: { xs: "none", md: "block" },
+              listStyle: "none",
+              p: 0,
+              mt: 5,
+              maxWidth: 520,
+              borderTop: "1px solid rgba(255,255,255,0.22)",
+            }}
+          >
+            {modules.map(([phase, detail], i) => (
+              <Box
+                component="li"
+                key={phase}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "36px 110px 1fr",
+                  alignItems: "baseline",
+                  py: 1.25,
+                  borderBottom: "1px dashed rgba(255,255,255,0.22)",
                 }}
-              />
-            </Box>
+              >
+                <Typography sx={{ ...capsSx, color: "#B9A6E0", fontVariantNumeric: "tabular-nums" }}>
+                  {String(i + 1).padStart(2, "0")}
+                </Typography>
+                <Typography sx={{ ...capsSx, fontSize: "1.05rem", color: "#fff" }}>{phase}</Typography>
+                <Typography sx={{ fontSize: "0.9rem", color: brand.shellText }}>{detail}</Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
 
-            <Typography
-              variant="h4"
-              fontWeight="700"
-              color="white"
-              gutterBottom
-              sx={{ textShadow: "0 2px 10px rgba(0,0,0,0.15)" }}
-            >
-              Plataforma SST
-            </Typography>
+        <Typography sx={{ ...capsSx, fontSize: "0.8rem", color: "rgba(201,211,234,0.75)", display: { xs: "none", md: "block" } }}>
+          Decreto 1072 de 2015 · Resolución 0312 de 2019
+        </Typography>
+      </Box>
 
-            <Typography
-              variant="body2"
-              sx={{ color: "rgba(255, 255, 255, 0.85)", mb: 2 }}
-            >
-              Sistema Integral de Gestión en Seguridad y Salud en el Trabajo
-            </Typography>
-
-            {/* Feature chips */}
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: 1,
-              }}
-            >
-              {features.map((feature, index) => (
-                <Chip
-                  key={index}
-                  icon={feature.icon}
-                  label={feature.label}
-                  size="small"
-                  sx={{
-                    backgroundColor: "rgba(255, 255, 255, 0.15)",
-                    color: "white",
-                    fontSize: "0.7rem",
-                    height: 28,
-                    "& .MuiChip-icon": {
-                      color: "#90caf9",
-                    },
-                    "&:hover": {
-                      backgroundColor: "rgba(255, 255, 255, 0.25)",
-                    },
-                  }}
-                />
-              ))}
-            </Box>
+      {/* ── Cupón de acceso ── */}
+      <Box
+        component="main"
+        sx={{
+          display: "flex",
+          alignItems: { xs: "flex-start", md: "center" },
+          justifyContent: "center",
+          px: { xs: 2, sm: 4 },
+          py: { xs: 3, md: 6 },
+        }}
+      >
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: 440,
+            backgroundColor: brand.coupon,
+            border: `1px solid ${brand.rule}`,
+            borderRadius: "4px",
+            position: "relative",
+            boxShadow: "0 10px 30px rgba(17, 26, 46, 0.08)",
+          }}
+        >
+          {/* Cabecera del cupón */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              px: 3,
+              py: 1.25,
+              backgroundColor: brand.shell,
+              color: "#fff",
+              borderRadius: "3px 3px 0 0",
+            }}
+          >
+            <Typography sx={{ ...capsSx, fontSize: "0.9rem" }}>Pase de acceso</Typography>
+            <Typography sx={{ ...capsSx, fontSize: "0.9rem", color: brand.shellText }}>SG-SST</Typography>
           </Box>
 
-          {/* Formulario */}
-          <Box sx={{ p: { xs: 3, sm: 4 } }}>
-            <Typography
-              variant="h5"
-              fontWeight="600"
-              color="text.primary"
-              gutterBottom
-              sx={{ textAlign: "center" }}
-            >
-              Iniciar Sesión
+          <Box component="form" onSubmit={handleSubmit} noValidate={false} sx={{ px: { xs: 3, sm: 4 }, pt: 3.5, pb: 3 }}>
+            <Typography component="h2" sx={{ fontFamily: condensed, fontWeight: 700, fontSize: "2rem", textTransform: "uppercase", letterSpacing: "0.01em", lineHeight: 1 }}>
+              Iniciar sesión
             </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ textAlign: "center", mb: 3 }}
-            >
+            <Typography color="text.secondary" sx={{ mt: 0.75, mb: 3 }}>
               Ingresa tus credenciales para acceder
             </Typography>
 
-            <Box component="form" onSubmit={handleSubmit}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Correo Electrónico"
-                name="email"
-                type="email"
-                autoComplete="email"
-                autoFocus
-                value={formData.email}
-                onChange={handleChange}
-                disabled={loading || isRedirecting}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email sx={{ color: "text.disabled" }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  mb: 2,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    backgroundColor: "#f8fafc",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      backgroundColor: "#f1f5f9",
-                    },
-                    "&.Mui-focused": {
-                      backgroundColor: "#fff",
-                      boxShadow: `0 0 0 3px ${alpha(
-                        theme.palette.primary.main,
-                        0.12
-                      )}`,
-                    },
-                  },
-                }}
-              />
+            <TextField
+              required
+              fullWidth
+              id="email"
+              label="Correo electrónico"
+              name="email"
+              type="email"
+              autoComplete="email"
+              autoFocus
+              value={formData.email}
+              onChange={handleChange}
+              disabled={busy}
+              sx={{ mb: 2.5 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Email sx={{ color: "text.secondary" }} fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Contraseña"
-                type={showPassword ? "text" : "password"}
-                id="password"
-                autoComplete="current-password"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={loading || isRedirecting}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ color: "text.disabled" }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={handleTogglePasswordVisibility}
-                        edge="end"
-                        disabled={loading || isRedirecting}
-                        sx={{ color: "text.disabled" }}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  mb: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    backgroundColor: "#f8fafc",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      backgroundColor: "#f1f5f9",
-                    },
-                    "&.Mui-focused": {
-                      backgroundColor: "#fff",
-                      boxShadow: `0 0 0 3px ${alpha(
-                        theme.palette.primary.main,
-                        0.12
-                      )}`,
-                    },
-                  },
-                }}
-              />
+            <TextField
+              required
+              fullWidth
+              name="password"
+              label="Contraseña"
+              type={showPassword ? "text" : "password"}
+              id="password"
+              autoComplete="current-password"
+              value={formData.password}
+              onChange={handleChange}
+              disabled={busy}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Lock sx={{ color: "text.secondary" }} fontSize="small" />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      onClick={handleTogglePasswordVisibility}
+                      edge="end"
+                      disabled={busy}
+                    >
+                      {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-              <Box sx={{ textAlign: "right", mb: 2.5 }}>
-                <Link
-                  component={RouterLink}
-                  to="/forgot-password"
-                  sx={{
-                    color: "primary.main",
-                    textDecoration: "none",
-                    fontWeight: 500,
-                    fontSize: "0.85rem",
-                    "&:hover": {
-                      textDecoration: "underline",
-                    },
-                  }}
-                >
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </Box>
+            <Box sx={{ textAlign: "right", mt: 1.25, mb: 3 }}>
+              <Link component={RouterLink} to="/forgot-password" sx={{ fontWeight: 600, fontSize: "0.9rem", color: "secondary.main" }}>
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </Box>
 
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={loading || isRedirecting}
-                sx={{
-                  py: 1.5,
-                  borderRadius: 2,
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  background: `linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)`,
-                  boxShadow: "0 4px 14px rgba(21, 101, 192, 0.4)",
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    boxShadow: "0 6px 20px rgba(21, 101, 192, 0.5)",
-                    transform: "translateY(-1px)",
-                  },
-                  "&:disabled": {
-                    background: "#e0e0e0",
-                    boxShadow: "none",
-                  },
+            <Button type="submit" fullWidth variant="contained" size="large" disabled={busy} sx={{ minHeight: 50, fontSize: "1.1rem" }}>
+              {loading ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                  <CircularProgress size={18} sx={{ color: "inherit" }} />
+                  Verificando…
+                </Box>
+              ) : isRedirecting ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                  <CircularProgress size={18} sx={{ color: "inherit" }} />
+                  Accediendo…
+                </Box>
+              ) : (
+                "Iniciar sesión"
+              )}
+            </Button>
+
+            {error && (
+              <Alert
+                severity="error"
+                role="alert"
+                sx={{ mt: 2 }}
+                onClose={() => {
+                  setError("");
+                  setIsAccountLocked(false);
                 }}
               >
-                {loading ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <CircularProgress size={20} sx={{ color: "inherit" }} />
-                    Verificando...
+                {error}
+                {isAccountLocked && (
+                  <Box sx={{ mt: 1 }}>
+                    <Link component={RouterLink} to="/forgot-password" sx={{ color: "error.dark", fontWeight: 700 }}>
+                      Restablecer contraseña
+                    </Link>
                   </Box>
-                ) : isRedirecting ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <CircularProgress size={20} sx={{ color: "inherit" }} />
-                    Accediendo...
-                  </Box>
-                ) : (
-                  "Iniciar Sesión"
                 )}
-              </Button>
+              </Alert>
+            )}
 
-              {/* Alertas */}
-              {error && (
-                <Alert
-                  severity="error"
-                  sx={{
-                    mt: 2,
-                    borderRadius: 2,
-                    animation: "slideIn 0.3s ease",
-                    "@keyframes slideIn": {
-                      "0%": { opacity: 0, transform: "translateY(-10px)" },
-                      "100%": { opacity: 1, transform: "translateY(0)" },
-                    },
-                  }}
-                  onClose={() => {
-                    setError("");
-                    setIsAccountLocked(false);
-                  }}
-                >
-                  <Box>
-                    {error}
-                    {isAccountLocked && (
-                      <Box sx={{ mt: 1 }}>
-                        <Link
-                          component={RouterLink}
-                          to="/forgot-password"
-                          sx={{
-                            color: "error.dark",
-                            textDecoration: "underline",
-                            fontWeight: 600,
-                          }}
-                        >
-                          Restablecer contraseña
-                        </Link>
-                      </Box>
-                    )}
-                  </Box>
-                </Alert>
-              )}
+            {success && (
+              <Alert severity="success" role="status" sx={{ mt: 2 }}>
+                ¡Inicio de sesión exitoso! Accediendo…
+              </Alert>
+            )}
+          </Box>
 
-              {success && (
-                <Alert
-                  severity="success"
-                  sx={{
-                    mt: 2,
-                    borderRadius: 2,
-                    animation: "slideIn 0.3s ease",
-                    "@keyframes slideIn": {
-                      "0%": { opacity: 0, transform: "translateY(-10px)" },
-                      "100%": { opacity: 1, transform: "translateY(0)" },
-                    },
-                  }}
-                >
-                  ¡Inicio de sesión exitoso! Accediendo...
-                </Alert>
-              )}
-
+          {/* Perforación y talón */}
+          <Box
+            aria-hidden
+            sx={{
+              position: "relative",
+              borderTop: `2px dashed ${brand.rule}`,
+              mx: 2.5,
+              "&::before, &::after": {
+                content: '""',
+                position: "absolute",
+                top: -12,
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                backgroundColor: brand.stock,
+                border: `1px solid ${brand.rule}`,
+              },
+              "&::before": { left: -32, clipPath: "inset(0 0 0 50%)" },
+              "&::after": { right: -32, clipPath: "inset(0 50% 0 0)" },
+            }}
+          />
+          <Box sx={{ px: { xs: 3, sm: 4 }, py: 2, display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+            <Box>
+              <Typography sx={{ ...capsSx, fontSize: "0.72rem", color: "text.secondary" }}>Marco legal</Typography>
+              <Typography sx={{ fontWeight: 600, fontSize: "0.9rem", color: brand.carbon }}>Decreto 1072 · Res. 0312</Typography>
+            </Box>
+            <Box sx={{ textAlign: "right" }}>
+              <Typography sx={{ ...capsSx, fontSize: "0.72rem", color: "text.secondary" }}>Acceso</Typography>
+              <Typography sx={{ fontWeight: 600, fontSize: "0.9rem", color: brand.carbon }}>Según tu rol</Typography>
             </Box>
           </Box>
-
-          {/* Footer */}
-          <Box
-            sx={{
-              p: 2,
-              textAlign: "center",
-              backgroundColor: "#f8fafc",
-              borderTop: "1px solid #e0e0e0",
-            }}
-          >
-            <Typography variant="caption" color="text.disabled">
-              Decreto 1072 de 2015 • Resolución 0312 de 2019
-            </Typography>
-          </Box>
-        </Paper>
-      </Container>
+        </Box>
+      </Box>
     </Box>
   );
 };

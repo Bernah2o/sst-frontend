@@ -142,11 +142,11 @@
 /* Sidebar improvements for larger screens */
 @media (min-width: 1366px) {
   .sidebar-content {
-    padding: 24px 16px;
+    padding: 12px 0;
   }
   
   .sidebar-menu-item {
-    margin-bottom: 8px;
+    margin-bottom: 2px;
   }
 }
 
@@ -295,7 +295,7 @@
 
 /* Focus and accessibility improvements */
 .focus-visible {
-  outline: 2px solid #1976d2;
+  outline: 2px solid #4B2E83;
   outline-offset: 2px;
 }
 
