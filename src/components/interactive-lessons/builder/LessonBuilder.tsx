@@ -44,9 +44,12 @@ import {
   Settings,
   AutoAwesome,
   Unpublished,
+  Extension,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  InteractiveActivity,
+  InteractiveActivityCreate,
   InteractiveLesson,
   InteractiveLessonCreate,
   InteractiveLessonUpdate,
@@ -57,6 +60,9 @@ import {
 } from "../../../types/interactiveLesson";
 import interactiveLessonApi from "../../../services/interactiveLessonApi";
 import SlideEditor from "./SlideEditor";
+import ActivityEditorDialog, { ACTIVITY_TYPE_LABELS } from "./ActivityEditorDialog";
+import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
+import ConfirmDialog from "../../ConfirmDialog";
 
 interface LessonBuilderProps {
   moduleId?: number;
@@ -91,6 +97,9 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({
   });
 
   // AI Generation State
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<InteractiveActivity | null>(null);
+  const { dialogState, showConfirmDialog } = useConfirmDialog();
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiFormData, setAiFormData] = useState({
@@ -316,6 +325,46 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({
         message: "Error al eliminar el slide",
         severity: "error",
       });
+    }
+  };
+
+  const openActivityDialog = (activity: InteractiveActivity | null) => {
+    setEditingActivity(activity);
+    setActivityDialogOpen(true);
+  };
+
+  const handleSaveActivity = async (data: InteractiveActivityCreate) => {
+    if (!lesson) return;
+    if (editingActivity) {
+      const updated = await interactiveLessonApi.updateActivity(editingActivity.id, data);
+      setLesson({
+        ...lesson,
+        activities: (lesson.activities ?? []).map((a) => (a.id === updated.id ? updated : a)),
+      });
+    } else {
+      const created = await interactiveLessonApi.createActivity(lesson.id, data);
+      setLesson({ ...lesson, activities: [...(lesson.activities ?? []), created] });
+    }
+    setActivityDialogOpen(false);
+    setSnackbar({ open: true, message: "Actividad guardada", severity: "success" });
+  };
+
+  const handleDeleteActivity = async (activity: InteractiveActivity) => {
+    if (!lesson) return;
+    const confirmed = await showConfirmDialog({
+      title: "Eliminar actividad",
+      message: `¿Eliminar "${activity.title}"? También se borran los intentos que ya registraron los trabajadores. Esta acción no se puede deshacer.`,
+      severity: "error",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+    });
+    if (!confirmed) return;
+    try {
+      await interactiveLessonApi.deleteActivity(activity.id);
+      setLesson({ ...lesson, activities: (lesson.activities ?? []).filter((a) => a.id !== activity.id) });
+    } catch (error) {
+      console.error("Error deleting activity:", error);
+      setSnackbar({ open: true, message: "Error al eliminar la actividad", severity: "error" });
     }
   };
 
@@ -619,6 +668,68 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({
               </Box>
             </Box>
           )}
+
+          {/* Actividades */}
+          {lesson && (
+            <>
+              <Divider />
+              <Box
+                sx={{
+                  p: 2,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Actividades ({lesson.activities?.length || 0})
+                </Typography>
+                <Button size="small" startIcon={<Add />} onClick={() => openActivityDialog(null)}>
+                  Agregar
+                </Button>
+              </Box>
+              <Divider />
+              <List sx={{ py: 0 }}>
+                {[...(lesson.activities ?? [])]
+                  .sort((a, b) => a.order_index - b.order_index)
+                  .map((activity) => {
+                    const slideIdx = lesson.slides.findIndex((sl) => sl.id === activity.slide_id);
+                    return (
+                      <ListItemButton key={activity.id} onClick={() => openActivityDialog(activity)}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          <Extension fontSize="small" color="secondary" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={activity.title}
+                          secondary={`${ACTIVITY_TYPE_LABELS[activity.activity_type] ?? activity.activity_type} · ${
+                            slideIdx >= 0 ? `Slide ${slideIdx + 1}` : "Automático"
+                          }`}
+                          primaryTypographyProps={{ noWrap: true }}
+                          secondaryTypographyProps={{ noWrap: true }}
+                        />
+                        <ListItemSecondaryAction>
+                          <IconButton
+                            size="small"
+                            aria-label={`Eliminar actividad ${activity.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteActivity(activity);
+                            }}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItemButton>
+                    );
+                  })}
+              </List>
+              {(lesson.activities?.length ?? 0) === 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
+                  Sin actividades. Agrega una para practicar lo visto en los slides.
+                </Typography>
+              )}
+            </>
+          )}
         </Paper>
 
         {/* Main Editor Area */}
@@ -917,6 +1028,16 @@ const LessonBuilder: React.FC<LessonBuilderProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ActivityEditorDialog
+        open={activityDialogOpen}
+        activity={editingActivity}
+        slides={lesson?.slides ?? []}
+        nextOrderIndex={lesson?.activities?.length ?? 0}
+        onClose={() => setActivityDialogOpen(false)}
+        onSave={handleSaveActivity}
+      />
+      <ConfirmDialog {...dialogState} />
 
       {/* Snackbar */}
       <Snackbar

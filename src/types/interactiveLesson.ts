@@ -379,7 +379,7 @@ export interface ActivitySubmitResponse {
   score: number;
   points_earned: number;
   feedback?: Record<string, unknown>;
-  correct_solution?: Record<string, unknown>;
+  correct_solution?: Record<string, string> | string[];
   attempts_remaining: number;
 }
 
@@ -409,6 +409,9 @@ export interface LessonWithProgress extends InteractiveLesson {
 export interface PaginatedLessons {
   items: InteractiveLessonListItem[];
   total: number;
-  skip: number;
-  limit: number;
+  page: number;
+  size: number;
+  pages: number;
+  has_next: boolean;
+  has_prev: boolean;
 }

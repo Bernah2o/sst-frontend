@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import DOMPurify from "dompurify";
 import {
   Box,
@@ -21,6 +21,7 @@ import {
   Step,
   StepLabel,
   StepButton,
+  Tooltip,
   // Container,
   alpha,
   useTheme,
@@ -36,7 +37,9 @@ import {
   TouchApp,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
+import ActivityPlayer, { ActivityOutcome } from "./ActivityPlayer";
 import {
+  InteractiveActivity,
   InteractiveLesson,
   UserLessonProgress,
   // UserSlideProgress,
@@ -195,6 +198,53 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
   const currentSlide = lesson?.slides[currentSlideIndex];
 
+  // Resultado de cada actividad en esta sesión
+  const [activityOutcomes, setActivityOutcomes] = useState<Record<number, ActivityOutcome>>({});
+
+  /**
+   * Ubica cada actividad en un slide: las vinculadas (slide_id) en su slide;
+   * las demás (p. ej. las que genera la IA) en los slides interactivos vacíos
+   * y, si sobran, al final del último slide.
+   */
+  const activitiesBySlide = useMemo(() => {
+    const map: Record<number, InteractiveActivity[]> = {};
+    if (!lesson || lesson.slides.length === 0) return map;
+    const slideIds = new Set(lesson.slides.map((s) => s.id));
+    const unlinked: InteractiveActivity[] = [];
+    [...(lesson.activities ?? [])]
+      .sort((a, b) => a.order_index - b.order_index)
+      .forEach((a) => {
+        if (a.slide_id && slideIds.has(a.slide_id)) {
+          (map[a.slide_id] ||= []).push(a);
+        } else {
+          unlinked.push(a);
+        }
+      });
+    lesson.slides
+      .filter((s) => s.slide_type === "interactive" && !map[s.id])
+      .forEach((s) => {
+        const next = unlinked.shift();
+        if (next) map[s.id] = [next];
+      });
+    if (unlinked.length > 0) {
+      const last = lesson.slides[lesson.slides.length - 1];
+      map[last.id] = [...(map[last.id] ?? []), ...unlinked];
+    }
+    return map;
+  }, [lesson]);
+
+  const SUPPORTED_ACTIVITIES = ["matching", "ordering", "drag_drop", "fill_blanks"];
+  const slideActivities = currentSlide ? activitiesBySlide[currentSlide.id] ?? [] : [];
+  const pendingActivities =
+    !isPreview &&
+    slideActivities.some(
+      (a) => SUPPORTED_ACTIVITIES.includes(a.activity_type) && !activityOutcomes[a.id]?.resolved,
+    );
+
+  const handleActivityOutcome = useCallback((activityId: number, outcome: ActivityOutcome) => {
+    setActivityOutcomes((prev) => ({ ...prev, [activityId]: outcome }));
+  }, []);
+
   const loadLesson = useCallback(async () => {
     if (!lessonId) return;
 
@@ -204,14 +254,14 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
     try {
       // In preview mode, only load the lesson data (no progress tracking)
       if (isPreview) {
-        const lessonData = await interactiveLessonApi.getLesson(lessonId);
+        const lessonData = await interactiveLessonApi.getLesson(lessonId, { view: "learner" });
         setLesson(lessonData);
         setLoading(false);
         return;
       }
 
       const [lessonData, progressData] = await Promise.all([
-        interactiveLessonApi.getLesson(lessonId),
+        interactiveLessonApi.getLesson(lessonId, { view: "learner" }),
         interactiveLessonApi.getLessonProgress(lessonId).catch(() => null),
       ]);
 
@@ -411,6 +461,9 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
   const handleNext = () => {
     if (!lesson) return;
+
+    // Las actividades del slide deben resolverse (acierto o intentos agotados)
+    if (pendingActivities) return;
 
     // In preview mode, skip quiz requirement checks
     if (!isPreview) {
@@ -626,7 +679,8 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
         );
 
       case "interactive":
-        // Placeholder for interactive activities (to be implemented)
+        // Las actividades del slide se muestran debajo del contenido
+        if (slideActivities.length > 0) return null;
         return (
           <Box sx={{ p: 4, textAlign: "center" }}>
             <TouchApp
@@ -636,7 +690,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
               Actividad Interactiva
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Esta actividad estará disponible próximamente.
+              Este slide aún no tiene una actividad asignada.
             </Typography>
           </Box>
         );
@@ -921,10 +975,11 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
   const progressPercentage = isPreview ? 0 : progress?.progress_percentage || 0;
   const canGoNext =
-    isPreview ||
-    !currentSlide?.inline_quiz?.required_to_continue ||
-    isQuizAnswered(currentSlide.id) ||
-    quizSubmitted;
+    !pendingActivities &&
+    (isPreview ||
+      !currentSlide?.inline_quiz?.required_to_continue ||
+      isQuizAnswered(currentSlide.id) ||
+      quizSubmitted);
 
   return (
     <MainContainer>
@@ -1019,11 +1074,26 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
           <Box sx={{ flex: 1 }}>{renderSlideContent()}</Box>
 
           {renderQuiz()}
+
+          {slideActivities.length > 0 && (
+            <Box sx={{ px: { xs: 2, sm: 4 }, pb: 4, pt: 1, display: "flex", flexDirection: "column", gap: 3 }}>
+              {slideActivities.map((activity) => (
+                <ActivityPlayer
+                  key={activity.id}
+                  lessonId={lesson.id}
+                  activity={activity}
+                  isPreview={isPreview}
+                  previousOutcome={activityOutcomes[activity.id]}
+                  onOutcome={handleActivityOutcome}
+                />
+              ))}
+            </Box>
+          )}
         </ViewerPaper>
       </ContentArea>
 
       {/* Navigation Footer */}
-      <FooterPaper elevation={0}>
+      <FooterPaper elevation={0} sx={{ px: { xs: 2, sm: 4 }, gap: 1.5 }}>
         <Button
           startIcon={<ArrowBack />}
           onClick={handlePrevious}
@@ -1034,7 +1104,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
           Anterior
         </Button>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 1 }}>
           <Typography
             variant="caption"
             fontWeight="bold"
@@ -1063,6 +1133,8 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
           </Box>
         </Box>
 
+        <Tooltip title={pendingActivities ? "Resuelve la actividad para continuar" : ""}>
+        <span>
         <Button
           endIcon={
             currentSlideIndex === lesson.slides.length - 1 ? (
@@ -1094,6 +1166,8 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
               : "Finalizar Lección"
             : "Siguiente Slide"}
         </Button>
+        </span>
+        </Tooltip>
       </FooterPaper>
 
       {/* Completion Dialog */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -15,6 +15,9 @@ import {
   CircularProgress,
   Tooltip,
   Alert,
+  TablePagination,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import {
   // Add,
@@ -34,26 +37,38 @@ import ConfirmDialog from "../components/ConfirmDialog";
 const InteractiveLessons: React.FC = () => {
   const navigate = useNavigate();
   const [lessons, setLessons] = useState<InteractiveLessonListItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ severity: "success" | "error"; message: string } | null>(null);
   const { dialogState, showConfirmDialog } = useConfirmDialog();
 
-  useEffect(() => {
-    loadLessons();
-  }, []);
-
-  const loadLessons = async () => {
+  // El API pagina (20 por defecto): antes solo se pedía la primera página y
+  // las lecciones a partir de la 21 no aparecían.
+  const loadLessons = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await interactiveLessonApi.getLessons();
+      const data = await interactiveLessonApi.getLessons({
+        skip: page * rowsPerPage,
+        limit: rowsPerPage,
+        status: statusFilter === "all" ? undefined : statusFilter,
+      });
       setLessons(data.items);
+      setTotal(data.total ?? data.items.length);
     } catch (error) {
       console.error("Error loading lessons:", error);
+      setFeedback({ severity: "error", message: "No se pudieron cargar las lecciones." });
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, statusFilter]);
+
+  useEffect(() => {
+    loadLessons();
+  }, [loadLessons]);
 
   const handleDelete = async (id: number) => {
     const lesson = lessons.find((l) => l.id === id);
@@ -68,7 +83,12 @@ const InteractiveLessons: React.FC = () => {
     if (confirmed) {
       try {
         await interactiveLessonApi.deleteLesson(id);
-        setLessons(lessons.filter((l) => l.id !== id));
+        // Si era el último de la página, volver a la anterior
+        if (lessons.length === 1 && page > 0) {
+          setPage((p) => p - 1);
+        } else {
+          loadLessons();
+        }
       } catch (error) {
         console.error("Error deleting lesson:", error);
       }
@@ -116,7 +136,7 @@ const InteractiveLessons: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading && lessons.length === 0 && total === 0) {
     return (
       <Box
         display="flex"
@@ -136,6 +156,8 @@ const InteractiveLessons: React.FC = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: 2,
           mb: 3,
         }}
       >
@@ -147,6 +169,21 @@ const InteractiveLessons: React.FC = () => {
           <Slideshow fontSize="large" color="primary" />
           Lecciones Interactivas
         </Typography>
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={statusFilter}
+          onChange={(_, value) => {
+            if (!value) return;
+            setStatusFilter(value);
+            setPage(0);
+          }}
+          aria-label="Filtrar por estado"
+        >
+          <ToggleButton value="all">Todas</ToggleButton>
+          <ToggleButton value="published">Publicadas</ToggleButton>
+          <ToggleButton value="draft">Borradores</ToggleButton>
+        </ToggleButtonGroup>
       </Box>
 
       {feedback && (
@@ -155,7 +192,7 @@ const InteractiveLessons: React.FC = () => {
         </Alert>
       )}
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ opacity: loading ? 0.6 : 1, transition: "opacity 120ms" }}>
         <Table>
           <TableHead>
             <TableRow>
@@ -172,8 +209,9 @@ const InteractiveLessons: React.FC = () => {
             {lessons.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} align="center">
-                  No se encontraron lecciones. Gestiona las lecciones desde el
-                  detalle de cada curso/módulo.
+                  {statusFilter === "all"
+                    ? "No se encontraron lecciones. Gestiona las lecciones desde el detalle de cada curso/módulo."
+                    : "No hay lecciones con este estado."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -283,6 +321,20 @@ const InteractiveLessons: React.FC = () => {
             )}
           </TableBody>
         </Table>
+        <TablePagination
+          component="div"
+          count={total}
+          page={page}
+          onPageChange={(_, p) => setPage(p)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setRowsPerPage(parseInt(e.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[20, 50, 100]}
+          labelRowsPerPage="Lecciones por página"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+        />
       </TableContainer>
       <ConfirmDialog {...dialogState} />
     </Box>

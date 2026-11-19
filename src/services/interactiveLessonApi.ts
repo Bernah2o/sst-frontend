@@ -35,8 +35,17 @@ export const getLessons = async (params?: {
   return response.data;
 };
 
-export const getLesson = async (lessonId: number): Promise<InteractiveLesson> => {
-  const response = await api.get(`${BASE_URL}/${lessonId}`);
+/**
+ * `view: 'learner'` devuelve las actividades sin las respuestas correctas,
+ * aunque el usuario pueda editar (lo usa el visor, también en vista previa).
+ */
+export const getLesson = async (
+  lessonId: number,
+  options?: { view?: 'learner' },
+): Promise<InteractiveLesson> => {
+  const response = await api.get(`${BASE_URL}/${lessonId}`, {
+    params: options?.view ? { view: options.view } : undefined,
+  });
   return response.data;
 };
 
@@ -153,6 +162,16 @@ export const submitActivityResponse = async (
   return response.data;
 };
 
+/** Califica una actividad en vista previa, sin registrar intentos (solo editores). */
+export const previewActivityResponse = async (
+  lessonId: number,
+  activityId: number,
+  data: ActivitySubmitRequest
+): Promise<ActivitySubmitResponse> => {
+  const response = await api.post(`${BASE_URL}/${lessonId}/activity/${activityId}/preview`, data);
+  return response.data;
+};
+
 export const completeLesson = async (lessonId: number): Promise<UserLessonProgress> => {
   const response = await api.post(`${BASE_URL}/${lessonId}/complete`);
   return response.data;
@@ -193,7 +212,7 @@ export const generateContent = async (
 // ==================== Helper Functions ====================
 
 export const getLessonsByModule = async (moduleId: number): Promise<InteractiveLessonListItem[]> => {
-  const response = await getLessons({ module_id: moduleId });
+  const response = await getLessons({ module_id: moduleId, limit: 100 });
   return response.items;
 };
 
@@ -237,6 +256,7 @@ const interactiveLessonApi = {
   markSlideViewed,
   submitQuizAnswer,
   submitActivityResponse,
+  previewActivityResponse,
   completeLesson,
   getLessonProgress,
   // AI Content Generation
