@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   CircularProgress,
   Divider,
@@ -24,8 +22,6 @@ import {
   Typography,
   Alert,
   Radio,
-  RadioGroup,
-  FormControlLabel,
   Tooltip,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
@@ -89,6 +85,92 @@ const roleLabel: Record<CommitteeRole, string> = {
   [CommitteeRole.ALTERNATE]: 'Suplente',
 };
 
+const activityStatusLabel: Record<ActivityStatus, string> = {
+  [ActivityStatus.PENDING]: 'Pendiente',
+  [ActivityStatus.IN_PROGRESS]: 'En progreso',
+  [ActivityStatus.COMPLETED]: 'Completada',
+  [ActivityStatus.CANCELLED]: 'Cancelada',
+  [ActivityStatus.OVERDUE]: 'Vencida',
+};
+
+// Fecha local en formato YYYY-MM-DD (toISOString usa UTC y corre el día en Colombia)
+const toLocalDateInput = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+// Muestra una fecha YYYY-MM-DD sin conversión de zona horaria
+const formatDateOnly = (value: string) => {
+  const [y, m, d] = value.split('-');
+  return y && m && d ? `${d}/${m}/${y}` : value;
+};
+
+// ──────────────────────────────────────────────
+// Piezas de presentación
+// ──────────────────────────────────────────────
+const ActaHeader: React.FC<{ page: number; total: number }> = ({ page, total }) => (
+  <Box
+    sx={{
+      display: 'grid',
+      gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 2fr 1fr' },
+      borderBottom: 2,
+      borderColor: 'text.primary',
+      '& > *': { borderColor: 'divider' },
+    }}
+  >
+    <Box
+      sx={{
+        p: 1.5,
+        borderRight: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Typography fontWeight={700} fontSize={18} letterSpacing={1}>
+        ROWL
+      </Typography>
+    </Box>
+    <Box
+      sx={{
+        p: 1.5,
+        borderRight: { xs: 0, sm: 1 },
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        order: { xs: -1, sm: 0 },
+        gridColumn: { xs: '1 / -1', sm: 'auto' },
+        borderBottom: { xs: 1, sm: 0 },
+      }}
+    >
+      <Typography component="h2" fontWeight={700} fontSize={16} textAlign="center">
+        ACTA DE REUNIÓN
+      </Typography>
+    </Box>
+    <Box sx={{ px: 1.5, py: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {[`Código: RES-SST-01`, `Versión: 001`, `Página: ${page} de ${total}`].map((line) => (
+        <Typography key={line} variant="caption" display="block" lineHeight={1.6}>
+          {line}
+        </Typography>
+      ))}
+    </Box>
+  </Box>
+);
+
+const SectionTitle: React.FC<{ children: React.ReactNode; action?: React.ReactNode }> = ({
+  children,
+  action,
+}) => (
+  <Box display="flex" justifyContent="space-between" alignItems="center" gap={2} mt={3} mb={1.25}>
+    <Typography component="h3" variant="subtitle2" fontWeight={700} letterSpacing={0.3}>
+      {children}
+    </Typography>
+    {action}
+  </Box>
+);
+
+const headCellSx = { fontWeight: 700, bgcolor: 'action.hover', whiteSpace: 'nowrap' } as const;
+
 const emptyTask = (): NewTask => ({
   title: '',
   responsibleMemberId: '',
@@ -120,7 +202,7 @@ const ActaForm: React.FC = () => {
   const { id: committeeId, actaId } = useParams<{ id: string; actaId: string }>();
   const isEdit = Boolean(actaId);
   const isAdmin = (user?.role || user?.rol) === 'admin';
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalDateInput(new Date());
 
   // ── Datos del comité y acta
   const [committee, setCommittee] = useState<Committee | null>(null);
@@ -150,8 +232,6 @@ const ActaForm: React.FC = () => {
   // ── UI state
   const [loading, setLoading] = useState(true);
   const [activeAction, setActiveAction] = useState<'save' | 'saveAndPdf' | 'pdf' | null>(null);
-  const saving = activeAction === 'save' || activeAction === 'saveAndPdf';
-  const downloading = activeAction === 'pdf';
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [savedMeetingId, setSavedMeetingId] = useState<number | null>(null);
@@ -199,7 +279,7 @@ const ActaForm: React.FC = () => {
         setActaNumber(idx >= 0 ? idx + 1 : sorted.length);
 
         const dateObj = new Date(m.meeting_date);
-        setMeetingDate(dateObj.toISOString().split('T')[0]);
+        setMeetingDate(toLocalDateInput(dateObj));
         setHoraInicio(
           dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false }),
         );
@@ -219,7 +299,8 @@ const ActaForm: React.FC = () => {
         const attendanceRes = await api.get(`/committee-meetings/${actaId}/attendance`);
         const attendanceMap: Record<number, boolean> = {};
         (attendanceRes.data ?? []).forEach((a: any) => {
-          attendanceMap[a.member_id] = a.status?.toUpperCase() === 'PRESENT';
+          // Igual que el PDF: llegar tarde cuenta como presente
+          attendanceMap[a.member_id] = ['PRESENT', 'LATE'].includes(a.status?.toUpperCase());
         });
 
         setAttendees(
@@ -351,35 +432,47 @@ const ActaForm: React.FC = () => {
         attendees_count: attendees.filter((a) => a.present).length,
       };
 
+      // Si el acta ya se guardó en esta sesión, actualizarla en vez de crear otra
+      const existingId = actaId ? parseInt(actaId) : savedMeetingId;
       let meetingId: number;
 
-      if (isEdit && actaId) {
-        await api.put(`/committee-meetings/${actaId}`, meetingPayload);
-        meetingId = parseInt(actaId);
+      if (existingId) {
+        await api.put(`/committee-meetings/${existingId}`, meetingPayload);
+        meetingId = existingId;
       } else {
         const res = await api.post('/committee-meetings/', meetingPayload);
         meetingId = res.data.id;
         setSavedMeetingId(meetingId);
       }
 
-      // Registrar asistencia
+      const failures: string[] = [];
+
+      // Registrar asistencia: al crear el acta el backend ya genera un registro
+      // por miembro, así que se actualiza; si no existe (404) se crea.
+      let attendanceFailed = 0;
       for (const att of attendees) {
         const attendanceStatus = att.present ? 'PRESENT' : 'ABSENT';
         try {
-          if (isEdit) {
-            await api.put(
-              `/committee-meetings/${meetingId}/attendance/${att.memberId}`,
-              { status: attendanceStatus },
-            );
-          } else {
+          await api.put(`/committee-meetings/${meetingId}/attendance/${att.memberId}`, {
+            status: attendanceStatus,
+          });
+        } catch (err: any) {
+          if (err?.response?.status !== 404) {
+            attendanceFailed += 1;
+            continue;
+          }
+          try {
             await api.post(`/committee-meetings/${meetingId}/attendance`, {
               member_id: att.memberId,
               status: attendanceStatus,
             });
+          } catch {
+            attendanceFailed += 1;
           }
-        } catch {
-          // Ignorar errores individuales de asistencia
         }
+      }
+      if (attendanceFailed > 0) {
+        failures.push(`${attendanceFailed} registro(s) de asistencia`);
       }
 
       // Actualizar actividades previas (% cumplimiento y observaciones)
@@ -410,9 +503,15 @@ const ActaForm: React.FC = () => {
       }
       setDeletedTaskIds([]);
 
-      // Guardar tareas: actualizar las existentes, crear las nuevas
+      // Guardar tareas: actualizar las existentes, crear las nuevas.
+      // Se guardan los ids creados para que un segundo "Guardar" no las duplique.
+      let tasksFailed = 0;
+      const savedTasks: NewTask[] = [];
       for (const task of newTasks) {
-        if (!task.title.trim()) continue;
+        if (!task.title.trim()) {
+          savedTasks.push(task);
+          continue;
+        }
         try {
           if (task.id) {
             await api.put(`/committee-activities/${task.id}`, {
@@ -421,8 +520,9 @@ const ActaForm: React.FC = () => {
               due_date: task.commitmentDate || undefined,
               notes: task.observations,
             });
+            savedTasks.push(task);
           } else {
-            await api.post('/committee-activities/', {
+            const res = await api.post('/committee-activities/', {
               committee_id: parseInt(committeeId),
               meeting_id: meetingId,
               title: task.title,
@@ -432,13 +532,23 @@ const ActaForm: React.FC = () => {
               status: ActivityStatus.PENDING,
               priority: 'MEDIUM',
             });
+            savedTasks.push({ ...task, id: res.data?.id });
           }
         } catch {
-          // Continuar aunque falle una tarea
+          tasksFailed += 1;
+          savedTasks.push(task);
         }
       }
+      setNewTasks(savedTasks);
+      if (tasksFailed > 0) failures.push(`${tasksFailed} tarea(s)`);
 
-      setSuccessMsg('Acta guardada correctamente.');
+      if (failures.length > 0) {
+        setError(
+          `El acta se guardó, pero no se pudieron guardar ${failures.join(' y ')}. Vuelve a pulsar Guardar.`,
+        );
+      } else {
+        setSuccessMsg('Acta guardada correctamente.');
+      }
 
       if (downloadPdf) {
         await handleDownloadPdf(meetingId);
@@ -511,85 +621,41 @@ const ActaForm: React.FC = () => {
   // Render
   // ──────────────────────────────────────────
   return (
-    <Box p={3} maxWidth={900} mx="auto">
+    <Box px={{ xs: 2, sm: 3 }} pt={3} maxWidth={960} mx="auto">
       {/* ── Navegación ── */}
-      <Box display="flex" alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate(`/admin/committees/${committeeId}/actas`)} sx={{ mr: 1 }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h5">
-          {isEdit ? 'Editar Acta' : 'Nueva Acta de Reunión'}
-        </Typography>
+      <Box display="flex" alignItems="center" gap={1} mb={2.5}>
+        <Tooltip title="Volver a las actas">
+          <IconButton
+            aria-label="Volver a las actas"
+            onClick={() => navigate(`/admin/committees/${committeeId}/actas`)}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+        </Tooltip>
+        <Box minWidth={0}>
+          <Typography variant="h5" component="h1" fontWeight={600}>
+            {isEdit ? 'Editar acta' : 'Nueva acta de reunión'}
+          </Typography>
+          {committee && (
+            <Typography variant="body2" color="text.secondary" noWrap>
+              {committee.name} · Acta No. {String(actaNumber).padStart(3, '0')}
+            </Typography>
+          )}
+        </Box>
       </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      {successMsg && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMsg(null)}>
-          {successMsg}
-        </Alert>
-      )}
 
       {/* ═══════════════════════════════════════════════ */}
       {/* PÁGINA 1                                        */}
       {/* ═══════════════════════════════════════════════ */}
-      <Paper elevation={2} sx={{ mb: 3, overflow: 'hidden' }}>
-        {/* Encabezado del acta */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 2fr 1fr',
-            borderBottom: '2px solid #333',
-          }}
-        >
-          <Box
-            sx={{
-              p: 1.5,
-              borderRight: '1px solid #333',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Typography fontWeight="bold" fontSize={18} letterSpacing={1}>
-              ROWL
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              p: 1.5,
-              borderRight: '1px solid #333',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Typography fontWeight="bold" fontSize={16} textAlign="center">
-              ACTA DE REUNIÓN
-            </Typography>
-          </Box>
-          <Box sx={{ p: 1, fontSize: 11, lineHeight: 1.6 }}>
-            <Typography variant="caption" display="block">
-              Código: RES-SST-01
-            </Typography>
-            <Typography variant="caption" display="block">
-              Versión: 001
-            </Typography>
-            <Typography variant="caption" display="block">
-              Página: 1 de 2
-            </Typography>
-          </Box>
-        </Box>
+      <Paper variant="outlined" sx={{ mb: 3, overflow: 'hidden' }}>
+        <ActaHeader page={1} total={2} />
 
-        <Box p={3}>
+        <Box p={{ xs: 2, sm: 3 }}>
           {/* Tipo de comité + Acta No */}
           <Grid container spacing={2} alignItems="center" mb={2}>
             <Grid size={{ xs: 12, sm: 8 }}>
-              <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                Tipo de comité:
+              <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                Tipo de comité
               </Typography>
               <Box display="flex" gap={1} flexWrap="wrap">
                 {['COPASST', 'Convivencia', 'Gerencial', 'Otro'].map((t) => (
@@ -613,22 +679,28 @@ const ActaForm: React.FC = () => {
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
               <Box
-                sx={{ border: '1px solid #333', p: 1, textAlign: 'center', borderRadius: 1 }}
+                sx={{
+                  border: 1,
+                  borderColor: 'divider',
+                  p: 1,
+                  textAlign: 'center',
+                  borderRadius: 1,
+                }}
               >
-                <Typography variant="caption" color="text.secondary">
-                  ACTA No.
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Acta No.
                 </Typography>
-                <Typography fontWeight="bold" fontSize={20}>
+                <Typography fontWeight={700} fontSize={20} sx={{ fontVariantNumeric: 'tabular-nums' }}>
                   {String(actaNumber).padStart(3, '0')}
                 </Typography>
               </Box>
             </Grid>
           </Grid>
 
-          <Divider sx={{ mb: 2 }} />
+          <Divider sx={{ mb: 2.5 }} />
 
           {/* Fecha y lugar */}
-          <Grid container spacing={2} mb={2}>
+          <Grid container spacing={2} mb={3}>
             <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 label="Fecha de Reunión"
@@ -677,98 +749,110 @@ const ActaForm: React.FC = () => {
             </Grid>
           </Grid>
 
-          <Divider sx={{ mb: 2 }} />
+          <Divider />
 
           {/* Asistentes */}
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            Asistentes:
-          </Typography>
+          <SectionTitle
+            action={
+              <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                {presentCount} de {totalMembers} presentes
+              </Typography>
+            }
+          >
+            Asistentes
+          </SectionTitle>
           <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
-            <Table size="small">
+            <Table size="small" aria-label="Asistencia de los miembros del comité">
               <TableHead>
-                <TableRow sx={{ bgcolor: 'grey.100' }}>
-                  <TableCell><strong>Nombres</strong></TableCell>
-                  <TableCell><strong>Cargo</strong></TableCell>
-                  <TableCell align="center" width={60}><strong>SI</strong></TableCell>
-                  <TableCell align="center" width={60}><strong>NO</strong></TableCell>
-                  <TableCell><strong>Firma</strong></TableCell>
+                <TableRow>
+                  <TableCell sx={headCellSx}>Nombres</TableCell>
+                  <TableCell sx={headCellSx}>Cargo</TableCell>
+                  <TableCell sx={headCellSx} align="center" width={64}>Sí</TableCell>
+                  <TableCell sx={headCellSx} align="center" width={64}>No</TableCell>
+                  <TableCell sx={headCellSx}>Firma</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {attendees.map((att, idx) => (
-                  <TableRow key={att.memberId}>
-                    <TableCell>{att.name || `Miembro ${idx + 1}`}</TableCell>
-                    <TableCell>
-                      <Chip label={roleLabel[att.role] ?? att.role} size="small" variant="outlined" />
-                    </TableCell>
-                    <TableCell align="center">
-                      <RadioGroup
-                        row
-                        value={att.present ? 'si' : 'no'}
-                        onChange={(e) =>
-                          setAttendees((prev) =>
-                            prev.map((a, i) =>
-                              i === idx ? { ...a, present: e.target.value === 'si' } : a,
-                            ),
-                          )
-                        }
-                      >
-                        <FormControlLabel value="si" control={<Radio size="small" />} label="" />
-                      </RadioGroup>
-                    </TableCell>
-                    <TableCell align="center">
-                      <RadioGroup
-                        row
-                        value={att.present ? 'si' : 'no'}
-                        onChange={(e) =>
-                          setAttendees((prev) =>
-                            prev.map((a, i) =>
-                              i === idx ? { ...a, present: e.target.value === 'si' } : a,
-                            ),
-                          )
-                        }
-                      >
-                        <FormControlLabel value="no" control={<Radio size="small" />} label="" />
-                      </RadioGroup>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ borderBottom: '1px dashed #aaa', minWidth: 120, height: 24 }} />
+                {attendees.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                      El comité no tiene miembros activos.
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
+                {attendees.map((att, idx) => {
+                  const name = att.name || `Miembro ${idx + 1}`;
+                  const setPresent = (present: boolean) =>
+                    setAttendees((prev) =>
+                      prev.map((a, i) => (i === idx ? { ...a, present } : a)),
+                    );
+                  return (
+                    <TableRow
+                      key={att.memberId}
+                      sx={{ bgcolor: att.present ? undefined : 'action.hover' }}
+                    >
+                      <TableCell sx={{ color: att.present ? 'text.primary' : 'text.secondary' }}>
+                        {name}
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={roleLabel[att.role] ?? att.role} size="small" variant="outlined" />
+                      </TableCell>
+                      <TableCell align="center" padding="none">
+                        <Radio
+                          size="small"
+                          name={`asistencia-${att.memberId}`}
+                          checked={att.present}
+                          onChange={() => setPresent(true)}
+                          inputProps={{ 'aria-label': `${name}: asistió` }}
+                        />
+                      </TableCell>
+                      <TableCell align="center" padding="none">
+                        <Radio
+                          size="small"
+                          name={`asistencia-${att.memberId}`}
+                          checked={!att.present}
+                          onChange={() => setPresent(false)}
+                          inputProps={{ 'aria-label': `${name}: no asistió` }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box
+                          aria-hidden
+                          sx={{ borderBottom: 1, borderColor: 'divider', borderBottomStyle: 'dashed', minWidth: 120, height: 24 }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
 
           {/* Invitados */}
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            Invitados:
-          </Typography>
+          <SectionTitle>Invitados</SectionTitle>
           <TextField
             value={guests}
             onChange={(e) => setGuests(e.target.value)}
             multiline
-            rows={2}
+            minRows={2}
             fullWidth
             size="small"
             placeholder="Nombres de invitados a la reunión"
-            sx={{ mb: 3 }}
+            inputProps={{ 'aria-label': 'Invitados' }}
           />
 
-          <Divider sx={{ mb: 2 }} />
+          <Divider sx={{ mt: 3 }} />
 
           {/* Sección Actividades */}
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            ACTIVIDADES:
-          </Typography>
+          <SectionTitle>Actividades</SectionTitle>
 
           {/* 1. Llamada a lista */}
-          <Box sx={{ mb: 2, p: 1.5, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="body2" fontWeight="bold" gutterBottom>
+          <Box sx={{ mb: 1.5, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="body2" fontWeight={700} gutterBottom>
               1. LLAMADA A LISTA Y VERIFICACIÓN DE QUÓRUM
             </Typography>
-            <Box display="flex" alignItems="center" gap={2}>
-              <Typography variant="body2">
+            <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
+              <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
                 Presentes: <strong>{presentCount}</strong> de <strong>{totalMembers}</strong> (
                 {attendancePct.toFixed(0)}%)
               </Typography>
@@ -776,13 +860,14 @@ const ActaForm: React.FC = () => {
                 label={quorumAchieved ? `Quórum alcanzado (${quorumPct}%)` : `Sin quórum (req. ${quorumPct}%)`}
                 size="small"
                 color={quorumAchieved ? 'success' : 'error'}
+                variant="outlined"
               />
             </Box>
           </Box>
 
           {/* 2. Lectura del acta anterior */}
-          <Box sx={{ mb: 2, p: 1.5, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="body2" fontWeight="bold" gutterBottom>
+          <Box sx={{ mb: 2, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="body2" fontWeight={700} gutterBottom>
               2. LECTURA DEL ACTA ANTERIOR
             </Typography>
             {prevMeetingId ? (
@@ -800,18 +885,26 @@ const ActaForm: React.FC = () => {
           </Box>
 
           {/* 3. Desarrollo */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" fontWeight="bold" gutterBottom>
+          <Box>
+            <Typography
+              component="label"
+              htmlFor="acta-desarrollo"
+              variant="body2"
+              fontWeight={700}
+              display="block"
+              gutterBottom
+            >
               3. DESARROLLO DE LA REUNIÓN
             </Typography>
             <TextField
+              id="acta-desarrollo"
               value={desarrollo}
               onChange={(e) => setDesarrollo(e.target.value)}
               multiline
-              rows={6}
+              minRows={6}
               fullWidth
               size="small"
-              placeholder="Describe el desarrollo de la reunión..."
+              placeholder="Describe el desarrollo de la reunión…"
             />
           </Box>
         </Box>
@@ -820,37 +913,16 @@ const ActaForm: React.FC = () => {
       {/* ═══════════════════════════════════════════════ */}
       {/* PÁGINA 2                                        */}
       {/* ═══════════════════════════════════════════════ */}
-      <Paper elevation={2} sx={{ mb: 3, overflow: 'hidden' }}>
-        {/* Encabezado p2 */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 2fr 1fr',
-            borderBottom: '2px solid #333',
-          }}
-        >
-          <Box sx={{ p: 1.5, borderRight: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography fontWeight="bold" fontSize={18} letterSpacing={1}>ROWL</Typography>
-          </Box>
-          <Box sx={{ p: 1.5, borderRight: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography fontWeight="bold" fontSize={16} textAlign="center">ACTA DE REUNIÓN</Typography>
-          </Box>
-          <Box sx={{ p: 1, fontSize: 11, lineHeight: 1.6 }}>
-            <Typography variant="caption" display="block">Código: RES-SST-01</Typography>
-            <Typography variant="caption" display="block">Versión: 001</Typography>
-            <Typography variant="caption" display="block">Página: 2 de 2</Typography>
-          </Box>
-        </Box>
+      <Paper variant="outlined" sx={{ mb: 3, overflow: 'hidden' }}>
+        <ActaHeader page={2} total={2} />
 
-        <Box p={3}>
+        <Box p={{ xs: 2, sm: 3 }} pt={{ xs: 0, sm: 0 }}>
           {/* 4. Revisión de tareas anteriores */}
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            4. REVISIÓN DE TAREAS COMITÉ O REUNIÓN ANTERIOR
-          </Typography>
+          <SectionTitle>4. REVISIÓN DE TAREAS COMITÉ O REUNIÓN ANTERIOR</SectionTitle>
 
           {previousActivities.length === 0 ? (
             <Box
-              sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 3, textAlign: 'center' }}
+              sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1, textAlign: 'center' }}
             >
               <Typography variant="body2" color="text.secondary">
                 {prevMeetingId
@@ -859,15 +931,15 @@ const ActaForm: React.FC = () => {
               </Typography>
             </Box>
           ) : (
-            <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-              <Table size="small">
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small" aria-label="Tareas de la reunión anterior">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: 'grey.100' }}>
-                    <TableCell><strong>Actividad</strong></TableCell>
-                    <TableCell><strong>Responsable</strong></TableCell>
-                    <TableCell width={130} align="center"><strong>% Cumpl.</strong></TableCell>
-                    <TableCell width={110}><strong>Fecha</strong></TableCell>
-                    <TableCell><strong>Observaciones</strong></TableCell>
+                  <TableRow>
+                    <TableCell sx={headCellSx}>Actividad</TableCell>
+                    <TableCell sx={headCellSx}>Responsable</TableCell>
+                    <TableCell sx={headCellSx} width={140} align="center">% Cumpl.</TableCell>
+                    <TableCell sx={headCellSx} width={110}>Fecha</TableCell>
+                    <TableCell sx={headCellSx}>Observaciones</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -876,7 +948,7 @@ const ActaForm: React.FC = () => {
                       <TableCell>
                         <Typography variant="body2">{act.title}</Typography>
                         <Chip
-                          label={act.status}
+                          label={activityStatusLabel[act.status] ?? act.status}
                           size="small"
                           variant="outlined"
                           sx={{ mt: 0.5 }}
@@ -890,7 +962,9 @@ const ActaForm: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">{act.responsible}</Typography>
+                        <Typography variant="body2" color={act.responsible ? 'text.primary' : 'text.secondary'}>
+                          {act.responsible || 'Sin asignar'}
+                        </Typography>
                       </TableCell>
                       <TableCell align="center">
                         <Box px={1}>
@@ -903,15 +977,16 @@ const ActaForm: React.FC = () => {
                             size="small"
                             valueLabelDisplay="auto"
                             valueLabelFormat={(v) => `${v}%`}
+                            aria-label={`Porcentaje de cumplimiento: ${act.title}`}
                           />
-                          <Typography variant="caption">{act.progress}%</Typography>
+                          <Typography variant="caption" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {act.progress}%
+                          </Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="caption">
-                          {act.dueDate
-                            ? new Date(act.dueDate).toLocaleDateString('es-ES')
-                            : '—'}
+                        <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                          {act.dueDate ? formatDateOnly(act.dueDate) : '—'}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -920,9 +995,10 @@ const ActaForm: React.FC = () => {
                           onChange={(e) => updatePrevActivity(idx, 'observations', e.target.value)}
                           size="small"
                           multiline
-                          rows={1}
+                          minRows={1}
                           fullWidth
                           placeholder="Observaciones"
+                          inputProps={{ 'aria-label': `Observaciones: ${act.title}` }}
                         />
                       </TableCell>
                     </TableRow>
@@ -933,46 +1009,49 @@ const ActaForm: React.FC = () => {
           )}
 
           {/* 5. Asignación de tareas */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              5. ASIGNACIÓN DE TAREAS
-            </Typography>
-            <Button
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={() => setNewTasks((prev) => [...prev, emptyTask()])}
-            >
-              Agregar tarea
-            </Button>
-          </Box>
+          <SectionTitle
+            action={
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => setNewTasks((prev) => [...prev, emptyTask()])}
+              >
+                Agregar tarea
+              </Button>
+            }
+          >
+            5. ASIGNACIÓN DE TAREAS
+          </SectionTitle>
 
-          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-            <Table size="small">
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small" aria-label="Tareas asignadas en esta reunión">
               <TableHead>
-                <TableRow sx={{ bgcolor: 'grey.100' }}>
-                  <TableCell><strong>Actividad</strong></TableCell>
-                  <TableCell width={200}><strong>Responsable</strong></TableCell>
-                  <TableCell width={140}><strong>Fecha Compromiso</strong></TableCell>
-                  <TableCell><strong>Observaciones</strong></TableCell>
-                  <TableCell width={48} />
+                <TableRow>
+                  <TableCell sx={headCellSx}>Actividad</TableCell>
+                  <TableCell sx={headCellSx} width={200}>Responsable</TableCell>
+                  <TableCell sx={headCellSx} width={150}>Fecha compromiso</TableCell>
+                  <TableCell sx={headCellSx}>Observaciones</TableCell>
+                  <TableCell sx={headCellSx} width={48} />
                 </TableRow>
               </TableHead>
               <TableBody>
                 {newTasks.map((task, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell>
+                  <TableRow key={task.id ?? `new-${idx}`}>
+                    <TableCell sx={{ minWidth: 200 }}>
                       <TextField
                         value={task.title}
                         onChange={(e) => updateNewTask(idx, 'title', e.target.value)}
                         size="small"
                         fullWidth
                         placeholder="Descripción de la tarea"
+                        inputProps={{ 'aria-label': `Tarea ${idx + 1}: descripción` }}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ minWidth: 180 }}>
                       <FormControl size="small" fullWidth>
-                        <InputLabel>Responsable</InputLabel>
+                        <InputLabel id={`responsable-${idx}`}>Responsable</InputLabel>
                         <Select
+                          labelId={`responsable-${idx}`}
                           value={task.responsibleMemberId}
                           onChange={(e) =>
                             updateNewTask(idx, 'responsibleMemberId', e.target.value)
@@ -988,7 +1067,7 @@ const ActaForm: React.FC = () => {
                         </Select>
                       </FormControl>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ minWidth: 150 }}>
                       <TextField
                         type="date"
                         value={task.commitmentDate}
@@ -996,22 +1075,25 @@ const ActaForm: React.FC = () => {
                         size="small"
                         fullWidth
                         InputLabelProps={{ shrink: true }}
+                        inputProps={{ 'aria-label': `Tarea ${idx + 1}: fecha compromiso` }}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ minWidth: 180 }}>
                       <TextField
                         value={task.observations}
                         onChange={(e) => updateNewTask(idx, 'observations', e.target.value)}
                         size="small"
                         fullWidth
                         placeholder="Observaciones"
+                        inputProps={{ 'aria-label': `Tarea ${idx + 1}: observaciones` }}
                       />
                     </TableCell>
                     <TableCell>
-                      <Tooltip title="Eliminar fila">
+                      <Tooltip title={newTasks.length === 1 ? 'Debe quedar al menos una fila' : 'Eliminar tarea'}>
                         <span>
                           <IconButton
                             size="small"
+                            aria-label={`Eliminar tarea ${idx + 1}`}
                             onClick={() => {
                               const task = newTasks[idx];
                               if (task.id) setDeletedTaskIds((prev) => [...prev, task.id!]);
@@ -1031,22 +1113,20 @@ const ActaForm: React.FC = () => {
           </TableContainer>
 
           {/* 6. Proposiciones */}
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            6. PROPOSICIONES Y VARIOS
-          </Typography>
+          <SectionTitle>6. PROPOSICIONES Y VARIOS</SectionTitle>
           <TextField
             value={proposiciones}
             onChange={(e) => setProposiciones(e.target.value)}
             multiline
-            rows={4}
+            minRows={4}
             fullWidth
             size="small"
-            placeholder="Proposiciones y varios..."
-            sx={{ mb: 3 }}
+            placeholder="Proposiciones y varios…"
+            inputProps={{ 'aria-label': 'Proposiciones y varios' }}
           />
 
           {/* Firmas */}
-          <Grid container spacing={4} justifyContent="center">
+          <Grid container spacing={4} justifyContent="center" mt={5}>
             {[
               { label: 'SECRETARIO', role: CommitteeRole.SECRETARY },
               { label: 'PRESIDENTE', role: CommitteeRole.PRESIDENT },
@@ -1056,23 +1136,15 @@ const ActaForm: React.FC = () => {
                 <Grid key={label} size={{ xs: 12, sm: 5 }}>
                   <Box textAlign="center">
                     <Box
-                      sx={{
-                        borderBottom: '1px solid #333',
-                        mb: 0.5,
-                        height: 48,
-                        display: 'flex',
-                        alignItems: 'flex-end',
-                        justifyContent: 'center',
-                      }}
+                      aria-hidden
+                      sx={{ borderBottom: 1, borderColor: 'text.primary', mb: 0.75, height: 48 }}
                     />
-                    <Typography variant="body2" fontWeight="bold">
+                    <Typography variant="body2" fontWeight={700}>
                       {label}
                     </Typography>
-                    {found && (
-                      <Typography variant="caption" color="text.secondary">
-                        {found.name}
-                      </Typography>
-                    )}
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {found?.name || 'Cargo sin asignar en el comité'}
+                    </Typography>
                   </Box>
                 </Grid>
               );
@@ -1081,10 +1153,39 @@ const ActaForm: React.FC = () => {
         </Box>
       </Paper>
 
-      {/* ── Acciones ── */}
-      <Card>
-        <CardContent>
-          <Box display="flex" justifyContent="flex-end" gap={2} flexWrap="wrap" alignItems="center">
+      {/* ── Acciones (fijas abajo para que guardar siempre esté a mano) ── */}
+      <Paper
+        variant="outlined"
+        sx={{
+          position: 'sticky',
+          bottom: 0,
+          zIndex: (theme) => theme.zIndex.appBar - 1,
+          mx: { xs: -2, sm: 0 },
+          mb: { xs: 0, sm: 2 },
+          px: { xs: 2, sm: 2.5 },
+          py: 1.5,
+          borderRadius: { xs: 0, sm: 1 },
+          boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.08)',
+        }}
+      >
+        {(error || successMsg) && (
+          <Alert
+            severity={error ? 'error' : 'success'}
+            onClose={() => (error ? setError(null) : setSuccessMsg(null))}
+            sx={{ mb: 1.5 }}
+            role={error ? 'alert' : 'status'}
+          >
+            {error || successMsg}
+          </Alert>
+        )}
+        <Box
+          display="flex"
+          justifyContent="flex-end"
+          gap={1.5}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ '& > *': { flex: { xs: '1 1 auto', sm: '0 0 auto' } }, '& .MuiButton-root': { width: { xs: '100%', sm: 'auto' } } }}
+        >
             <Button
               variant="outlined"
               onClick={() => navigate(`/admin/committees/${committeeId}/actas`)}
@@ -1100,7 +1201,7 @@ const ActaForm: React.FC = () => {
             >
               {activeAction === 'save' ? 'Guardando…' : 'Guardar'}
             </Button>
-            <Tooltip title={!savedMeetingId && !isEdit ? 'Guarda el acta primero' : ''}>
+            <Tooltip title={!savedMeetingId && !isEdit ? 'Guarda el acta primero' : 'Descargar la última versión guardada'}>
               <span>
                 <Button
                   variant="outlined"
@@ -1118,11 +1219,10 @@ const ActaForm: React.FC = () => {
               onClick={() => handleSave(true)}
               disabled={activeAction !== null}
             >
-              {activeAction === 'saveAndPdf' ? 'Guardando…' : 'Guardar y Descargar PDF'}
+              {activeAction === 'saveAndPdf' ? 'Guardando…' : 'Guardar y descargar PDF'}
             </Button>
-          </Box>
-        </CardContent>
-      </Card>
+        </Box>
+      </Paper>
     </Box>
   );
 };
